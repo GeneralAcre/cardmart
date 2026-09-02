@@ -1,5 +1,5 @@
 import { PrismaClient, type AssetCategory, type GradingCompany } from "@prisma/client";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaPg } from "@prisma/adapter-pg";
 import "dotenv/config";
 import { mockPublicKey, mockTxSignature } from "../lib/web3/mock-chain";
 import { SELF_MINT_FEE_THB, FULL_SERVICE_PACKAGE_PRICE_THB } from "../lib/pricing";
@@ -9,7 +9,7 @@ import { getVerificationChecklist } from "../lib/verification-checklist";
 const PLACEHOLDER_CAPTURE =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
 
-const adapter = new PrismaBetterSqlite3({ url: process.env.DATABASE_URL! });
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
 
 function daysAgo(days: number, hours = 0) {

@@ -9,7 +9,7 @@ authenticity against the grading company's official database.
 ## Stack
 
 - Next.js 16 (App Router), TypeScript, Tailwind CSS v4
-- Prisma 7 + SQLite (`@prisma/adapter-better-sqlite3` driver adapter)
+- Prisma 7 + Postgres (`@prisma/adapter-pg` driver adapter) — works with Neon, Vercel Postgres, Supabase, or any hosted/local Postgres
 - **Auth.js v5** with the Google provider and database-backed sessions (`@auth/prisma-adapter`) — real sign-in, not mocked
 - Server Actions for mutations, Route Handlers for the marketplace read API
 - shadcn-style UI primitives (Radix UI + `class-variance-authority`), Framer Motion, sonner toasts, Zustand
@@ -17,9 +17,17 @@ authenticity against the grading company's official database.
 
 ## Getting started
 
+Get a Postgres database — the easiest path is Vercel's dashboard:
+**Storage tab → Create Database → Postgres (Neon)**, then copy both
+connection strings it gives you (or `vercel env pull .env` if the project is
+already linked): the pooled one → `DATABASE_URL`, the direct/unpooled one →
+`DIRECT_URL` (see `.env.example`). Any other Postgres works too — for a
+single local instance, both vars can just point to the same URL.
+
 ```bash
 npm install
-npx prisma migrate dev   # creates prisma/dev.db and applies the schema
+# put DATABASE_URL and DIRECT_URL in .env (see .env.example)
+npx prisma migrate dev   # applies the schema
 npx prisma db seed       # seeds 4 demo marketplace participants and 12 assets
 ```
 
@@ -58,6 +66,24 @@ tables get wiped and recreated).
 - `/item/[id]` — product detail, live verification photo gallery, provenance timeline, buy-with-escrow flow (ship vs. keep-in-vault)
 - `/portfolio` — owned digital twins, split by "physical in my hands" vs. "physical in warehouse vault", plus Full-Service grading submission tracking, with relist/redeem actions
 - `/admin/warehouse` — inbound inspection queue comparing seller-declared vs. official certificate data, plus the Full-Service grading queue, with approve-ship / approve-vault / reject / complete-grading actions
+
+## Deploying to Vercel
+
+1. Import the repo in Vercel, then add a Postgres database from the
+   **Storage** tab and connect it to the project — this injects `DATABASE_URL`
+   and its unpooled counterpart into the project's environment automatically.
+   Make sure that unpooled one is also set as `DIRECT_URL` (Vercel's Neon
+   integration may name it `DATABASE_URL_UNPOOLED` — add a second env var
+   `DIRECT_URL` pointing at the same value).
+2. Add `AUTH_SECRET` in the project's Environment Variables (generate one
+   with `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`).
+   Add `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` too once you have them (see
+   above) — until then Google sign-in stays a visible-but-inert button.
+3. Deploy. `npm run build` runs `prisma generate && prisma migrate deploy`
+   before `next build`, so pending migrations apply automatically on every
+   deploy. Seeding is **not** part of the build (it wipes app-domain tables)
+   — run `npx prisma db seed` once by hand against the production
+   `DATABASE_URL` after the first successful deploy.
 
 ## Auth model
 
