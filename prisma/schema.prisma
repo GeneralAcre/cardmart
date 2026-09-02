@@ -1,0 +1,282 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum GradingCompany {
+  PSA
+  BGS
+  CGC
+}
+
+enum AssetCategory {
+  TRADING_CARD
+  SPORTS_CARD
+  AMULET
+  COMIC
+}
+
+// Marketplace-facing badge shown on product cards.
+enum MarketStatus {
+  READY_TO_SHIP
+  IN_VAULT
+  IN_ESCROW
+  DELISTED
+}
+
+// Internal physical-custody pipeline driven by the warehouse dashboard.
+enum PipelineStage {
+  NONE
+  AWAITING_SELLER_SHIPMENT
+  IN_TRANSIT_TO_WAREHOUSE
+  IN_INSPECTION
+  REJECTED
+  IN_TRANSIT_TO_BUYER
+  DELIVERED
+}
+
+enum FulfillmentChoice {
+  SHIP
+  VAULT
+}
+
+enum EscrowStatus {
+  LOCKED
+  RELEASED
+  REFUNDED
+}
+
+enum InboundStatus {
+  PENDING_INSPECTION
+  APPROVED_SHIP
+  APPROVED_VAULT
+  REJECTED
+}
+
+enum ProvenanceType {
+  MINTED_DIGITAL_TWIN
+  LISTED
+  DELISTED
+  ESCROW_LOCKED
+  SHIPPED_TO_WAREHOUSE
+  INSPECTION_PASSED
+  INSPECTION_REJECTED
+  DEPOSITED_TO_VAULT
+  DELIVERED_TO_BUYER
+  OWNERSHIP_TRANSFERRED
+  RELISTED
+  REDEEMED
+  ESCROW_REFUNDED
+}
+
+// The two onboarding/pricing models for getting an item onto the platform.
+enum VerificationPackage {
+  // Flat mock fee. Seller already holds an official grading company slab and
+  // self-declares + verifies it; seller bears the later cost of shipping the
+  // physical item to the warehouse once it sells.
+  SELF_MINT
+  // Higher mock package fee that bundles shipping the raw item to the
+  // grading company, the grading company's own grading fee, and digital
+  // twin minting — all covered by the platform out of the package price.
+  FULL_SERVICE
+}
+
+enum GradingSubmissionStatus {
+  AWAITING_SHIPMENT_TO_GRADER
+  AT_GRADING_COMPANY
+  GRADED
+  REJECTED
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+
+  // App-specific profile, filled in during onboarding after first sign-in.
+  handle          String? @unique
+  walletMock      String?
+  shippingAddress String?
+  phone           String?
+  profileComplete Boolean @default(false)
+
+  accounts Account[]
+  sessions Session[]
+
+  listedAssets       Asset[]             @relation("AssetSeller")
+  ownedAssets        Asset[]             @relation("AssetOwner")
+  provenanceEvents   ProvenanceEvent[]
+  purchases          EscrowTransaction[] @relation("EscrowBuyer")
+  sales              EscrowTransaction[] @relation("EscrowSeller")
+  gradingSubmissions GradingSubmission[] @relation("GradingSubmissionSeller")
+}
+
+// Auth.js (NextAuth) required models — database-backed OAuth accounts and sessions.
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Asset {
+  id                  String              @id @default(cuid())
+  name                String
+  subtitle            String
+  category            AssetCategory
+  gradingCompany      GradingCompany
+  grade               Float
+  serial              String              @unique
+  themeIndex          Int                 @default(0)
+  priceThb            Int?
+  forSale             Boolean             @default(false)
+  vaulted             Boolean             @default(false)
+  marketStatus        MarketStatus        @default(READY_TO_SHIP)
+  pipelineStage       PipelineStage       @default(NONE)
+  mockMintTx          String
+  verificationPackage VerificationPackage @default(SELF_MINT)
+  mintFeeThb          Int                 @default(50)
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  sellerId String
+  seller   User   @relation("AssetSeller", fields: [sellerId], references: [id])
+  ownerId  String
+  owner    User   @relation("AssetOwner", fields: [ownerId], references: [id])
+
+  provenance         ProvenanceEvent[]
+  escrowTxs          EscrowTransaction[]
+  inboundPackages    InboundPackage[]
+  gradingSubmission  GradingSubmission?
+  verificationPhotos VerificationPhoto[]
+
+  @@index([sellerId])
+  @@index([ownerId])
+}
+
+// A single live-camera capture taken during self-mint verification, proving
+// the seller physically held the item at mint time (no gallery uploads).
+model VerificationPhoto {
+  id        String   @id @default(cuid())
+  viewKey   String
+  viewLabel String
+  dataUrl   String
+  createdAt DateTime @default(now())
+
+  assetId String
+  asset   Asset  @relation(fields: [assetId], references: [id])
+
+  @@index([assetId])
+}
+
+model GradingSubmission {
+  id              String                  @id @default(cuid())
+  itemName        String
+  itemSubtitle    String
+  category        AssetCategory
+  gradingCompany  GradingCompany
+  packagePriceThb Int
+  status          GradingSubmissionStatus @default(AWAITING_SHIPMENT_TO_GRADER)
+  mockPaymentTx   String
+  createdAt       DateTime                @default(now())
+  resolvedAt      DateTime?
+
+  sellerId String
+  seller   User   @relation("GradingSubmissionSeller", fields: [sellerId], references: [id])
+
+  resultAssetId String? @unique
+  resultAsset   Asset?  @relation(fields: [resultAssetId], references: [id])
+
+  @@index([sellerId])
+}
+
+model ProvenanceEvent {
+  id              String         @id @default(cuid())
+  type            ProvenanceType
+  note            String
+  mockTxSignature String
+  createdAt       DateTime       @default(now())
+
+  assetId String
+  asset   Asset   @relation(fields: [assetId], references: [id])
+  actorId String?
+  actor   User?   @relation(fields: [actorId], references: [id])
+
+  @@index([assetId])
+}
+
+model EscrowTransaction {
+  id                String            @id @default(cuid())
+  amountThb         Int
+  fulfillmentChoice FulfillmentChoice
+  status            EscrowStatus      @default(LOCKED)
+  createdAt         DateTime          @default(now())
+  releasedAt        DateTime?
+
+  assetId  String
+  asset    Asset  @relation(fields: [assetId], references: [id])
+  buyerId  String
+  buyer    User   @relation("EscrowBuyer", fields: [buyerId], references: [id])
+  sellerId String
+  seller   User   @relation("EscrowSeller", fields: [sellerId], references: [id])
+
+  inboundPackage InboundPackage?
+
+  @@index([assetId])
+}
+
+model InboundPackage {
+  id                     String         @id @default(cuid())
+  declaredSerial         String
+  declaredGradingCompany GradingCompany
+  declaredGrade          Float
+  officialSerial         String
+  officialGradingCompany GradingCompany
+  officialGrade          Float
+  officialName           String
+  status                 InboundStatus  @default(PENDING_INSPECTION)
+  arrivedAt              DateTime       @default(now())
+  resolvedAt             DateTime?
+
+  assetId    String
+  asset      Asset             @relation(fields: [assetId], references: [id])
+  escrowTxId String            @unique
+  escrowTx   EscrowTransaction @relation(fields: [escrowTxId], references: [id])
+
+  @@index([assetId])
+}
