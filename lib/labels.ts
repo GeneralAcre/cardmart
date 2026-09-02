@@ -30,11 +30,13 @@ export const MARKET_STATUS_LABELS: Record<MarketStatus, string> = {
   DELISTED: "Not Listed",
 };
 
+// Status is encoded by weight (solid / outline / muted / faint), not hue —
+// keeps the marketplace to a cream/white/black palette.
 export const MARKET_STATUS_BADGE_CLASS: Record<MarketStatus, string> = {
-  READY_TO_SHIP: "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300",
-  IN_VAULT: "bg-indigo-100 text-indigo-800 dark:bg-indigo-500/15 dark:text-indigo-300",
-  IN_ESCROW: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300",
-  DELISTED: "bg-zinc-100 text-zinc-600 dark:bg-zinc-500/15 dark:text-zinc-400",
+  READY_TO_SHIP: "bg-foreground text-background",
+  IN_VAULT: "border border-foreground/50 text-foreground bg-transparent",
+  IN_ESCROW: "bg-muted text-foreground/80",
+  DELISTED: "border border-dashed border-muted-foreground/30 text-muted-foreground bg-transparent",
 };
 
 export const PIPELINE_STAGE_LABELS: Record<PipelineStage, string> = {
@@ -66,8 +68,8 @@ export const VERIFICATION_PACKAGE_LABELS: Record<VerificationPackage, string> = 
 };
 
 export const VERIFICATION_PACKAGE_BADGE_CLASS: Record<VerificationPackage, string> = {
-  SELF_MINT: "bg-zinc-100 text-zinc-700 dark:bg-zinc-500/15 dark:text-zinc-300",
-  FULL_SERVICE: "bg-violet-100 text-violet-800 dark:bg-violet-500/15 dark:text-violet-300",
+  SELF_MINT: "bg-muted text-muted-foreground",
+  FULL_SERVICE: "border border-foreground/50 text-foreground bg-transparent",
 };
 
 export const GRADING_SUBMISSION_STATUS_LABELS: Record<GradingSubmissionStatus, string> = {

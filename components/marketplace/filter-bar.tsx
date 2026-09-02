@@ -46,7 +46,7 @@ export function FilterBar({
         <Input
           value={filters.q}
           onChange={(e) => onChange({ ...filters, q: e.target.value })}
-          placeholder="Search by name, set, or serial number…"
+          placeholder="Search name or serial…"
           className="pl-9"
         />
       </div>
@@ -56,9 +56,9 @@ export function FilterBar({
         onValueChange={(v) => onChange({ ...filters, vaultedStatus: v as MarketplaceFilterState["vaultedStatus"] })}
       >
         <TabsList className="w-full">
-          <TabsTrigger value="ALL">All Items</TabsTrigger>
+          <TabsTrigger value="ALL">All</TabsTrigger>
           <TabsTrigger value="IN_VAULT">In Vault</TabsTrigger>
-          <TabsTrigger value="SHIPPING">Physical Shipping</TabsTrigger>
+          <TabsTrigger value="SHIPPING">Shipping</TabsTrigger>
         </TabsList>
       </Tabs>
 

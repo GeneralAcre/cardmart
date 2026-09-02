@@ -21,10 +21,10 @@ export function Hero() {
         </p>
         <div className="flex flex-wrap gap-3 pt-2">
           <Button size="lg" asChild>
-            <Link href="/verify">Get Verified</Link>
+            <Link href="/marketplace">Browse Marketplace</Link>
           </Button>
           <Button size="lg" variant="outline" asChild>
-            <Link href="/portfolio">View Portfolio</Link>
+            <Link href="/verify">Get Verified</Link>
           </Button>
         </div>
         <div className="text-muted-foreground grid grid-cols-1 gap-4 pt-8 sm:grid-cols-3">

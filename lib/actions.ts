@@ -16,7 +16,7 @@ import { themeIndexForSerial } from "@/lib/theme";
 import { getVerificationChecklist } from "@/lib/verification-checklist";
 
 function revalidateMarketplace(assetId?: string) {
-  revalidatePath("/");
+  revalidatePath("/marketplace");
   revalidatePath("/portfolio");
   revalidatePath("/admin/warehouse");
   if (assetId) revalidatePath(`/item/${assetId}`);
