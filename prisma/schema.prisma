@@ -10,6 +10,9 @@ enum GradingCompany {
   PSA
   BGS
   CGC
+  // Not an actual grading company — marks a raw/ungraded Self-Mint item that
+  // was verified by camera only, never sent to a real grading company.
+  RAW
 }
 
 enum AssetCategory {
@@ -160,7 +163,7 @@ model Asset {
   subtitle            String
   category            AssetCategory
   gradingCompany      GradingCompany
-  grade               Float
+  grade               Float?
   serial              String              @unique
   themeIndex          Int                 @default(0)
   priceThb            Int?

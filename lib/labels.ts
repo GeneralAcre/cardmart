@@ -21,6 +21,7 @@ export const GRADING_COMPANY_LABELS: Record<GradingCompany, string> = {
   PSA: "PSA",
   BGS: "BGS",
   CGC: "CGC",
+  RAW: "Raw / Ungraded",
 };
 
 export const MARKET_STATUS_LABELS: Record<MarketStatus, string> = {

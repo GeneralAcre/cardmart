@@ -15,12 +15,13 @@ const CAPTURE_HOLD_SECONDS = 3;
 
 interface CameraCaptureGridProps {
   category: AssetCategory;
+  raw?: boolean;
   captures: CaptureMap;
   onChange: (captures: CaptureMap) => void;
 }
 
-export function CameraCaptureGrid({ category, captures, onChange }: CameraCaptureGridProps) {
-  const checklist = getVerificationChecklist(category);
+export function CameraCaptureGrid({ category, raw = false, captures, onChange }: CameraCaptureGridProps) {
+  const checklist = getVerificationChecklist(category, raw);
   const [activeView, setActiveView] = useState<VerificationView | null>(null);
 
   function handleCaptured(key: string, dataUrl: string) {

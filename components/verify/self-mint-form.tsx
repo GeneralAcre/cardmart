@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -42,6 +43,7 @@ export function SelfMintForm() {
   const router = useRouter();
   const { connected, connecting, publicKey, connect, signMessage } = useWalletStore();
 
+  const [raw, setRaw] = useState(false);
   const [category, setCategory] = useState<AssetCategory>("TRADING_CARD");
   const [gradingCompany, setGradingCompany] = useState<GradingCompany>("PSA");
   const [serial, setSerial] = useState("");
@@ -55,8 +57,13 @@ export function SelfMintForm() {
   const [signing, setSigning] = useState(false);
   const [submitting, startSubmit] = useTransition();
 
-  const checklist = getVerificationChecklist(category);
+  const checklist = getVerificationChecklist(category, raw);
   const allCaptured = checklist.every((v) => captures[v.key]);
+
+  function handleModeChange(nextRaw: boolean) {
+    setRaw(nextRaw);
+    setCaptures({}); // checklist differs between graded and raw — start over
+  }
 
   function handleCategoryChange(next: AssetCategory) {
     setCategory(next);
@@ -68,7 +75,7 @@ export function SelfMintForm() {
     try {
       let key = publicKey;
       if (!connected) key = await connect();
-      await signMessage(`Register digital twin for certificate ${serial}`);
+      await signMessage(raw ? `Register digital twin for ${name}` : `Register digital twin for certificate ${serial}`);
       toast.success("Transaction signed", { description: key ? `${key.slice(0, 4)}…${key.slice(-4)}` : undefined });
 
       const photos = checklist.map((v) => ({
@@ -81,9 +88,12 @@ export function SelfMintForm() {
       fd.set("name", name);
       fd.set("subtitle", subtitle);
       fd.set("category", category);
-      fd.set("gradingCompany", gradingCompany);
-      fd.set("grade", grade);
-      fd.set("serial", serial);
+      fd.set("raw", String(raw));
+      fd.set("gradingCompany", raw ? "RAW" : gradingCompany);
+      if (!raw) {
+        fd.set("grade", grade);
+        fd.set("serial", serial);
+      }
       fd.set("priceThb", priceThb);
       fd.set("photos", JSON.stringify(photos));
 
@@ -105,10 +115,11 @@ export function SelfMintForm() {
   const canSubmit =
     name.trim().length >= 2 &&
     subtitle.trim().length >= 2 &&
-    serial.trim().length >= 4 &&
-    grade.trim().length > 0 &&
-    Number(grade) >= 1 &&
-    Number(grade) <= 10 &&
+    (raw ||
+      (serial.trim().length >= 4 &&
+        grade.trim().length > 0 &&
+        Number(grade) >= 1 &&
+        Number(grade) <= 10)) &&
     priceThb.trim().length > 0 &&
     Number(priceThb) > 0 &&
     allCaptured;
@@ -119,11 +130,27 @@ export function SelfMintForm() {
         <CardHeader>
           <CardTitle>Item Details</CardTitle>
           <CardDescription>
-            Enter the certificate details exactly as shown on the slab label,
-            then verify it yourself with your camera.
+            {raw
+              ? "Describe the raw item, then verify it yourself with your camera — no grading company involved."
+              : "Enter the certificate details exactly as shown on the slab label, then verify it yourself with your camera."}
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-5">
+          <div className="flex flex-col gap-2">
+            <Label>Item Condition</Label>
+            <Tabs value={raw ? "raw" : "graded"} onValueChange={(v) => handleModeChange(v === "raw")}>
+              <TabsList className="w-full">
+                <TabsTrigger value="graded">Already Graded</TabsTrigger>
+                <TabsTrigger value="raw">Raw / Ungraded</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <p className="text-muted-foreground text-xs">
+              {raw
+                ? "No official grading company is involved — you verify it yourself with a live camera checklist."
+                : "You hold an official PSA / BGS / CGC slab and self-declare its certificate details."}
+            </p>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-2">
               <Label>Category</Label>
@@ -140,21 +167,23 @@ export function SelfMintForm() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex flex-col gap-2">
-              <Label>Select Grading Institute</Label>
-              <Select value={gradingCompany} onValueChange={(v) => setGradingCompany(v as GradingCompany)}>
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {GRADING_COMPANIES.map((c) => (
-                    <SelectItem key={c} value={c}>
-                      {GRADING_COMPANY_LABELS[c]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {!raw && (
+              <div className="flex flex-col gap-2">
+                <Label>Select Grading Institute</Label>
+                <Select value={gradingCompany} onValueChange={(v) => setGradingCompany(v as GradingCompany)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {GRADING_COMPANIES.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {GRADING_COMPANY_LABELS[c]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -168,44 +197,46 @@ export function SelfMintForm() {
               />
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="subtitle">Set / Origin</Label>
+              <Label htmlFor="subtitle">{raw ? "Set / Origin / Condition" : "Set / Origin"}</Label>
               <Input
                 id="subtitle"
-                placeholder="e.g. Evolving Skies, 2021"
+                placeholder={raw ? "e.g. Evolving Skies, 2021 — near mint" : "e.g. Evolving Skies, 2021"}
                 value={subtitle}
                 onChange={(e) => setSubtitle(e.target.value)}
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="serial">Serial Number</Label>
-              <Input
-                id="serial"
-                placeholder="e.g. 84920193"
-                value={serial}
-                onChange={(e) => setSerial(e.target.value)}
-              />
+          {!raw && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="serial">Serial Number</Label>
+                <Input
+                  id="serial"
+                  placeholder="e.g. 84920193"
+                  value={serial}
+                  onChange={(e) => setSerial(e.target.value)}
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="grade">Grade (1–10)</Label>
+                <Input
+                  id="grade"
+                  type="number"
+                  step="0.5"
+                  min={1}
+                  max={10}
+                  placeholder="e.g. 10"
+                  value={grade}
+                  onChange={(e) => setGrade(e.target.value)}
+                />
+              </div>
             </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="grade">Grade (1–10)</Label>
-              <Input
-                id="grade"
-                type="number"
-                step="0.5"
-                min={1}
-                max={10}
-                placeholder="e.g. 10"
-                value={grade}
-                onChange={(e) => setGrade(e.target.value)}
-              />
-            </div>
-          </div>
+          )}
 
           <Separator />
 
-          <CameraCaptureGrid category={category} captures={captures} onChange={setCaptures} />
+          <CameraCaptureGrid category={category} raw={raw} captures={captures} onChange={setCaptures} />
 
           <Separator />
 
@@ -246,16 +277,16 @@ export function SelfMintForm() {
       <div className="flex flex-col gap-3">
         <span className="text-muted-foreground text-sm font-medium">Digital Twin Preview</span>
         <CardArt
-          themeIndex={serial ? themeIndexForSerial(serial) : 0}
+          themeIndex={serial ? themeIndexForSerial(serial) : themeIndexForSerial(name || "preview")}
           category={category}
-          gradingCompany={gradingCompany}
-          grade={Number(grade) || 0}
+          gradingCompany={raw ? "RAW" : gradingCompany}
+          grade={raw ? null : Number(grade) || null}
           size="lg"
           className={!allCaptured ? "opacity-40 grayscale" : undefined}
         />
         <p className="text-muted-foreground text-xs">
           This artwork represents the registered digital twin, generated from
-          your certificate details.
+          your {raw ? "item details" : "certificate details"}.
         </p>
       </div>
 
@@ -270,10 +301,8 @@ export function SelfMintForm() {
           </DialogHeader>
           <div className="bg-muted/40 rounded-lg border p-3 text-sm">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Certificate</span>
-              <span className="font-mono">
-                {gradingCompany}-{serial}
-              </span>
+              <span className="text-muted-foreground">{raw ? "Item" : "Certificate"}</span>
+              <span className="font-mono">{raw ? name : `${gradingCompany}-${serial}`}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Listing Price</span>

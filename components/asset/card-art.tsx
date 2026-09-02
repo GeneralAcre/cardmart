@@ -10,7 +10,7 @@ interface CardArtProps {
   themeIndex: number;
   category: AssetCategory;
   gradingCompany: GradingCompany;
-  grade: number;
+  grade: number | null;
   className?: string;
   size?: "sm" | "lg";
 }
@@ -54,7 +54,7 @@ export function CardArt({
       <div className="absolute left-2 top-2 flex items-center gap-1 rounded bg-black/45 px-1.5 py-0.5 backdrop-blur-sm">
         <ShieldCheck className="size-3 text-white" />
         <span className="text-[10px] font-semibold tracking-wide text-white">
-          {gradingCompany} {formatGrade(grade)}
+          {gradingCompany === "RAW" ? "RAW" : `${gradingCompany} ${formatGrade(grade)}`}
         </span>
       </div>
     </div>

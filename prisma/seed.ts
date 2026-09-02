@@ -43,7 +43,7 @@ async function main() {
     subtitle: string;
     category: AssetCategory;
     gradingCompany: GradingCompany;
-    grade: number;
+    grade: number | null;
     serial: string;
     themeIndex: number;
     priceThb: number | null;
@@ -257,6 +257,38 @@ async function main() {
       sellerId: you.id,
       ownerId: you.id,
     },
+    {
+      name: "Raw Pikachu Illustrator Reprint",
+      subtitle: "CoroCoro Comic Promo — unverified print run",
+      category: "TRADING_CARD",
+      gradingCompany: "RAW",
+      grade: null,
+      serial: "RAW-DEMO0001",
+      themeIndex: 4,
+      priceThb: 12000,
+      forSale: true,
+      vaulted: false,
+      marketStatus: "READY_TO_SHIP",
+      pipelineStage: "NONE",
+      sellerId: chalit.id,
+      ownerId: chalit.id,
+    },
+    {
+      name: "Raw Phra Somdej Reproduction",
+      subtitle: "Modern reproduction, no formal certification",
+      category: "AMULET",
+      gradingCompany: "RAW",
+      grade: null,
+      serial: "RAW-DEMO0002",
+      themeIndex: 6,
+      priceThb: 3500,
+      forSale: true,
+      vaulted: false,
+      marketStatus: "READY_TO_SHIP",
+      pipelineStage: "NONE",
+      sellerId: araya.id,
+      ownerId: araya.id,
+    },
   ];
 
   const created = new Map<string, string>();
@@ -289,7 +321,7 @@ async function main() {
     created.set(a.serial, asset.id);
 
     if (verificationPackage === "SELF_MINT") {
-      const checklist = getVerificationChecklist(a.category);
+      const checklist = getVerificationChecklist(a.category, a.gradingCompany === "RAW");
       await prisma.verificationPhoto.createMany({
         data: checklist.map((v) => ({
           assetId: asset.id,
@@ -307,7 +339,9 @@ async function main() {
         note:
           verificationPackage === "FULL_SERVICE"
             ? `Full-Service package: platform shipped the raw item to ${a.gradingCompany}, covered the ${a.gradingCompany} grading fee, and minted the digital twin (${mintFeeThb.toLocaleString()} THB package).`
-            : `Self-Mint package: digital twin registered from ${a.gradingCompany} certificate ${a.serial} (${mintFeeThb.toLocaleString()} THB fee).`,
+            : a.gradingCompany === "RAW"
+              ? `Self-Mint package: raw/ungraded item verified by live camera only — no grading company involved (${mintFeeThb.toLocaleString()} THB fee).`
+              : `Self-Mint package: digital twin registered from ${a.gradingCompany} certificate ${a.serial} (${mintFeeThb.toLocaleString()} THB fee).`,
         mockTxSignature: asset.mockMintTx,
         actorId: a.sellerId,
         createdAt: daysAgo(30),

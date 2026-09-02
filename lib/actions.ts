@@ -28,23 +28,35 @@ const verificationPhotoSchema = z.object({
   dataUrl: z.string().startsWith("data:image/"),
 });
 
-const createListingSchema = z.object({
-  name: z.string().min(2),
-  subtitle: z.string().min(2),
-  category: z.enum(["TRADING_CARD", "SPORTS_CARD", "AMULET", "COMIC"]),
-  gradingCompany: z.enum(["PSA", "BGS", "CGC"]),
-  grade: z.coerce.number().min(1).max(10),
-  serial: z.string().min(4),
-  priceThb: z.coerce.number().int().min(100),
-  photos: z.string().transform((raw, ctx) => {
-    try {
-      return z.array(verificationPhotoSchema).parse(JSON.parse(raw));
-    } catch {
-      ctx.addIssue({ code: "custom", message: "Invalid verification photo data." });
-      return z.NEVER;
+const createListingSchema = z
+  .object({
+    name: z.string().min(2),
+    subtitle: z.string().min(2),
+    category: z.enum(["TRADING_CARD", "SPORTS_CARD", "AMULET", "COMIC"]),
+    raw: z.enum(["true", "false"]).transform((v) => v === "true"),
+    gradingCompany: z.enum(["PSA", "BGS", "CGC", "RAW"]),
+    grade: z.coerce.number().min(1).max(10).optional(),
+    serial: z.string().min(4).optional(),
+    priceThb: z.coerce.number().int().min(100),
+    photos: z.string().transform((raw, ctx) => {
+      try {
+        return z.array(verificationPhotoSchema).parse(JSON.parse(raw));
+      } catch {
+        ctx.addIssue({ code: "custom", message: "Invalid verification photo data." });
+        return z.NEVER;
+      }
+    }),
+  })
+  .superRefine((data, ctx) => {
+    if (!data.raw) {
+      if (data.grade == null) ctx.addIssue({ code: "custom", message: "Enter a grade." });
+      if (!data.serial) ctx.addIssue({ code: "custom", message: "Enter a serial number." });
     }
-  }),
-});
+  });
+
+function generateRawSerial(): string {
+  return `RAW-${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+}
 
 export interface CreateListingState {
   error?: string;
@@ -67,9 +79,10 @@ export async function createListing(
     name: formData.get("name"),
     subtitle: formData.get("subtitle"),
     category: formData.get("category"),
+    raw: formData.get("raw"),
     gradingCompany: formData.get("gradingCompany"),
-    grade: formData.get("grade"),
-    serial: formData.get("serial"),
+    grade: formData.get("grade") || undefined,
+    serial: formData.get("serial") || undefined,
     priceThb: formData.get("priceThb"),
     photos: formData.get("photos"),
   });
@@ -78,8 +91,9 @@ export async function createListing(
     return { error: parsed.error.issues[0]?.message ?? "Invalid listing details." };
   }
   const data = parsed.data;
+  const serial = data.raw ? generateRawSerial() : data.serial!;
 
-  const requiredViews = getVerificationChecklist(data.category as AssetCategory);
+  const requiredViews = getVerificationChecklist(data.category as AssetCategory, data.raw);
   const capturedKeys = new Set(data.photos.map((p) => p.viewKey));
   const missing = requiredViews.filter((v) => !capturedKeys.has(v.key));
   if (missing.length > 0) {
@@ -88,12 +102,14 @@ export async function createListing(
     };
   }
 
-  const existing = await prisma.asset.findUnique({ where: { serial: data.serial } });
-  if (existing) {
-    return { error: `Serial ${data.serial} is already registered on the platform.` };
+  if (!data.raw) {
+    const existing = await prisma.asset.findUnique({ where: { serial } });
+    if (existing) {
+      return { error: `Serial ${serial} is already registered on the platform.` };
+    }
   }
 
-  const mint = await mockMintDigitalTwin(data.serial);
+  const mint = await mockMintDigitalTwin(serial);
 
   const asset = await prisma.asset.create({
     data: {
@@ -101,9 +117,9 @@ export async function createListing(
       subtitle: data.subtitle,
       category: data.category as AssetCategory,
       gradingCompany: data.gradingCompany as GradingCompany,
-      grade: data.grade,
-      serial: data.serial,
-      themeIndex: themeIndexForSerial(data.serial),
+      grade: data.raw ? null : data.grade,
+      serial,
+      themeIndex: themeIndexForSerial(serial),
       priceThb: data.priceThb,
       forSale: true,
       vaulted: false,
@@ -131,7 +147,9 @@ export async function createListing(
       {
         assetId: asset.id,
         type: "MINTED_DIGITAL_TWIN",
-        note: `Self-Mint package (${SELF_MINT_FEE_THB} THB): seller-verified with ${data.photos.length} live camera captures, registered as ${data.gradingCompany} certificate ${data.serial}.`,
+        note: data.raw
+          ? `Self-Mint package (${SELF_MINT_FEE_THB} THB): raw/ungraded item verified with ${data.photos.length} live camera captures — no grading company involved.`
+          : `Self-Mint package (${SELF_MINT_FEE_THB} THB): seller-verified with ${data.photos.length} live camera captures, registered as ${data.gradingCompany} certificate ${serial}.`,
         mockTxSignature: mint.txSignature,
         actorId: user.id,
       },
@@ -236,10 +254,10 @@ export async function buyListing(assetId: string, fulfillmentChoice: "SHIP" | "V
         escrowTxId: escrowTx.id,
         declaredSerial: asset.serial,
         declaredGradingCompany: asset.gradingCompany,
-        declaredGrade: asset.grade,
+        declaredGrade: asset.grade ?? 0,
         officialSerial: asset.serial,
         officialGradingCompany: asset.gradingCompany,
-        officialGrade: asset.grade,
+        officialGrade: asset.grade ?? 0,
         officialName: asset.name,
         status: "PENDING_INSPECTION",
       },

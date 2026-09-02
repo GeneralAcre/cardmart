@@ -55,12 +55,18 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
           </div>
 
           <div className="flex flex-wrap items-center gap-2 text-sm">
-            <Badge variant="outline" className="font-mono">
-              Verified Serial: {asset.serial}
-            </Badge>
-            <Badge variant="outline">
-              {asset.gradingCompany} {formatGrade(asset.grade)}
-            </Badge>
+            {asset.gradingCompany === "RAW" ? (
+              <Badge variant="outline">Raw / Ungraded — verified by camera</Badge>
+            ) : (
+              <>
+                <Badge variant="outline" className="font-mono">
+                  Verified Serial: {asset.serial}
+                </Badge>
+                <Badge variant="outline">
+                  {asset.gradingCompany} {formatGrade(asset.grade)}
+                </Badge>
+              </>
+            )}
           </div>
 
           <div className="text-muted-foreground text-sm">

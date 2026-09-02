@@ -6,7 +6,7 @@ export interface AssetSummary {
   subtitle: string;
   category: AssetCategory;
   gradingCompany: GradingCompany;
-  grade: number;
+  grade: number | null;
   serial: string;
   themeIndex: number;
   priceThb: number | null;

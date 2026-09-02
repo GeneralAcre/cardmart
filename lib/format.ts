@@ -31,6 +31,7 @@ export function shortSignature(signature: string): string {
   return `${signature.slice(0, 6)}…${signature.slice(-6)}`;
 }
 
-export function formatGrade(grade: number): string {
+export function formatGrade(grade: number | null): string {
+  if (grade == null) return "Ungraded";
   return Number.isInteger(grade) ? grade.toFixed(0) : grade.toFixed(1);
 }

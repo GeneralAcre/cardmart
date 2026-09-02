@@ -12,7 +12,7 @@ interface Props {
   themeIndex: number;
   category: AssetCategory;
   gradingCompany: GradingCompany;
-  grade: number;
+  grade: number | null;
 }
 
 export function ZoomableCardArt(props: Props) {

@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { GRADING_COMPANY_LABELS } from "@/lib/labels";
 import { EMPTY_FILTERS, type MarketplaceFilterState } from "@/lib/types";
 
-const GRADING_COMPANIES: GradingCompany[] = ["PSA", "BGS", "CGC"];
+const GRADING_COMPANIES: GradingCompany[] = ["PSA", "BGS", "CGC", "RAW"];
 const GRADES = [10, 9.5, 9, 8.5, 8, 7];
 
 export function FilterBar({
