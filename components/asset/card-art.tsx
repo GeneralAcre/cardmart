@@ -29,31 +29,31 @@ export function CardArt({
   return (
     <div
       className={cn(
-        "relative isolate flex aspect-[3/4] w-full items-center justify-center overflow-hidden rounded-lg",
+        "relative isolate flex aspect-[3/4] w-full items-center justify-center overflow-hidden rounded-lg border",
         className,
       )}
       style={{
-        backgroundImage: `radial-gradient(120% 120% at 15% 10%, ${from}dd 0%, ${to}dd 55%, #0f0f12 100%)`,
+        backgroundImage: `radial-gradient(120% 120% at 15% 10%, ${from} 0%, ${to} 100%)`,
       }}
     >
       <div
-        className="absolute inset-0 opacity-25 mix-blend-overlay"
+        className="absolute inset-0 opacity-[0.06] mix-blend-multiply"
         style={{
           backgroundImage:
-            "repeating-linear-gradient(135deg, rgba(255,255,255,0.35) 0px, rgba(255,255,255,0.35) 1px, transparent 1px, transparent 10px)",
+            "repeating-linear-gradient(135deg, rgba(0,0,0,0.4) 0px, rgba(0,0,0,0.4) 1px, transparent 1px, transparent 10px)",
         }}
       />
-      <div className="absolute inset-2 rounded-md border border-white/25" />
+      <div className="absolute inset-2 rounded-md border border-black/10" />
       <Icon
         className={cn(
-          "text-white/90 drop-shadow-sm",
+          "text-neutral-900/20",
           size === "lg" ? "size-16" : "size-10",
         )}
         strokeWidth={1.5}
       />
-      <div className="absolute left-2 top-2 flex items-center gap-1 rounded bg-black/45 px-1.5 py-0.5 backdrop-blur-sm">
-        <ShieldCheck className="size-3 text-white" />
-        <span className="text-[10px] font-semibold tracking-wide text-white">
+      <div className="absolute left-2 top-2 flex items-center gap-1 rounded border bg-white/85 px-1.5 py-0.5 shadow-sm backdrop-blur-sm">
+        <ShieldCheck className="text-primary size-3" />
+        <span className="text-[10px] font-semibold tracking-wide text-neutral-800">
           {gradingCompany === "RAW" ? "RAW" : `${gradingCompany} ${formatGrade(grade)}`}
         </span>
       </div>

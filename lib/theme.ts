@@ -1,17 +1,18 @@
 import type { AssetCategory } from "@prisma/client";
 import { Sparkles, Trophy, Gem, BookOpen, type LucideIcon } from "lucide-react";
 
-// Neutral cream-to-charcoal swatches — warmth and value vary slightly per
-// index for scannable variety in a grid, without introducing hue/color.
+// Off-white swatches — warmth varies slightly per index for scannable
+// variety in a grid, while staying light so card art reads easily at a
+// glance instead of resolving to a dark tile.
 export const CARD_GRADIENTS: [string, string][] = [
-  ["#f4ecd8", "#1c1917"],
-  ["#eee6d3", "#242220"],
-  ["#f7f3ea", "#141414"],
-  ["#e8e0cd", "#2a2620"],
-  ["#f0e9db", "#1a1a1a"],
-  ["#ece3d0", "#211f1c"],
-  ["#f5efe2", "#181614"],
-  ["#e6ddc8", "#252220"],
+  ["#ffffff", "#f2efe6"],
+  ["#fdfdfc", "#eef0f2"],
+  ["#ffffff", "#f5efe2"],
+  ["#fbfbfa", "#e9edf1"],
+  ["#fefefe", "#f1ece1"],
+  ["#fcfcfb", "#eaeef0"],
+  ["#ffffff", "#f4f0e6"],
+  ["#fdfdfc", "#ecefee"],
 ];
 
 export const CATEGORY_ICONS: Record<AssetCategory, LucideIcon> = {
