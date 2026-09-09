@@ -1,4 +1,4 @@
-# Phygital — Collectibles Marketplace & Digital Twin Vault
+# Provenance — Collectibles Marketplace & Digital Twin Vault
 
 Phase 1 (Web2) implementation of a phygital collectibles marketplace: a
 physical escrow + digital twin vault for certified collectibles (PSA / BGS /

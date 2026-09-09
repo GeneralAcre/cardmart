@@ -9,7 +9,7 @@ export default function LoginPage() {
       <div className="flex w-full max-w-sm flex-col items-center gap-6 rounded-xl border p-8 text-center shadow-sm">
         <div className="flex items-center gap-2 font-semibold tracking-tight">
           <Gem className="text-primary size-5" />
-          <span>Phygital</span>
+          <span>Provenance</span>
         </div>
         <div className="flex flex-col gap-1">
           <h1 className="text-xl font-semibold">Join the marketplace</h1>

@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Phygital — Collectibles Marketplace & Digital Twin Vault",
+  title: "Provenance — Collectibles Marketplace & Digital Twin Vault",
   description:
     "Trade real, certified collectibles secured by physical escrow and digital certificates.",
 };

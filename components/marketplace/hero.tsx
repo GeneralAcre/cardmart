@@ -7,11 +7,8 @@ export function Hero() {
   return (
     <div className="relative overflow-hidden border-b bg-[radial-gradient(120%_140%_at_10%_-10%,rgba(99,102,241,0.18),transparent_60%)]">
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-16 sm:px-6 sm:py-24">
-        <span className="text-primary w-fit rounded-full border px-3 py-1 text-xs font-medium">
-          Physical Escrow &middot; Digital Twin Vault
-        </span>
         <h1 className="max-w-2xl text-3xl font-semibold tracking-tight sm:text-5xl">
-          Phygital Trading: trade real collectibles secured by physical escrow
+          Provenance Trading: trade real collectibles secured by physical escrow
           &amp; digital certificates.
         </h1>
         <p className="text-muted-foreground max-w-xl text-base sm:text-lg">
