@@ -25,7 +25,7 @@ function revalidateMarketplace(assetId?: string) {
 const verificationPhotoSchema = z.object({
   viewKey: z.string().min(1),
   viewLabel: z.string().min(1),
-  dataUrl: z.string().startsWith("data:image/"),
+  url: z.string().url(),
 });
 
 const createListingSchema = z
@@ -34,7 +34,7 @@ const createListingSchema = z
     subtitle: z.string().min(2),
     category: z.enum(["TRADING_CARD", "SPORTS_CARD", "AMULET", "COMIC"]),
     raw: z.enum(["true", "false"]).transform((v) => v === "true"),
-    gradingCompany: z.enum(["PSA", "BGS", "CGC", "RAW"]),
+    gradingCompany: z.enum(["PSA", "BGS", "CGC", "GPRA", "RAW"]),
     grade: z.coerce.number().min(1).max(10).optional(),
     serial: z.string().min(4).optional(),
     priceThb: z.coerce.number().int().min(100),
@@ -135,7 +135,7 @@ export async function createListing(
           data: data.photos.map((p) => ({
             viewKey: p.viewKey,
             viewLabel: p.viewLabel,
-            dataUrl: p.dataUrl,
+            url: p.url,
           })),
         },
       },
@@ -449,7 +449,7 @@ const submitForGradingSchema = z.object({
   itemName: z.string().min(2),
   itemSubtitle: z.string().min(2),
   category: z.enum(["TRADING_CARD", "SPORTS_CARD", "AMULET", "COMIC"]),
-  gradingCompany: z.enum(["PSA", "BGS", "CGC"]),
+  gradingCompany: z.enum(["PSA", "BGS", "CGC", "GPRA"]),
 });
 
 export interface SubmitForGradingState {

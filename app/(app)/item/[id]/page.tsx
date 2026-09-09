@@ -107,7 +107,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
                 <div key={photo.id} className="flex flex-col gap-1.5">
                   <div className="aspect-square overflow-hidden rounded-lg border">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={photo.dataUrl} alt={photo.viewLabel} className="size-full object-cover" />
+                    <img src={photo.url} alt={photo.viewLabel} className="size-full object-cover" />
                   </div>
                   <span className="text-muted-foreground text-center text-xs">{photo.viewLabel}</span>
                 </div>

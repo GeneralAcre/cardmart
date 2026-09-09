@@ -1,13 +1,18 @@
 import { PrismaClient, type AssetCategory, type GradingCompany } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { put } from "@vercel/blob";
 import "dotenv/config";
 import { mockPublicKey, mockTxSignature } from "../lib/web3/mock-chain";
 import { SELF_MINT_FEE_THB, FULL_SERVICE_PACKAGE_PRICE_THB } from "../lib/pricing";
 import { getVerificationChecklist } from "../lib/verification-checklist";
 
-// 1x1 placeholder pixel standing in for a real live-camera capture in seed data.
-const PLACEHOLDER_CAPTURE =
-  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
+// 1x1 placeholder pixel standing in for a real live-camera capture in seed
+// data — uploaded to Blob storage once and reused for every seeded photo, so
+// seed data goes through the same storage path as real uploads.
+const PLACEHOLDER_PIXEL_PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+  "base64",
+);
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
@@ -17,6 +22,12 @@ function daysAgo(days: number, hours = 0) {
 }
 
 async function main() {
+  const { url: placeholderPhotoUrl } = await put("seed/placeholder.png", PLACEHOLDER_PIXEL_PNG, {
+    access: "public",
+    addRandomSuffix: false,
+    allowOverwrite: true,
+  });
+
   await prisma.gradingSubmission.deleteMany();
   await prisma.inboundPackage.deleteMany();
   await prisma.escrowTransaction.deleteMany();
@@ -117,9 +128,9 @@ async function main() {
       name: "Phra Somdej Wat Rakang",
       subtitle: "Somdej Toh Prohmrangsi — B.E. 2411",
       category: "AMULET",
-      gradingCompany: "CGC",
+      gradingCompany: "GPRA",
       grade: 9,
-      serial: "CGC-30019284",
+      serial: "GPRA-30019284",
       themeIndex: 3,
       priceThb: 45000,
       forSale: true,
@@ -133,9 +144,9 @@ async function main() {
       name: "Luang Pu Thuat",
       subtitle: "Wat Chang Hai — B.E. 2497",
       category: "AMULET",
-      gradingCompany: "PSA",
+      gradingCompany: "GPRA",
       grade: 8,
-      serial: "PSA-77123001",
+      serial: "GPRA-77123001",
       themeIndex: 4,
       priceThb: 28000,
       forSale: true,
@@ -149,9 +160,9 @@ async function main() {
       name: "Phra Rod",
       subtitle: "Wat Phra Sing — Lamphun",
       category: "AMULET",
-      gradingCompany: "PSA",
+      gradingCompany: "GPRA",
       grade: 7,
-      serial: "PSA-77123099",
+      serial: "GPRA-77123099",
       themeIndex: 5,
       priceThb: 18000,
       forSale: true,
@@ -213,9 +224,9 @@ async function main() {
       name: "Jatukam Ramathep",
       subtitle: "Rama IX Commemorative Edition",
       category: "AMULET",
-      gradingCompany: "CGC",
+      gradingCompany: "GPRA",
       grade: 8.5,
-      serial: "CGC-51002733",
+      serial: "GPRA-51002733",
       themeIndex: 3,
       priceThb: null,
       forSale: false,
@@ -327,7 +338,7 @@ async function main() {
           assetId: asset.id,
           viewKey: v.key,
           viewLabel: v.label,
-          dataUrl: PLACEHOLDER_CAPTURE,
+          url: placeholderPhotoUrl,
         })),
       });
     }
@@ -477,7 +488,7 @@ async function main() {
   });
 
   // Historical, resolved escrow for the Jatukam amulet now delivered to "you".
-  const jatukamId = created.get("CGC-51002733")!;
+  const jatukamId = created.get("GPRA-51002733")!;
   const escrowJatukam = await prisma.escrowTransaction.create({
     data: {
       assetId: jatukamId,
@@ -494,11 +505,11 @@ async function main() {
     data: {
       assetId: jatukamId,
       escrowTxId: escrowJatukam.id,
-      declaredSerial: "CGC-51002733",
-      declaredGradingCompany: "CGC",
+      declaredSerial: "GPRA-51002733",
+      declaredGradingCompany: "GPRA",
       declaredGrade: 8.5,
-      officialSerial: "CGC-51002733",
-      officialGradingCompany: "CGC",
+      officialSerial: "GPRA-51002733",
+      officialGradingCompany: "GPRA",
       officialGrade: 8.5,
       officialName: "Jatukam Ramathep",
       status: "APPROVED_SHIP",
@@ -509,7 +520,7 @@ async function main() {
   for (const [type, note, offset, actorId] of [
     ["ESCROW_LOCKED", "Buyer payment of 32,000 THB locked in escrow.", 20, you.id],
     ["SHIPPED_TO_WAREHOUSE", "Seller shipped package to platform warehouse.", 18, nattapong.id],
-    ["INSPECTION_PASSED", "Serial and slab authenticity verified against CGC database.", 16, undefined],
+    ["INSPECTION_PASSED", "Serial and slab authenticity verified against GPRA database.", 16, undefined],
     ["DELIVERED_TO_BUYER", "Package delivered to buyer's address.", 14, undefined],
     ["OWNERSHIP_TRANSFERRED", "Digital ownership transferred to buyer; escrow released to seller.", 14, undefined],
   ] as const) {
@@ -592,7 +603,7 @@ async function main() {
       itemName: "Raw Phra Kring Pavares",
       itemSubtitle: "Wat Bovoranives — believed B.E. 2485, ungraded",
       category: "AMULET",
-      gradingCompany: "CGC",
+      gradingCompany: "GPRA",
       packagePriceThb: FULL_SERVICE_PACKAGE_PRICE_THB,
       status: "AT_GRADING_COMPANY",
       mockPaymentTx: mockTxSignature(),

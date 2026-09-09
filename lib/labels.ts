@@ -21,7 +21,18 @@ export const GRADING_COMPANY_LABELS: Record<GradingCompany, string> = {
   PSA: "PSA",
   BGS: "BGS",
   CGC: "CGC",
+  GPRA: "G-PRA (การันตีพระ)",
   RAW: "Raw / Ungraded",
+};
+
+// Which grading institutes are actually relevant to each category — PSA/BGS
+// grade cards, CGC grades comics (and cards), and G-PRA is Thailand's amulet
+// authentication institute. None of the card/comic graders certify amulets.
+export const CATEGORY_GRADING_COMPANIES: Record<AssetCategory, GradingCompany[]> = {
+  TRADING_CARD: ["PSA", "BGS", "CGC"],
+  SPORTS_CARD: ["PSA", "BGS"],
+  COMIC: ["CGC"],
+  AMULET: ["GPRA"],
 };
 
 export const MARKET_STATUS_LABELS: Record<MarketStatus, string> = {

@@ -7,9 +7,15 @@ datasource db {
 }
 
 enum GradingCompany {
+  // Cards (TRADING_CARD / SPORTS_CARD).
   PSA
   BGS
+  // Comics (COMIC); also grades cards, but not amulets.
   CGC
+  // Amulets (AMULET) — Thailand's G-PRA (การันตีพระ) amulet authentication
+  // marketplace. PSA/BGS/CGC don't certify amulets in reality, so amulets
+  // get their own institute instead of one of the card/comic graders.
+  GPRA
   // Not an actual grading company — marks a raw/ungraded Self-Mint item that
   // was verified by camera only, never sent to a real grading company.
   RAW
@@ -194,11 +200,12 @@ model Asset {
 
 // A single live-camera capture taken during self-mint verification, proving
 // the seller physically held the item at mint time (no gallery uploads).
+// The file itself lives in Vercel Blob storage — this only stores its URL.
 model VerificationPhoto {
   id        String   @id @default(cuid())
   viewKey   String
   viewLabel String
-  dataUrl   String
+  url       String
   createdAt DateTime @default(now())
 
   assetId String

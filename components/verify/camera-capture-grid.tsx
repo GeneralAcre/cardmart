@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Camera, CheckCircle2, RotateCcw, Video, XCircle } from "lucide-react";
+import { upload } from "@vercel/blob/client";
+import { Camera, CheckCircle2, Loader2, RotateCcw, Video, XCircle } from "lucide-react";
 import type { AssetCategory } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,8 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { getVerificationChecklist, type VerificationView } from "@/lib/verification-checklist";
 
+// Each value is a Vercel Blob URL, not the raw image — the capture dialog
+// uploads directly to Blob storage and only ever hands back the resulting URL.
 export type CaptureMap = Record<string, string>;
 
 const CAPTURE_HOLD_SECONDS = 3;
@@ -104,13 +107,21 @@ function CameraCaptureDialog({
 }: {
   view: VerificationView;
   onCancel: () => void;
-  onCaptured: (dataUrl: string) => void;
+  onCaptured: (url: string) => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const [status, setStatus] = useState<"requesting" | "counting" | "error">("requesting");
+  const unmountedRef = useRef(false);
+  const [status, setStatus] = useState<"requesting" | "counting" | "uploading" | "error">("requesting");
   const [error, setError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(CAPTURE_HOLD_SECONDS);
+
+  useEffect(() => {
+    unmountedRef.current = false;
+    return () => {
+      unmountedRef.current = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -157,10 +168,34 @@ function CameraCaptureDialog({
     canvas.height = video.videoHeight * scale;
     const ctx = canvas.getContext("2d");
     ctx?.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
     streamRef.current?.getTracks().forEach((t) => t.stop());
-    onCaptured(dataUrl);
-  }, [onCaptured]);
+
+    canvas.toBlob(
+      async (blob) => {
+        if (unmountedRef.current) return;
+        if (!blob) {
+          setError("Could not process the capture. Try again.");
+          setStatus("error");
+          return;
+        }
+        setStatus("uploading");
+        try {
+          const result = await upload(`verification/${view.key}-${Date.now()}.jpg`, blob, {
+            access: "public",
+            handleUploadUrl: "/api/blob/upload",
+          });
+          if (unmountedRef.current) return;
+          onCaptured(result.url);
+        } catch {
+          if (unmountedRef.current) return;
+          setError("Upload failed — check your connection and try again.");
+          setStatus("error");
+        }
+      },
+      "image/jpeg",
+      0.85,
+    );
+  }, [onCaptured, view.key]);
 
   useEffect(() => {
     if (status !== "counting") return;
@@ -195,12 +230,20 @@ function CameraCaptureDialog({
                   <span className="text-5xl font-bold text-white drop-shadow-lg">{countdown}</span>
                 </div>
               )}
+              {status === "uploading" && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/40">
+                  <Loader2 className="size-8 animate-spin text-white" />
+                  <span className="text-sm font-medium text-white">Uploading…</span>
+                </div>
+              )}
             </>
           )}
         </div>
 
         <p className="text-muted-foreground text-center text-xs">
-          Hold the item steady in frame — capturing automatically in {countdown}s.
+          {status === "uploading"
+            ? "Saving your capture…"
+            : `Hold the item steady in frame — capturing automatically in ${countdown}s.`}
         </p>
 
         <Button variant="outline" onClick={onCancel}>

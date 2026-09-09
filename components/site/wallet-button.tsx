@@ -34,7 +34,7 @@ export function WalletButton() {
         }}
       >
         <Wallet />
-        {connecting ? "Connecting…" : "Connect Wallet"}
+        <span className="hidden sm:inline">{connecting ? "Connecting…" : "Connect Wallet"}</span>
       </Button>
     );
   }
@@ -44,7 +44,7 @@ export function WalletButton() {
       <DropdownMenuTrigger asChild>
         <Button size="sm" variant="outline">
           <Wallet className="text-emerald-500" />
-          {truncateKey(publicKey!)}
+          <span className="hidden sm:inline">{truncateKey(publicKey!)}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">

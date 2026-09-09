@@ -28,10 +28,9 @@ import {
 } from "@/components/ui/dialog";
 import { submitForGrading } from "@/lib/actions";
 import { useWalletStore } from "@/lib/web3/wallet-store";
-import { CATEGORY_LABELS, GRADING_COMPANY_LABELS } from "@/lib/labels";
+import { CATEGORY_GRADING_COMPANIES, CATEGORY_LABELS, GRADING_COMPANY_LABELS } from "@/lib/labels";
 import { FULL_SERVICE_COST_BREAKDOWN, FULL_SERVICE_PACKAGE_PRICE_THB } from "@/lib/pricing";
 
-const GRADING_COMPANIES: GradingCompany[] = ["PSA", "BGS", "CGC"];
 const CATEGORIES: AssetCategory[] = ["TRADING_CARD", "SPORTS_CARD", "AMULET", "COMIC"];
 
 export function FullServiceForm() {
@@ -42,6 +41,7 @@ export function FullServiceForm() {
   const [itemSubtitle, setItemSubtitle] = useState("");
   const [category, setCategory] = useState<AssetCategory>("TRADING_CARD");
   const [gradingCompany, setGradingCompany] = useState<GradingCompany>("PSA");
+  const gradingCompanies = CATEGORY_GRADING_COMPANIES[category];
 
   const [payOpen, setPayOpen] = useState(false);
   const [signing, setSigning] = useState(false);
@@ -109,7 +109,14 @@ export function FullServiceForm() {
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-2">
               <Label>Category</Label>
-              <Select value={category} onValueChange={(v) => setCategory(v as AssetCategory)}>
+              <Select
+                value={category}
+                onValueChange={(v) => {
+                  const next = v as AssetCategory;
+                  setCategory(next);
+                  setGradingCompany(CATEGORY_GRADING_COMPANIES[next][0]); // institute list is category-specific
+                }}
+              >
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
@@ -129,7 +136,7 @@ export function FullServiceForm() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {GRADING_COMPANIES.map((c) => (
+                  {gradingCompanies.map((c) => (
                     <SelectItem key={c} value={c}>
                       {GRADING_COMPANY_LABELS[c]}
                     </SelectItem>

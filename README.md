@@ -31,6 +31,18 @@ npx prisma migrate dev   # applies the schema
 npx prisma db seed       # seeds 4 demo marketplace participants and 12 assets
 ```
 
+### Set up Vercel Blob (required — stores verification photo files)
+
+Verification photos (live-camera captures from the Self-Mint flow) upload
+directly from the browser to Vercel Blob storage; Postgres only stores the
+resulting URL. From the Vercel dashboard: **Storage tab → Create Database →
+Blob**, then copy the token it gives you into `.env` (or
+`vercel env pull .env` if the project is already linked):
+
+```
+BLOB_READ_WRITE_TOKEN="vercel_blob_rw_..."
+```
+
 ### Set up Google sign-in (required — the whole site is gated behind it)
 
 1. In the [Google Cloud Console](https://console.cloud.google.com/apis/credentials), create an OAuth 2.0 Client ID (application type **Web application**).
@@ -75,11 +87,13 @@ tables get wiped and recreated).
    Make sure that unpooled one is also set as `DIRECT_URL` (Vercel's Neon
    integration may name it `DATABASE_URL_UNPOOLED` — add a second env var
    `DIRECT_URL` pointing at the same value).
-2. Add `AUTH_SECRET` in the project's Environment Variables (generate one
+2. Add a Blob store from the **Storage** tab too and connect it to the
+   project — this injects `BLOB_READ_WRITE_TOKEN` automatically.
+3. Add `AUTH_SECRET` in the project's Environment Variables (generate one
    with `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`).
    Add `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` too once you have them (see
    above) — until then Google sign-in stays a visible-but-inert button.
-3. Deploy. `npm run build` runs `prisma generate && prisma migrate deploy`
+4. Deploy. `npm run build` runs `prisma generate && prisma migrate deploy`
    before `next build`, so pending migrations apply automatically on every
    deploy. Seeding is **not** part of the build (it wipes app-domain tables)
    — run `npx prisma db seed` once by hand against the production

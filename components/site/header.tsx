@@ -27,15 +27,15 @@ export async function SiteHeader() {
 
   return (
     <header className="bg-background/80 sticky top-0 z-40 border-b backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
-        <div className="flex items-center gap-6">
-          <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
-            <Gem className="text-primary size-5" />
-            <span>Phygital</span>
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-2 px-4 sm:gap-4 sm:px-6">
+        <div className="flex min-w-0 items-center gap-2 sm:gap-6">
+          <Link href="/" className="flex shrink-0 items-center gap-2 font-semibold tracking-tight">
+            <Gem className="text-primary size-5 shrink-0" />
+            <span className="hidden sm:inline">Phygital</span>
           </Link>
           <NavLinks />
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           <WalletButton />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

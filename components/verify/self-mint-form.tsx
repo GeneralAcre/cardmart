@@ -31,12 +31,11 @@ import { CardArt } from "@/components/asset/card-art";
 import { CameraCaptureGrid, type CaptureMap } from "@/components/verify/camera-capture-grid";
 import { createListing } from "@/lib/actions";
 import { useWalletStore } from "@/lib/web3/wallet-store";
-import { CATEGORY_LABELS, GRADING_COMPANY_LABELS } from "@/lib/labels";
+import { CATEGORY_GRADING_COMPANIES, CATEGORY_LABELS, GRADING_COMPANY_LABELS } from "@/lib/labels";
 import { SELF_MINT_FEE_THB } from "@/lib/pricing";
 import { themeIndexForSerial } from "@/lib/theme";
 import { getVerificationChecklist } from "@/lib/verification-checklist";
 
-const GRADING_COMPANIES: GradingCompany[] = ["PSA", "BGS", "CGC"];
 const CATEGORIES: AssetCategory[] = ["TRADING_CARD", "SPORTS_CARD", "AMULET", "COMIC"];
 
 export function SelfMintForm() {
@@ -46,6 +45,7 @@ export function SelfMintForm() {
   const [raw, setRaw] = useState(false);
   const [category, setCategory] = useState<AssetCategory>("TRADING_CARD");
   const [gradingCompany, setGradingCompany] = useState<GradingCompany>("PSA");
+  const gradingCompanies = CATEGORY_GRADING_COMPANIES[category];
   const [serial, setSerial] = useState("");
   const [name, setName] = useState("");
   const [subtitle, setSubtitle] = useState("");
@@ -67,6 +67,7 @@ export function SelfMintForm() {
 
   function handleCategoryChange(next: AssetCategory) {
     setCategory(next);
+    setGradingCompany(CATEGORY_GRADING_COMPANIES[next][0]); // institute list is category-specific
     setCaptures({}); // checklist changes per category — start over
   }
 
@@ -81,7 +82,7 @@ export function SelfMintForm() {
       const photos = checklist.map((v) => ({
         viewKey: v.key,
         viewLabel: v.label,
-        dataUrl: captures[v.key],
+        url: captures[v.key],
       }));
 
       const fd = new FormData();
@@ -147,7 +148,7 @@ export function SelfMintForm() {
             <p className="text-muted-foreground text-xs">
               {raw
                 ? "No official grading company is involved — you verify it yourself with a live camera checklist."
-                : "You hold an official PSA / BGS / CGC slab and self-declare its certificate details."}
+                : `You hold an official ${gradingCompanies.map((c) => GRADING_COMPANY_LABELS[c]).join(" / ")} certificate and self-declare its details.`}
             </p>
           </div>
 
@@ -175,7 +176,7 @@ export function SelfMintForm() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {GRADING_COMPANIES.map((c) => (
+                    {gradingCompanies.map((c) => (
                       <SelectItem key={c} value={c}>
                         {GRADING_COMPANY_LABELS[c]}
                       </SelectItem>
