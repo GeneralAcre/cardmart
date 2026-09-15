@@ -38,7 +38,7 @@ export default async function PortfolioPage() {
           name={user.name ?? user.handle ?? "Collector"}
           handle={user.handle}
           image={user.image}
-          walletMock={user.walletMock}
+          walletAddress={user.walletAddress ?? user.walletMock}
           createdAt={user.createdAt}
           stats={{
             totalCards: assets.length,

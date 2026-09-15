@@ -12,7 +12,7 @@ interface ProfileHeaderProps {
   name: string;
   handle: string | null;
   image: string | null;
-  walletMock: string | null;
+  walletAddress: string | null;
   createdAt: Date;
   stats: {
     totalCards: number;
@@ -22,7 +22,7 @@ interface ProfileHeaderProps {
   };
 }
 
-export function ProfileHeader({ name, handle, image, walletMock, createdAt, stats }: ProfileHeaderProps) {
+export function ProfileHeader({ name, handle, image, walletAddress, createdAt, stats }: ProfileHeaderProps) {
   const [copied, setCopied] = useState(false);
   const initials = name
     .split(" ")
@@ -32,8 +32,8 @@ export function ProfileHeader({ name, handle, image, walletMock, createdAt, stat
     .toUpperCase();
 
   function copyWallet() {
-    if (!walletMock) return;
-    navigator.clipboard.writeText(walletMock);
+    if (!walletAddress) return;
+    navigator.clipboard.writeText(walletAddress);
     toast.success("Wallet address copied");
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
@@ -52,13 +52,13 @@ export function ProfileHeader({ name, handle, image, walletMock, createdAt, stat
             {handle && <span className="text-muted-foreground text-sm">@{handle}</span>}
           </div>
           <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-            {walletMock ? (
+            {walletAddress ? (
               <button
                 type="button"
                 onClick={copyWallet}
                 className="hover:text-foreground flex items-center gap-1.5 font-mono transition-colors"
               >
-                {shortSignature(walletMock)}
+                {shortSignature(walletAddress)}
                 {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
               </button>
             ) : (

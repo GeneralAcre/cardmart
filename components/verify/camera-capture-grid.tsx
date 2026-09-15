@@ -27,9 +27,14 @@ export function CameraCaptureGrid({ category, raw = false, captures, onChange }:
   const checklist = getVerificationChecklist(category, raw);
   const [activeView, setActiveView] = useState<VerificationView | null>(null);
 
-  function handleCaptured(key: string, dataUrl: string) {
-    onChange({ ...captures, [key]: dataUrl });
-    setActiveView(null);
+  // Chains straight into the next uncaptured view instead of dropping the
+  // user back to the grid after every single shot — they're already
+  // holding the item in frame, so let them just flip it and keep going.
+  function handleCaptured(key: string, url: string) {
+    const next = { ...captures, [key]: url };
+    onChange(next);
+    const remaining = checklist.find((v) => v.key !== key && !next[v.key]);
+    setActiveView(remaining ?? null);
   }
 
   const completedCount = checklist.filter((v) => captures[v.key]).length;
@@ -91,9 +96,10 @@ export function CameraCaptureGrid({ category, raw = false, captures, onChange }:
 
       {activeView && (
         <CameraCaptureDialog
+          key={activeView.key}
           view={activeView}
           onCancel={() => setActiveView(null)}
-          onCaptured={(dataUrl) => handleCaptured(activeView.key, dataUrl)}
+          onCaptured={(url) => handleCaptured(activeView.key, url)}
         />
       )}
     </div>
@@ -112,7 +118,13 @@ function CameraCaptureDialog({
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const unmountedRef = useRef(false);
-  const [status, setStatus] = useState<"requesting" | "counting" | "uploading" | "error">("requesting");
+  // "positioning": camera is live but the countdown hasn't started yet —
+  // gives the user time to actually pick up and frame the item before
+  // anything gets captured, instead of the timer running the instant the
+  // camera loads (which is what was making captures come out empty/blurry).
+  const [status, setStatus] = useState<"requesting" | "positioning" | "counting" | "uploading" | "error">(
+    "requesting",
+  );
   const [error, setError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(CAPTURE_HOLD_SECONDS);
 
@@ -140,7 +152,7 @@ function CameraCaptureDialog({
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
         }
-        setStatus("counting");
+        setStatus("positioning");
       } catch {
         if (!cancelled) {
           setError("Camera access was denied or is unavailable on this device.");
@@ -225,6 +237,10 @@ function CameraCaptureDialog({
           ) : (
             <>
               <video ref={videoRef} autoPlay playsInline muted className="size-full object-cover" />
+              {/* Positioning guide frame — helps the user see where to hold the item before the countdown starts. */}
+              {(status === "positioning" || status === "counting") && (
+                <div className="pointer-events-none absolute inset-6 rounded-lg border-2 border-dashed border-white/70" />
+              )}
               {status === "counting" && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/20">
                   <span className="text-5xl font-bold text-white drop-shadow-lg">{countdown}</span>
@@ -241,14 +257,25 @@ function CameraCaptureDialog({
         </div>
 
         <p className="text-muted-foreground text-center text-xs">
-          {status === "uploading"
-            ? "Saving your capture…"
-            : `Hold the item steady in frame — capturing automatically in ${countdown}s.`}
+          {status === "positioning"
+            ? "Hold the item inside the frame, then tap Start when you're ready."
+            : status === "uploading"
+              ? "Saving your capture…"
+              : status === "counting"
+                ? `Hold steady — capturing in ${countdown}s.`
+                : null}
         </p>
 
-        <Button variant="outline" onClick={onCancel}>
-          Cancel
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={onCancel} className="flex-1">
+            Cancel
+          </Button>
+          {status === "positioning" && (
+            <Button onClick={() => setStatus("counting")} className="flex-1">
+              <Camera /> Start Capture
+            </Button>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );

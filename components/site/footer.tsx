@@ -73,14 +73,12 @@ export function SiteFooter() {
                 href={href}
                 target="_blank"
                 rel="noreferrer"
-                className="text-muted-foreground hover:text-foreground hover:border-foreground/30 flex size-9 items-center justify-center overflow-hidden rounded-md border transition-colors"
+                className="hover:border-foreground/30 relative flex size-9 items-center justify-center overflow-hidden rounded-md border transition-colors"
               >
                 {image ? (
-                  <span className="relative block size-5">
-                    <Image src={image} alt={label} fill sizes="20px" className="object-contain" />
-                  </span>
+                  <Image src={image} alt={label} fill sizes="36px" className="object-cover" />
                 ) : Icon ? (
-                  <Icon className="size-5" />
+                  <Icon className="text-muted-foreground size-5" />
                 ) : null}
                 <span className="sr-only">{label}</span>
               </Link>

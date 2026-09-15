@@ -38,5 +38,11 @@ export function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  // Excludes Next.js internals AND any actual static file (extension in the
+  // last path segment) — without the file-extension exclusion, requests for
+  // public/ assets like /X-logo.png were being caught by this same
+  // middleware and redirected to /login when signed out, breaking images
+  // (and would break any public file) sitewide, including on pages like
+  // /terms and /privacy that are supposed to be reachable without signing in.
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.[\\w]+$).*)"],
 };
