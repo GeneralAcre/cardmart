@@ -1,6 +1,5 @@
 import Image from "next/image";
 import Link from "next/link";
-import { FileText, ShieldCheck } from "lucide-react";
 
 import { ContactForm } from "@/components/site/contact-form";
 
@@ -19,8 +18,7 @@ const LEGAL_LINKS = [
 
 const SOCIAL_LINKS = [
   { label: "X", href: "#", image: "/X-logo.png" },
-  { label: "GitHub", href: "https://github.com/GeneralAcre/id-thesis", image: "/Github-logo.png" },
-  { label: "Docs", href: "https://github.com/GeneralAcre/id-thesis#readme", icon: FileText },
+  { label: "GitHub", href: "https://github.com/GeneralAcre/id-thesis", image: "/Github-logo.png" }
 ];
 
 const COLUMN_HEADING = "text-xs font-semibold uppercase tracking-wide text-muted-foreground";
@@ -67,7 +65,7 @@ export function SiteFooter() {
         <div className="flex flex-col gap-4">
           <h2 className={COLUMN_HEADING}>Social</h2>
           <div className="flex items-center gap-3">
-            {SOCIAL_LINKS.map(({ label, href, image, icon: Icon }) => (
+            {SOCIAL_LINKS.map(({ label, href, image }) => (
               <Link
                 key={label}
                 href={href}
@@ -75,11 +73,7 @@ export function SiteFooter() {
                 rel="noreferrer"
                 className="hover:border-foreground/30 relative flex size-9 items-center justify-center overflow-hidden rounded-md border transition-colors"
               >
-                {image ? (
-                  <Image src={image} alt={label} fill sizes="36px" className="object-cover" />
-                ) : Icon ? (
-                  <Icon className="text-muted-foreground size-5" />
-                ) : null}
+                <Image src={image} alt={label} fill sizes="36px" className="object-cover" />
                 <span className="sr-only">{label}</span>
               </Link>
             ))}
@@ -87,15 +81,6 @@ export function SiteFooter() {
         </div>
       </div>
 
-      <div className="border-t">
-        <div className="text-muted-foreground mx-auto flex max-w-7xl flex-col items-center gap-2 px-4 py-6 text-center text-sm sm:flex-row sm:justify-between sm:px-6 sm:text-left">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="size-4 shrink-0" />
-            <span>Provenance Collectibles Marketplace — Physical Escrow &amp; Digital Twin Protocol</span>
-          </div>
-          <span>Phase 1 · Web2 mock backend · Solana settlement coming in Phase 2</span>
-        </div>
-      </div>
     </footer>
   );
 }

@@ -3,6 +3,7 @@ import { PackageOpen, Sparkles } from "lucide-react";
 
 import { getGradingSubmissions, getVaultAssets } from "@/lib/queries";
 import { getCurrentUser } from "@/lib/session";
+import { getDevnetSolBalance } from "@/lib/solana";
 import { PortfolioItemCard } from "@/components/portfolio/portfolio-item-card";
 import { ProfileHeader } from "@/components/portfolio/profile-header";
 import { Badge } from "@/components/ui/badge";
@@ -12,9 +13,11 @@ import { formatDate, formatThb } from "@/lib/format";
 
 export default async function PortfolioPage() {
   const user = await getCurrentUser();
-  const [assets, submissions] = await Promise.all([
+  const walletAddress = user.walletAddress ?? user.walletMock;
+  const [assets, submissions, solBalance] = await Promise.all([
     getVaultAssets(user.id),
     getGradingSubmissions(user.id),
+    getDevnetSolBalance(user.walletAddress), // real balance only for real (Privy) wallets, not the mock demo ones
   ]);
 
   const inHand = assets.filter((a) => !a.vaulted);
@@ -38,13 +41,14 @@ export default async function PortfolioPage() {
           name={user.name ?? user.handle ?? "Collector"}
           handle={user.handle}
           image={user.image}
-          walletAddress={user.walletAddress ?? user.walletMock}
+          walletAddress={walletAddress}
           createdAt={user.createdAt}
           stats={{
             totalCards: assets.length,
             inHand: inHand.length,
             inVault: inVault.length,
             listedValueThb,
+            solBalance,
           }}
         />
       </div>

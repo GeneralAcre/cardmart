@@ -19,6 +19,8 @@ interface ProfileHeaderProps {
     inHand: number;
     inVault: number;
     listedValueThb: number;
+    /** Real devnet SOL balance, or null if there's no wallet / the RPC call failed. */
+    solBalance: number | null;
   };
 }
 
@@ -72,7 +74,11 @@ export function ProfileHeader({ name, handle, image, walletAddress, createdAt, s
 
       <Separator className="hidden sm:block" orientation="vertical" />
 
-      <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4 sm:gap-x-8">
+      <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-5 sm:gap-x-8">
+        <Stat
+          label="SOL Balance"
+          value={stats.solBalance != null ? `${stats.solBalance.toFixed(4)} SOL` : "—"}
+        />
         <Stat label="Total Cards" value={String(stats.totalCards)} />
         <Stat label="Listed Value" value={formatThb(stats.listedValueThb)} />
         <Stat label="In Hand" value={String(stats.inHand)} />
