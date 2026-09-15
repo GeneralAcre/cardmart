@@ -3,6 +3,7 @@ import {
   getWarehouseHistory,
   getWarehouseQueue,
 } from "@/lib/queries";
+import { requireAdmin } from "@/lib/session";
 import { InboundTable } from "@/components/warehouse/inbound-table";
 import { GradingQueue } from "@/components/warehouse/grading-queue";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +20,8 @@ import { formatDateTime, formatThb } from "@/lib/format";
 import { INBOUND_STATUS_LABELS } from "@/lib/labels";
 
 export default async function WarehouseAdminPage() {
+  await requireAdmin();
+
   const [queue, history, gradingQueue] = await Promise.all([
     getWarehouseQueue(),
     getWarehouseHistory(),

@@ -37,7 +37,8 @@ async function main() {
   await prisma.user.deleteMany();
 
   const you = await prisma.user.create({
-    data: { name: "Kade Anuwat", handle: "you", walletMock: mockPublicKey() },
+    // isAdmin so the single demo account can also exercise /admin/warehouse.
+    data: { name: "Kade Anuwat", handle: "you", walletMock: mockPublicKey(), isAdmin: true },
   });
   const nattapong = await prisma.user.create({
     data: { name: "Nattapong S.", handle: "nattapong", walletMock: mockPublicKey() },
@@ -125,54 +126,6 @@ async function main() {
       verificationPackage: "FULL_SERVICE",
     },
     {
-      name: "Phra Somdej Wat Rakang",
-      subtitle: "Somdej Toh Prohmrangsi — B.E. 2411",
-      category: "AMULET",
-      gradingCompany: "GPRA",
-      grade: 9,
-      serial: "GPRA-30019284",
-      themeIndex: 3,
-      priceThb: 45000,
-      forSale: true,
-      vaulted: false,
-      marketStatus: "READY_TO_SHIP",
-      pipelineStage: "NONE",
-      sellerId: you.id,
-      ownerId: you.id,
-    },
-    {
-      name: "Luang Pu Thuat",
-      subtitle: "Wat Chang Hai — B.E. 2497",
-      category: "AMULET",
-      gradingCompany: "GPRA",
-      grade: 8,
-      serial: "GPRA-77123001",
-      themeIndex: 4,
-      priceThb: 28000,
-      forSale: true,
-      vaulted: false,
-      marketStatus: "READY_TO_SHIP",
-      pipelineStage: "NONE",
-      sellerId: araya.id,
-      ownerId: araya.id,
-    },
-    {
-      name: "Phra Rod",
-      subtitle: "Wat Phra Sing — Lamphun",
-      category: "AMULET",
-      gradingCompany: "GPRA",
-      grade: 7,
-      serial: "GPRA-77123099",
-      themeIndex: 5,
-      priceThb: 18000,
-      forSale: true,
-      vaulted: false,
-      marketStatus: "READY_TO_SHIP",
-      pipelineStage: "NONE",
-      sellerId: chalit.id,
-      ownerId: chalit.id,
-    },
-    {
       name: "Lugia Holo 1st Edition",
       subtitle: "Neo Genesis — 2000",
       category: "TRADING_CARD",
@@ -221,22 +174,6 @@ async function main() {
       ownerId: araya.id,
     },
     {
-      name: "Jatukam Ramathep",
-      subtitle: "Rama IX Commemorative Edition",
-      category: "AMULET",
-      gradingCompany: "GPRA",
-      grade: 8.5,
-      serial: "GPRA-51002733",
-      themeIndex: 3,
-      priceThb: null,
-      forSale: false,
-      vaulted: false,
-      marketStatus: "DELISTED",
-      pipelineStage: "DELIVERED",
-      sellerId: nattapong.id,
-      ownerId: you.id,
-    },
-    {
       name: "Michael Jordan Rookie Card",
       subtitle: "Fleer Basketball — 1986",
       category: "SPORTS_CARD",
@@ -283,22 +220,6 @@ async function main() {
       pipelineStage: "NONE",
       sellerId: chalit.id,
       ownerId: chalit.id,
-    },
-    {
-      name: "Raw Phra Somdej Reproduction",
-      subtitle: "Modern reproduction, no formal certification",
-      category: "AMULET",
-      gradingCompany: "RAW",
-      grade: null,
-      serial: "RAW-DEMO0002",
-      themeIndex: 6,
-      priceThb: 3500,
-      forSale: true,
-      vaulted: false,
-      marketStatus: "READY_TO_SHIP",
-      pipelineStage: "NONE",
-      sellerId: araya.id,
-      ownerId: araya.id,
     },
   ];
 
@@ -487,55 +408,6 @@ async function main() {
     },
   });
 
-  // Historical, resolved escrow for the Jatukam amulet now delivered to "you".
-  const jatukamId = created.get("GPRA-51002733")!;
-  const escrowJatukam = await prisma.escrowTransaction.create({
-    data: {
-      assetId: jatukamId,
-      buyerId: you.id,
-      sellerId: nattapong.id,
-      amountThb: 32000,
-      fulfillmentChoice: "SHIP",
-      status: "RELEASED",
-      createdAt: daysAgo(20),
-      releasedAt: daysAgo(14),
-    },
-  });
-  await prisma.inboundPackage.create({
-    data: {
-      assetId: jatukamId,
-      escrowTxId: escrowJatukam.id,
-      declaredSerial: "GPRA-51002733",
-      declaredGradingCompany: "GPRA",
-      declaredGrade: 8.5,
-      officialSerial: "GPRA-51002733",
-      officialGradingCompany: "GPRA",
-      officialGrade: 8.5,
-      officialName: "Jatukam Ramathep",
-      status: "APPROVED_SHIP",
-      arrivedAt: daysAgo(17),
-      resolvedAt: daysAgo(16),
-    },
-  });
-  for (const [type, note, offset, actorId] of [
-    ["ESCROW_LOCKED", "Buyer payment of 32,000 THB locked in escrow.", 20, you.id],
-    ["SHIPPED_TO_WAREHOUSE", "Seller shipped package to platform warehouse.", 18, nattapong.id],
-    ["INSPECTION_PASSED", "Serial and slab authenticity verified against GPRA database.", 16, undefined],
-    ["DELIVERED_TO_BUYER", "Package delivered to buyer's address.", 14, undefined],
-    ["OWNERSHIP_TRANSFERRED", "Digital ownership transferred to buyer; escrow released to seller.", 14, undefined],
-  ] as const) {
-    await prisma.provenanceEvent.create({
-      data: {
-        assetId: jatukamId,
-        type,
-        note,
-        mockTxSignature: mockTxSignature(),
-        actorId: actorId ?? null,
-        createdAt: daysAgo(offset),
-      },
-    });
-  }
-
   // Historical resolved escrow for the vaulted Jordan card (instant vault
   // deposit path) now owned by "you".
   const jordanVaultId = created.get("PSA-11238599")!;
@@ -598,21 +470,7 @@ async function main() {
       createdAt: daysAgo(1),
     },
   });
-  await prisma.gradingSubmission.create({
-    data: {
-      itemName: "Raw Phra Kring Pavares",
-      itemSubtitle: "Wat Bovoranives — believed B.E. 2485, ungraded",
-      category: "AMULET",
-      gradingCompany: "GPRA",
-      packagePriceThb: FULL_SERVICE_PACKAGE_PRICE_THB,
-      status: "AT_GRADING_COMPANY",
-      mockPaymentTx: mockTxSignature(),
-      sellerId: araya.id,
-      createdAt: daysAgo(4),
-    },
-  });
-
-  console.log(`Seeded ${assets.length} assets, 4 users, 2 grading submissions.`);
+  console.log(`Seeded ${assets.length} assets, 4 users, 1 grading submission.`);
 }
 
 main()

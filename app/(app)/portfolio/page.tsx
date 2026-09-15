@@ -4,6 +4,7 @@ import { PackageOpen, Sparkles } from "lucide-react";
 import { getGradingSubmissions, getVaultAssets } from "@/lib/queries";
 import { getCurrentUser } from "@/lib/session";
 import { PortfolioItemCard } from "@/components/portfolio/portfolio-item-card";
+import { ProfileHeader } from "@/components/portfolio/profile-header";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CATEGORY_LABELS, GRADING_SUBMISSION_STATUS_LABELS } from "@/lib/labels";
@@ -18,15 +19,34 @@ export default async function PortfolioPage() {
 
   const inHand = assets.filter((a) => !a.vaulted);
   const inVault = assets.filter((a) => a.vaulted);
+  const listedValueThb = assets
+    .filter((a) => a.forSale && a.priceThb != null)
+    .reduce((sum, a) => sum + (a.priceThb ?? 0), 0);
 
   return (
     <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6">
-      <div className="mb-8 flex flex-col gap-2">
+      <div className="mb-6 flex flex-col gap-2">
         <h1 className="text-2xl font-semibold">Portfolio</h1>
         <p className="text-muted-foreground text-sm">
           Digital twins currently in your profile, whether the physical item
           is in your hands or held in our warehouse vault.
         </p>
+      </div>
+
+      <div className="mb-8">
+        <ProfileHeader
+          name={user.name ?? user.handle ?? "Collector"}
+          handle={user.handle}
+          image={user.image}
+          walletMock={user.walletMock}
+          createdAt={user.createdAt}
+          stats={{
+            totalCards: assets.length,
+            inHand: inHand.length,
+            inVault: inVault.length,
+            listedValueThb,
+          }}
+        />
       </div>
 
       <Tabs defaultValue="all">

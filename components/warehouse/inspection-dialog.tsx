@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { CheckCircle2, Loader2, Truck, Vault, XCircle, XOctagon } from "lucide-react";
+import { CheckCircle2, ExternalLink, Loader2, Truck, Vault, XCircle, XOctagon } from "lucide-react";
 import type { InboundPackage, Asset, EscrowTransaction, User } from "@prisma/client";
 
 import {
@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { warehouseApproveShip, warehouseApproveVault, warehouseReject } from "@/lib/actions";
 import { formatGrade, formatThb } from "@/lib/format";
+import { extractPsaCertNumber, psaCertUrl } from "@/lib/psa-client";
 import { cn } from "@/lib/utils";
 
 export type InboundPackageWithRelations = InboundPackage & {
@@ -143,6 +144,16 @@ export function InspectionDialog({
               <XOctagon className="size-3.5" />
               Mismatch detected — recommend rejecting this item.
             </p>
+          )}
+          {pkg.officialGradingCompany === "PSA" && (
+            <a
+              href={psaCertUrl(extractPsaCertNumber(pkg.officialSerial))}
+              target="_blank"
+              rel="noreferrer"
+              className="text-muted-foreground hover:text-foreground mt-2 inline-flex items-center gap-1 text-xs underline underline-offset-2"
+            >
+              View cert on PSA <ExternalLink className="size-3" />
+            </a>
           )}
         </div>
 

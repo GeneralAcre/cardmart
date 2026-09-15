@@ -1,10 +1,10 @@
 # Provenance — Collectibles Marketplace & Digital Twin Vault
 
-Phase 1 (Web2) implementation of a phygital collectibles marketplace: a
-physical escrow + digital twin vault for certified collectibles (PSA / BGS /
-CGC cards, certified Thai amulets, etc.). Ownership is reconciled by a
-warehouse team that inspects the physical item's serial number and slab
-authenticity against the grading company's official database.
+Phase 1 (Web2) implementation of a phygital TCG marketplace: a physical
+escrow + digital twin vault for certified trading cards (PSA / BGS / CGC).
+Ownership is reconciled by a warehouse team that inspects the physical
+item's serial number and slab authenticity against the grading company's
+official database.
 
 ## Stack
 
@@ -28,7 +28,7 @@ single local instance, both vars can just point to the same URL.
 npm install
 # put DATABASE_URL and DIRECT_URL in .env (see .env.example)
 npx prisma migrate dev   # applies the schema
-npx prisma db seed       # seeds 4 demo marketplace participants and 12 assets
+npx prisma db seed       # seeds 4 demo marketplace participants and 9 assets
 ```
 
 ### Set up Vercel Blob (required — stores verification photo files)
@@ -42,6 +42,23 @@ Blob**, then copy the token it gives you into `.env` (or
 ```
 BLOB_READ_WRITE_TOKEN="vercel_blob_rw_..."
 ```
+
+### Set up the PSA Public API (optional — enables real cert verification)
+
+PSA listings can be checked against PSA's actual Cert Verification database
+instead of trusting the seller's self-declared data — both when a PSA item
+is listed (`/verify`) and when the warehouse inspects an inbound package
+(`/admin/warehouse`). Register at
+[psacard.com/publicapi](https://www.psacard.com/publicapi), agree to the API
+End User Agreement, and generate a bearer token, then add it to `.env`:
+
+```
+PSA_API_TOKEN="..."
+```
+
+Without this token, PSA verification is skipped entirely and the app falls
+back to mirroring the seller's declared data (the original Phase 1
+behavior) — nothing breaks either way.
 
 ### Set up Google sign-in (required — the whole site is gated behind it)
 

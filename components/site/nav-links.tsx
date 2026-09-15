@@ -13,19 +13,21 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 
-const LINKS = [
+const BASE_LINKS = [
   { href: "/marketplace", label: "Marketplace" },
   { href: "/verify", label: "Verify" },
   { href: "/portfolio", label: "Portfolio" },
-  { href: "/admin/warehouse", label: "Warehouse Admin" },
 ];
+
+const ADMIN_LINK = { href: "/admin/warehouse", label: "Warehouse Admin" };
 
 function isActive(pathname: string, href: string) {
   return href === "/" ? pathname === "/" : pathname.startsWith(href);
 }
 
-export function NavLinks() {
+export function NavLinks({ isAdmin = false }: { isAdmin?: boolean }) {
   const pathname = usePathname();
+  const LINKS = isAdmin ? [...BASE_LINKS, ADMIN_LINK] : BASE_LINKS;
 
   return (
     <>

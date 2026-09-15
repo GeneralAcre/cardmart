@@ -1,17 +1,16 @@
 import { redirect } from "next/navigation";
 import { Gem } from "lucide-react";
 
-import { auth } from "@/auth";
+import { getSessionUser } from "@/lib/session";
 import { OnboardingForm } from "@/components/onboarding/onboarding-form";
 import { suggestHandle } from "@/lib/profile-utils";
 
 export default async function OnboardingPage() {
-  const session = await auth();
-  if (!session?.user) redirect("/login");
-  if (session.user.profileComplete) redirect("/");
+  const user = await getSessionUser();
+  if (user.profileComplete) redirect("/");
 
-  const defaultName = session.user.name ?? "";
-  const defaultHandle = suggestHandle(session.user.email ?? session.user.name ?? "collector");
+  const defaultName = user.name ?? "";
+  const defaultHandle = suggestHandle(user.email ?? user.name ?? "collector");
 
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-16">

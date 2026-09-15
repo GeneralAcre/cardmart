@@ -1,15 +1,15 @@
 import Link from "next/link";
-import { Gem, LogOut } from "lucide-react";
+import { Gem } from "lucide-react";
 
-import { signOut } from "@/auth";
 import { getCurrentUser } from "@/lib/session";
 import { WalletButton } from "@/components/site/wallet-button";
 import { NavLinks } from "@/components/site/nav-links";
+import { SignOutButton } from "@/components/site/sign-out-button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -33,18 +33,20 @@ export async function SiteHeader() {
             <Gem className="text-primary size-5 shrink-0" />
             <span className="hidden sm:inline">Provenance</span>
           </Link>
-          <NavLinks />
+          <NavLinks isAdmin={user.isAdmin} />
         </div>
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-          <WalletButton />
+          <div className="hidden sm:block">
+            <WalletButton />
+          </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button type="button" className="rounded-full">
+              <Button variant="ghost" size="icon" className="rounded-full">
                 <Avatar>
                   {user.image && <AvatarImage src={user.image} alt={displayName} />}
                   <AvatarFallback>{initials}</AvatarFallback>
                 </Avatar>
-              </button>
+              </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel className="flex flex-col">
@@ -52,18 +54,7 @@ export async function SiteHeader() {
                 {user.email && <span className="text-muted-foreground text-xs">{user.email}</span>}
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <form
-                action={async () => {
-                  "use server";
-                  await signOut({ redirectTo: "/login" });
-                }}
-              >
-                <DropdownMenuItem variant="destructive" asChild>
-                  <button type="submit" className="w-full">
-                    <LogOut /> Sign out
-                  </button>
-                </DropdownMenuItem>
-              </form>
+              <SignOutButton />
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

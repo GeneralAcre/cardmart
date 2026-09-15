@@ -19,6 +19,7 @@ export interface AssetSummary {
 
 export interface MarketplaceFilterState {
   q: string;
+  categories: AssetCategory[];
   gradingCompanies: GradingCompany[];
   grades: number[];
   priceMin: number | null;
@@ -28,6 +29,7 @@ export interface MarketplaceFilterState {
 
 export const EMPTY_FILTERS: MarketplaceFilterState = {
   q: "",
+  categories: [],
   gradingCompanies: [],
   grades: [],
   priceMin: null,

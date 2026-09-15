@@ -5,7 +5,7 @@ import { z } from "zod";
 import type { AssetCategory, GradingCompany } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser } from "@/lib/session";
+import { getCurrentUser, requireAdmin } from "@/lib/session";
 import {
   mockMintDigitalTwin,
   mockTransferOwnership,
@@ -14,6 +14,7 @@ import {
 import { SELF_MINT_FEE_THB, FULL_SERVICE_PACKAGE_PRICE_THB } from "@/lib/pricing";
 import { themeIndexForSerial } from "@/lib/theme";
 import { getVerificationChecklist } from "@/lib/verification-checklist";
+import { extractPsaCertNumber, isPsaConfigured, lookupPsaCert } from "@/lib/psa";
 
 function revalidateMarketplace(assetId?: string) {
   revalidatePath("/marketplace");
@@ -32,9 +33,9 @@ const createListingSchema = z
   .object({
     name: z.string().min(2),
     subtitle: z.string().min(2),
-    category: z.enum(["TRADING_CARD", "SPORTS_CARD", "AMULET", "COMIC"]),
+    category: z.enum(["TRADING_CARD", "SPORTS_CARD", "COMIC"]),
     raw: z.enum(["true", "false"]).transform((v) => v === "true"),
-    gradingCompany: z.enum(["PSA", "BGS", "CGC", "GPRA", "RAW"]),
+    gradingCompany: z.enum(["PSA", "BGS", "CGC", "RAW"]),
     grade: z.coerce.number().min(1).max(10).optional(),
     serial: z.string().min(4).optional(),
     priceThb: z.coerce.number().int().min(100),
@@ -106,6 +107,21 @@ export async function createListing(
     const existing = await prisma.asset.findUnique({ where: { serial } });
     if (existing) {
       return { error: `Serial ${serial} is already registered on the platform.` };
+    }
+  }
+
+  // Real-time check against PSA's actual cert database — a no-op until
+  // PSA_API_TOKEN is configured (see lib/psa.ts), so this stays safe to
+  // ship before that token exists.
+  if (!data.raw && data.gradingCompany === "PSA" && isPsaConfigured()) {
+    const cert = await lookupPsaCert(extractPsaCertNumber(serial));
+    if (!cert) {
+      return { error: `PSA cert ${serial} could not be verified. Double-check the cert number.` };
+    }
+    if (cert.gradeNumber != null && cert.gradeNumber !== data.grade) {
+      return {
+        error: `PSA's records show cert ${serial} as a ${cert.cardGrade}, not the grade ${data.grade} you entered.`,
+      };
     }
   }
 
@@ -248,6 +264,15 @@ export async function buyListing(assetId: string, fulfillmentChoice: "SHIP" | "V
         actorId: asset.sellerId,
       },
     });
+    // Real check against PSA's cert database when possible — falls back to
+    // mirroring the seller's declared data (the old fully-mocked behavior)
+    // if PSA isn't configured or this isn't a PSA item, so nothing breaks
+    // before a real PSA_API_TOKEN exists.
+    const psaCert =
+      asset.gradingCompany === "PSA"
+        ? await lookupPsaCert(extractPsaCertNumber(asset.serial))
+        : null;
+
     await prisma.inboundPackage.create({
       data: {
         assetId,
@@ -255,10 +280,10 @@ export async function buyListing(assetId: string, fulfillmentChoice: "SHIP" | "V
         declaredSerial: asset.serial,
         declaredGradingCompany: asset.gradingCompany,
         declaredGrade: asset.grade ?? 0,
-        officialSerial: asset.serial,
+        officialSerial: psaCert ? `PSA-${psaCert.certNumber}` : asset.serial,
         officialGradingCompany: asset.gradingCompany,
-        officialGrade: asset.grade ?? 0,
-        officialName: asset.name,
+        officialGrade: psaCert?.gradeNumber ?? asset.grade ?? 0,
+        officialName: psaCert?.subject ?? asset.name,
         status: "PENDING_INSPECTION",
       },
     });
@@ -276,6 +301,7 @@ async function loadInboundPackage(inboundPackageId: string) {
 
 /** Warehouse verifies the slab, then ships it directly to the buyer's address. */
 export async function warehouseApproveShip(inboundPackageId: string) {
+  await requireAdmin();
   const pkg = await loadInboundPackage(inboundPackageId);
   const transfer = await mockTransferOwnership(pkg.assetId, pkg.escrowTx.buyerId);
   const release = await mockEscrowInstruction("release", pkg.assetId);
@@ -328,6 +354,7 @@ export async function warehouseApproveShip(inboundPackageId: string) {
 
 /** Warehouse verifies the slab, then deposits it into the platform vault for the buyer. */
 export async function warehouseApproveVault(inboundPackageId: string) {
+  await requireAdmin();
   const pkg = await loadInboundPackage(inboundPackageId);
   const transfer = await mockTransferOwnership(pkg.assetId, pkg.escrowTx.buyerId);
   const release = await mockEscrowInstruction("release", pkg.assetId);
@@ -380,6 +407,7 @@ export async function warehouseApproveVault(inboundPackageId: string) {
 
 /** Warehouse flags a mismatch: refund the buyer and return the item to the seller. */
 export async function warehouseReject(inboundPackageId: string) {
+  await requireAdmin();
   const pkg = await loadInboundPackage(inboundPackageId);
   const refund = await mockEscrowInstruction("refund", pkg.assetId);
 
@@ -448,8 +476,8 @@ export async function vaultRelist(assetId: string, priceThb: number) {
 const submitForGradingSchema = z.object({
   itemName: z.string().min(2),
   itemSubtitle: z.string().min(2),
-  category: z.enum(["TRADING_CARD", "SPORTS_CARD", "AMULET", "COMIC"]),
-  gradingCompany: z.enum(["PSA", "BGS", "CGC", "GPRA"]),
+  category: z.enum(["TRADING_CARD", "SPORTS_CARD", "COMIC"]),
+  gradingCompany: z.enum(["PSA", "BGS", "CGC"]),
 });
 
 export interface SubmitForGradingState {
@@ -504,6 +532,7 @@ async function loadGradingSubmission(submissionId: string) {
 
 /** Staff confirms the raw item has been shipped out to the grading company. */
 export async function adminMarkAtGradingCompany(submissionId: string) {
+  await requireAdmin();
   const submission = await loadGradingSubmission(submissionId);
   if (submission.status !== "AWAITING_SHIPMENT_TO_GRADER") {
     throw new Error("This submission is not awaiting shipment.");
@@ -534,6 +563,7 @@ export async function adminCompleteGrading(
   _prev: CompleteGradingState,
   formData: FormData,
 ): Promise<CompleteGradingState> {
+  await requireAdmin();
   const submission = await loadGradingSubmission(submissionId);
   if (submission.status !== "AT_GRADING_COMPANY") {
     return { error: "This submission has not been sent to the grading company yet." };
@@ -589,6 +619,7 @@ export async function adminCompleteGrading(
 
 /** Staff rejects a raw item — e.g. the grading company found it inauthentic. */
 export async function adminRejectGradingSubmission(submissionId: string) {
+  await requireAdmin();
   const submission = await loadGradingSubmission(submissionId);
   if (submission.status === "GRADED" || submission.status === "REJECTED") {
     throw new Error("This submission has already been resolved.");

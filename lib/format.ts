@@ -1,7 +1,11 @@
 export function formatThb(amount: number): string {
+  // currencyDisplay: "code" (renders "THB 1,000" not "฿1,000") — the Thai
+  // baht glyph isn't in the Epilogue font's loaded (latin-only) subset, so
+  // browsers fall back to a mismatched system font for just that character.
   return new Intl.NumberFormat("th-TH", {
     style: "currency",
     currency: "THB",
+    currencyDisplay: "code",
     maximumFractionDigits: 0,
   }).format(amount);
 }

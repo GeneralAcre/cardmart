@@ -10,12 +10,8 @@ enum GradingCompany {
   // Cards (TRADING_CARD / SPORTS_CARD).
   PSA
   BGS
-  // Comics (COMIC); also grades cards, but not amulets.
+  // Comics (COMIC); also grades cards.
   CGC
-  // Amulets (AMULET) — Thailand's G-PRA (การันตีพระ) amulet authentication
-  // marketplace. PSA/BGS/CGC don't certify amulets in reality, so amulets
-  // get their own institute instead of one of the card/comic graders.
-  GPRA
   // Not an actual grading company — marks a raw/ungraded Self-Mint item that
   // was verified by camera only, never sent to a real grading company.
   RAW
@@ -24,7 +20,6 @@ enum GradingCompany {
 enum AssetCategory {
   TRADING_CARD
   SPORTS_CARD
-  AMULET
   COMIC
 }
 
@@ -101,12 +96,19 @@ enum GradingSubmissionStatus {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  createdAt     DateTime  @default(now())
+  id        String   @id @default(cuid())
+  name      String?
+  email     String?  @unique
+  image     String?
+  createdAt DateTime @default(now())
+
+  // Privy identity — the stable ID from Privy's own user object, independent
+  // of which login method (Google, email) the user signed in with.
+  privyUserId String? @unique
+  // Real embedded wallet address Privy creates for users without one, e.g.
+  // signing in with Gmail. Distinct from walletMock, which only seeded demo
+  // personas use (they have no real Privy identity).
+  walletAddress String?
 
   // App-specific profile, filled in during onboarding after first sign-in.
   handle          String? @unique
@@ -115,8 +117,9 @@ model User {
   phone           String?
   profileComplete Boolean @default(false)
 
-  accounts Account[]
-  sessions Session[]
+  // Gates /admin/warehouse and its Server Actions — warehouse staff only.
+  // Defaults false; only rows explicitly flagged true in the database get in.
+  isAdmin Boolean @default(false)
 
   listedAssets       Asset[]             @relation("AssetSeller")
   ownedAssets        Asset[]             @relation("AssetOwner")
@@ -124,43 +127,6 @@ model User {
   purchases          EscrowTransaction[] @relation("EscrowBuyer")
   sales              EscrowTransaction[] @relation("EscrowSeller")
   gradingSubmissions GradingSubmission[] @relation("GradingSubmissionSeller")
-}
-
-// Auth.js (NextAuth) required models — database-backed OAuth accounts and sessions.
-model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String?
-  access_token      String?
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String?
-  session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
-}
-
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model VerificationToken {
-  identifier String
-  token      String
-  expires    DateTime
-
-  @@unique([identifier, token])
 }
 
 model Asset {
@@ -289,4 +255,14 @@ model InboundPackage {
   escrowTx   EscrowTransaction @relation(fields: [escrowTxId], references: [id])
 
   @@index([assetId])
+}
+
+// Footer "Contact & Support" form submissions. Not tied to a User — the
+// site's contact form is open to signed-out visitors too.
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  message   String
+  createdAt DateTime @default(now())
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { Wallet, LogOut } from "lucide-react";
 import { useWalletStore } from "@/lib/web3/wallet-store";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ function truncateKey(key: string) {
 }
 
 export function WalletButton() {
+  const router = useRouter();
   const { connected, connecting, publicKey, connect, disconnect } = useWalletStore();
 
   if (!connected) {
@@ -27,14 +29,19 @@ export function WalletButton() {
         variant="outline"
         disabled={connecting}
         onClick={async () => {
-          const key = await connect();
-          toast.success("Mock wallet connected", {
-            description: truncateKey(key),
-          });
+          try {
+            const key = await connect();
+            toast.success("Wallet connected", {
+              description: truncateKey(key),
+            });
+          } catch {
+            // Not authenticated yet — connect() already opened the Privy
+            // sign-in modal; the button re-renders once that completes.
+          }
         }}
       >
         <Wallet />
-        <span className="hidden sm:inline">{connecting ? "Connecting…" : "Connect Wallet"}</span>
+        {connecting ? "Connecting…" : "Connect Wallet"}
       </Button>
     );
   }
@@ -44,21 +51,22 @@ export function WalletButton() {
       <DropdownMenuTrigger asChild>
         <Button size="sm" variant="outline">
           <Wallet className="text-emerald-500" />
-          <span className="hidden sm:inline">{truncateKey(publicKey!)}</span>
+          {truncateKey(publicKey!)}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuLabel>Mock Web3 Wallet</DropdownMenuLabel>
+        <DropdownMenuLabel>Solana Wallet</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem
           variant="destructive"
           onClick={() => {
             disconnect();
-            toast("Wallet disconnected");
+            toast("Signed out");
+            router.push("/login");
           }}
         >
           <LogOut />
-          Disconnect
+          Sign out
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

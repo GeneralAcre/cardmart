@@ -1,5 +1,5 @@
 import type { AssetCategory } from "@prisma/client";
-import { Sparkles, Trophy, Gem, BookOpen, type LucideIcon } from "lucide-react";
+import { Sparkles, Trophy, BookOpen, type LucideIcon } from "lucide-react";
 
 // Off-white swatches — warmth varies slightly per index for scannable
 // variety in a grid, while staying light so card art reads easily at a
@@ -18,7 +18,6 @@ export const CARD_GRADIENTS: [string, string][] = [
 export const CATEGORY_ICONS: Record<AssetCategory, LucideIcon> = {
   TRADING_CARD: Sparkles,
   SPORTS_CARD: Trophy,
-  AMULET: Gem,
   COMIC: BookOpen,
 };
 

@@ -31,7 +31,7 @@ import { useWalletStore } from "@/lib/web3/wallet-store";
 import { CATEGORY_GRADING_COMPANIES, CATEGORY_LABELS, GRADING_COMPANY_LABELS } from "@/lib/labels";
 import { FULL_SERVICE_COST_BREAKDOWN, FULL_SERVICE_PACKAGE_PRICE_THB } from "@/lib/pricing";
 
-const CATEGORIES: AssetCategory[] = ["TRADING_CARD", "SPORTS_CARD", "AMULET", "COMIC"];
+const CATEGORIES: AssetCategory[] = ["TRADING_CARD", "SPORTS_CARD", "COMIC"];
 
 export function FullServiceForm() {
   const router = useRouter();
@@ -106,7 +106,7 @@ export function FullServiceForm() {
               onChange={(e) => setItemSubtitle(e.target.value)}
             />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
               <Label>Category</Label>
               <Select

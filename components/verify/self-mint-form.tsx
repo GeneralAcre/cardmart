@@ -36,7 +36,7 @@ import { SELF_MINT_FEE_THB } from "@/lib/pricing";
 import { themeIndexForSerial } from "@/lib/theme";
 import { getVerificationChecklist } from "@/lib/verification-checklist";
 
-const CATEGORIES: AssetCategory[] = ["TRADING_CARD", "SPORTS_CARD", "AMULET", "COMIC"];
+const CATEGORIES: AssetCategory[] = ["TRADING_CARD", "SPORTS_CARD", "COMIC"];
 
 export function SelfMintForm() {
   const router = useRouter();
@@ -152,7 +152,7 @@ export function SelfMintForm() {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
               <Label>Category</Label>
               <Select value={category} onValueChange={(v) => handleCategoryChange(v as AssetCategory)}>
@@ -187,7 +187,7 @@ export function SelfMintForm() {
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
               <Label htmlFor="name">Item Name</Label>
               <Input
@@ -209,7 +209,7 @@ export function SelfMintForm() {
           </div>
 
           {!raw && (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-2">
                 <Label htmlFor="serial">Serial Number</Label>
                 <Input

@@ -1,9 +1,10 @@
 import "server-only";
-import type { GradingCompany, Prisma } from "@prisma/client";
+import type { AssetCategory, GradingCompany, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 export interface MarketplaceFilters {
   q?: string;
+  categories?: AssetCategory[];
   gradingCompanies?: GradingCompany[];
   grades?: number[];
   priceMin?: number;
@@ -26,6 +27,9 @@ export async function getMarketplaceListings(filters: MarketplaceFilters = {}) {
       { subtitle: { contains: filters.q } },
       { serial: { contains: filters.q } },
     ];
+  }
+  if (filters.categories?.length) {
+    where.category = { in: filters.categories };
   }
   if (filters.gradingCompanies?.length) {
     where.gradingCompany = { in: filters.gradingCompanies };

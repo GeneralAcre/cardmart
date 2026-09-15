@@ -12,7 +12,7 @@ export function Hero() {
           &amp; digital certificates.
         </h1>
         <p className="text-muted-foreground max-w-xl text-base sm:text-lg">
-          List PSA, BGS, and CGC certified cards and amulets. Every sale is
+          List PSA, BGS, and CGC certified trading cards. Every sale is
           protected by escrow, verified at our warehouse, and mirrored by an
           on-chain digital twin.
         </p>

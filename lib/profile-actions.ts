@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { redirect } from "next/navigation";
 
-import { auth } from "@/auth";
+import { getSessionUser } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 
 const completeProfileSchema = z.object({
@@ -25,8 +25,7 @@ export async function completeProfile(
   _prev: CompleteProfileState,
   formData: FormData,
 ): Promise<CompleteProfileState> {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  const user = await getSessionUser();
 
   const parsed = completeProfileSchema.safeParse({
     name: formData.get("name"),
@@ -40,14 +39,14 @@ export async function completeProfile(
   const data = parsed.data;
 
   const handleTaken = await prisma.user.findFirst({
-    where: { handle: data.handle, NOT: { id: session.user.id } },
+    where: { handle: data.handle, NOT: { id: user.id } },
   });
   if (handleTaken) {
     return { error: `Username "${data.handle}" is already taken.` };
   }
 
   await prisma.user.update({
-    where: { id: session.user.id },
+    where: { id: user.id },
     data: {
       name: data.name,
       handle: data.handle,

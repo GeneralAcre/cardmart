@@ -11,6 +11,7 @@ import { EMPTY_FILTERS, type AssetSummary, type MarketplaceFilterState } from "@
 function buildQuery(filters: MarketplaceFilterState) {
   const sp = new URLSearchParams();
   if (filters.q) sp.set("q", filters.q);
+  filters.categories.forEach((c) => sp.append("category", c));
   filters.gradingCompanies.forEach((c) => sp.append("gradingCompany", c));
   filters.grades.forEach((g) => sp.append("grade", String(g)));
   if (filters.priceMin != null) sp.set("priceMin", String(filters.priceMin));

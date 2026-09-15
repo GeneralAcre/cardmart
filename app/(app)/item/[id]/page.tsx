@@ -7,6 +7,8 @@ import { ProvenanceTimeline } from "@/components/item/provenance-timeline";
 import { BuyPanel } from "@/components/item/buy-panel";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { ExternalLink } from "lucide-react";
+
 import { formatGrade } from "@/lib/format";
 import {
   CATEGORY_LABELS,
@@ -15,6 +17,7 @@ import {
   VERIFICATION_PACKAGE_BADGE_CLASS,
   VERIFICATION_PACKAGE_LABELS,
 } from "@/lib/labels";
+import { extractPsaCertNumber, psaCertUrl } from "@/lib/psa";
 import { cn } from "@/lib/utils";
 
 export default async function ItemDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -65,6 +68,16 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
                 <Badge variant="outline">
                   {asset.gradingCompany} {formatGrade(asset.grade)}
                 </Badge>
+                {asset.gradingCompany === "PSA" && (
+                  <a
+                    href={psaCertUrl(extractPsaCertNumber(asset.serial))}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs underline underline-offset-2"
+                  >
+                    View on PSA <ExternalLink className="size-3" />
+                  </a>
+                )}
               </>
             )}
           </div>

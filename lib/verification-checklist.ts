@@ -26,12 +26,6 @@ export const GRADED_VERIFICATION_CHECKLIST: Record<AssetCategory, VerificationVi
     { key: "cert_label", label: "Certification Label", hint: "Close-up of the serial number and grade sticker" },
     { key: "corner_closeup", label: "Corner Close-up", hint: "Close-up of one case corner for damage or tampering" },
   ],
-  AMULET: [
-    { key: "amulet_front", label: "Amulet Front", hint: "Full front of the sealed case" },
-    { key: "amulet_back", label: "Amulet Back", hint: "Full back of the sealed case" },
-    { key: "cert_label", label: "Certification Label", hint: "Close-up of the certificate sticker and serial number" },
-    { key: "seal_edge", label: "Case Seal Edge", hint: "Close-up of the seal edge, confirming it's untampered" },
-  ],
   COMIC: [
     { key: "slab_front", label: "Slab Front", hint: "Full front cover through the case" },
     { key: "slab_back", label: "Slab Back", hint: "Full back of the case" },
@@ -57,12 +51,6 @@ export const RAW_VERIFICATION_CHECKLIST: Record<AssetCategory, VerificationView[
     { key: "card_back", label: "Card Back", hint: "Full back of the card" },
     { key: "corner_closeup", label: "Corner Close-up", hint: "Close-up of the sharpest corner, checking for wear" },
     { key: "surface_closeup", label: "Surface Close-up", hint: "Angled close-up checking for scratches or print lines" },
-  ],
-  AMULET: [
-    { key: "amulet_front", label: "Amulet Front", hint: "Full front, no casing" },
-    { key: "amulet_back", label: "Amulet Back", hint: "Full back, no casing" },
-    { key: "material_closeup", label: "Material Close-up", hint: "Close-up of the material and texture for authenticity" },
-    { key: "base_closeup", label: "Base Close-up", hint: "Close-up of the base or maker's stamp" },
   ],
   COMIC: [
     { key: "cover_front", label: "Cover Front", hint: "Full front cover, ungraded" },
