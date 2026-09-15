@@ -28,6 +28,15 @@ export const metadata: Metadata = {
     "Trade real, certified collectibles secured by physical escrow and digital certificates.",
 };
 
+// Every page here depends on live session/DB state anyway (via
+// getCurrentUser()), so there's no real static-generation benefit to lose.
+// More importantly: `next build` tries to statically prerender pages in a
+// headless, browser-less context, and Privy's client SDK (wrapping every
+// page via PrivyProvider below) isn't designed to run there — it throws
+// during that prerender pass. Forcing dynamic rendering skips that
+// entirely, which is what actually broke the Vercel build.
+export const dynamic = "force-dynamic";
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
