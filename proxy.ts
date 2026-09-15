@@ -25,7 +25,8 @@ export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const isPublicPath = PUBLIC_PATHS.includes(pathname);
   const isGuestOnlyPath = GUEST_ONLY_PATHS.includes(pathname);
-  const hasSession = Boolean(req.cookies.get("privy-id-token")?.value);
+  // "privy-token", not "privy-id-token" — see lib/privy-server.ts for why.
+  const hasSession = Boolean(req.cookies.get("privy-token")?.value);
 
   if (!hasSession && !isPublicPath) {
     return NextResponse.redirect(new URL("/login", req.nextUrl.origin));

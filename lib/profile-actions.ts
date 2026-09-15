@@ -13,8 +13,6 @@ const completeProfileSchema = z.object({
     .min(3, "Username must be at least 3 characters.")
     .max(24, "Username must be 24 characters or fewer.")
     .regex(/^[a-z0-9_]+$/, "Only lowercase letters, numbers, and underscores."),
-  shippingAddress: z.string().min(10, "Enter a full shipping address."),
-  phone: z.string().min(6, "Enter a valid phone number."),
 });
 
 export interface CompleteProfileState {
@@ -30,8 +28,6 @@ export async function completeProfile(
   const parsed = completeProfileSchema.safeParse({
     name: formData.get("name"),
     handle: formData.get("handle"),
-    shippingAddress: formData.get("shippingAddress"),
-    phone: formData.get("phone"),
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid profile details." };
@@ -50,8 +46,6 @@ export async function completeProfile(
     data: {
       name: data.name,
       handle: data.handle,
-      shippingAddress: data.shippingAddress,
-      phone: data.phone,
       profileComplete: true,
     },
   });
