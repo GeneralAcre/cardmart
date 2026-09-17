@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { BadgeCheck, Loader2 } from "lucide-react";
+import { BadgeCheck, CheckCircle2, Loader2, SearchX } from "lucide-react";
 import type { AssetCategory, GradingCompany } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/dialog";
 import { CardArt } from "@/components/asset/card-art";
 import { CameraCaptureGrid, type CaptureMap } from "@/components/verify/camera-capture-grid";
-import { createListing } from "@/lib/actions";
+import { createListing, lookupPsaCertForForm, type PsaCertLookupResult } from "@/lib/actions";
 import { useWalletStore } from "@/lib/web3/wallet-store";
 import { CATEGORY_GRADING_COMPANIES, CATEGORY_LABELS, GRADING_COMPANY_LABELS } from "@/lib/labels";
 import { SELF_MINT_FEE_THB } from "@/lib/pricing";
@@ -56,6 +56,52 @@ export function SelfMintForm() {
   const [signOpen, setSignOpen] = useState(false);
   const [signing, setSigning] = useState(false);
   const [submitting, startSubmit] = useTransition();
+
+  const [psaLookup, setPsaLookup] = useState<PsaCertLookupResult | null>(null);
+  // The serial the current psaLookup result actually reflects — compared
+  // against the live serial below to derive "pending" instead of tracking
+  // it as separate state, so there's no synchronous setState in the effect.
+  const [psaLookupSerial, setPsaLookupSerial] = useState("");
+  const autofilledRef = useRef({ name: false, subtitle: false, grade: false });
+
+  const psaEligible = !raw && gradingCompany === "PSA" && serial.trim().length >= 4;
+  const psaLookupPending = psaEligible && psaLookupSerial !== serial.trim();
+
+  // Live PSA lookup as the user types a cert number — debounced so it
+  // doesn't fire on every keystroke, and guarded against stale responses
+  // landing after the serial has already changed again.
+  useEffect(() => {
+    if (!psaEligible) return;
+
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      const result = await lookupPsaCertForForm(serial);
+      if (cancelled) return;
+      setPsaLookup(result);
+      setPsaLookupSerial(serial.trim());
+
+      if (result.status === "ok" && result.cert) {
+        const cert = result.cert;
+        if (!autofilledRef.current.name && cert.subject) {
+          setName(cert.subject);
+          autofilledRef.current.name = true;
+        }
+        if (!autofilledRef.current.subtitle && (cert.year || cert.brand || cert.variety)) {
+          setSubtitle([cert.year, cert.brand, cert.variety].filter(Boolean).join(" "));
+          autofilledRef.current.subtitle = true;
+        }
+        if (!autofilledRef.current.grade && cert.gradeNumber != null) {
+          setGrade(String(cert.gradeNumber));
+          autofilledRef.current.grade = true;
+        }
+      }
+    }, 600);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [serial, psaEligible]);
 
   const checklist = getVerificationChecklist(category, raw);
   const allCaptured = checklist.every((v) => captures[v.key]);
@@ -235,6 +281,8 @@ export function SelfMintForm() {
             </div>
           )}
 
+          {psaEligible && <PsaLookupPanel pending={psaLookupPending} result={psaLookup} />}
+
           <Separator />
 
           <CameraCaptureGrid category={category} raw={raw} captures={captures} onChange={setCaptures} />
@@ -329,6 +377,88 @@ export function SelfMintForm() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function PsaLookupPanel({
+  pending,
+  result,
+}: {
+  pending: boolean;
+  result: PsaCertLookupResult | null;
+}) {
+  if (pending) {
+    return (
+      <div className="text-muted-foreground flex items-center gap-2 text-xs">
+        <Loader2 className="size-3.5 animate-spin" />
+        Looking up this cert on PSA…
+      </div>
+    );
+  }
+
+  if (!result || result.status === "unavailable") {
+    // Not an error worth alarming over — PSA isn't configured, hasn't
+    // approved live access for this account yet, or the request failed.
+    // The seller can still enter details manually; createListing's own
+    // check never blocks on this state either.
+    return null;
+  }
+
+  if (result.status === "not_found") {
+    return (
+      <div className="text-destructive flex items-center gap-2 text-xs">
+        <SearchX className="size-3.5" />
+        No PSA cert found for this number. Double-check it against the slab label.
+      </div>
+    );
+  }
+
+  const cert = result.cert!;
+  return (
+    <div className="bg-muted/40 rounded-lg border p-3">
+      <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
+        <CheckCircle2 className="size-3.5" />
+        Verified live on PSA — details pre-filled below, edit freely
+      </div>
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:grid-cols-3">
+        {cert.subject && (
+          <div>
+            <dt className="text-muted-foreground text-xs">Subject</dt>
+            <dd>{cert.subject}</dd>
+          </div>
+        )}
+        {cert.year && (
+          <div>
+            <dt className="text-muted-foreground text-xs">Year</dt>
+            <dd>{cert.year}</dd>
+          </div>
+        )}
+        {cert.brand && (
+          <div>
+            <dt className="text-muted-foreground text-xs">Brand</dt>
+            <dd>{cert.brand}</dd>
+          </div>
+        )}
+        {cert.cardNumber && (
+          <div>
+            <dt className="text-muted-foreground text-xs">Card #</dt>
+            <dd className="font-mono">{cert.cardNumber}</dd>
+          </div>
+        )}
+        {cert.cardGrade && (
+          <div>
+            <dt className="text-muted-foreground text-xs">PSA Grade</dt>
+            <dd>{cert.cardGrade}</dd>
+          </div>
+        )}
+        {result.population?.total != null && (
+          <div>
+            <dt className="text-muted-foreground text-xs">Total Population</dt>
+            <dd>{result.population.total.toLocaleString()}</dd>
+          </div>
+        )}
+      </dl>
     </div>
   );
 }

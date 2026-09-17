@@ -14,7 +14,14 @@ import {
 import { SELF_MINT_FEE_THB, FULL_SERVICE_PACKAGE_PRICE_THB } from "@/lib/pricing";
 import { themeIndexForSerial } from "@/lib/theme";
 import { getVerificationChecklist } from "@/lib/verification-checklist";
-import { extractPsaCertNumber, isPsaConfigured, lookupPsaCert } from "@/lib/psa";
+import {
+  extractPsaCertNumber,
+  isPsaConfigured,
+  lookupPsaCert,
+  lookupPsaPopulation,
+  verifyPsaCert,
+  type PsaCertData,
+} from "@/lib/psa";
 
 function revalidateMarketplace(assetId?: string) {
   revalidatePath("/marketplace");
@@ -64,6 +71,31 @@ export interface CreateListingState {
   assetId?: string;
 }
 
+export interface PsaCertLookupResult {
+  status: "ok" | "not_found" | "unavailable";
+  cert?: PsaCertData;
+  population?: { description: string | null; total: number | null; grade10: number | null } | null;
+}
+
+/**
+ * Live PSA lookup as the seller types a cert number into the self-mint
+ * form, so they see (and the form can pre-fill from) real PSA data before
+ * ever submitting — not just a pass/fail check at final submit time like
+ * createListing's own PSA check.
+ */
+export async function lookupPsaCertForForm(rawSerial: string): Promise<PsaCertLookupResult> {
+  await getCurrentUser();
+
+  const certNumber = extractPsaCertNumber(rawSerial.trim());
+  if (!certNumber) return { status: "not_found" };
+
+  const result = await verifyPsaCert(certNumber);
+  if (!result.ok) return { status: result.reason };
+
+  const population = result.cert.specId != null ? await lookupPsaPopulation(result.cert.specId) : null;
+  return { status: "ok", cert: result.cert, population };
+}
+
 /**
  * Registers a new digital twin for an already-graded item and lists it for
  * sale. The seller self-declares the certificate details and must supply a
@@ -111,16 +143,18 @@ export async function createListing(
   }
 
   // Real-time check against PSA's actual cert database — a no-op until
-  // PSA_API_TOKEN is configured (see lib/psa.ts), so this stays safe to
-  // ship before that token exists.
+  // PSA_API_TOKEN is configured (see lib/psa.ts). Only blocks the listing on
+  // a definitive "not_found" or a grade mismatch; "unavailable" (no token,
+  // PSA account not yet approved for live access, network hiccup) is not
+  // proof the cert is fake, so it's allowed through same as unconfigured.
   if (!data.raw && data.gradingCompany === "PSA" && isPsaConfigured()) {
-    const cert = await lookupPsaCert(extractPsaCertNumber(serial));
-    if (!cert) {
+    const result = await verifyPsaCert(extractPsaCertNumber(serial));
+    if (!result.ok && result.reason === "not_found") {
       return { error: `PSA cert ${serial} could not be verified. Double-check the cert number.` };
     }
-    if (cert.gradeNumber != null && cert.gradeNumber !== data.grade) {
+    if (result.ok && result.cert.gradeNumber != null && result.cert.gradeNumber !== data.grade) {
       return {
-        error: `PSA's records show cert ${serial} as a ${cert.cardGrade}, not the grade ${data.grade} you entered.`,
+        error: `PSA's records show cert ${serial} as a ${result.cert.cardGrade}, not the grade ${data.grade} you entered.`,
       };
     }
   }

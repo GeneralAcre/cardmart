@@ -17,7 +17,7 @@ import {
   VERIFICATION_PACKAGE_BADGE_CLASS,
   VERIFICATION_PACKAGE_LABELS,
 } from "@/lib/labels";
-import { extractPsaCertNumber, psaCertUrl } from "@/lib/psa";
+import { extractPsaCertNumber, lookupPsaCert, lookupPsaPopulation, psaCertUrl } from "@/lib/psa";
 import { cn } from "@/lib/utils";
 
 export default async function ItemDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -25,6 +25,14 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
   const [asset, user] = await Promise.all([getAssetById(id), getCurrentUser()]);
 
   if (!asset) notFound();
+
+  // Live PSA cert + population lookup for display — best-effort, and never
+  // blocks the page: it silently returns null whenever PSA isn't
+  // configured, the account isn't approved for live access yet, or the
+  // request fails for any other reason.
+  const psaCert = asset.gradingCompany === "PSA" ? await lookupPsaCert(extractPsaCertNumber(asset.serial)) : null;
+  const psaPopulation =
+    psaCert?.specId != null ? await lookupPsaPopulation(psaCert.specId) : null;
 
   return (
     <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6">
@@ -81,6 +89,76 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
               </>
             )}
           </div>
+
+          {psaCert && (
+            <div className="bg-muted/40 rounded-lg border p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                  Card Details (Live from PSA)
+                </span>
+                {psaCert.itemStatus && (
+                  <Badge variant="outline" className="text-[10px]">
+                    {psaCert.itemStatus}
+                  </Badge>
+                )}
+              </div>
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm sm:grid-cols-3">
+                {psaCert.year && (
+                  <div>
+                    <dt className="text-muted-foreground text-xs">Year</dt>
+                    <dd>{psaCert.year}</dd>
+                  </div>
+                )}
+                {psaCert.brand && (
+                  <div>
+                    <dt className="text-muted-foreground text-xs">Brand</dt>
+                    <dd>{psaCert.brand}</dd>
+                  </div>
+                )}
+                {psaCert.cardNumber && (
+                  <div>
+                    <dt className="text-muted-foreground text-xs">Card # (Serial)</dt>
+                    <dd className="font-mono">{psaCert.cardNumber}</dd>
+                  </div>
+                )}
+                {psaCert.variety && (
+                  <div>
+                    <dt className="text-muted-foreground text-xs">Variety</dt>
+                    <dd>{psaCert.variety}</dd>
+                  </div>
+                )}
+                {psaCert.gradeDescription && (
+                  <div>
+                    <dt className="text-muted-foreground text-xs">Grade Description</dt>
+                    <dd>{psaCert.gradeDescription}</dd>
+                  </div>
+                )}
+                {psaCert.totalPopulation != null && (
+                  <div>
+                    <dt className="text-muted-foreground text-xs">Population at Grade</dt>
+                    <dd>{psaCert.totalPopulation.toLocaleString()}</dd>
+                  </div>
+                )}
+                {psaCert.populationHigher != null && (
+                  <div>
+                    <dt className="text-muted-foreground text-xs">Population Higher</dt>
+                    <dd>{psaCert.populationHigher.toLocaleString()}</dd>
+                  </div>
+                )}
+                {psaPopulation?.total != null && (
+                  <div>
+                    <dt className="text-muted-foreground text-xs">Total Pop. (All Grades)</dt>
+                    <dd>{psaPopulation.total.toLocaleString()}</dd>
+                  </div>
+                )}
+              </dl>
+              <p className="text-muted-foreground mt-2 text-[11px]">
+                Sourced live from PSA&apos;s public Cert Verification API. PSA does not publish a
+                price guide through this API, so no market value is shown here — only verified
+                card and population data.
+              </p>
+            </div>
+          )}
 
           <div className="text-muted-foreground text-sm">
             Listed by <span className="text-foreground font-medium">{asset.seller.name}</span>
