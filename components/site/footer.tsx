@@ -25,7 +25,7 @@ const COLUMN_HEADING = "text-xs font-semibold uppercase tracking-wide text-muted
 
 export function SiteFooter() {
   return (
-    <footer className="border-t">
+    <footer className="border-t pb-14 sm:pb-0">
       <div className="mx-auto grid max-w-7xl grid-cols-1 gap-10 px-4 py-12 sm:px-6 sm:grid-cols-2 md:grid-cols-4">
         <div className="flex flex-col gap-4">
           <h2 className={COLUMN_HEADING}>Contact &amp; Support</h2>

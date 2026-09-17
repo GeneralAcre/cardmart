@@ -1,0 +1,26 @@
+import type { LucideIcon } from "lucide-react";
+import { BadgeCheck, ShieldCheck, Store, Wallet } from "lucide-react";
+
+export interface NavLink {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+}
+
+const BASE_NAV_LINKS: NavLink[] = [
+  { href: "/marketplace", label: "Marketplace", icon: Store },
+  { href: "/verify", label: "Verify", icon: BadgeCheck },
+  { href: "/portfolio", label: "Portfolio", icon: Wallet },
+];
+
+// Icons here are placeholders (lucide-react) until custom symbols are ready
+// — swap NavLink.icon per entry when those land, nothing else needs to change.
+const ADMIN_NAV_LINK: NavLink = { href: "/admin/warehouse", label: "Admin", icon: ShieldCheck };
+
+export function navLinksFor(isAdmin: boolean): NavLink[] {
+  return isAdmin ? [...BASE_NAV_LINKS, ADMIN_NAV_LINK] : BASE_NAV_LINKS;
+}
+
+export function isNavLinkActive(pathname: string, href: string): boolean {
+  return href === "/" ? pathname === "/" : pathname.startsWith(href);
+}

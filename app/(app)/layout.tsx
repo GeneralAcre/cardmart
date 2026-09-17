@@ -5,7 +5,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
       <SiteHeader />
-      <main className="flex flex-1 flex-col">{children}</main>
+      {/* pb-14 clears the fixed MobileBottomNav (h-14) on mobile — sm:pb-0 once it's hidden */}
+      <main className="flex flex-1 flex-col pb-14 sm:pb-0">{children}</main>
       <SiteFooter />
     </>
   );
