@@ -112,7 +112,7 @@ export function LandingPage({ authenticated }: { authenticated: boolean }) {
 
       <div className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 sm:py-24">
         <div className="mb-10 flex flex-col gap-2">
-          <span className="text-primary text-sm font-semibold uppercase tracking-wide">Why Provenance</span>
+          <span className="text-primary text-sm font-semibold uppercase tracking-wide">Why Proof</span>
           <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
             Built so nobody has to just take your word for it.
           </h2>

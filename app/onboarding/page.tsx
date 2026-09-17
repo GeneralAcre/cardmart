@@ -17,7 +17,7 @@ export default async function OnboardingPage() {
       <div className="flex w-full max-w-md flex-col gap-6 rounded-xl border p-8 shadow-sm">
         <div className="flex items-center gap-2 font-semibold tracking-tight">
           <Gem className="text-primary size-5" />
-          <span>Provenance</span>
+          <span>Proof</span>
         </div>
         <div className="flex flex-col gap-1">
           <h1 className="text-xl font-semibold">Set up your profile</h1>

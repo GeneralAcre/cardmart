@@ -33,7 +33,7 @@ export async function SiteHeader() {
           <div className="flex min-w-0 items-center gap-2 sm:gap-6">
             <Link href="/" className="flex shrink-0 items-center gap-2 font-semibold tracking-tight">
               <Gem className="text-primary size-5 shrink-0" />
-              <span className="hidden sm:inline">Provenance</span>
+              <span className="hidden sm:inline">Proof</span>
             </Link>
             <NavLinks isAdmin={user.isAdmin} />
           </div>

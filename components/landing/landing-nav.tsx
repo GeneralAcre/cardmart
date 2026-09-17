@@ -13,7 +13,7 @@ export function LandingNav({ authenticated }: { authenticated: boolean }) {
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
         <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
           <Gem className="text-primary size-5" />
-          <span>Provenance</span>
+          <span>Proof</span>
         </Link>
         {authenticated ? (
           <Button asChild size="sm">

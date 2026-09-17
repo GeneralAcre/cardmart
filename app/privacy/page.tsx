@@ -4,7 +4,7 @@ import { Gem } from "lucide-react";
 import { SiteFooter } from "@/components/site/footer";
 
 export const metadata = {
-  title: "Privacy Policy — Provenance",
+  title: "Privacy Policy — Proof",
 };
 
 export default function PrivacyPage() {
@@ -14,7 +14,7 @@ export default function PrivacyPage() {
         <div className="mx-auto flex h-16 max-w-7xl items-center px-4 sm:px-6">
           <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
             <Gem className="text-primary size-5" />
-            <span>Provenance</span>
+            <span>Proof</span>
           </Link>
         </div>
       </header>
@@ -26,7 +26,7 @@ export default function PrivacyPage() {
         <div className="mt-8 flex flex-col gap-8 text-sm leading-relaxed">
           <section className="rounded-lg border border-dashed p-4">
             <p className="text-muted-foreground">
-              Provenance is a Phase 1 academic thesis project. This page
+              Proof is a Phase 1 academic thesis project. This page
               explains what data the demo platform actually stores and why —
               it&apos;s written for transparency, not as a substitute for legal
               review.
