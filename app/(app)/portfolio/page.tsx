@@ -51,9 +51,18 @@ export default async function PortfolioPage() {
       <Tabs defaultValue="all">
         <TabsList>
           <TabsTrigger value="all">All ({assets.length})</TabsTrigger>
-          <TabsTrigger value="hand">Physical in My Hands ({inHand.length})</TabsTrigger>
-          <TabsTrigger value="vault">Physical in Warehouse Vault ({inVault.length})</TabsTrigger>
-          <TabsTrigger value="grading">Grading Submissions ({submissions.length})</TabsTrigger>
+          <TabsTrigger value="hand">
+            <span className="sm:hidden">In Hand ({inHand.length})</span>
+            <span className="hidden sm:inline">Physical in My Hands ({inHand.length})</span>
+          </TabsTrigger>
+          <TabsTrigger value="vault">
+            <span className="sm:hidden">In Vault ({inVault.length})</span>
+            <span className="hidden sm:inline">Physical in Warehouse Vault ({inVault.length})</span>
+          </TabsTrigger>
+          <TabsTrigger value="grading">
+            <span className="sm:hidden">Grading ({submissions.length})</span>
+            <span className="hidden sm:inline">Grading Submissions ({submissions.length})</span>
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="all" className="pt-6">

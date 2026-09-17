@@ -132,3 +132,16 @@
     @apply font-sans;
   }
 }
+
+@layer utilities {
+  /* Keeps horizontal touch/swipe scrolling (e.g. an overflowing TabsList on
+     mobile) but hides the browser's own scrollbar track/arrows, which read
+     as a broken desktop-era control on a phone-width layout. */
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+}
