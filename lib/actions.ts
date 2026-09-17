@@ -14,6 +14,7 @@ import {
 import { SELF_MINT_FEE_THB, FULL_SERVICE_PACKAGE_PRICE_THB } from "@/lib/pricing";
 import { themeIndexForSerial } from "@/lib/theme";
 import { getVerificationChecklist } from "@/lib/verification-checklist";
+import { requestDevnetAirdrop } from "@/lib/solana";
 import {
   extractPsaCertNumber,
   isPsaConfigured,
@@ -694,4 +695,38 @@ export async function vaultRedeem(assetId: string) {
   });
 
   revalidateMarketplace(assetId);
+}
+
+export interface AirdropState {
+  error?: string;
+  signature?: string;
+}
+
+/**
+ * "Deposit" for a devnet wallet — requests real devnet SOL from Solana's
+ * faucet straight into the current user's own wallet. Always targets the
+ * caller's own walletAddress (never an arbitrary one passed from the
+ * client), so this can't be used to spam-airdrop into someone else's wallet.
+ */
+export async function requestSolAirdrop(amountSol: number): Promise<AirdropState> {
+  const user = await getCurrentUser();
+  if (!user.walletAddress) {
+    return { error: "No real Solana wallet on this account yet." };
+  }
+  if (!Number.isFinite(amountSol) || amountSol <= 0) {
+    return { error: "Enter a valid amount." };
+  }
+
+  try {
+    const signature = await requestDevnetAirdrop(user.walletAddress, amountSol);
+    revalidatePath("/portfolio");
+    return { signature };
+  } catch (err) {
+    return {
+      error:
+        err instanceof Error
+          ? err.message
+          : "Airdrop failed — the devnet faucet may be rate-limited. Try again shortly.",
+    };
+  }
 }

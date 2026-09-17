@@ -2,7 +2,10 @@
 
 import { useCallback, useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
-import { useCreateWallet, useSignMessage, useWallets } from "@privy-io/react-auth/solana";
+import { useCreateWallet, useSignAndSendTransaction, useSignMessage, useWallets } from "@privy-io/react-auth/solana";
+import { getBase58Decoder } from "@solana/kit";
+
+import { buildSolTransferTransaction } from "@/lib/web3/solana-transfer";
 
 // Phase 2 seam, now live: this used to be a zustand store standing in for
 // @solana/wallet-adapter-react's useWallet(). It's now backed by a real
@@ -23,6 +26,8 @@ export interface WalletStore {
   connect: () => Promise<string>;
   disconnect: () => void;
   signMessage: (message: string) => Promise<string>;
+  /** Signs and broadcasts a real SOL transfer to toAddress. Returns the base58 transaction signature. */
+  sendSol: (toAddress: string, amountSol: number) => Promise<string>;
 }
 
 function toHex(bytes: Uint8Array): string {
@@ -36,6 +41,7 @@ function usePrivyWalletStore(): WalletStore {
   const { wallets } = useWallets();
   const { createWallet } = useCreateWallet();
   const { signMessage: privySignMessage } = useSignMessage();
+  const { signAndSendTransaction } = useSignAndSendTransaction();
   const [connecting, setConnecting] = useState(false);
 
   const wallet = wallets[0] ?? null;
@@ -75,7 +81,21 @@ function usePrivyWalletStore(): WalletStore {
     [wallet, privySignMessage],
   );
 
-  return { connected, connecting, publicKey, connect, disconnect, signMessage };
+  const sendSol = useCallback(
+    async (toAddress: string, amountSol: number): Promise<string> => {
+      if (!wallet) throw new Error("Wallet not connected");
+      const transaction = await buildSolTransferTransaction(wallet.address, toAddress, amountSol);
+      const { signature } = await signAndSendTransaction({
+        transaction,
+        wallet,
+        chain: "solana:devnet",
+      });
+      return getBase58Decoder().decode(signature);
+    },
+    [wallet, signAndSendTransaction],
+  );
+
+  return { connected, connecting, publicKey, connect, disconnect, signMessage, sendSol };
 }
 
 /** Used when NEXT_PUBLIC_PRIVY_APP_ID isn't set — no PrivyProvider is
@@ -90,6 +110,9 @@ function useUnconfiguredWalletStore(): WalletStore {
     },
     disconnect: () => {},
     signMessage: async () => {
+      throw new Error("Wallet sign-in isn't configured yet.");
+    },
+    sendSol: async () => {
       throw new Error("Wallet sign-in isn't configured yet.");
     },
   };

@@ -22,9 +22,8 @@ export default async function PortfolioPage() {
 
   const inHand = assets.filter((a) => !a.vaulted);
   const inVault = assets.filter((a) => a.vaulted);
-  const listedValueThb = assets
-    .filter((a) => a.forSale && a.priceThb != null)
-    .reduce((sum, a) => sum + (a.priceThb ?? 0), 0);
+  const listedAssets = assets.filter((a) => a.forSale && a.priceThb != null);
+  const listedValueThb = listedAssets.reduce((sum, a) => sum + (a.priceThb ?? 0), 0);
 
   return (
     <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6">
@@ -43,13 +42,9 @@ export default async function PortfolioPage() {
           image={user.image}
           walletAddress={walletAddress}
           createdAt={user.createdAt}
-          stats={{
-            totalCards: assets.length,
-            inHand: inHand.length,
-            inVault: inVault.length,
-            listedValueThb,
-            solBalance,
-          }}
+          listedValueThb={listedValueThb}
+          listedAssets={listedAssets.map((a) => ({ id: a.id, name: a.name, priceThb: a.priceThb! }))}
+          solBalance={solBalance}
         />
       </div>
 
