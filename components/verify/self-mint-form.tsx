@@ -154,6 +154,11 @@ export function SelfMintForm() {
         toast.success("Digital twin minted and listing created.");
         router.push(`/item/${res.assetId}`);
       });
+    } catch (err) {
+      // signMessage/connect now hit the real Privy wallet, which can
+      // genuinely fail (rejected, session hiccup, etc.) — previously this
+      // path only wrapped a synchronous mock and effectively never threw.
+      toast.error(err instanceof Error ? err.message : "Signing failed. Try again.");
     } finally {
       setSigning(false);
     }
@@ -344,8 +349,9 @@ export function SelfMintForm() {
           <DialogHeader>
             <DialogTitle>Sign to Register Digital Twin</DialogTitle>
             <DialogDescription>
-              Phase 2 will route this through a Solana Anchor program. For now,
-              this simulates the wallet signature and mint transaction.
+              You&apos;ll sign a real message with your Solana wallet. The mint
+              transaction itself is still simulated until Phase 2 deploys the
+              on-chain Anchor program.
             </DialogDescription>
           </DialogHeader>
           <div className="bg-muted/40 rounded-lg border p-3 text-sm">

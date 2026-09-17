@@ -72,6 +72,10 @@ export function FullServiceForm() {
         toast.success("Item submitted. We'll ship it to the grading company shortly.");
         router.push("/portfolio");
       });
+    } catch (err) {
+      // signMessage/connect now hit the real Privy wallet, which can
+      // genuinely fail (rejected, session hiccup, etc.).
+      toast.error(err instanceof Error ? err.message : "Signing failed. Try again.");
     } finally {
       setSigning(false);
     }
@@ -192,8 +196,9 @@ export function FullServiceForm() {
           <DialogHeader>
             <DialogTitle>Pay Full-Service Package</DialogTitle>
             <DialogDescription>
-              Phase 2 will settle this on-chain. For now, this simulates the
-              wallet signature and payment transaction.
+              You&apos;ll sign a real message with your Solana wallet. The
+              payment transaction itself is still simulated until Phase 2
+              deploys on-chain escrow.
             </DialogDescription>
           </DialogHeader>
           <div className="bg-muted/40 rounded-lg border p-3 text-sm">
