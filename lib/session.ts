@@ -19,7 +19,9 @@ export const getSessionUser = cache(async () => {
   }
 
   const privyUser = await getPrivySessionUser();
-  if (!privyUser) redirect("/login");
+  // "/" not "/login" — there's no separate login page, the landing page IS
+  // the sign-in surface.
+  if (!privyUser) redirect("/");
 
   const existing = await prisma.user.findUnique({ where: { privyUserId: privyUser.id } });
   if (existing) return existing;

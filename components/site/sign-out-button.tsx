@@ -15,7 +15,7 @@ export function SignOutButton() {
       variant="destructive"
       onSelect={async () => {
         await logout();
-        router.push("/login");
+        router.push("/");
       }}
     >
       <LogOut /> Sign out

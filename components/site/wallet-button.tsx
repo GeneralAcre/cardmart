@@ -89,7 +89,7 @@ export function WalletButton() {
           onClick={() => {
             disconnect();
             toast("Signed out");
-            router.push("/login");
+            router.push("/");
           }}
         >
           <LogOut />

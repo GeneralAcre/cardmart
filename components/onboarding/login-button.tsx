@@ -5,8 +5,15 @@ import { Loader2, Wallet } from "lucide-react";
 import { useLogin, usePrivy } from "@privy-io/react-auth";
 
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
-export function LoginButton() {
+export function LoginButton({
+  className,
+  size = "lg",
+}: {
+  className?: string;
+  size?: "sm" | "default" | "lg";
+}) {
   const { ready, authenticated } = usePrivy();
   const { login } = useLogin({
     // Fires after auth AND embedded wallet creation both finish (since
@@ -16,10 +23,10 @@ export function LoginButton() {
     // state flips to authenticated slightly before the privy-id-token
     // cookie is actually readable by the server, so an immediate soft
     // navigation could race a server request that still sees no session
-    // and bounces back to /login. A full page load gives the cookie time
-    // to land before proxy.ts / getCurrentUser() re-check it.
+    // and bounces back to "/". A full page load gives the cookie time to
+    // land before proxy.ts / getCurrentUser() re-check it.
     onComplete: () => {
-      window.location.href = "/";
+      window.location.href = "/marketplace";
     },
     // Surfaces a visible reason instead of silently doing nothing — e.g.
     // when a login method is rejected by the Privy dashboard config.
@@ -36,7 +43,7 @@ export function LoginButton() {
 
   if (authenticated) {
     return (
-      <Button type="button" size="lg" className="w-full" disabled>
+      <Button type="button" size={size} className={cn("w-full", className)} disabled>
         <Loader2 className="animate-spin" />
         Redirecting…
       </Button>
@@ -44,7 +51,7 @@ export function LoginButton() {
   }
 
   return (
-    <Button type="button" size="lg" className="w-full" onClick={() => login()} disabled={!ready}>
+    <Button type="button" size={size} className={cn("w-full", className)} onClick={() => login()} disabled={!ready}>
       {ready ? <Wallet /> : <Loader2 className="animate-spin" />}
       Continue with Google or Email
     </Button>
