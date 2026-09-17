@@ -1,4 +1,4 @@
-# Provenance — Collectibles Marketplace & Digital Twin Vault
+# Proof — Collectibles Marketplace & Digital Twin Vault
 
 Phase 1 (Web2) implementation of a phygital TCG marketplace: a physical
 escrow + digital twin vault for certified trading cards (PSA / BGS / CGC).
@@ -59,6 +59,29 @@ PSA_API_TOKEN="..."
 Without this token, PSA verification is skipped entirely and the app falls
 back to mirroring the seller's declared data (the original Phase 1
 behavior) — nothing breaks either way.
+
+PSA's public API has no pricing/price-guide endpoint at all (confirmed
+against their live API spec), so it can never show a market value — see the
+next section for where that comes from instead.
+
+### Set up TCG API (optional — reference market price for trading cards)
+
+Item pages for TRADING_CARD listings show a reference market price sourced
+from [tcgapi.dev](https://tcgapi.dev) (TCGPlayer data via their free tier).
+Register with an email + password, verify the email, then create an API key
+and add it to `.env`:
+
+```
+TCG_API_KEY="tcg_live_..."
+```
+
+Two things worth knowing: it's Pokemon/TCG-specific (no sports cards or
+comics), and it prices the **raw/ungraded** card — there's no PSA/BGS
+grade-tier pricing in the data, so a graded slab is typically worth more
+than the number shown. The item page labels it as a reference price for
+exactly this reason. Free tier is 100 requests/day; lookups are cached for
+6 hours per query to stay well under that. Without this key, no reference
+price is shown — nothing else is affected.
 
 ### Set up Google sign-in (required — the whole site is gated behind it)
 

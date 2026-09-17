@@ -18,7 +18,9 @@ import {
   VERIFICATION_PACKAGE_LABELS,
 } from "@/lib/labels";
 import { extractPsaCertNumber, lookupPsaCert, lookupPsaPopulation, psaCertUrl } from "@/lib/psa";
+import { lookupCardPrice } from "@/lib/tcg-price";
 import { cn } from "@/lib/utils";
+import { formatUsd } from "@/lib/format";
 
 export default async function ItemDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -33,6 +35,12 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
   const psaCert = asset.gradingCompany === "PSA" ? await lookupPsaCert(extractPsaCertNumber(asset.serial)) : null;
   const psaPopulation =
     psaCert?.specId != null ? await lookupPsaPopulation(psaCert.specId) : null;
+
+  // Reference raw-card market price — TCG API (TCGPlayer data), Pokemon/TCG
+  // only, so this only ever runs for TRADING_CARD. No grade-tier pricing
+  // exists in that data at all, so it's deliberately never shown as "the"
+  // price for a graded slab — see the disclaimer rendered alongside it.
+  const priceQuote = asset.category === "TRADING_CARD" ? await lookupCardPrice(asset.name) : null;
 
   return (
     <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6">
@@ -154,8 +162,35 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
               </dl>
               <p className="text-muted-foreground mt-2 text-[11px]">
                 Sourced live from PSA&apos;s public Cert Verification API. PSA does not publish a
-                price guide through this API, so no market value is shown here — only verified
-                card and population data.
+                price guide through this API, so no market value is shown here — see below for a
+                separate reference price source.
+              </p>
+            </div>
+          )}
+
+          {priceQuote && (
+            <div className="bg-muted/40 rounded-lg border p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                  Reference Market Price
+                </span>
+                {priceQuote.marketPriceUsd != null && (
+                  <span className="text-base font-semibold tabular-nums">
+                    {formatUsd(priceQuote.marketPriceUsd)}
+                  </span>
+                )}
+              </div>
+              <p className="text-muted-foreground text-xs">
+                Matched to &quot;{priceQuote.matchedName}&quot;
+                {priceQuote.setName && ` — ${priceQuote.setName}`}
+                {priceQuote.cardNumber && ` #${priceQuote.cardNumber}`}
+                {priceQuote.printing && ` (${priceQuote.printing})`}
+              </p>
+              <p className="text-muted-foreground mt-2 text-[11px]">
+                This is a raw/ungraded TCGPlayer market price (USD), not adjusted for grade — a
+                PSA/BGS-graded copy of this card is typically worth more. It&apos;s also a
+                best-effort name match, so double-check it&apos;s really this print before relying
+                on it.
               </p>
             </div>
           )}

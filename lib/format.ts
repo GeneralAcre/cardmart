@@ -10,6 +10,14 @@ export function formatThb(amount: number): string {
   }).format(amount);
 }
 
+export function formatUsd(amount: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
+
 export function formatDate(value: Date | string): string {
   const d = typeof value === "string" ? new Date(value) : value;
   return new Intl.DateTimeFormat("en-GB", {
