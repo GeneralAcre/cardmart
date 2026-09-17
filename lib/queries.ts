@@ -53,6 +53,22 @@ export async function getMarketplaceListings(filters: MarketplaceFilters = {}) {
   });
 }
 
+export async function getSellerProfile(sellerId: string) {
+  const seller = await prisma.user.findUnique({
+    where: { id: sellerId },
+    select: { id: true, name: true, handle: true, image: true, createdAt: true },
+  });
+  if (!seller) return null;
+
+  const listings = await prisma.asset.findMany({
+    where: { sellerId, marketStatus: MARKETPLACE_VISIBLE_STATUSES },
+    orderBy: { createdAt: "desc" },
+    include: { seller: true, owner: true },
+  });
+
+  return { seller, listings };
+}
+
 export async function getAssetById(id: string) {
   return prisma.asset.findUnique({
     where: { id },

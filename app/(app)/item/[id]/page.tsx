@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { getAssetById } from "@/lib/queries";
@@ -7,7 +8,7 @@ import { ProvenanceTimeline } from "@/components/item/provenance-timeline";
 import { BuyPanel } from "@/components/item/buy-panel";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, History, ScanSearch, TrendingUp } from "lucide-react";
 
 import { formatGrade } from "@/lib/format";
 import {
@@ -73,94 +74,107 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
             <p className="text-muted-foreground text-sm">{asset.subtitle}</p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 text-sm">
-            {asset.gradingCompany === "RAW" ? (
-              <Badge variant="outline">Raw / Ungraded — verified by camera</Badge>
-            ) : (
-              <>
-                <Badge variant="outline" className="font-mono">
-                  Verified Serial: {asset.serial}
-                </Badge>
-                <Badge variant="outline">
-                  {asset.gradingCompany} {formatGrade(asset.grade)}
-                </Badge>
-                {asset.gradingCompany === "PSA" && (
-                  <a
-                    href={psaCertUrl(extractPsaCertNumber(asset.serial))}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs underline underline-offset-2"
-                  >
-                    View on PSA <ExternalLink className="size-3" />
-                  </a>
-                )}
-              </>
-            )}
-          </div>
+          {asset.gradingCompany === "RAW" ? (
+            <Badge variant="outline" className="w-fit">
+              Raw / Ungraded — verified by camera
+            </Badge>
+          ) : (
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Solid-black "seal" — the certification is the single most
+                  important credibility signal on this page, so it gets the
+                  heaviest visual weight on the page (same weight convention
+                  MARKET_STATUS_BADGE_CLASS uses: solid = most important). */}
+              <div className="bg-foreground text-background flex items-center gap-3 rounded-xl px-4 py-2.5">
+                <div className="flex flex-col items-center leading-none">
+                  <span className="text-2xl font-bold tabular-nums">{formatGrade(asset.grade)}</span>
+                  <span className="mt-0.5 text-[9px] font-medium tracking-wide uppercase opacity-70">Grade</span>
+                </div>
+                <div className="bg-background/25 h-8 w-px" />
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-sm font-semibold">{asset.gradingCompany}</span>
+                  <span className="font-mono text-[11px] opacity-80">{asset.serial}</span>
+                </div>
+              </div>
+              {asset.gradingCompany === "PSA" && (
+                <a
+                  href={psaCertUrl(extractPsaCertNumber(asset.serial))}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs underline underline-offset-2"
+                >
+                  View on PSA <ExternalLink className="size-3" />
+                </a>
+              )}
+            </div>
+          )}
 
           {psaCert && (
-            <div className="bg-muted/40 rounded-lg border p-3">
-              <div className="mb-2 flex items-center justify-between">
-                <span className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                  Card Details (Live from PSA)
-                </span>
+            <div className="bg-card rounded-xl border p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="bg-primary/10 text-primary flex size-7 items-center justify-center rounded-full">
+                    <ScanSearch className="size-3.5" />
+                  </div>
+                  <span className="text-sm font-semibold">Card Details</span>
+                  <span className="text-muted-foreground text-xs">— Live from PSA</span>
+                </div>
                 {psaCert.itemStatus && (
                   <Badge variant="outline" className="text-[10px]">
                     {psaCert.itemStatus}
                   </Badge>
                 )}
               </div>
-              <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm sm:grid-cols-3">
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:grid-cols-3">
                 {psaCert.year && (
                   <div>
                     <dt className="text-muted-foreground text-xs">Year</dt>
-                    <dd>{psaCert.year}</dd>
+                    <dd className="font-medium">{psaCert.year}</dd>
                   </div>
                 )}
                 {psaCert.brand && (
                   <div>
                     <dt className="text-muted-foreground text-xs">Brand</dt>
-                    <dd>{psaCert.brand}</dd>
+                    <dd className="font-medium">{psaCert.brand}</dd>
                   </div>
                 )}
                 {psaCert.cardNumber && (
                   <div>
                     <dt className="text-muted-foreground text-xs">Card # (Serial)</dt>
-                    <dd className="font-mono">{psaCert.cardNumber}</dd>
+                    <dd className="font-mono font-medium">{psaCert.cardNumber}</dd>
                   </div>
                 )}
                 {psaCert.variety && (
                   <div>
                     <dt className="text-muted-foreground text-xs">Variety</dt>
-                    <dd>{psaCert.variety}</dd>
+                    <dd className="font-medium">{psaCert.variety}</dd>
                   </div>
                 )}
                 {psaCert.gradeDescription && (
                   <div>
                     <dt className="text-muted-foreground text-xs">Grade Description</dt>
-                    <dd>{psaCert.gradeDescription}</dd>
+                    <dd className="font-medium">{psaCert.gradeDescription}</dd>
                   </div>
                 )}
                 {psaCert.totalPopulation != null && (
                   <div>
                     <dt className="text-muted-foreground text-xs">Population at Grade</dt>
-                    <dd>{psaCert.totalPopulation.toLocaleString()}</dd>
+                    <dd className="font-medium">{psaCert.totalPopulation.toLocaleString()}</dd>
                   </div>
                 )}
                 {psaCert.populationHigher != null && (
                   <div>
                     <dt className="text-muted-foreground text-xs">Population Higher</dt>
-                    <dd>{psaCert.populationHigher.toLocaleString()}</dd>
+                    <dd className="font-medium">{psaCert.populationHigher.toLocaleString()}</dd>
                   </div>
                 )}
                 {psaPopulation?.total != null && (
                   <div>
                     <dt className="text-muted-foreground text-xs">Total Pop. (All Grades)</dt>
-                    <dd>{psaPopulation.total.toLocaleString()}</dd>
+                    <dd className="font-medium">{psaPopulation.total.toLocaleString()}</dd>
                   </div>
                 )}
               </dl>
-              <p className="text-muted-foreground mt-2 text-[11px]">
+              <p className="text-muted-foreground mt-3 border-t pt-3 text-[11px]">
                 Sourced live from PSA&apos;s public Cert Verification API. PSA does not publish a
                 price guide through this API, so no market value is shown here — see below for a
                 separate reference price source.
@@ -169,13 +183,19 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
           )}
 
           {priceQuote && (
-            <div className="bg-muted/40 rounded-lg border p-3">
-              <div className="mb-2 flex items-center justify-between">
-                <span className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                  Reference Market Price
-                </span>
+            <div className="bg-card rounded-xl border p-4">
+              <div className="mb-3 flex items-start justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="bg-primary/10 text-primary flex size-7 items-center justify-center rounded-full">
+                    <TrendingUp className="size-3.5" />
+                  </div>
+                  <span className="text-sm font-semibold">Reference Market Price</span>
+                  <Badge variant="outline" className="text-[10px]">
+                    Ungraded
+                  </Badge>
+                </div>
                 {priceQuote.marketPriceUsd != null && (
-                  <span className="text-base font-semibold tabular-nums">
+                  <span className="text-2xl leading-none font-bold tabular-nums">
                     {formatUsd(priceQuote.marketPriceUsd)}
                   </span>
                 )}
@@ -186,22 +206,21 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
                 {priceQuote.cardNumber && ` #${priceQuote.cardNumber}`}
                 {priceQuote.printing && ` (${priceQuote.printing})`}
               </p>
-              <p className="text-muted-foreground mt-2 text-[11px]">
-                This is a raw/ungraded TCGPlayer market price (USD), not adjusted for grade — a
-                PSA/BGS-graded copy of this card is typically worth more. It&apos;s also a
-                best-effort name match, so double-check it&apos;s really this print before relying
-                on it.
-              </p>
             </div>
           )}
 
           <div className="text-muted-foreground text-sm">
-            Listed by <span className="text-foreground font-medium">{asset.seller.name}</span>
+            Listed by{" "}
+            <Link href={`/store/${asset.seller.id}`} className="text-foreground font-medium hover:underline">
+              {asset.seller.name}
+            </Link>
             {asset.owner.id !== asset.seller.id && (
               <>
                 {" "}
                 &middot; currently owned by{" "}
-                <span className="text-foreground font-medium">{asset.owner.name}</span>
+                <Link href={`/store/${asset.owner.id}`} className="text-foreground font-medium hover:underline">
+                  {asset.owner.name}
+                </Link>
               </>
             )}
           </div>
@@ -246,7 +265,12 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
       <Separator className="my-10" />
 
       <div className="max-w-2xl">
-        <h2 className="mb-6 text-lg font-semibold">Provenance History</h2>
+        <div className="mb-6 flex items-center gap-2">
+          <div className="bg-primary/10 text-primary flex size-7 items-center justify-center rounded-full">
+            <History className="size-3.5" />
+          </div>
+          <h2 className="text-lg font-semibold">Provenance History</h2>
+        </div>
         <ProvenanceTimeline events={asset.provenance} />
       </div>
     </div>
