@@ -15,6 +15,7 @@ import { SELF_MINT_FEE_THB, FULL_SERVICE_PACKAGE_PRICE_THB } from "@/lib/pricing
 import { themeIndexForSerial } from "@/lib/theme";
 import { getVerificationChecklist } from "@/lib/verification-checklist";
 import { requestDevnetAirdrop } from "@/lib/solana";
+import { getPriceHistory, type PriceHistoryRange } from "@/lib/queries";
 import {
   extractPsaCertNumber,
   isPsaConfigured,
@@ -202,6 +203,7 @@ export async function createListing(
           })),
         },
       },
+      priceSnapshots: { create: { priceThb: data.priceThb } },
     },
   });
 
@@ -507,7 +509,12 @@ export async function vaultRelist(assetId: string, priceThb: number) {
 
   await prisma.asset.update({
     where: { id: assetId },
-    data: { forSale: true, marketStatus: "IN_VAULT", priceThb },
+    data: {
+      forSale: true,
+      marketStatus: "IN_VAULT",
+      priceThb,
+      priceSnapshots: { create: { priceThb } },
+    },
   });
   await prisma.provenanceEvent.create({
     data: {
@@ -788,4 +795,11 @@ export async function submitReview(escrowTxId: string, rating: number, comment: 
   revalidatePath(`/item/${escrowTx.assetId}`);
   revalidatePath("/portfolio");
   return { success: true };
+}
+
+/** Thin server-action wrapper so the client-side range switcher (1d/7d/30d) on the price chart can re-fetch without a full page reload. */
+export async function getAssetPriceHistory(assetId: string, range: PriceHistoryRange) {
+  await getCurrentUser();
+  const snapshots = await getPriceHistory(assetId, range);
+  return snapshots.map((s) => ({ priceThb: s.priceThb, createdAt: s.createdAt.toISOString() }));
 }

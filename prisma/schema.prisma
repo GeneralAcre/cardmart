@@ -161,9 +161,26 @@ model Asset {
   inboundPackages    InboundPackage[]
   gradingSubmission  GradingSubmission?
   verificationPhotos VerificationPhoto[]
+  priceSnapshots     PriceSnapshot[]
 
   @@index([sellerId])
   @@index([ownerId])
+}
+
+// A real point-in-time record of an asset's listing price — one row per
+// list/reprice/sale event, never backfilled or fabricated. The marketplace
+// price chart reads straight from this table, so a brand-new listing shows
+// a flat/short line rather than a fake trend; it only fills in as real
+// pricing events actually happen.
+model PriceSnapshot {
+  id        String   @id @default(cuid())
+  priceThb  Int
+  createdAt DateTime @default(now())
+
+  assetId String
+  asset   Asset  @relation(fields: [assetId], references: [id])
+
+  @@index([assetId, createdAt])
 }
 
 // A single live-camera capture taken during self-mint verification, proving

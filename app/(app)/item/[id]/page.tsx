@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { getAssetById, getSellerRating } from "@/lib/queries";
+import { getAssetById, getPriceHistory, getSellerRating } from "@/lib/queries";
 import { getCurrentUser } from "@/lib/session";
 import { ItemGallery } from "@/components/item/item-gallery";
+import { PriceHistoryChart } from "@/components/item/price-history-chart";
 import { ProvenanceTimeline } from "@/components/item/provenance-timeline";
 import { BuyPanel } from "@/components/item/buy-panel";
 import { LeaveReviewForm } from "@/components/store/leave-review-form";
@@ -45,6 +46,10 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
   // exists in that data at all, so it's deliberately never shown as "the"
   // price for a graded slab — see the disclaimer rendered alongside it.
   const priceQuote = asset.category === "TRADING_CARD" ? await lookupCardPrice(asset.name) : null;
+
+  // Default range matches PriceHistoryChart's own default state (7d) — the
+  // client re-fetches on range change, this is just the initial paint.
+  const priceHistory = await getPriceHistory(asset.id, "7d");
 
   const sellerRating = await getSellerRating(asset.seller.id);
   const sellerInitials = (asset.seller.name ?? "?")
@@ -224,6 +229,12 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
               </p>
             </div>
           )}
+
+          <PriceHistoryChart
+            assetId={asset.id}
+            initialHistory={priceHistory.map((p) => ({ priceThb: p.priceThb, createdAt: p.createdAt.toISOString() }))}
+            currentPriceThb={asset.priceThb}
+          />
 
           <Link
             href={`/store/${asset.seller.id}`}

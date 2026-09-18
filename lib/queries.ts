@@ -106,6 +106,24 @@ export async function getAssetById(id: string) {
   });
 }
 
+export type PriceHistoryRange = "1d" | "7d" | "30d";
+
+const PRICE_HISTORY_DAYS: Record<PriceHistoryRange, number> = { "1d": 1, "7d": 7, "30d": 30 };
+
+/**
+ * Real price-over-time points for an asset, from our own PriceSnapshot
+ * table (recorded at list/reprice time — never fabricated or backfilled).
+ * A brand-new listing legitimately has just one point; the chart is
+ * expected to look flat/sparse until real pricing events accumulate.
+ */
+export async function getPriceHistory(assetId: string, range: PriceHistoryRange) {
+  const since = new Date(Date.now() - PRICE_HISTORY_DAYS[range] * 86_400_000);
+  return prisma.priceSnapshot.findMany({
+    where: { assetId, createdAt: { gte: since } },
+    orderBy: { createdAt: "asc" },
+  });
+}
+
 /** Real aggregate rating from completed sales only — never fabricated. */
 export async function getSellerRating(sellerId: string) {
   const agg = await prisma.review.aggregate({
