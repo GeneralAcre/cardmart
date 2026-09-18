@@ -93,7 +93,7 @@ export function ProfileHeader({
 
       {connected && (
         <div className="border-t pt-4">
-          <WalletActions />
+          <WalletActions solBalance={solBalance} />
         </div>
       )}
     </div>

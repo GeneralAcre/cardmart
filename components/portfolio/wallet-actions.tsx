@@ -7,15 +7,7 @@ import { ArrowDownToLine, ArrowUpFromLine, Check, Copy, ExternalLink, Loader2 } 
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useWalletStore } from "@/lib/web3/wallet-store";
 import { requestSolAirdrop } from "@/lib/actions";
 
@@ -27,7 +19,7 @@ function explorerTxUrl(signature: string) {
   return `https://explorer.solana.com/tx/${signature}?cluster=devnet`;
 }
 
-export function WalletActions() {
+export function WalletActions({ solBalance }: { solBalance?: number | null }) {
   const { connected, publicKey, sendSol } = useWalletStore();
   const [depositOpen, setDepositOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
@@ -45,8 +37,26 @@ export function WalletActions() {
         </Button>
       </div>
       <DepositDialog open={depositOpen} onOpenChange={setDepositOpen} walletAddress={publicKey} />
-      <WithdrawDialog open={withdrawOpen} onOpenChange={setWithdrawOpen} sendSol={sendSol} />
+      <WithdrawDialog
+        open={withdrawOpen}
+        onOpenChange={setWithdrawOpen}
+        sendSol={sendSol}
+        balance={solBalance ?? null}
+      />
     </>
+  );
+}
+
+function TxLink({ signature }: { signature: string }) {
+  return (
+    <a
+      href={explorerTxUrl(signature)}
+      target="_blank"
+      rel="noreferrer"
+      className="text-muted-foreground hover:text-foreground flex items-center justify-center gap-1 text-xs underline underline-offset-2"
+    >
+      View on Explorer <ExternalLink className="size-3" />
+    </a>
   );
 }
 
@@ -68,6 +78,7 @@ function DepositDialog({
   function copyAddress() {
     navigator.clipboard.writeText(walletAddress);
     setCopied(true);
+    toast.success("Address copied");
     setTimeout(() => setCopied(false), 1500);
   }
 
@@ -80,79 +91,57 @@ function DepositDialog({
         return;
       }
       setSignature(res.signature ?? null);
-      toast.success(`${amount} devnet SOL deposited`);
+      toast.success(`${amount} SOL deposited`);
       router.refresh();
     });
   }
 
   return (
     <Dialog open={open} onOpenChange={(o) => !pending && onOpenChange(o)}>
-      <DialogContent>
+      <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>Deposit</DialogTitle>
-          <DialogDescription>
-            This is a devnet wallet, so there&apos;s no real money to wire in — fund it either way below.
-          </DialogDescription>
+          <DialogTitle className="text-center">Deposit</DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col gap-2">
-          <Label>Receive from another wallet</Label>
-          <button
-            type="button"
-            onClick={copyAddress}
-            className="bg-muted/50 hover:bg-muted flex items-center gap-2 rounded-md border px-2 py-1.5 text-left transition-colors"
-          >
-            <span className="flex-1 truncate font-mono text-xs">{walletAddress}</span>
-            {copied ? (
-              <Check className="size-3.5 shrink-0 text-emerald-600" />
-            ) : (
-              <Copy className="text-muted-foreground size-3.5 shrink-0" />
-            )}
-          </button>
+        <button
+          type="button"
+          onClick={copyAddress}
+          className="bg-muted/50 hover:bg-muted flex flex-col items-center gap-2 rounded-xl border p-4 text-center transition-colors"
+        >
+          <span className="break-all font-mono text-sm">{walletAddress}</span>
+          <span className="text-muted-foreground flex items-center gap-1 text-xs">
+            {copied ? <Check className="size-3.5 text-emerald-600" /> : <Copy className="size-3.5" />}
+            {copied ? "Copied" : "Tap to copy"}
+          </span>
+        </button>
+
+        <div className="flex items-center gap-2">
+          <div className="bg-border h-px flex-1" />
+          <span className="text-muted-foreground text-xs">or get free devnet SOL</span>
+          <div className="bg-border h-px flex-1" />
         </div>
 
-        <div className="flex flex-col gap-2">
-          <Label>Or request a devnet faucet airdrop</Label>
-          <div className="flex gap-2">
-            {AIRDROP_PRESETS_SOL.map((preset) => (
-              <Button
-                key={preset}
-                type="button"
-                size="sm"
-                variant={amount === preset ? "default" : "outline"}
-                onClick={() => setAmount(preset)}
-                disabled={pending}
-              >
-                {preset} SOL
-              </Button>
-            ))}
-          </div>
-          <p className="text-muted-foreground text-xs">
-            Real devnet SOL, minted directly into your wallet — the faucet is rate-limited, so retry
-            later if it fails.
-          </p>
+        <div className="flex gap-2">
+          {AIRDROP_PRESETS_SOL.map((preset) => (
+            <Button
+              key={preset}
+              type="button"
+              variant={amount === preset ? "default" : "outline"}
+              className="flex-1"
+              onClick={() => setAmount(preset)}
+              disabled={pending}
+            >
+              {preset} SOL
+            </Button>
+          ))}
         </div>
 
-        {signature && (
-          <a
-            href={explorerTxUrl(signature)}
-            target="_blank"
-            rel="noreferrer"
-            className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs underline underline-offset-2"
-          >
-            View transaction on Solana Explorer <ExternalLink className="size-3" />
-          </a>
-        )}
+        <Button size="lg" className="w-full" onClick={handleAirdrop} disabled={pending}>
+          {pending ? <Loader2 className="animate-spin" /> : <ArrowDownToLine />}
+          {pending ? "Requesting…" : `Deposit ${amount} SOL`}
+        </Button>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>
-            Close
-          </Button>
-          <Button onClick={handleAirdrop} disabled={pending}>
-            {pending ? <Loader2 className="animate-spin" /> : <ArrowDownToLine />}
-            {pending ? "Requesting…" : `Deposit ${amount} SOL`}
-          </Button>
-        </DialogFooter>
+        {signature && <TxLink signature={signature} />}
       </DialogContent>
     </Dialog>
   );
@@ -162,10 +151,12 @@ function WithdrawDialog({
   open,
   onOpenChange,
   sendSol,
+  balance,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   sendSol: (toAddress: string, amountSol: number) => Promise<string>;
+  balance: number | null;
 }) {
   const router = useRouter();
   const [toAddress, setToAddress] = useState("");
@@ -182,7 +173,7 @@ function WithdrawDialog({
     try {
       const sig = await sendSol(toAddress.trim(), amountNumber);
       setSignature(sig);
-      toast.success("Withdrawal sent");
+      toast.success("Sent");
       router.refresh();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Withdrawal failed.");
@@ -204,60 +195,54 @@ function WithdrawDialog({
         onOpenChange(o);
       }}
     >
-      <DialogContent>
+      <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>Withdraw</DialogTitle>
-          <DialogDescription>
-            Sends a real, on-chain devnet SOL transfer from your wallet — signed directly with your
-            Privy wallet, not simulated.
-          </DialogDescription>
+          <DialogTitle className="text-center">Withdraw</DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="withdraw-address">Destination Solana Address</Label>
+        <Input
+          placeholder="Recipient address"
+          value={toAddress}
+          onChange={(e) => setToAddress(e.target.value)}
+          disabled={sending}
+          className="font-mono text-xs"
+        />
+
+        <div className="relative">
           <Input
-            id="withdraw-address"
-            placeholder="Recipient's devnet wallet address"
-            value={toAddress}
-            onChange={(e) => setToAddress(e.target.value)}
-            disabled={sending}
-            className="font-mono text-xs"
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="withdraw-amount">Amount (SOL)</Label>
-          <Input
-            id="withdraw-amount"
             type="number"
             step="0.0001"
             min={0}
-            placeholder="e.g. 0.5"
+            placeholder="0.00"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             disabled={sending}
+            className="pr-28 text-lg font-medium"
           />
+          <div className="absolute inset-y-0 right-1.5 flex items-center gap-1.5">
+            {balance != null && (
+              <button
+                type="button"
+                onClick={() => setAmount(String(balance))}
+                disabled={sending}
+                className="text-primary hover:bg-accent rounded px-1.5 py-1 text-xs font-semibold"
+              >
+                MAX
+              </button>
+            )}
+            <span className="text-muted-foreground pr-1 text-sm font-medium">SOL</span>
+          </div>
         </div>
-
-        {signature && (
-          <a
-            href={explorerTxUrl(signature)}
-            target="_blank"
-            rel="noreferrer"
-            className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs underline underline-offset-2"
-          >
-            View transaction on Solana Explorer <ExternalLink className="size-3" />
-          </a>
+        {balance != null && (
+          <span className="text-muted-foreground -mt-2 text-xs">Balance: {balance.toFixed(4)} SOL</span>
         )}
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={sending}>
-            Cancel
-          </Button>
-          <Button onClick={handleSend} disabled={!canSend}>
-            {sending ? <Loader2 className="animate-spin" /> : <ArrowUpFromLine />}
-            {sending ? "Signing & sending…" : "Sign & Send"}
-          </Button>
-        </DialogFooter>
+        <Button size="lg" className="w-full" onClick={handleSend} disabled={!canSend}>
+          {sending ? <Loader2 className="animate-spin" /> : <ArrowUpFromLine />}
+          {sending ? "Sending…" : "Send"}
+        </Button>
+
+        {signature && <TxLink signature={signature} />}
       </DialogContent>
     </Dialog>
   );
