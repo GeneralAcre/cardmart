@@ -1,19 +1,21 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { MessageSquare, PackageOpen } from "lucide-react";
+import { CircleCheck, MessageSquare, PackageOpen } from "lucide-react";
 
 import { getSellerProfile } from "@/lib/queries";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ListingCard } from "@/components/marketplace/listing-card";
 import { RatingStars } from "@/components/store/rating-stars";
 import { SellerWalletAddress } from "@/components/store/seller-wallet-address";
-import { formatDate } from "@/lib/format";
+import { CATEGORY_LABELS } from "@/lib/labels";
+import { formatDate, formatThb } from "@/lib/format";
 
 export default async function StorePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const profile = await getSellerProfile(id);
 
   if (!profile) notFound();
-  const { seller, listings, rating, reviews } = profile;
+  const { seller, listings, rating, reviews, soldHistory } = profile;
 
   const displayName = seller.name ?? seller.handle ?? "Collector";
   const initials = displayName
@@ -55,6 +57,44 @@ export default async function StorePage({ params }: { params: Promise<{ id: stri
           {listings.map((asset) => (
             <ListingCard key={asset.id} asset={asset} />
           ))}
+        </div>
+      )}
+
+      <h2 className="mt-10 mb-4 text-lg font-semibold">Sold History</h2>
+      {soldHistory.length === 0 ? (
+        <div className="text-muted-foreground flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed py-16 text-center">
+          <CircleCheck className="size-8" />
+          <p className="text-sm">No completed sales yet.</p>
+        </div>
+      ) : (
+        <div className="flex max-w-2xl flex-col gap-2">
+          {soldHistory.map((tx) => {
+            const photo = tx.asset.verificationPhotos[0];
+            return (
+              <Link
+                key={tx.id}
+                href={`/item/${tx.asset.id}`}
+                className="bg-card flex items-center gap-3 rounded-xl border p-3 hover:bg-muted/40"
+              >
+                {photo ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={photo.url} alt={tx.asset.name} className="size-12 shrink-0 rounded-md border object-cover" />
+                ) : (
+                  <div className="bg-muted flex size-12 shrink-0 items-center justify-center rounded-md border">
+                    <PackageOpen className="text-muted-foreground size-5" />
+                  </div>
+                )}
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate text-sm font-medium">{tx.asset.name}</span>
+                  <span className="text-muted-foreground text-xs">
+                    {CATEGORY_LABELS[tx.asset.category]} &middot; Sold{" "}
+                    {tx.releasedAt ? formatDate(tx.releasedAt) : formatDate(tx.createdAt)}
+                  </span>
+                </div>
+                <span className="text-sm font-semibold">{formatThb(tx.amountThb)}</span>
+              </Link>
+            );
+          })}
         </div>
       )}
 

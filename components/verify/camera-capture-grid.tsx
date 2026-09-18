@@ -42,7 +42,7 @@ export function CameraCaptureGrid({ category, raw = false, captures, onChange }:
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium">Live Verification Capture</span>
+        <span className="text-muted-foreground text-xs">Tap each tile and take a live photo</span>
         <span className="text-muted-foreground text-xs">
           {completedCount} / {checklist.length} captured
         </span>

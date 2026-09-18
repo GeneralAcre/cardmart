@@ -99,13 +99,13 @@ export function ItemGallery({ themeIndex, category, gradingCompany, grade, photo
       <p className="text-muted-foreground text-center text-xs">
         {selectedPhoto
           ? `${selectedPhoto.viewLabel} — live camera capture, click to zoom`
-          : "Generated digital twin visualization — click to zoom"}
+          : "Generated certificate artwork — click to zoom"}
       </p>
 
       <Dialog open={zoomOpen} onOpenChange={setZoomOpen}>
         <DialogContent className="max-w-md">
           <DialogTitle className="sr-only">
-            Zoomed {selectedPhoto ? selectedPhoto.viewLabel : "digital twin artwork"}
+            Zoomed {selectedPhoto ? selectedPhoto.viewLabel : "certificate artwork"}
           </DialogTitle>
           {selectedPhoto ? (
             // eslint-disable-next-line @next/next/no-img-element

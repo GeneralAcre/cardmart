@@ -117,7 +117,7 @@ function DepositDialog({
 
         <div className="flex items-center gap-2">
           <div className="bg-border h-px flex-1" />
-          <span className="text-muted-foreground text-xs">or get free devnet SOL</span>
+          <span className="text-muted-foreground text-xs">or get free test SOL (no real money)</span>
           <div className="bg-border h-px flex-1" />
         </div>
 

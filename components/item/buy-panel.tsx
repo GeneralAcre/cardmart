@@ -64,7 +64,7 @@ export function BuyPanel({ assetId, assetName, priceThb, forSale, vaulted, marke
     return (
       <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
         {marketStatus === "IN_ESCROW"
-          ? "This item is currently locked in escrow with another buyer."
+          ? "This item is on hold — another buyer is already purchasing it."
           : "This item is not currently for sale."}
       </p>
     );
@@ -74,14 +74,14 @@ export function BuyPanel({ assetId, assetName, priceThb, forSale, vaulted, marke
     setSigning(true);
     try {
       if (!connected) await connect();
-      await signMessage(`Lock ${priceThb} THB in escrow for asset ${assetId}`);
+      await signMessage(`Confirm payment of ${priceThb} THB for this item`);
       startSubmit(async () => {
         try {
           await buyListing(assetId, vaulted ? "VAULT" : fulfillment);
           toast.success(
             vaulted
               ? "Purchased! Digital ownership transferred instantly."
-              : "Payment locked in escrow. Awaiting warehouse inspection.",
+              : "Payment held safely. Waiting for warehouse inspection.",
           );
           setOpen(false);
           router.refresh();
@@ -107,7 +107,7 @@ export function BuyPanel({ assetId, assetName, priceThb, forSale, vaulted, marke
         </div>
       ) : (
         <div className="flex flex-col gap-2">
-          <span className="text-sm font-medium">Choose fulfillment</span>
+          <span className="text-sm font-medium">How do you want to receive it?</span>
           <Tabs value={fulfillment} onValueChange={(v) => setFulfillment(v as "SHIP" | "VAULT")}>
             <TabsList className="w-full">
               <TabsTrigger value="SHIP">
@@ -120,15 +120,15 @@ export function BuyPanel({ assetId, assetName, priceThb, forSale, vaulted, marke
           </Tabs>
           <p className="text-muted-foreground text-xs">
             {fulfillment === "SHIP"
-              ? "After warehouse inspection, the item ships directly to your address."
-              : "After warehouse inspection, the item is deposited into the platform vault under your ownership."}
+              ? "After the warehouse checks the item, it ships directly to your address."
+              : "After the warehouse checks the item, it's stored safely in the platform vault under your name."}
           </p>
         </div>
       )}
 
       <Button size="lg" onClick={() => setOpen(true)}>
         <ShieldCheck />
-        Buy with Escrow Protection — {formatThb(priceThb)}
+        Buy with Buyer Protection — {formatThb(priceThb)}
       </Button>
 
       <Dialog open={open} onOpenChange={(o) => !signing && !submitting && setOpen(o)}>
@@ -136,8 +136,8 @@ export function BuyPanel({ assetId, assetName, priceThb, forSale, vaulted, marke
           <DialogHeader>
             <DialogTitle>Confirm Purchase</DialogTitle>
             <DialogDescription>
-              Your payment is locked in Web2 escrow until the item clears
-              warehouse inspection. Phase 2 will settle this on-chain.
+              Your payment is held safely until the item passes a check at
+              our warehouse — you only pay for what you actually receive.
             </DialogDescription>
           </DialogHeader>
           <div className="bg-muted/40 flex flex-col gap-2 rounded-lg border p-3 text-sm">
@@ -146,7 +146,7 @@ export function BuyPanel({ assetId, assetName, priceThb, forSale, vaulted, marke
               <span className="font-semibold">{formatThb(priceThb)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Fulfillment</span>
+              <span className="text-muted-foreground">Delivery</span>
               <span>{vaulted ? "Instant Vault Transfer" : fulfillment === "SHIP" ? "Ship to Address" : "Deposit to Vault"}</span>
             </div>
           </div>
@@ -156,7 +156,7 @@ export function BuyPanel({ assetId, assetName, priceThb, forSale, vaulted, marke
             </Button>
             <Button onClick={handleConfirm} disabled={signing || submitting || connecting}>
               {signing || submitting ? <Loader2 className="animate-spin" /> : <ShieldCheck />}
-              {signing ? "Awaiting signature…" : submitting ? "Processing…" : "Sign & Lock Escrow"}
+              {signing ? "Waiting for approval…" : submitting ? "Processing…" : "Confirm & Pay"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -197,8 +197,8 @@ function OwnerListForSaleForm({ assetId, assetName }: { assetId: string; assetNa
         You own this item — set a price to list it
       </div>
       <p className="text-muted-foreground text-xs">
-        Grading is complete and the digital twin is minted. It won&apos;t
-        appear on the marketplace until you set a price.
+        Grading is complete and your digital certificate has been created.
+        It won&apos;t appear on the marketplace until you set a price.
       </p>
       <div className="flex flex-col gap-2">
         <Label htmlFor="owner-list-price">Price (THB)</Label>

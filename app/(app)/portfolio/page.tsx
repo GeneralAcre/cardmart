@@ -31,8 +31,8 @@ export default async function PortfolioPage() {
       <div className="mb-6 flex flex-col gap-2">
         <h1 className="text-2xl font-semibold">Portfolio</h1>
         <p className="text-muted-foreground text-sm">
-          Digital twins currently in your profile, whether the physical item
-          is in your hands or held in our warehouse vault.
+          Digital certificates currently in your profile, whether the
+          physical item is in your hands or held in our warehouse vault.
         </p>
       </div>
 
@@ -48,6 +48,8 @@ export default async function PortfolioPage() {
             totalThb: p.totalThb,
             createdAt: p.createdAt.toISOString(),
           }))}
+          shippingAddress={user.shippingAddress}
+          phone={user.phone}
         />
       </div>
 

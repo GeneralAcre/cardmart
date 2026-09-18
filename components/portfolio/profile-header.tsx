@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { WalletActions } from "@/components/portfolio/wallet-actions";
+import { ShippingInfoDialog } from "@/components/portfolio/shipping-info-dialog";
 import { PortfolioValueChart } from "@/components/portfolio/portfolio-value-chart";
 import { useWalletStore } from "@/lib/web3/wallet-store";
 import { formatDate, shortSignature } from "@/lib/format";
@@ -20,6 +21,8 @@ interface ProfileHeaderProps {
   /** Real devnet SOL balance, or null if there's no wallet / the RPC call failed. */
   solBalance: number | null;
   portfolioValueHistory: { totalThb: number; createdAt: string }[];
+  shippingAddress: string | null;
+  phone: string | null;
 }
 
 export function ProfileHeader({
@@ -30,6 +33,8 @@ export function ProfileHeader({
   createdAt,
   solBalance,
   portfolioValueHistory,
+  shippingAddress,
+  phone,
 }: ProfileHeaderProps) {
   const { connected } = useWalletStore();
   const [copied, setCopied] = useState(false);
@@ -83,6 +88,8 @@ export function ProfileHeader({
         <Separator className="hidden sm:block" orientation="vertical" />
 
         <Stat label="SOL Balance" value={solBalance != null ? `${solBalance.toFixed(4)} SOL` : "—"} />
+
+        <ShippingInfoDialog shippingAddress={shippingAddress} phone={phone} />
       </div>
 
       <div className="border-t pt-4">

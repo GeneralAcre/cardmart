@@ -34,7 +34,7 @@ export const CATEGORY_GRADING_COMPANIES: Record<AssetCategory, GradingCompany[]>
 export const MARKET_STATUS_LABELS: Record<MarketStatus, string> = {
   READY_TO_SHIP: "Ready to Ship",
   IN_VAULT: "In Vault",
-  IN_ESCROW: "In Escrow",
+  IN_ESCROW: "Sale Pending",
   DELISTED: "Not Listed",
 };
 
@@ -65,13 +65,13 @@ export const INBOUND_STATUS_LABELS: Record<InboundStatus, string> = {
 };
 
 export const ESCROW_STATUS_LABELS: Record<EscrowStatus, string> = {
-  LOCKED: "Locked in Escrow",
-  RELEASED: "Released to Seller",
+  LOCKED: "Payment Held",
+  RELEASED: "Paid to Seller",
   REFUNDED: "Refunded to Buyer",
 };
 
 export const VERIFICATION_PACKAGE_LABELS: Record<VerificationPackage, string> = {
-  SELF_MINT: "Self-Mint",
+  SELF_MINT: "Instant Verify",
   FULL_SERVICE: "Full-Service Grading",
 };
 
@@ -88,17 +88,17 @@ export const GRADING_SUBMISSION_STATUS_LABELS: Record<GradingSubmissionStatus, s
 };
 
 export const PROVENANCE_LABELS: Record<ProvenanceType, string> = {
-  MINTED_DIGITAL_TWIN: "Digital Twin Minted",
+  MINTED_DIGITAL_TWIN: "Digital Certificate Created",
   LISTED: "Listed for Sale",
   DELISTED: "Delisted",
-  ESCROW_LOCKED: "Payment Locked in Escrow",
+  ESCROW_LOCKED: "Payment Held Safely",
   SHIPPED_TO_WAREHOUSE: "Shipped to Warehouse",
   INSPECTION_PASSED: "Inspection Passed",
   INSPECTION_REJECTED: "Inspection Rejected",
   DEPOSITED_TO_VAULT: "Deposited to Vault",
   DELIVERED_TO_BUYER: "Delivered to Buyer",
-  OWNERSHIP_TRANSFERRED: "Digital Ownership Transferred",
+  OWNERSHIP_TRANSFERRED: "Ownership Transferred",
   RELISTED: "Relisted for Instant Sale",
   REDEEMED: "Physical Item Redeemed",
-  ESCROW_REFUNDED: "Escrow Refunded",
+  ESCROW_REFUNDED: "Payment Refunded",
 };

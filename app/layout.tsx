@@ -23,9 +23,9 @@ const siteUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: "Proof — Collectibles Marketplace & Digital Twin Vault",
+  title: "Proof — Collectibles Marketplace & Digital Certificate Vault",
   description:
-    "Trade real, certified collectibles secured by physical escrow and digital certificates.",
+    "Trade real, certified collectibles protected by secure payments and digital certificates.",
 };
 
 // Every page here depends on live session/DB state anyway (via

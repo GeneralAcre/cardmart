@@ -6,6 +6,7 @@ import { Loader2, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { completeProfile, type CompleteProfileState } from "@/lib/profile-actions";
 
 const initialState: CompleteProfileState = {};
@@ -41,6 +42,29 @@ export function OnboardingForm({
             title="Lowercase letters, numbers, and underscores only"
           />
         </div>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="shippingAddress">Shipping Address</Label>
+        <Textarea
+          id="shippingAddress"
+          name="shippingAddress"
+          placeholder="Street, city, postal code — where we'll send physical items"
+          required
+          minLength={10}
+        />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="phone">Phone Number</Label>
+        <Input
+          id="phone"
+          name="phone"
+          type="tel"
+          placeholder="For the courier to reach you"
+          required
+          minLength={6}
+        />
       </div>
 
       {state.error && <p className="text-destructive text-sm">{state.error}</p>}

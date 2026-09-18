@@ -38,7 +38,17 @@ async function main() {
 
   const you = await prisma.user.create({
     // isAdmin so the single demo account can also exercise /admin/warehouse.
-    data: { name: "Kade Anuwat", handle: "you", walletMock: mockPublicKey(), isAdmin: true },
+    // profileComplete + shipping details set directly so re-seeding doesn't
+    // force the demo account back through /onboarding every time.
+    data: {
+      name: "Kade Anuwat",
+      handle: "you",
+      walletMock: mockPublicKey(),
+      isAdmin: true,
+      profileComplete: true,
+      shippingAddress: "88/12 Sukhumvit Soi 24, Klongtan, Klongtoey, Bangkok 10110",
+      phone: "081-234-5678",
+    },
   });
   const nattapong = await prisma.user.create({
     data: { name: "Nattapong S.", handle: "nattapong", walletMock: mockPublicKey() },

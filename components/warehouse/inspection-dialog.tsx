@@ -26,6 +26,30 @@ export type InboundPackageWithRelations = InboundPackage & {
   escrowTx: EscrowTransaction & { buyer: User; seller: User };
 };
 
+function AddressRow({
+  label,
+  address,
+  phone,
+}: {
+  label: string;
+  address: string | null;
+  phone: string | null;
+}) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-muted-foreground text-xs font-medium">{label}</span>
+      {address ? (
+        <>
+          <span>{address}</span>
+          <span className="text-muted-foreground text-xs">{phone ?? "No phone on file"}</span>
+        </>
+      ) : (
+        <span className="text-destructive text-xs">No shipping info on file — contact them before dispatch.</span>
+      )}
+    </div>
+  );
+}
+
 function MatchRow({
   label,
   declared,
@@ -116,10 +140,25 @@ export function InspectionDialog({
           <span className="font-semibold">{formatThb(pkg.escrowTx.amountThb)}</span>
         </div>
         <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Buyer&apos;s Fulfillment Choice</span>
+          <span className="text-muted-foreground">Buyer&apos;s Delivery Choice</span>
           <Badge variant="secondary">
             {pkg.escrowTx.fulfillmentChoice === "SHIP" ? "Ship to Address" : "Keep in Vault"}
           </Badge>
+        </div>
+
+        <div className="bg-muted/40 flex flex-col gap-2 rounded-lg border p-3 text-sm">
+          {pkg.escrowTx.fulfillmentChoice === "SHIP" && (
+            <AddressRow
+              label="Ship to Buyer"
+              address={pkg.escrowTx.buyer.shippingAddress}
+              phone={pkg.escrowTx.buyer.phone}
+            />
+          )}
+          <AddressRow
+            label="Return to Seller (if rejected)"
+            address={pkg.escrowTx.seller.shippingAddress}
+            phone={pkg.escrowTx.seller.phone}
+          />
         </div>
 
         <div className="bg-muted/40 rounded-lg border p-3">

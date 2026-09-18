@@ -23,7 +23,7 @@ export default async function OnboardingPage() {
           <h1 className="text-xl font-semibold">Set up your profile</h1>
           <p className="text-muted-foreground text-sm">
             One last step before you can browse, verify, and trade — we need
-            a few details to fulfill physical shipments.
+            a few details so we can actually ship items to you.
           </p>
         </div>
         <OnboardingForm defaultName={defaultName} defaultHandle={defaultHandle} />

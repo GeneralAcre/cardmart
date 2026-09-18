@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/dialog";
 import { CardArt } from "@/components/asset/card-art";
 import { CameraCaptureGrid, type CaptureMap } from "@/components/verify/camera-capture-grid";
+import { StepHeading } from "@/components/verify/step-heading";
 import { createListing, lookupPsaCertForForm, type PsaCertLookupResult } from "@/lib/actions";
 import { useWalletStore } from "@/lib/web3/wallet-store";
 import { CATEGORY_GRADING_COMPANIES, CATEGORY_LABELS, GRADING_COMPANY_LABELS } from "@/lib/labels";
@@ -127,7 +128,7 @@ export function SelfMintForm() {
       // Solana-Explorer-verifiable event instead of a simulated one.
       const memo = `Proof mint: ${name} | ${raw ? "Raw/Ungraded" : `${gradingCompany} ${serial}`} | ${priceThb} THB`;
       const mintTxSignature = await sendMemo(memo);
-      toast.success("Minted on-chain", { description: `${mintTxSignature.slice(0, 8)}…` });
+      toast.success("Confirmed on the blockchain", { description: `${mintTxSignature.slice(0, 8)}…` });
 
       const photos = checklist.map((v) => ({
         viewKey: v.key,
@@ -156,7 +157,7 @@ export function SelfMintForm() {
           setSignOpen(false);
           return;
         }
-        toast.success("Digital twin minted and listing created.");
+        toast.success("Digital certificate created and listed for sale.");
         router.push(`/item/${res.assetId}`);
       });
     } catch (err) {
@@ -185,14 +186,15 @@ export function SelfMintForm() {
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
       <Card>
         <CardHeader>
-          <CardTitle>Item Details</CardTitle>
+          <CardTitle>Instant Verify</CardTitle>
           <CardDescription>
             {raw
-              ? "Describe the raw item, then verify it yourself with your camera — no grading company involved."
-              : "Enter the certificate details exactly as shown on the slab label, then verify it yourself with your camera."}
+              ? "Describe the item, then prove you have it with a quick camera check."
+              : "Tell us what's on the certificate, then prove you have it with a quick camera check."}
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-5">
+          <StepHeading step={1} title="What are you listing?" />
           <div className="flex flex-col gap-2">
             <Label>Item Condition</Label>
             <Tabs value={raw ? "raw" : "graded"} onValueChange={(v) => handleModeChange(v === "raw")}>
@@ -226,7 +228,7 @@ export function SelfMintForm() {
             </div>
             {!raw && (
               <div className="flex flex-col gap-2">
-                <Label>Select Grading Institute</Label>
+                <Label>Who graded it?</Label>
                 <Select value={gradingCompany} onValueChange={(v) => setGradingCompany(v as GradingCompany)}>
                   <SelectTrigger className="w-full">
                     <SelectValue />
@@ -295,10 +297,12 @@ export function SelfMintForm() {
 
           <Separator />
 
+          <StepHeading step={2} title="Prove it's really yours" />
           <CameraCaptureGrid category={category} raw={raw} captures={captures} onChange={setCaptures} />
 
           <Separator />
 
+          <StepHeading step={3} title="Set your price" />
           <div className="flex flex-col gap-2">
             <Label htmlFor="price">Listing Price (THB)</Label>
             <Input
@@ -309,10 +313,13 @@ export function SelfMintForm() {
               value={priceThb}
               onChange={(e) => setPriceThb(e.target.value)}
             />
+            <p className="text-muted-foreground text-xs">
+              This is what buyers will see on the marketplace. You can change it anytime.
+            </p>
           </div>
 
           <div className="flex items-center justify-between rounded-lg border bg-muted/30 px-3 py-2 text-sm">
-            <span className="text-muted-foreground">Self-Mint package fee</span>
+            <span className="text-muted-foreground">Instant Verify fee</span>
             <span className="font-semibold">฿{SELF_MINT_FEE_THB}</span>
           </div>
 
@@ -334,7 +341,7 @@ export function SelfMintForm() {
       </Card>
 
       <div className="flex flex-col gap-3">
-        <span className="text-muted-foreground text-sm font-medium">Digital Twin Preview</span>
+        <span className="text-muted-foreground text-sm font-medium">Digital Certificate Preview</span>
         <CardArt
           themeIndex={serial ? themeIndexForSerial(serial) : themeIndexForSerial(name || "preview")}
           category={category}
@@ -344,7 +351,7 @@ export function SelfMintForm() {
           className={!allCaptured ? "opacity-40 grayscale" : undefined}
         />
         <p className="text-muted-foreground text-xs">
-          This artwork represents the registered digital twin, generated from
+          This artwork represents your digital certificate, generated from
           your {raw ? "item details" : "certificate details"}.
         </p>
       </div>
@@ -352,12 +359,12 @@ export function SelfMintForm() {
       <Dialog open={signOpen} onOpenChange={(open) => !signing && !submitting && setSignOpen(open)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Sign to Register Digital Twin</DialogTitle>
+            <DialogTitle>Confirm &amp; Create Your Certificate</DialogTitle>
             <DialogDescription>
-              You&apos;ll sign a real Solana devnet transaction recording this mint
-              &amp; listing — verifiable on Solana Explorer. Ownership tracking
-              itself still lives in our database until Phase 2 deploys a full
-              on-chain program.
+              You&apos;ll approve a one-time blockchain record for this item, so
+              anyone can verify it&apos;s really yours. Full on-chain ownership
+              tracking is coming in a future update — for now it&apos;s also kept
+              in our database.
             </DialogDescription>
           </DialogHeader>
           <div className="bg-muted/40 rounded-lg border p-3 text-sm">
@@ -370,7 +377,7 @@ export function SelfMintForm() {
               <span>{priceThb ? `${Number(priceThb).toLocaleString()} THB` : "—"}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Self-Mint Fee</span>
+              <span className="text-muted-foreground">Instant Verify Fee</span>
               <span>฿{SELF_MINT_FEE_THB}</span>
             </div>
             <div className="flex justify-between">
@@ -384,7 +391,7 @@ export function SelfMintForm() {
             </Button>
             <Button onClick={handleConfirmAndSign} disabled={signing || submitting || connecting}>
               {signing || submitting ? <Loader2 className="animate-spin" /> : null}
-              {signing ? "Awaiting signature…" : submitting ? "Minting…" : `Sign & Pay ฿${SELF_MINT_FEE_THB}`}
+              {signing ? "Waiting for approval…" : submitting ? "Creating…" : `Confirm & Pay ฿${SELF_MINT_FEE_THB}`}
             </Button>
           </DialogFooter>
         </DialogContent>

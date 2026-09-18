@@ -23,9 +23,13 @@ export async function getMarketplaceListings(filters: MarketplaceFilters = {}) {
 
   if (filters.q) {
     where.OR = [
-      { name: { contains: filters.q } },
-      { subtitle: { contains: filters.q } },
-      { serial: { contains: filters.q } },
+      { name: { contains: filters.q, mode: "insensitive" } },
+      { subtitle: { contains: filters.q, mode: "insensitive" } },
+      { serial: { contains: filters.q, mode: "insensitive" } },
+      { seller: { name: { contains: filters.q, mode: "insensitive" } } },
+      { seller: { handle: { contains: filters.q, mode: "insensitive" } } },
+      { owner: { name: { contains: filters.q, mode: "insensitive" } } },
+      { owner: { handle: { contains: filters.q, mode: "insensitive" } } },
     ];
   }
   if (filters.categories?.length) {
@@ -64,7 +68,7 @@ export async function getSellerProfile(sellerId: string) {
   });
   if (!seller) return null;
 
-  const [listings, ratingAgg, reviews] = await Promise.all([
+  const [listings, ratingAgg, reviews, soldHistory] = await Promise.all([
     prisma.asset.findMany({
       where: { sellerId, marketStatus: MARKETPLACE_VISIBLE_STATUSES },
       orderBy: { createdAt: "desc" },
@@ -83,6 +87,18 @@ export async function getSellerProfile(sellerId: string) {
         escrowTx: { include: { asset: { select: { name: true } } } },
       },
     }),
+    // Real completed sales only — an escrow only reaches RELEASED once the
+    // warehouse/vault flow actually finished, never fabricated for display.
+    prisma.escrowTransaction.findMany({
+      where: { sellerId, status: "RELEASED" },
+      orderBy: { releasedAt: "desc" },
+      take: 20,
+      include: {
+        asset: {
+          select: { id: true, name: true, category: true, verificationPhotos: { take: 1, orderBy: { createdAt: "asc" } } },
+        },
+      },
+    }),
   ]);
 
   return {
@@ -90,6 +106,7 @@ export async function getSellerProfile(sellerId: string) {
     listings,
     rating: { average: ratingAgg._avg.rating, count: ratingAgg._count },
     reviews,
+    soldHistory,
   };
 }
 

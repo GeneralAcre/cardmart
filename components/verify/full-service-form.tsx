@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { submitForGrading } from "@/lib/actions";
 import { useWalletStore } from "@/lib/web3/wallet-store";
+import { StepHeading } from "@/components/verify/step-heading";
 import { CATEGORY_GRADING_COMPANIES, CATEGORY_LABELS, GRADING_COMPANY_LABELS } from "@/lib/labels";
 import { FULL_SERVICE_COST_BREAKDOWN, FULL_SERVICE_PACKAGE_PRICE_THB } from "@/lib/pricing";
 
@@ -85,13 +86,14 @@ export function FullServiceForm() {
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
       <Card>
         <CardHeader>
-          <CardTitle>Raw Item Details</CardTitle>
+          <CardTitle>Full-Service Grading</CardTitle>
           <CardDescription>
             Describe the item as best you can — the grading company will
             determine the official grade once it arrives.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-5">
+          <StepHeading step={1} title="What are you sending in?" />
           <div className="flex flex-col gap-2">
             <Label htmlFor="item-name">Item Name</Label>
             <Input
@@ -134,7 +136,7 @@ export function FullServiceForm() {
               </Select>
             </div>
             <div className="flex flex-col gap-2">
-              <Label>Select Grading Institute</Label>
+              <Label>Who should grade it?</Label>
               <Select value={gradingCompany} onValueChange={(v) => setGradingCompany(v as GradingCompany)}>
                 <SelectTrigger className="w-full">
                   <SelectValue />
@@ -150,6 +152,7 @@ export function FullServiceForm() {
             </div>
           </div>
 
+          <StepHeading step={2} title="Review the cost" />
           <div className="bg-muted/30 flex flex-col gap-1 rounded-lg border px-3 py-2 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Shipping to grading company</span>
@@ -160,7 +163,7 @@ export function FullServiceForm() {
               <span>฿{FULL_SERVICE_COST_BREAKDOWN.gradingFeeThb.toLocaleString()}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Digital twin minting</span>
+              <span className="text-muted-foreground">Digital certificate creation</span>
               <span>฿{FULL_SERVICE_COST_BREAKDOWN.mintingFeeThb.toLocaleString()}</span>
             </div>
             <div className="mt-1 flex justify-between border-t pt-1 font-semibold">
@@ -184,7 +187,7 @@ export function FullServiceForm() {
         <ol className="text-muted-foreground flex flex-col gap-3 text-sm">
           <li>1. We arrange pickup/shipping of your raw item to {GRADING_COMPANY_LABELS[gradingCompany]}.</li>
           <li>2. {GRADING_COMPANY_LABELS[gradingCompany]} grades the item and assigns an official certificate.</li>
-          <li>3. We mint the digital twin and hand the finished listing to you — ready to price and sell.</li>
+          <li>3. We create your digital certificate and hand the finished listing to you — ready to price and sell.</li>
         </ol>
         <p className="text-muted-foreground text-xs">
           Track progress anytime from the &quot;Grading Submissions&quot; tab on Portfolio.
@@ -194,11 +197,11 @@ export function FullServiceForm() {
       <Dialog open={payOpen} onOpenChange={(open) => !signing && !submitting && setPayOpen(open)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Pay Full-Service Package</DialogTitle>
+            <DialogTitle>Pay for Full-Service Grading</DialogTitle>
             <DialogDescription>
-              You&apos;ll sign a real message with your Solana wallet. The
-              payment transaction itself is still simulated until Phase 2
-              deploys on-chain escrow.
+              You&apos;ll approve this with your crypto wallet. The payment
+              itself is simulated for now — real payment processing is
+              coming in a future update.
             </DialogDescription>
           </DialogHeader>
           <div className="bg-muted/40 rounded-lg border p-3 text-sm">
@@ -218,10 +221,10 @@ export function FullServiceForm() {
             <Button onClick={handleConfirmAndPay} disabled={signing || submitting || connecting}>
               {signing || submitting ? <Loader2 className="animate-spin" /> : null}
               {signing
-                ? "Awaiting signature…"
+                ? "Waiting for approval…"
                 : submitting
                   ? "Submitting…"
-                  : `Sign & Pay ฿${FULL_SERVICE_PACKAGE_PRICE_THB.toLocaleString()}`}
+                  : `Confirm & Pay ฿${FULL_SERVICE_PACKAGE_PRICE_THB.toLocaleString()}`}
             </Button>
           </DialogFooter>
         </DialogContent>

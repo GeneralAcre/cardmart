@@ -147,7 +147,16 @@ export function GradingQueue({ submissions }: { submissions: SubmissionWithSelle
                   <span className="text-muted-foreground text-xs">{CATEGORY_LABELS[s.category]}</span>
                 </div>
               </TableCell>
-              <TableCell>{s.seller.name}</TableCell>
+              <TableCell>
+                <div className="flex flex-col">
+                  <span>{s.seller.name}</span>
+                  {s.status === "AWAITING_SHIPMENT_TO_GRADER" && (
+                    <span className="text-muted-foreground max-w-48 truncate text-xs" title={s.seller.shippingAddress ?? undefined}>
+                      {s.seller.shippingAddress ?? "No pickup address on file"}
+                    </span>
+                  )}
+                </div>
+              </TableCell>
               <TableCell>{GRADING_COMPANY_LABELS[s.gradingCompany]}</TableCell>
               <TableCell className="text-muted-foreground text-xs">{formatDate(s.createdAt)}</TableCell>
               <TableCell>
@@ -184,7 +193,7 @@ export function GradingQueue({ submissions }: { submissions: SubmissionWithSelle
             <DialogTitle>Record Grading Result</DialogTitle>
             <DialogDescription>
               Enter the grade {gradeTarget ? GRADING_COMPANY_LABELS[gradeTarget.gradingCompany] : ""} assigned to{" "}
-              {gradeTarget?.itemName}. This mints the digital twin and creates the listing.
+              {gradeTarget?.itemName}. This creates the digital certificate and the listing.
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-2">

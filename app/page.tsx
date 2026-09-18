@@ -4,7 +4,7 @@ import { PRIVY_ENFORCED, getPrivySessionUser } from "@/lib/privy-server";
 import { LandingPage } from "@/components/landing/landing-page";
 
 export const metadata = {
-  title: "Proof — Collectibles Marketplace & Digital Twin Vault",
+  title: "Proof — Collectibles Marketplace & Digital Certificate Vault",
 };
 
 // Public marketing page at "/" — proxy.ts lists it in PUBLIC_PATHS, and it's

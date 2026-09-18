@@ -13,6 +13,8 @@ const completeProfileSchema = z.object({
     .min(3, "Username must be at least 3 characters.")
     .max(24, "Username must be 24 characters or fewer.")
     .regex(/^[a-z0-9_]+$/, "Only lowercase letters, numbers, and underscores."),
+  shippingAddress: z.string().min(10, "Enter a full address — we ship real items here."),
+  phone: z.string().min(6, "Enter a phone number the courier can reach you on."),
 });
 
 export interface CompleteProfileState {
@@ -28,6 +30,8 @@ export async function completeProfile(
   const parsed = completeProfileSchema.safeParse({
     name: formData.get("name"),
     handle: formData.get("handle"),
+    shippingAddress: formData.get("shippingAddress"),
+    phone: formData.get("phone"),
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid profile details." };
@@ -46,9 +50,43 @@ export async function completeProfile(
     data: {
       name: data.name,
       handle: data.handle,
+      shippingAddress: data.shippingAddress,
+      phone: data.phone,
       profileComplete: true,
     },
   });
 
   redirect("/");
+}
+
+const updateShippingInfoSchema = z.object({
+  shippingAddress: z.string().min(10, "Enter a full address — we ship real items here."),
+  phone: z.string().min(6, "Enter a phone number the courier can reach you on."),
+});
+
+export interface UpdateShippingInfoState {
+  error?: string;
+  success?: boolean;
+}
+
+export async function updateShippingInfo(
+  _prev: UpdateShippingInfoState,
+  formData: FormData,
+): Promise<UpdateShippingInfoState> {
+  const user = await getSessionUser();
+
+  const parsed = updateShippingInfoSchema.safeParse({
+    shippingAddress: formData.get("shippingAddress"),
+    phone: formData.get("phone"),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid shipping details." };
+  }
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: parsed.data,
+  });
+
+  return { success: true };
 }

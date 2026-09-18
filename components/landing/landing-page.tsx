@@ -20,8 +20,8 @@ import { SiteFooter } from "@/components/site/footer";
 const FEATURES = [
   {
     icon: ShieldCheck,
-    title: "Escrow-protected sales",
-    description: "Every sale locks the buyer's payment until the item clears warehouse inspection.",
+    title: "Protected payments on every sale",
+    description: "The buyer's payment is held safely until the item passes inspection at our warehouse.",
   },
   {
     icon: Vault,
@@ -41,7 +41,7 @@ const FEATURES = [
   {
     icon: Wallet,
     title: "A real wallet, automatically",
-    description: "Sign in with Google or email and Privy creates a real Solana wallet for you — no seed phrases.",
+    description: "Sign in with Google or email and a secure crypto wallet is created for you — no confusing setup.",
   },
   {
     icon: Truck,
@@ -61,11 +61,11 @@ const STEPS = [
   },
   {
     title: "List it for sale",
-    description: "Set a price. Your digital twin goes live on the marketplace, backed by the real item.",
+    description: "Set a price. Your digital certificate goes live on the marketplace, backed by the real item.",
   },
   {
-    title: "Sell with escrow protection",
-    description: "Payment locks in escrow, the item is inspected, then it ships to the buyer or joins the vault.",
+    title: "Sell with payment protection",
+    description: "The buyer's payment is held safely, the item is inspected, then it ships to them or joins the vault.",
   },
 ];
 
@@ -96,15 +96,15 @@ export function LandingPage({ authenticated }: { authenticated: boolean }) {
         <div className="mx-auto flex max-w-7xl flex-col items-center gap-5 px-4 py-14 text-center sm:items-start sm:px-6 sm:py-24 sm:text-left">
           <span className="bg-primary/10 text-primary inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium">
             <Gem className="size-3.5" />
-            Phase 1 &middot; Live on Solana Devnet
+            Beta &middot; Running on a Test Blockchain
           </span>
           <h1 className="max-w-2xl text-4xl leading-[1.1] font-semibold tracking-tight text-balance sm:text-5xl">
-            Trade real collectibles, secured by physical escrow &amp; digital certificates.
+            Trade real collectibles, protected by secure payments &amp; digital certificates.
           </h1>
           <p className="text-muted-foreground max-w-xl text-base text-balance sm:text-lg">
             List PSA, BGS, and CGC certified trading cards. Every sale is
-            protected by escrow, verified at our warehouse, and mirrored by a
-            real digital twin on Solana.
+            protected, verified at our warehouse, and backed by a real
+            digital certificate on the blockchain.
           </p>
           <div className="flex w-full flex-col items-center gap-2.5 pt-2 sm:w-auto sm:items-start">
             <LandingCta authenticated={authenticated} className="w-full px-8 sm:w-auto" />

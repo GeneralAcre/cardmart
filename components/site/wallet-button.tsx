@@ -27,7 +27,7 @@ export function WalletButton() {
   function copyAddress() {
     if (!publicKey) return;
     navigator.clipboard.writeText(publicKey);
-    toast.success("Address copied — safe to send devnet SOL here");
+    toast.success("Address copied — safe to send test SOL here");
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }
@@ -65,10 +65,10 @@ export function WalletButton() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-72">
-        <DropdownMenuLabel>Solana Wallet (Devnet)</DropdownMenuLabel>
+        <DropdownMenuLabel>Solana Wallet (Test Network)</DropdownMenuLabel>
         <div className="flex flex-col gap-1.5 px-2 pb-2">
           <span className="text-muted-foreground text-[11px]">
-            Send devnet SOL to this address to fund it:
+            Send test SOL to this address to fund it:
           </span>
           <button
             type="button"
