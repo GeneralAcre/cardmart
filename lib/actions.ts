@@ -730,3 +730,48 @@ export async function requestSolAirdrop(amountSol: number): Promise<AirdropState
     };
   }
 }
+
+export interface ReviewState {
+  error?: string;
+  success?: boolean;
+}
+
+/**
+ * A buyer rates the seller after a completed purchase. Gated on the escrow
+ * transaction being RELEASED (the sale actually went through) and on the
+ * current user being that transaction's buyer — a seller can't review
+ * themselves, and nobody can review a purchase that didn't happen. One
+ * review per transaction, enforced by the schema's unique escrowTxId.
+ */
+export async function submitReview(escrowTxId: string, rating: number, comment: string): Promise<ReviewState> {
+  const user = await getCurrentUser();
+
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+    return { error: "Rating must be between 1 and 5 stars." };
+  }
+
+  const escrowTx = await prisma.escrowTransaction.findUnique({ where: { id: escrowTxId } });
+  if (!escrowTx) return { error: "Purchase not found." };
+  if (escrowTx.buyerId !== user.id) return { error: "You can only review your own purchases." };
+  if (escrowTx.status !== "RELEASED") {
+    return { error: "You can review the seller once this purchase is complete." };
+  }
+
+  const existing = await prisma.review.findUnique({ where: { escrowTxId } });
+  if (existing) return { error: "You've already reviewed this purchase." };
+
+  await prisma.review.create({
+    data: {
+      rating,
+      comment: comment.trim() ? comment.trim() : null,
+      sellerId: escrowTx.sellerId,
+      buyerId: user.id,
+      escrowTxId,
+    },
+  });
+
+  revalidatePath(`/store/${escrowTx.sellerId}`);
+  revalidatePath(`/item/${escrowTx.assetId}`);
+  revalidatePath("/portfolio");
+  return { success: true };
+}

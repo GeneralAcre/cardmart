@@ -49,7 +49,11 @@ export async function getMarketplaceListings(filters: MarketplaceFilters = {}) {
   return prisma.asset.findMany({
     where,
     orderBy: { createdAt: "desc" },
-    include: { seller: true, owner: true },
+    include: {
+      seller: true,
+      owner: true,
+      verificationPhotos: { orderBy: { createdAt: "asc" } },
+    },
   });
 }
 
@@ -60,13 +64,33 @@ export async function getSellerProfile(sellerId: string) {
   });
   if (!seller) return null;
 
-  const listings = await prisma.asset.findMany({
-    where: { sellerId, marketStatus: MARKETPLACE_VISIBLE_STATUSES },
-    orderBy: { createdAt: "desc" },
-    include: { seller: true, owner: true },
-  });
+  const [listings, ratingAgg, reviews] = await Promise.all([
+    prisma.asset.findMany({
+      where: { sellerId, marketStatus: MARKETPLACE_VISIBLE_STATUSES },
+      orderBy: { createdAt: "desc" },
+      include: {
+        seller: true,
+        owner: true,
+        verificationPhotos: { orderBy: { createdAt: "asc" } },
+      },
+    }),
+    prisma.review.aggregate({ where: { sellerId }, _avg: { rating: true }, _count: true }),
+    prisma.review.findMany({
+      where: { sellerId },
+      orderBy: { createdAt: "desc" },
+      include: {
+        buyer: { select: { name: true, handle: true } },
+        escrowTx: { include: { asset: { select: { name: true } } } },
+      },
+    }),
+  ]);
 
-  return { seller, listings };
+  return {
+    seller,
+    listings,
+    rating: { average: ratingAgg._avg.rating, count: ratingAgg._count },
+    reviews,
+  };
 }
 
 export async function getAssetById(id: string) {
@@ -76,10 +100,20 @@ export async function getAssetById(id: string) {
       seller: true,
       owner: true,
       provenance: { orderBy: { createdAt: "asc" }, include: { actor: true } },
-      escrowTxs: { orderBy: { createdAt: "desc" } },
+      escrowTxs: { orderBy: { createdAt: "desc" }, include: { review: true } },
       verificationPhotos: { orderBy: { createdAt: "asc" } },
     },
   });
+}
+
+/** Real aggregate rating from completed sales only — never fabricated. */
+export async function getSellerRating(sellerId: string) {
+  const agg = await prisma.review.aggregate({
+    where: { sellerId },
+    _avg: { rating: true },
+    _count: true,
+  });
+  return { average: agg._avg.rating, count: agg._count };
 }
 
 export async function getVaultAssets(userId: string) {
@@ -89,7 +123,11 @@ export async function getVaultAssets(userId: string) {
       marketStatus: { not: "IN_ESCROW" },
     },
     orderBy: { updatedAt: "desc" },
-    include: { seller: true, owner: true },
+    include: {
+      seller: true,
+      owner: true,
+      verificationPhotos: { orderBy: { createdAt: "asc" } },
+    },
   });
 }
 

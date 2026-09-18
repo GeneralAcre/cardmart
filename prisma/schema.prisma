@@ -127,6 +127,8 @@ model User {
   purchases          EscrowTransaction[] @relation("EscrowBuyer")
   sales              EscrowTransaction[] @relation("EscrowSeller")
   gradingSubmissions GradingSubmission[] @relation("GradingSubmissionSeller")
+  reviewsReceived    Review[]            @relation("SellerReviews")
+  reviewsGiven       Review[]            @relation("BuyerReviews")
 }
 
 model Asset {
@@ -232,8 +234,29 @@ model EscrowTransaction {
   seller   User   @relation("EscrowSeller", fields: [sellerId], references: [id])
 
   inboundPackage InboundPackage?
+  review         Review?
 
   @@index([assetId])
+}
+
+// A buyer's rating of the seller after a completed (RELEASED) purchase —
+// one per escrow transaction, so a seller's aggregate rating only ever
+// reflects real, completed sales, never something fabricated for display.
+model Review {
+  id        String   @id @default(cuid())
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+
+  sellerId String
+  seller   User   @relation("SellerReviews", fields: [sellerId], references: [id])
+  buyerId  String
+  buyer    User   @relation("BuyerReviews", fields: [buyerId], references: [id])
+
+  escrowTxId String            @unique
+  escrowTx   EscrowTransaction @relation(fields: [escrowTxId], references: [id])
+
+  @@index([sellerId])
 }
 
 model InboundPackage {

@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { getAssetById } from "@/lib/queries";
+import { getAssetById, getSellerRating } from "@/lib/queries";
 import { getCurrentUser } from "@/lib/session";
-import { ZoomableCardArt } from "@/components/item/zoomable-card-art";
+import { ItemGallery } from "@/components/item/item-gallery";
 import { ProvenanceTimeline } from "@/components/item/provenance-timeline";
 import { BuyPanel } from "@/components/item/buy-panel";
+import { LeaveReviewForm } from "@/components/store/leave-review-form";
+import { RatingStars } from "@/components/store/rating-stars";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ExternalLink, History, ScanSearch, TrendingUp } from "lucide-react";
@@ -43,19 +46,32 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
   // price for a graded slab — see the disclaimer rendered alongside it.
   const priceQuote = asset.category === "TRADING_CARD" ? await lookupCardPrice(asset.name) : null;
 
+  const sellerRating = await getSellerRating(asset.seller.id);
+  const sellerInitials = (asset.seller.name ?? "?")
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+  // A completed (RELEASED) purchase of THIS asset, made by the current
+  // user, that doesn't have a review yet — real gate, not just "did you buy
+  // something from this seller ever."
+  const reviewableEscrow = asset.escrowTxs.find(
+    (tx) => tx.buyerId === user.id && tx.status === "RELEASED" && !tx.review,
+  );
+
   return (
     <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6">
       <div className="grid grid-cols-1 gap-10 md:grid-cols-2">
         <div className="flex flex-col gap-4">
-          <ZoomableCardArt
+          <ItemGallery
             themeIndex={asset.themeIndex}
             category={asset.category}
             gradingCompany={asset.gradingCompany}
             grade={asset.grade}
+            photos={asset.verificationPhotos}
           />
-          <p className="text-muted-foreground text-center text-xs">
-            Click artwork to zoom &middot; generated digital twin visualization
-          </p>
         </div>
 
         <div className="flex flex-col gap-5">
@@ -209,21 +225,28 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
             </div>
           )}
 
-          <div className="text-muted-foreground text-sm">
-            Listed by{" "}
-            <Link href={`/store/${asset.seller.id}`} className="text-foreground font-medium hover:underline">
-              {asset.seller.name}
-            </Link>
-            {asset.owner.id !== asset.seller.id && (
-              <>
-                {" "}
-                &middot; currently owned by{" "}
-                <Link href={`/store/${asset.owner.id}`} className="text-foreground font-medium hover:underline">
-                  {asset.owner.name}
-                </Link>
-              </>
-            )}
-          </div>
+          <Link
+            href={`/store/${asset.seller.id}`}
+            className="bg-card hover:bg-accent/50 flex items-center gap-3 rounded-xl border p-3 transition-colors"
+          >
+            <Avatar className="size-10 shrink-0">
+              {asset.seller.image && <AvatarImage src={asset.seller.image} alt={asset.seller.name ?? ""} />}
+              <AvatarFallback className="text-sm font-medium">{sellerInitials}</AvatarFallback>
+            </Avatar>
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <span className="text-muted-foreground text-xs">Listed by</span>
+              <span className="truncate text-sm font-semibold">{asset.seller.name}</span>
+              <RatingStars average={sellerRating.average} count={sellerRating.count} />
+            </div>
+          </Link>
+          {asset.owner.id !== asset.seller.id && (
+            <p className="text-muted-foreground text-xs">
+              Currently owned by{" "}
+              <Link href={`/store/${asset.owner.id}`} className="text-foreground font-medium hover:underline">
+                {asset.owner.name}
+              </Link>
+            </p>
+          )}
 
           <Separator />
 
@@ -235,32 +258,10 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
             marketStatus={asset.marketStatus}
             isOwner={asset.ownerId === user.id}
           />
+
+          {reviewableEscrow && <LeaveReviewForm escrowTxId={reviewableEscrow.id} />}
         </div>
       </div>
-
-      {asset.verificationPhotos.length > 0 && (
-        <>
-          <Separator className="my-10" />
-          <div>
-            <h2 className="mb-1 text-lg font-semibold">Live Verification Photos</h2>
-            <p className="text-muted-foreground mb-6 text-sm">
-              Captured live by the seller&apos;s camera at mint time — proof
-              the item was physically in hand, not a reused photo.
-            </p>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {asset.verificationPhotos.map((photo) => (
-                <div key={photo.id} className="flex flex-col gap-1.5">
-                  <div className="aspect-square overflow-hidden rounded-lg border">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={photo.url} alt={photo.viewLabel} className="size-full object-cover" />
-                  </div>
-                  <span className="text-muted-foreground text-center text-xs">{photo.viewLabel}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </>
-      )}
 
       <Separator className="my-10" />
 

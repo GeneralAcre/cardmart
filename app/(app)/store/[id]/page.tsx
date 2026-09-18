@@ -1,9 +1,10 @@
 import { notFound } from "next/navigation";
-import { PackageOpen } from "lucide-react";
+import { MessageSquare, PackageOpen } from "lucide-react";
 
 import { getSellerProfile } from "@/lib/queries";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ListingCard } from "@/components/marketplace/listing-card";
+import { RatingStars } from "@/components/store/rating-stars";
 import { formatDate } from "@/lib/format";
 
 export default async function StorePage({ params }: { params: Promise<{ id: string }> }) {
@@ -11,7 +12,7 @@ export default async function StorePage({ params }: { params: Promise<{ id: stri
   const profile = await getSellerProfile(id);
 
   if (!profile) notFound();
-  const { seller, listings } = profile;
+  const { seller, listings, rating, reviews } = profile;
 
   const displayName = seller.name ?? seller.handle ?? "Collector";
   const initials = displayName
@@ -33,6 +34,7 @@ export default async function StorePage({ params }: { params: Promise<{ id: stri
             <h1 className="truncate text-lg font-semibold">{displayName}</h1>
             {seller.handle && <span className="text-muted-foreground text-sm">@{seller.handle}</span>}
           </div>
+          <RatingStars average={rating.average} count={rating.count} size="md" />
           <span className="text-muted-foreground text-xs">
             Member since {formatDate(seller.createdAt)} &middot; {listings.length} listed item
             {listings.length === 1 ? "" : "s"}
@@ -50,6 +52,30 @@ export default async function StorePage({ params }: { params: Promise<{ id: stri
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4">
           {listings.map((asset) => (
             <ListingCard key={asset.id} asset={asset} />
+          ))}
+        </div>
+      )}
+
+      <h2 className="mt-10 mb-4 text-lg font-semibold">Reviews</h2>
+      {reviews.length === 0 ? (
+        <div className="text-muted-foreground flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed py-16 text-center">
+          <MessageSquare className="size-8" />
+          <p className="text-sm">No reviews yet — they show up here after a completed sale.</p>
+        </div>
+      ) : (
+        <div className="flex max-w-2xl flex-col gap-3">
+          {reviews.map((review) => (
+            <div key={review.id} className="bg-card flex flex-col gap-1.5 rounded-xl border p-4">
+              <div className="flex items-center justify-between gap-3">
+                <RatingStars average={review.rating} count={1} showCount={false} />
+                <span className="text-muted-foreground text-xs">{formatDate(review.createdAt)}</span>
+              </div>
+              {review.comment && <p className="text-sm">{review.comment}</p>}
+              <span className="text-muted-foreground text-xs">
+                {review.buyer.name ?? review.buyer.handle ?? "A buyer"} &middot; bought &quot;
+                {review.escrowTx.asset.name}&quot;
+              </span>
+            </div>
           ))}
         </div>
       )}
