@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { WalletActions } from "@/components/portfolio/wallet-actions";
 import { ListedValueChart, type ListedAssetPoint } from "@/components/portfolio/listed-value-chart";
+import { PortfolioValueChart } from "@/components/portfolio/portfolio-value-chart";
 import { useWalletStore } from "@/lib/web3/wallet-store";
 import { formatDate, shortSignature } from "@/lib/format";
 
@@ -21,6 +22,7 @@ interface ProfileHeaderProps {
   listedAssets: ListedAssetPoint[];
   /** Real devnet SOL balance, or null if there's no wallet / the RPC call failed. */
   solBalance: number | null;
+  portfolioValueHistory: { totalThb: number; createdAt: string }[];
 }
 
 export function ProfileHeader({
@@ -32,6 +34,7 @@ export function ProfileHeader({
   listedValueThb,
   listedAssets,
   solBalance,
+  portfolioValueHistory,
 }: ProfileHeaderProps) {
   const { connected } = useWalletStore();
   const [copied, setCopied] = useState(false);
@@ -89,6 +92,10 @@ export function ProfileHeader({
 
       <div className="border-t pt-4">
         <ListedValueChart assets={listedAssets} totalThb={listedValueThb} />
+      </div>
+
+      <div className="border-t pt-4">
+        <PortfolioValueChart initialHistory={portfolioValueHistory} />
       </div>
 
       {connected && (

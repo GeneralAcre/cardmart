@@ -15,7 +15,7 @@ import { SELF_MINT_FEE_THB, FULL_SERVICE_PACKAGE_PRICE_THB } from "@/lib/pricing
 import { themeIndexForSerial } from "@/lib/theme";
 import { getVerificationChecklist } from "@/lib/verification-checklist";
 import { requestDevnetAirdrop } from "@/lib/solana";
-import { getPriceHistory, type PriceHistoryRange } from "@/lib/queries";
+import { getPortfolioPriceHistory, getPriceHistory, type PriceHistoryRange } from "@/lib/queries";
 import {
   extractPsaCertNumber,
   isPsaConfigured,
@@ -802,4 +802,15 @@ export async function getAssetPriceHistory(assetId: string, range: PriceHistoryR
   await getCurrentUser();
   const snapshots = await getPriceHistory(assetId, range);
   return snapshots.map((s) => ({ priceThb: s.priceThb, createdAt: s.createdAt.toISOString() }));
+}
+
+/**
+ * Same range-switcher pattern, but for the current user's own total
+ * portfolio value across every asset they own — always the caller's own
+ * portfolio, never an arbitrary userId passed from the client.
+ */
+export async function getMyPortfolioPriceHistory(range: PriceHistoryRange) {
+  const user = await getCurrentUser();
+  const points = await getPortfolioPriceHistory(user.id, range);
+  return points.map((p) => ({ totalThb: p.totalThb, createdAt: p.createdAt.toISOString() }));
 }

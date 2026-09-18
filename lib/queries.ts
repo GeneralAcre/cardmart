@@ -124,6 +124,53 @@ export async function getPriceHistory(assetId: string, range: PriceHistoryRange)
   });
 }
 
+/**
+ * Total value of everything a user owns, tracked over time — a real
+ * step-function built from the same PriceSnapshot rows the per-item chart
+ * uses, merged across every asset they own. At each point where any one
+ * asset's price snapshot lands, this recomputes the sum using each asset's
+ * latest known price as of that moment. An owned asset with no snapshot at
+ * all yet (shouldn't normally happen — every list/reprice writes one) is
+ * left out entirely rather than guessed at.
+ */
+export async function getPortfolioPriceHistory(userId: string, range: PriceHistoryRange) {
+  const since = new Date(Date.now() - PRICE_HISTORY_DAYS[range] * 86_400_000);
+
+  const ownedAssetIds = (await prisma.asset.findMany({ where: { ownerId: userId }, select: { id: true } })).map(
+    (a) => a.id,
+  );
+  if (ownedAssetIds.length === 0) return [];
+
+  const [priorSnapshots, snapshotsInRange] = await Promise.all([
+    // Last known price per asset from before the window, so the window's
+    // first point doesn't undercount assets priced earlier than `since`.
+    prisma.priceSnapshot.findMany({
+      where: { assetId: { in: ownedAssetIds }, createdAt: { lt: since } },
+      orderBy: { createdAt: "desc" },
+      distinct: ["assetId"],
+    }),
+    prisma.priceSnapshot.findMany({
+      where: { assetId: { in: ownedAssetIds }, createdAt: { gte: since } },
+      orderBy: { createdAt: "asc" },
+    }),
+  ]);
+
+  const latestPriceByAsset = new Map<string, number>();
+  for (const s of priorSnapshots) latestPriceByAsset.set(s.assetId, s.priceThb);
+
+  const sumPrices = () => Array.from(latestPriceByAsset.values()).reduce((a, b) => a + b, 0);
+
+  const points: { createdAt: Date; totalThb: number }[] = [];
+  if (latestPriceByAsset.size > 0) {
+    points.push({ createdAt: since, totalThb: sumPrices() });
+  }
+  for (const s of snapshotsInRange) {
+    latestPriceByAsset.set(s.assetId, s.priceThb);
+    points.push({ createdAt: s.createdAt, totalThb: sumPrices() });
+  }
+  return points;
+}
+
 /** Real aggregate rating from completed sales only — never fabricated. */
 export async function getSellerRating(sellerId: string) {
   const agg = await prisma.review.aggregate({

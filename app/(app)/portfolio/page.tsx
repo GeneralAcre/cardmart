@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { PackageOpen, Sparkles } from "lucide-react";
 
-import { getGradingSubmissions, getVaultAssets } from "@/lib/queries";
+import { getGradingSubmissions, getPortfolioPriceHistory, getVaultAssets } from "@/lib/queries";
 import { getCurrentUser } from "@/lib/session";
 import { getDevnetSolBalance } from "@/lib/solana";
 import { PortfolioItemCard } from "@/components/portfolio/portfolio-item-card";
@@ -14,10 +14,11 @@ import { formatDate, formatThb } from "@/lib/format";
 export default async function PortfolioPage() {
   const user = await getCurrentUser();
   const walletAddress = user.walletAddress ?? user.walletMock;
-  const [assets, submissions, solBalance] = await Promise.all([
+  const [assets, submissions, solBalance, portfolioValueHistory] = await Promise.all([
     getVaultAssets(user.id),
     getGradingSubmissions(user.id),
     getDevnetSolBalance(user.walletAddress), // real balance only for real (Privy) wallets, not the mock demo ones
+    getPortfolioPriceHistory(user.id, "7d"), // default range matches PortfolioValueChart's own initial state
   ]);
 
   const inHand = assets.filter((a) => !a.vaulted);
@@ -45,6 +46,10 @@ export default async function PortfolioPage() {
           listedValueThb={listedValueThb}
           listedAssets={listedAssets.map((a) => ({ id: a.id, name: a.name, priceThb: a.priceThb! }))}
           solBalance={solBalance}
+          portfolioValueHistory={portfolioValueHistory.map((p) => ({
+            totalThb: p.totalThb,
+            createdAt: p.createdAt.toISOString(),
+          }))}
         />
       </div>
 
