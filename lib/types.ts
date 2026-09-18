@@ -15,6 +15,8 @@ export interface AssetSummary {
   marketStatus: MarketStatus;
   seller: { id: string; name: string | null };
   owner: { id: string; name: string | null };
+  /** Real live-camera captures from verification — shown instead of the generated digital-twin art when available. */
+  verificationPhotos: { id: string; viewLabel: string; url: string }[];
 }
 
 export interface MarketplaceFilterState {

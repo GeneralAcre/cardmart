@@ -58,15 +58,26 @@ export function PortfolioItemCard({ asset }: { asset: AssetSummary }) {
     });
   }
 
+  const thumbnail = asset.verificationPhotos[0];
+
   return (
     <div className="bg-card flex flex-col gap-3 rounded-xl border p-3 shadow-sm">
       <Link href={`/item/${asset.id}`}>
-        <CardArt
-          themeIndex={asset.themeIndex}
-          category={asset.category}
-          gradingCompany={asset.gradingCompany}
-          grade={asset.grade}
-        />
+        {thumbnail ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={thumbnail.url}
+            alt={asset.name}
+            className="aspect-[3/4] w-full rounded-lg border object-cover"
+          />
+        ) : (
+          <CardArt
+            themeIndex={asset.themeIndex}
+            category={asset.category}
+            gradingCompany={asset.gradingCompany}
+            grade={asset.grade}
+          />
+        )}
       </Link>
       <div className="flex flex-col gap-1">
         <span className="text-muted-foreground text-xs">{CATEGORY_LABELS[asset.category]}</span>
