@@ -60,7 +60,7 @@ export async function getMarketplaceListings(filters: MarketplaceFilters = {}) {
 export async function getSellerProfile(sellerId: string) {
   const seller = await prisma.user.findUnique({
     where: { id: sellerId },
-    select: { id: true, name: true, handle: true, image: true, createdAt: true },
+    select: { id: true, name: true, handle: true, image: true, createdAt: true, walletAddress: true },
   });
   if (!seller) return null;
 

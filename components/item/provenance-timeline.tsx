@@ -1,5 +1,6 @@
 import {
   ArrowRightLeft,
+  ExternalLink,
   Lock,
   PackageCheck,
   PackageOpen,
@@ -41,6 +42,14 @@ interface Entry {
   note: string;
   createdAt: string | Date;
   actor: { name: string | null } | null;
+  /** Only meaningful together with onChain — a real, working Solana Explorer link otherwise doesn't exist. */
+  mockTxSignature: string;
+  /** True when mockTxSignature is a real signed devnet transaction, not a simulated placeholder. */
+  onChain: boolean;
+}
+
+function explorerTxUrl(signature: string) {
+  return `https://explorer.solana.com/tx/${signature}?cluster=devnet`;
 }
 
 export function ProvenanceTimeline({ events }: { events: Entry[] }) {
@@ -62,7 +71,19 @@ export function ProvenanceTimeline({ events }: { events: Entry[] }) {
                 <span className="text-muted-foreground text-xs">{formatDateTime(event.createdAt)}</span>
               </div>
               <p className="text-muted-foreground text-sm">{event.note}</p>
-              {event.actor && <span className="text-muted-foreground text-xs">{event.actor.name}</span>}
+              <div className="flex items-center gap-3">
+                {event.actor && <span className="text-muted-foreground text-xs">{event.actor.name}</span>}
+                {event.onChain && (
+                  <a
+                    href={explorerTxUrl(event.mockTxSignature)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs underline underline-offset-2"
+                  >
+                    View on Solana Explorer <ExternalLink className="size-3" />
+                  </a>
+                )}
+              </div>
             </div>
           </li>
         );

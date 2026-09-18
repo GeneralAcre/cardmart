@@ -208,6 +208,11 @@ model ProvenanceEvent {
   type            ProvenanceType
   note            String
   mockTxSignature String
+  // True only when mockTxSignature is a real, signed Solana devnet
+  // transaction (currently: a Memo instruction recorded at mint/list time)
+  // rather than a randomly-generated placeholder string. Lets the UI show
+  // a real, working Solana Explorer link only where one actually resolves.
+  onChain         Boolean        @default(false)
   createdAt       DateTime       @default(now())
 
   assetId String

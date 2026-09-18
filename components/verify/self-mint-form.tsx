@@ -40,7 +40,7 @@ const CATEGORIES: AssetCategory[] = ["TRADING_CARD", "SPORTS_CARD", "COMIC"];
 
 export function SelfMintForm() {
   const router = useRouter();
-  const { connected, connecting, publicKey, connect, signMessage } = useWalletStore();
+  const { connected, connecting, connect, sendMemo } = useWalletStore();
 
   const [raw, setRaw] = useState(false);
   const [category, setCategory] = useState<AssetCategory>("TRADING_CARD");
@@ -120,10 +120,14 @@ export function SelfMintForm() {
   async function handleConfirmAndSign() {
     setSigning(true);
     try {
-      let key = publicKey;
-      if (!connected) key = await connect();
-      await signMessage(raw ? `Register digital twin for ${name}` : `Register digital twin for certificate ${serial}`);
-      toast.success("Transaction signed", { description: key ? `${key.slice(0, 4)}…${key.slice(-4)}` : undefined });
+      if (!connected) await connect();
+
+      // Real on-chain transaction (a Memo instruction), not just a message
+      // signature — this is what actually makes minting/listing a genuine,
+      // Solana-Explorer-verifiable event instead of a simulated one.
+      const memo = `Proof mint: ${name} | ${raw ? "Raw/Ungraded" : `${gradingCompany} ${serial}`} | ${priceThb} THB`;
+      const mintTxSignature = await sendMemo(memo);
+      toast.success("Minted on-chain", { description: `${mintTxSignature.slice(0, 8)}…` });
 
       const photos = checklist.map((v) => ({
         viewKey: v.key,
@@ -143,6 +147,7 @@ export function SelfMintForm() {
       }
       fd.set("priceThb", priceThb);
       fd.set("photos", JSON.stringify(photos));
+      fd.set("mintTxSignature", mintTxSignature);
 
       startSubmit(async () => {
         const res = await createListing({}, fd);
@@ -155,7 +160,7 @@ export function SelfMintForm() {
         router.push(`/item/${res.assetId}`);
       });
     } catch (err) {
-      // signMessage/connect now hit the real Privy wallet, which can
+      // sendMemo/connect now hit the real Privy wallet, which can
       // genuinely fail (rejected, session hiccup, etc.) — previously this
       // path only wrapped a synchronous mock and effectively never threw.
       toast.error(err instanceof Error ? err.message : "Signing failed. Try again.");
@@ -349,9 +354,10 @@ export function SelfMintForm() {
           <DialogHeader>
             <DialogTitle>Sign to Register Digital Twin</DialogTitle>
             <DialogDescription>
-              You&apos;ll sign a real message with your Solana wallet. The mint
-              transaction itself is still simulated until Phase 2 deploys the
-              on-chain Anchor program.
+              You&apos;ll sign a real Solana devnet transaction recording this mint
+              &amp; listing — verifiable on Solana Explorer. Ownership tracking
+              itself still lives in our database until Phase 2 deploys a full
+              on-chain program.
             </DialogDescription>
           </DialogHeader>
           <div className="bg-muted/40 rounded-lg border p-3 text-sm">

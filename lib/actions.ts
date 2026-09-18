@@ -55,6 +55,12 @@ const createListingSchema = z
         return z.NEVER;
       }
     }),
+    // Real Solana devnet transaction signature from a Memo instruction the
+    // seller actually signed client-side (see self-mint-form.tsx +
+    // lib/web3/solana-memo.ts) — optional because it's only present when
+    // the seller has a real wallet connected (demo/unconfigured Privy mode
+    // has none), in which case this falls back to the simulated signature.
+    mintTxSignature: z.string().optional(),
   })
   .superRefine((data, ctx) => {
     if (!data.raw) {
@@ -119,6 +125,7 @@ export async function createListing(
     serial: formData.get("serial") || undefined,
     priceThb: formData.get("priceThb"),
     photos: formData.get("photos"),
+    mintTxSignature: formData.get("mintTxSignature") || undefined,
   });
 
   if (!parsed.success) {
@@ -160,7 +167,12 @@ export async function createListing(
     }
   }
 
-  const mint = await mockMintDigitalTwin(serial);
+  // A real on-chain signature (from the seller actually signing a Memo
+  // transaction client-side) takes priority over the simulated mint —
+  // only falls back to mockMintDigitalTwin when no real wallet was
+  // available to sign with (demo mode without Privy configured).
+  const mintTxSignature = data.mintTxSignature ?? (await mockMintDigitalTwin(serial)).txSignature;
+  const isOnChain = Boolean(data.mintTxSignature);
 
   const asset = await prisma.asset.create({
     data: {
@@ -176,7 +188,7 @@ export async function createListing(
       vaulted: false,
       marketStatus: "READY_TO_SHIP",
       pipelineStage: "NONE",
-      mockMintTx: mint.txSignature,
+      mockMintTx: mintTxSignature,
       verificationPackage: "SELF_MINT",
       mintFeeThb: SELF_MINT_FEE_THB,
       sellerId: user.id,
@@ -201,14 +213,16 @@ export async function createListing(
         note: data.raw
           ? `Self-Mint package (${SELF_MINT_FEE_THB} THB): raw/ungraded item verified with ${data.photos.length} live camera captures — no grading company involved.`
           : `Self-Mint package (${SELF_MINT_FEE_THB} THB): seller-verified with ${data.photos.length} live camera captures, registered as ${data.gradingCompany} certificate ${serial}.`,
-        mockTxSignature: mint.txSignature,
+        mockTxSignature: mintTxSignature,
+        onChain: isOnChain,
         actorId: user.id,
       },
       {
         assetId: asset.id,
         type: "LISTED",
         note: `Listed for sale at ${data.priceThb.toLocaleString()} THB.`,
-        mockTxSignature: mint.txSignature,
+        mockTxSignature: mintTxSignature,
+        onChain: isOnChain,
         actorId: user.id,
       },
     ],

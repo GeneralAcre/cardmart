@@ -6,6 +6,7 @@ import { useCreateWallet, useSignAndSendTransaction, useSignMessage, useWallets 
 import { getBase58Decoder } from "@solana/kit";
 
 import { buildSolTransferTransaction } from "@/lib/web3/solana-transfer";
+import { buildMemoTransaction } from "@/lib/web3/solana-memo";
 
 // Phase 2 seam, now live: this used to be a zustand store standing in for
 // @solana/wallet-adapter-react's useWallet(). It's now backed by a real
@@ -28,6 +29,8 @@ export interface WalletStore {
   signMessage: (message: string) => Promise<string>;
   /** Signs and broadcasts a real SOL transfer to toAddress. Returns the base58 transaction signature. */
   sendSol: (toAddress: string, amountSol: number) => Promise<string>;
+  /** Signs and broadcasts a real on-chain Memo transaction. Returns the base58 transaction signature. */
+  sendMemo: (memo: string) => Promise<string>;
 }
 
 function toHex(bytes: Uint8Array): string {
@@ -95,7 +98,21 @@ function usePrivyWalletStore(): WalletStore {
     [wallet, signAndSendTransaction],
   );
 
-  return { connected, connecting, publicKey, connect, disconnect, signMessage, sendSol };
+  const sendMemo = useCallback(
+    async (memo: string): Promise<string> => {
+      if (!wallet) throw new Error("Wallet not connected");
+      const transaction = await buildMemoTransaction(wallet.address, memo);
+      const { signature } = await signAndSendTransaction({
+        transaction,
+        wallet,
+        chain: "solana:devnet",
+      });
+      return getBase58Decoder().decode(signature);
+    },
+    [wallet, signAndSendTransaction],
+  );
+
+  return { connected, connecting, publicKey, connect, disconnect, signMessage, sendSol, sendMemo };
 }
 
 /** Used when NEXT_PUBLIC_PRIVY_APP_ID isn't set — no PrivyProvider is
@@ -113,6 +130,9 @@ function useUnconfiguredWalletStore(): WalletStore {
       throw new Error("Wallet sign-in isn't configured yet.");
     },
     sendSol: async () => {
+      throw new Error("Wallet sign-in isn't configured yet.");
+    },
+    sendMemo: async () => {
       throw new Error("Wallet sign-in isn't configured yet.");
     },
   };

@@ -5,6 +5,7 @@ import { getSellerProfile } from "@/lib/queries";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ListingCard } from "@/components/marketplace/listing-card";
 import { RatingStars } from "@/components/store/rating-stars";
+import { SellerWalletAddress } from "@/components/store/seller-wallet-address";
 import { formatDate } from "@/lib/format";
 
 export default async function StorePage({ params }: { params: Promise<{ id: string }> }) {
@@ -39,6 +40,7 @@ export default async function StorePage({ params }: { params: Promise<{ id: stri
             Member since {formatDate(seller.createdAt)} &middot; {listings.length} listed item
             {listings.length === 1 ? "" : "s"}
           </span>
+          {seller.walletAddress && <SellerWalletAddress address={seller.walletAddress} />}
         </div>
       </div>
 
