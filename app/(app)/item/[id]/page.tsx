@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { getAssetById, getPriceHistory, getSellerRating } from "@/lib/queries";
+import { getAssetById, getPriceHistory, getSellerRating, isAssetWatched } from "@/lib/queries";
 import { getCurrentUser } from "@/lib/session";
 import { ItemGallery } from "@/components/item/item-gallery";
 import { PriceHistoryChart } from "@/components/item/price-history-chart";
 import { ProvenanceTimeline } from "@/components/item/provenance-timeline";
 import { BuyPanel } from "@/components/item/buy-panel";
+import { WatchButton } from "@/components/item/watch-button";
 import { LeaveReviewForm } from "@/components/store/leave-review-form";
 import { RatingStars } from "@/components/store/rating-stars";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -66,6 +67,9 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
     (tx) => tx.buyerId === user.id && tx.status === "RELEASED" && !tx.review,
   );
 
+  const isOwner = asset.ownerId === user.id;
+  const isWatching = !isOwner && (await isAssetWatched(user.id, asset.id));
+
   return (
     <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6">
       <div className="grid grid-cols-1 gap-10 md:grid-cols-2">
@@ -81,15 +85,18 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
 
         <div className="flex flex-col gap-5">
           <div className="flex flex-col gap-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="outline">{CATEGORY_LABELS[asset.category]}</Badge>
-              <Badge className={cn("border-0", MARKET_STATUS_BADGE_CLASS[asset.marketStatus])}>
-                {MARKET_STATUS_LABELS[asset.marketStatus]}
-              </Badge>
-              {asset.vaulted && <Badge variant="secondary">In Platform Vault</Badge>}
-              <Badge className={cn("border-0", VERIFICATION_PACKAGE_BADGE_CLASS[asset.verificationPackage])}>
-                {VERIFICATION_PACKAGE_LABELS[asset.verificationPackage]}
-              </Badge>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="outline">{CATEGORY_LABELS[asset.category]}</Badge>
+                <Badge className={cn("border-0", MARKET_STATUS_BADGE_CLASS[asset.marketStatus])}>
+                  {MARKET_STATUS_LABELS[asset.marketStatus]}
+                </Badge>
+                {asset.vaulted && <Badge variant="secondary">In Platform Vault</Badge>}
+                <Badge className={cn("border-0", VERIFICATION_PACKAGE_BADGE_CLASS[asset.verificationPackage])}>
+                  {VERIFICATION_PACKAGE_LABELS[asset.verificationPackage]}
+                </Badge>
+              </div>
+              {!isOwner && <WatchButton assetId={asset.id} initialWatching={isWatching} />}
             </div>
             <h1 className="text-2xl font-semibold">{asset.name}</h1>
             <p className="text-muted-foreground text-sm">{asset.subtitle}</p>
@@ -267,7 +274,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
             forSale={asset.forSale}
             vaulted={asset.vaulted}
             marketStatus={asset.marketStatus}
-            isOwner={asset.ownerId === user.id}
+            isOwner={isOwner}
           />
 
           {reviewableEscrow && <LeaveReviewForm escrowTxId={reviewableEscrow.id} />}

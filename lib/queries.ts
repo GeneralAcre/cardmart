@@ -243,3 +243,27 @@ export async function getWarehouseHistory() {
     },
   });
 }
+
+export async function isAssetWatched(userId: string, assetId: string): Promise<boolean> {
+  const existing = await prisma.watchlistItem.findUnique({
+    where: { userId_assetId: { userId, assetId } },
+  });
+  return Boolean(existing);
+}
+
+export async function getWatchlist(userId: string) {
+  const items = await prisma.watchlistItem.findMany({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+    include: {
+      asset: {
+        include: {
+          seller: true,
+          owner: true,
+          verificationPhotos: { orderBy: { createdAt: "asc" } },
+        },
+      },
+    },
+  });
+  return items.map((i) => i.asset);
+}

@@ -529,6 +529,71 @@ export async function vaultRelist(assetId: string, priceThb: number) {
   revalidateMarketplace(assetId);
 }
 
+/**
+ * Lists (or reprices) a non-vaulted item the seller physically still holds.
+ * Vaulted items go through vaultRelist instead — this is specifically for
+ * the "in your hands" gap: previously there was no way to change price or
+ * relist a delisted, un-vaulted item at all.
+ */
+export async function updateListingPrice(assetId: string, priceThb: number) {
+  const user = await getCurrentUser();
+  const asset = await prisma.asset.findUniqueOrThrow({ where: { id: assetId } });
+  if (asset.ownerId !== user.id) throw new Error("You do not own this item.");
+  if (asset.vaulted) throw new Error("Vaulted items are repriced via Relist instead.");
+  if (asset.marketStatus === "IN_ESCROW") throw new Error("This item is locked in an active sale.");
+  if (!Number.isInteger(priceThb) || priceThb < 100) throw new Error("Enter a valid price.");
+
+  const wasForSale = asset.forSale;
+  await prisma.asset.update({
+    where: { id: assetId },
+    data: {
+      priceThb,
+      forSale: true,
+      marketStatus: "READY_TO_SHIP",
+      priceSnapshots: { create: { priceThb } },
+    },
+  });
+  await prisma.provenanceEvent.create({
+    data: {
+      assetId,
+      type: "LISTED",
+      note: wasForSale
+        ? `Price updated to ${priceThb.toLocaleString()} THB.`
+        : `Relisted for sale at ${priceThb.toLocaleString()} THB.`,
+      mockTxSignature: (await mockEscrowInstruction("lock", assetId)).txSignature,
+      actorId: user.id,
+    },
+  });
+
+  revalidateMarketplace(assetId);
+}
+
+/** Takes a non-vaulted, currently-listed item off the marketplace without dispatching it anywhere. */
+export async function delistAsset(assetId: string) {
+  const user = await getCurrentUser();
+  const asset = await prisma.asset.findUniqueOrThrow({ where: { id: assetId } });
+  if (asset.ownerId !== user.id) throw new Error("You do not own this item.");
+  if (asset.vaulted) throw new Error("Vaulted items can't be delisted this way.");
+  if (asset.marketStatus === "IN_ESCROW") throw new Error("This item is locked in an active sale.");
+  if (!asset.forSale) throw new Error("This item is not currently listed.");
+
+  await prisma.asset.update({
+    where: { id: assetId },
+    data: { forSale: false, marketStatus: "DELISTED" },
+  });
+  await prisma.provenanceEvent.create({
+    data: {
+      assetId,
+      type: "DELISTED",
+      note: "Delisted from the marketplace.",
+      mockTxSignature: (await mockEscrowInstruction("lock", assetId)).txSignature,
+      actorId: user.id,
+    },
+  });
+
+  revalidateMarketplace(assetId);
+}
+
 const submitForGradingSchema = z.object({
   itemName: z.string().min(2),
   itemSubtitle: z.string().min(2),
@@ -813,4 +878,24 @@ export async function getMyPortfolioPriceHistory(range: PriceHistoryRange) {
   const user = await getCurrentUser();
   const points = await getPortfolioPriceHistory(user.id, range);
   return points.map((p) => ({ totalThb: p.totalThb, createdAt: p.createdAt.toISOString() }));
+}
+
+/** Adds or removes an item from the current user's watchlist; returns the new state. */
+export async function toggleWatchlist(assetId: string): Promise<{ watching: boolean }> {
+  const user = await getCurrentUser();
+  const existing = await prisma.watchlistItem.findUnique({
+    where: { userId_assetId: { userId: user.id, assetId } },
+  });
+
+  if (existing) {
+    await prisma.watchlistItem.delete({ where: { id: existing.id } });
+    revalidatePath("/portfolio");
+    revalidatePath(`/item/${assetId}`);
+    return { watching: false };
+  }
+
+  await prisma.watchlistItem.create({ data: { userId: user.id, assetId } });
+  revalidatePath("/portfolio");
+  revalidatePath(`/item/${assetId}`);
+  return { watching: true };
 }

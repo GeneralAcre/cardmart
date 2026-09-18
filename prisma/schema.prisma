@@ -129,6 +129,7 @@ model User {
   gradingSubmissions GradingSubmission[] @relation("GradingSubmissionSeller")
   reviewsReceived    Review[]            @relation("SellerReviews")
   reviewsGiven       Review[]            @relation("BuyerReviews")
+  watchlist          WatchlistItem[]
 }
 
 model Asset {
@@ -162,9 +163,25 @@ model Asset {
   gradingSubmission  GradingSubmission?
   verificationPhotos VerificationPhoto[]
   priceSnapshots     PriceSnapshot[]
+  watchedBy          WatchlistItem[]
 
   @@index([sellerId])
   @@index([ownerId])
+}
+
+// A buyer saving a listing to keep an eye on — one row per (user, asset),
+// so watching twice is a no-op rather than a duplicate row.
+model WatchlistItem {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+  assetId String
+  asset   Asset  @relation(fields: [assetId], references: [id])
+
+  @@unique([userId, assetId])
+  @@index([userId])
 }
 
 // A real point-in-time record of an asset's listing price — one row per

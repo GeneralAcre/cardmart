@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { PackageOpen, Sparkles } from "lucide-react";
+import { Bookmark, PackageOpen, Sparkles } from "lucide-react";
 
-import { getGradingSubmissions, getPortfolioPriceHistory, getVaultAssets } from "@/lib/queries";
+import { getGradingSubmissions, getPortfolioPriceHistory, getVaultAssets, getWatchlist } from "@/lib/queries";
 import { getCurrentUser } from "@/lib/session";
 import { getDevnetSolBalance } from "@/lib/solana";
+import { ListingCard } from "@/components/marketplace/listing-card";
 import { PortfolioItemCard } from "@/components/portfolio/portfolio-item-card";
 import { ProfileHeader } from "@/components/portfolio/profile-header";
 import { Badge } from "@/components/ui/badge";
@@ -14,11 +15,12 @@ import { formatDate, formatThb } from "@/lib/format";
 export default async function PortfolioPage() {
   const user = await getCurrentUser();
   const walletAddress = user.walletAddress ?? user.walletMock;
-  const [assets, submissions, solBalance, portfolioValueHistory] = await Promise.all([
+  const [assets, submissions, solBalance, portfolioValueHistory, watchlist] = await Promise.all([
     getVaultAssets(user.id),
     getGradingSubmissions(user.id),
     getDevnetSolBalance(user.walletAddress), // real balance only for real (Privy) wallets, not the mock demo ones
     getPortfolioPriceHistory(user.id, "7d"), // default range matches PortfolioValueChart's own initial state
+    getWatchlist(user.id),
   ]);
 
   const inHand = assets.filter((a) => !a.vaulted);
@@ -68,6 +70,7 @@ export default async function PortfolioPage() {
             <span className="sm:hidden">Grading ({submissions.length})</span>
             <span className="hidden sm:inline">Grading Submissions ({submissions.length})</span>
           </TabsTrigger>
+          <TabsTrigger value="watchlist">Watchlist ({watchlist.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="all" className="pt-6">
@@ -81,6 +84,23 @@ export default async function PortfolioPage() {
         </TabsContent>
         <TabsContent value="grading" className="pt-6">
           <GradingSubmissionList submissions={submissions} />
+        </TabsContent>
+        <TabsContent value="watchlist" className="pt-6">
+          {watchlist.length === 0 ? (
+            <div className="text-muted-foreground flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed py-24 text-center">
+              <Bookmark className="size-8" />
+              <p className="text-sm">Nothing on your watchlist yet.</p>
+              <Link href="/marketplace" className="text-foreground text-sm underline">
+                Browse the marketplace
+              </Link>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4">
+              {watchlist.map((asset) => (
+                <ListingCard key={asset.id} asset={asset} />
+              ))}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>

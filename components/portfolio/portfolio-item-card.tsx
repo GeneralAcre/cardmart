@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2, PackageCheck, Repeat, Truck } from "lucide-react";
+import { Loader2, PackageCheck, Repeat, Tag, TagX, Truck } from "lucide-react";
 
 import { CardArt } from "@/components/asset/card-art";
 import { Badge } from "@/components/ui/badge";
@@ -20,7 +20,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { vaultRedeem, vaultRelist } from "@/lib/actions";
+import { delistAsset, updateListingPrice, vaultRedeem, vaultRelist } from "@/lib/actions";
 import { formatThb } from "@/lib/format";
 import { CATEGORY_LABELS } from "@/lib/labels";
 import type { AssetSummary } from "@/lib/types";
@@ -29,6 +29,7 @@ export function PortfolioItemCard({ asset }: { asset: AssetSummary }) {
   const router = useRouter();
   const [relistOpen, setRelistOpen] = useState(false);
   const [redeemOpen, setRedeemOpen] = useState(false);
+  const [priceEditOpen, setPriceEditOpen] = useState(false);
   const [price, setPrice] = useState(asset.priceThb ? String(asset.priceThb) : "");
   const [pending, startTransition] = useTransition();
 
@@ -54,6 +55,31 @@ export function PortfolioItemCard({ asset }: { asset: AssetSummary }) {
         router.refresh();
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Could not redeem item.");
+      }
+    });
+  }
+
+  function handleUpdatePrice() {
+    startTransition(async () => {
+      try {
+        await updateListingPrice(asset.id, Number(price));
+        toast.success(asset.forSale ? "Price updated." : "Listed for sale.");
+        setPriceEditOpen(false);
+        router.refresh();
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Could not update listing.");
+      }
+    });
+  }
+
+  function handleDelist() {
+    startTransition(async () => {
+      try {
+        await delistAsset(asset.id);
+        toast.success("Delisted from the marketplace.");
+        router.refresh();
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Could not delist item.");
       }
     });
   }
@@ -158,8 +184,54 @@ export function PortfolioItemCard({ asset }: { asset: AssetSummary }) {
             </DialogContent>
           </Dialog>
         </div>
+      ) : asset.marketStatus === "IN_ESCROW" ? (
+        <p className="text-muted-foreground pt-1 text-xs">Locked in an active sale.</p>
       ) : (
-        <p className="text-muted-foreground pt-1 text-xs">Physically in your hands.</p>
+        <div className="flex gap-2 pt-1">
+          <Dialog open={priceEditOpen} onOpenChange={setPriceEditOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" variant="secondary" className="flex-1">
+                <Tag /> {asset.forSale ? "Edit Price" : "List for Sale"}
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{asset.forSale ? "Update Listing Price" : "List for Sale"}</DialogTitle>
+                <DialogDescription>
+                  {asset.forSale
+                    ? "Changes the price buyers see on the marketplace right away."
+                    : "Puts this item back on the marketplace at the price you set."}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="price-edit">Price (THB)</Label>
+                <Input
+                  id="price-edit"
+                  type="number"
+                  inputMode="numeric"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                />
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setPriceEditOpen(false)} disabled={pending}>
+                  Cancel
+                </Button>
+                <Button onClick={handleUpdatePrice} disabled={pending || !price || Number(price) <= 0}>
+                  {pending && <Loader2 className="animate-spin" />}
+                  {asset.forSale ? "Update Price" : "List for Sale"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {asset.forSale && (
+            <Button size="sm" variant="outline" className="flex-1" onClick={handleDelist} disabled={pending}>
+              {pending ? <Loader2 className="animate-spin" /> : <TagX />}
+              Delist
+            </Button>
+          )}
+        </div>
       )}
     </div>
   );
