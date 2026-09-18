@@ -270,6 +270,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
 
           <BuyPanel
             assetId={asset.id}
+            assetName={asset.name}
             priceThb={asset.priceThb}
             forSale={asset.forSale}
             vaulted={asset.vaulted}

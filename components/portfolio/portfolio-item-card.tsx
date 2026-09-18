@@ -21,22 +21,39 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { delistAsset, updateListingPrice, vaultRedeem, vaultRelist } from "@/lib/actions";
+import { useWalletStore } from "@/lib/web3/wallet-store";
 import { formatThb } from "@/lib/format";
 import { CATEGORY_LABELS } from "@/lib/labels";
 import type { AssetSummary } from "@/lib/types";
 
 export function PortfolioItemCard({ asset }: { asset: AssetSummary }) {
   const router = useRouter();
+  const { connected, connect, sendMemo } = useWalletStore();
   const [relistOpen, setRelistOpen] = useState(false);
   const [redeemOpen, setRedeemOpen] = useState(false);
   const [priceEditOpen, setPriceEditOpen] = useState(false);
   const [price, setPrice] = useState(asset.priceThb ? String(asset.priceThb) : "");
   const [pending, startTransition] = useTransition();
 
+  // Real on-chain transaction (Memo instruction) signed by the seller's own
+  // wallet before the price/listing change is recorded — same mechanism
+  // Self-Mint uses. Returns undefined (not a hard failure) when there's no
+  // real wallet to sign with, so the action falls back to a simulated
+  // signature instead of blocking the seller entirely.
+  async function signMemo(memo: string): Promise<string | undefined> {
+    try {
+      if (!connected) await connect();
+      return await sendMemo(memo);
+    } catch {
+      return undefined;
+    }
+  }
+
   function handleRelist() {
     startTransition(async () => {
       try {
-        await vaultRelist(asset.id, Number(price));
+        const tx = await signMemo(`Proof relist: ${asset.name} | ${Number(price)} THB`);
+        await vaultRelist(asset.id, Number(price), tx);
         toast.success("Relisted for instant sale.");
         setRelistOpen(false);
         router.refresh();
@@ -62,7 +79,8 @@ export function PortfolioItemCard({ asset }: { asset: AssetSummary }) {
   function handleUpdatePrice() {
     startTransition(async () => {
       try {
-        await updateListingPrice(asset.id, Number(price));
+        const tx = await signMemo(`Proof ${asset.forSale ? "reprice" : "list"}: ${asset.name} | ${Number(price)} THB`);
+        await updateListingPrice(asset.id, Number(price), tx);
         toast.success(asset.forSale ? "Price updated." : "Listed for sale.");
         setPriceEditOpen(false);
         router.refresh();
@@ -75,7 +93,8 @@ export function PortfolioItemCard({ asset }: { asset: AssetSummary }) {
   function handleDelist() {
     startTransition(async () => {
       try {
-        await delistAsset(asset.id);
+        const tx = await signMemo(`Proof delist: ${asset.name}`);
+        await delistAsset(asset.id, tx);
         toast.success("Delisted from the marketplace.");
         router.refresh();
       } catch (err) {

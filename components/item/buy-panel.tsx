@@ -3,10 +3,12 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2, ShieldCheck, Truck, Vault } from "lucide-react";
+import { Loader2, ShieldCheck, Tag, Truck, Vault } from "lucide-react";
 import type { MarketStatus } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -16,12 +18,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { buyListing } from "@/lib/actions";
+import { buyListing, updateListingPrice } from "@/lib/actions";
 import { useWalletStore } from "@/lib/web3/wallet-store";
 import { formatThb } from "@/lib/format";
 
 interface BuyPanelProps {
   assetId: string;
+  assetName: string;
   priceThb: number | null;
   forSale: boolean;
   vaulted: boolean;
@@ -29,7 +32,7 @@ interface BuyPanelProps {
   isOwner: boolean;
 }
 
-export function BuyPanel({ assetId, priceThb, forSale, vaulted, marketStatus, isOwner }: BuyPanelProps) {
+export function BuyPanel({ assetId, assetName, priceThb, forSale, vaulted, marketStatus, isOwner }: BuyPanelProps) {
   const router = useRouter();
   const { connected, connecting, connect, signMessage } = useWalletStore();
 
@@ -39,6 +42,13 @@ export function BuyPanel({ assetId, priceThb, forSale, vaulted, marketStatus, is
   const [submitting, startSubmit] = useTransition();
 
   if (isOwner) {
+    // Not vaulted, not mid-sale, and not currently listed — e.g. a
+    // Full-Service item straight out of grading, which is created with no
+    // price at all. Rather than sending the owner off to hunt for this in
+    // Portfolio, let them list it right here.
+    if (!vaulted && marketStatus !== "IN_ESCROW" && !forSale) {
+      return <OwnerListForSaleForm assetId={assetId} assetName={assetName} />;
+    }
     return (
       <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
         You own this item. Manage it from{" "}
@@ -151,6 +161,62 @@ export function BuyPanel({ assetId, priceThb, forSale, vaulted, marketStatus, is
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function OwnerListForSaleForm({ assetId, assetName }: { assetId: string; assetName: string }) {
+  const router = useRouter();
+  const { connected, connect, sendMemo } = useWalletStore();
+  const [price, setPrice] = useState("");
+  const [pending, startTransition] = useTransition();
+
+  function handleList() {
+    startTransition(async () => {
+      try {
+        let tx: string | undefined;
+        try {
+          if (!connected) await connect();
+          tx = await sendMemo(`Proof list: ${assetName} | ${Number(price)} THB`);
+        } catch {
+          tx = undefined;
+        }
+        await updateListingPrice(assetId, Number(price), tx);
+        toast.success("Listed for sale.");
+        router.refresh();
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Could not list item.");
+      }
+    });
+  }
+
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border p-4">
+      <div className="flex items-center gap-2 text-sm font-medium">
+        <Tag className="size-4" />
+        You own this item — set a price to list it
+      </div>
+      <p className="text-muted-foreground text-xs">
+        Grading is complete and the digital twin is minted. It won&apos;t
+        appear on the marketplace until you set a price.
+      </p>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="owner-list-price">Price (THB)</Label>
+        <Input
+          id="owner-list-price"
+          type="number"
+          inputMode="numeric"
+          value={price}
+          onChange={(e) => setPrice(e.target.value)}
+        />
+      </div>
+      <Button onClick={handleList} disabled={pending || !price || Number(price) <= 0}>
+        {pending && <Loader2 className="animate-spin" />}
+        List for Sale
+      </Button>
+      <a href="/portfolio" className="text-muted-foreground text-center text-xs underline">
+        Or manage it from Portfolio
+      </a>
     </div>
   );
 }

@@ -500,12 +500,26 @@ export async function warehouseReject(inboundPackageId: string) {
   revalidateMarketplace(pkg.assetId);
 }
 
+/**
+ * Real on-chain signature takes priority when the client actually signed
+ * one (see components/portfolio/portfolio-item-card.tsx's use of
+ * wallet-store's sendMemo); falls back to the simulated escrow instruction
+ * only when no real wallet was available to sign with.
+ */
+async function resolveTxSignature(assetId: string, txSignature?: string) {
+  if (txSignature) return { signature: txSignature, onChain: true };
+  const mock = await mockEscrowInstruction("lock", assetId);
+  return { signature: mock.txSignature, onChain: false };
+}
+
 /** Relists a vaulted item for instant, zero-shipping sale. */
-export async function vaultRelist(assetId: string, priceThb: number) {
+export async function vaultRelist(assetId: string, priceThb: number, txSignature?: string) {
   const user = await getCurrentUser();
   const asset = await prisma.asset.findUniqueOrThrow({ where: { id: assetId } });
   if (asset.ownerId !== user.id) throw new Error("You do not own this item.");
   if (!asset.vaulted) throw new Error("Only vaulted items can be relisted instantly.");
+
+  const tx = await resolveTxSignature(assetId, txSignature);
 
   await prisma.asset.update({
     where: { id: assetId },
@@ -521,7 +535,8 @@ export async function vaultRelist(assetId: string, priceThb: number) {
       assetId,
       type: "RELISTED",
       note: `Relisted for instant sale at ${priceThb.toLocaleString()} THB.`,
-      mockTxSignature: (await mockEscrowInstruction("lock", assetId)).txSignature,
+      mockTxSignature: tx.signature,
+      onChain: tx.onChain,
       actorId: user.id,
     },
   });
@@ -535,7 +550,7 @@ export async function vaultRelist(assetId: string, priceThb: number) {
  * the "in your hands" gap: previously there was no way to change price or
  * relist a delisted, un-vaulted item at all.
  */
-export async function updateListingPrice(assetId: string, priceThb: number) {
+export async function updateListingPrice(assetId: string, priceThb: number, txSignature?: string) {
   const user = await getCurrentUser();
   const asset = await prisma.asset.findUniqueOrThrow({ where: { id: assetId } });
   if (asset.ownerId !== user.id) throw new Error("You do not own this item.");
@@ -544,6 +559,8 @@ export async function updateListingPrice(assetId: string, priceThb: number) {
   if (!Number.isInteger(priceThb) || priceThb < 100) throw new Error("Enter a valid price.");
 
   const wasForSale = asset.forSale;
+  const tx = await resolveTxSignature(assetId, txSignature);
+
   await prisma.asset.update({
     where: { id: assetId },
     data: {
@@ -560,7 +577,8 @@ export async function updateListingPrice(assetId: string, priceThb: number) {
       note: wasForSale
         ? `Price updated to ${priceThb.toLocaleString()} THB.`
         : `Relisted for sale at ${priceThb.toLocaleString()} THB.`,
-      mockTxSignature: (await mockEscrowInstruction("lock", assetId)).txSignature,
+      mockTxSignature: tx.signature,
+      onChain: tx.onChain,
       actorId: user.id,
     },
   });
@@ -569,13 +587,15 @@ export async function updateListingPrice(assetId: string, priceThb: number) {
 }
 
 /** Takes a non-vaulted, currently-listed item off the marketplace without dispatching it anywhere. */
-export async function delistAsset(assetId: string) {
+export async function delistAsset(assetId: string, txSignature?: string) {
   const user = await getCurrentUser();
   const asset = await prisma.asset.findUniqueOrThrow({ where: { id: assetId } });
   if (asset.ownerId !== user.id) throw new Error("You do not own this item.");
   if (asset.vaulted) throw new Error("Vaulted items can't be delisted this way.");
   if (asset.marketStatus === "IN_ESCROW") throw new Error("This item is locked in an active sale.");
   if (!asset.forSale) throw new Error("This item is not currently listed.");
+
+  const tx = await resolveTxSignature(assetId, txSignature);
 
   await prisma.asset.update({
     where: { id: assetId },
@@ -586,7 +606,8 @@ export async function delistAsset(assetId: string) {
       assetId,
       type: "DELISTED",
       note: "Delisted from the marketplace.",
-      mockTxSignature: (await mockEscrowInstruction("lock", assetId)).txSignature,
+      mockTxSignature: tx.signature,
+      onChain: tx.onChain,
       actorId: user.id,
     },
   });
@@ -668,6 +689,11 @@ export async function adminMarkAtGradingCompany(submissionId: string) {
 
 const completeGradingSchema = z.object({
   grade: z.coerce.number().min(1).max(10),
+  // Real Solana devnet transaction signature from the admin's own wallet
+  // signing a Memo instruction recording the grading result (see
+  // components/warehouse/grading-queue.tsx) — optional because it's only
+  // present when the admin has a real wallet connected.
+  mintTxSignature: z.string().optional(),
 });
 
 export interface CompleteGradingState {
@@ -689,14 +715,18 @@ export async function adminCompleteGrading(
   if (submission.status !== "AT_GRADING_COMPANY") {
     return { error: "This submission has not been sent to the grading company yet." };
   }
-  const parsed = completeGradingSchema.safeParse({ grade: formData.get("grade") });
+  const parsed = completeGradingSchema.safeParse({
+    grade: formData.get("grade"),
+    mintTxSignature: formData.get("mintTxSignature") || undefined,
+  });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Enter a valid grade." };
   }
 
   const serial = `${submission.gradingCompany}-${Math.floor(10_000_000 + Math.random() * 89_999_999)}`;
   const themeIndex = serial.length % 8;
-  const mint = await mockMintDigitalTwin(serial);
+  const mintTxSignature = parsed.data.mintTxSignature ?? (await mockMintDigitalTwin(serial)).txSignature;
+  const isOnChain = Boolean(parsed.data.mintTxSignature);
 
   const asset = await prisma.asset.create({
     data: {
@@ -711,7 +741,7 @@ export async function adminCompleteGrading(
       vaulted: false,
       marketStatus: "DELISTED",
       pipelineStage: "NONE",
-      mockMintTx: mint.txSignature,
+      mockMintTx: mintTxSignature,
       verificationPackage: "FULL_SERVICE",
       mintFeeThb: submission.packagePriceThb,
       sellerId: submission.sellerId,
@@ -729,7 +759,8 @@ export async function adminCompleteGrading(
       assetId: asset.id,
       type: "MINTED_DIGITAL_TWIN",
       note: `Full-Service package (${submission.packagePriceThb.toLocaleString()} THB): graded ${submission.gradingCompany} ${parsed.data.grade} by the grading company, digital twin minted by the platform.`,
-      mockTxSignature: mint.txSignature,
+      mockTxSignature: mintTxSignature,
+      onChain: isOnChain,
       actorId: submission.sellerId,
     },
   });

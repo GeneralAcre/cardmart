@@ -31,6 +31,7 @@ import {
   adminMarkAtGradingCompany,
   adminRejectGradingSubmission,
 } from "@/lib/actions";
+import { useWalletStore } from "@/lib/web3/wallet-store";
 import { CATEGORY_LABELS, GRADING_COMPANY_LABELS, GRADING_SUBMISSION_STATUS_LABELS } from "@/lib/labels";
 import { formatDate } from "@/lib/format";
 
@@ -38,6 +39,7 @@ type SubmissionWithSeller = GradingSubmission & { seller: User };
 
 export function GradingQueue({ submissions }: { submissions: SubmissionWithSeller[] }) {
   const router = useRouter();
+  const { connected, connect, sendMemo } = useWalletStore();
   const [pending, startTransition] = useTransition();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [gradeTarget, setGradeTarget] = useState<SubmissionWithSeller | null>(null);
@@ -61,17 +63,33 @@ export function GradingQueue({ submissions }: { submissions: SubmissionWithSelle
 
   function completeGrading() {
     if (!gradeTarget) return;
-    const fd = new FormData();
-    fd.set("grade", grade);
     setBusyId(gradeTarget.id);
     startTransition(async () => {
       try {
+        // Real on-chain transaction (a Memo instruction), signed by the
+        // staff member completing the grading — same mechanism Self-Mint
+        // uses, so this is a genuine devnet transaction, not a simulated one.
+        let mintTxSignature: string | undefined;
+        try {
+          if (!connected) await connect();
+          mintTxSignature = await sendMemo(
+            `Proof grading complete: ${gradeTarget.itemName} | ${gradeTarget.gradingCompany} ${grade}`,
+          );
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : "Could not sign the on-chain record.");
+          return;
+        }
+
+        const fd = new FormData();
+        fd.set("grade", grade);
+        if (mintTxSignature) fd.set("mintTxSignature", mintTxSignature);
+
         const res = await adminCompleteGrading(gradeTarget.id, {}, fd);
         if (res.error) {
           toast.error(res.error);
           return;
         }
-        toast.success("Graded and minted. The seller can now price and list it.");
+        toast.success("Graded and minted on-chain. The seller can now price and list it.");
         setGradeTarget(null);
         setGrade("");
         router.refresh();
