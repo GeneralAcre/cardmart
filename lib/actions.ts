@@ -11,6 +11,7 @@ import {
   mockTransferOwnership,
   mockEscrowInstruction,
 } from "@/lib/web3/mock-chain";
+import { releaseTradeToSeller, refundTradeToBuyer, getEscrowAuthorityAddress } from "@/lib/web3/escrow-server";
 import { SELF_MINT_FEE_THB, FULL_SERVICE_PACKAGE_PRICE_THB } from "@/lib/pricing";
 import { themeIndexForSerial } from "@/lib/theme";
 import { getVerificationChecklist } from "@/lib/verification-checklist";
@@ -241,9 +242,13 @@ export async function createListing(
  * pipeline; this mock immediately simulates the seller's shipment arriving
  * so the warehouse dashboard has something to inspect.
  */
-export async function buyListing(assetId: string, fulfillmentChoice: "SHIP" | "VAULT") {
+export async function buyListing(
+  assetId: string,
+  fulfillmentChoice: "SHIP" | "VAULT",
+  escrowLock?: { tradeId: string; txSignature: string; lamports: string; tradeAccount: string },
+) {
   const user = await getCurrentUser();
-  const asset = await prisma.asset.findUniqueOrThrow({ where: { id: assetId } });
+  const asset = await prisma.asset.findUniqueOrThrow({ where: { id: assetId }, include: { owner: true } });
 
   if (!asset.forSale || asset.priceThb == null) {
     throw new Error("This item is not currently for sale.");
@@ -252,7 +257,13 @@ export async function buyListing(assetId: string, fulfillmentChoice: "SHIP" | "V
     throw new Error("You already own this item.");
   }
 
-  const lock = await mockEscrowInstruction("lock", assetId);
+  // Real on-chain lock when the buyer actually signed one (see
+  // components/item/buy-panel.tsx) — falls back to the old simulated
+  // signature otherwise, same pattern as everywhere else real signing was
+  // added this session.
+  const onChain = Boolean(escrowLock);
+  const lockSignature = escrowLock?.txSignature ?? (await mockEscrowInstruction("lock", assetId)).txSignature;
+
   const escrowTx = await prisma.escrowTransaction.create({
     data: {
       assetId,
@@ -261,6 +272,10 @@ export async function buyListing(assetId: string, fulfillmentChoice: "SHIP" | "V
       amountThb: asset.priceThb,
       fulfillmentChoice,
       status: "LOCKED",
+      onChain,
+      onChainTradeId: escrowLock ? BigInt(escrowLock.tradeId) : null,
+      tradeAccount: escrowLock?.tradeAccount ?? null,
+      lamportsLocked: escrowLock ? BigInt(escrowLock.lamports) : null,
     },
   });
   await prisma.provenanceEvent.create({
@@ -268,15 +283,30 @@ export async function buyListing(assetId: string, fulfillmentChoice: "SHIP" | "V
       assetId,
       type: "ESCROW_LOCKED",
       note: `Buyer payment of ${asset.priceThb.toLocaleString()} THB locked in escrow.`,
-      mockTxSignature: lock.txSignature,
+      mockTxSignature: lockSignature,
+      onChain,
       actorId: user.id,
     },
   });
 
   if (asset.vaulted) {
-    // Vault Trading Feature: instant digital transfer, zero shipping.
+    // Vault Trading Feature: instant digital transfer, zero shipping —
+    // funds release the moment the trade happens, so release the real
+    // escrow (when one was locked) right here instead of waiting on a
+    // separate warehouse step. Reuses releaseOrRefundEscrow so a real
+    // on-chain failure throws (and the purchase aborts) rather than
+    // silently transferring ownership while real funds stay locked.
     const transfer = await mockTransferOwnership(assetId, user.id);
-    const release = await mockEscrowInstruction("release", assetId);
+    const release = await releaseOrRefundEscrow(
+      "release",
+      {
+        onChain,
+        onChainTradeId: escrowLock ? BigInt(escrowLock.tradeId) : null,
+        buyer: { walletAddress: user.walletAddress },
+        seller: { walletAddress: asset.owner.walletAddress },
+      },
+      assetId,
+    );
 
     await prisma.asset.update({
       where: { id: assetId },
@@ -286,16 +316,17 @@ export async function buyListing(assetId: string, fulfillmentChoice: "SHIP" | "V
       where: { id: escrowTx.id },
       data: { status: "RELEASED", releasedAt: new Date() },
     });
+    void transfer;
     await prisma.provenanceEvent.create({
       data: {
         assetId,
         type: "OWNERSHIP_TRANSFERRED",
-        note: "Instant vault trade: digital ownership transferred with zero physical movement.",
-        mockTxSignature: transfer.txSignature,
+        note: "Instant vault trade: digital ownership transferred and escrow released to seller.",
+        mockTxSignature: release.signature,
+        onChain: release.onChain,
         actorId: user.id,
       },
     });
-    void release;
   } else {
     await prisma.asset.update({
       where: { id: assetId },
@@ -346,8 +377,58 @@ export async function buyListing(assetId: string, fulfillmentChoice: "SHIP" | "V
 async function loadInboundPackage(inboundPackageId: string) {
   return prisma.inboundPackage.findUniqueOrThrow({
     where: { id: inboundPackageId },
-    include: { asset: true, escrowTx: true },
+    include: { asset: true, escrowTx: { include: { buyer: true, seller: true } } },
   });
+}
+
+/**
+ * Real release/refund when the trade was actually locked on-chain (both
+ * wallet addresses present). Falls back to the old simulated signature only
+ * when the escrow authority isn't configured at all, or either side lacks a
+ * real wallet — i.e. cases where nothing real was ever at stake. If the
+ * trade genuinely holds real locked funds and the on-chain call itself
+ * fails (bad RPC, authority out of fees, etc.), this throws instead of
+ * quietly "completing" the trade in the DB — the money is still sitting in
+ * the on-chain Trade PDA, so pretending otherwise would leave our records
+ * claiming a payout that never happened.
+ */
+async function releaseOrRefundEscrow(
+  kind: "release" | "refund",
+  escrowTx: { onChain: boolean; onChainTradeId: bigint | null; buyer: { walletAddress: string | null }; seller: { walletAddress: string | null } },
+  assetId: string,
+): Promise<{ signature: string; onChain: boolean }> {
+  if (!escrowTx.onChain) {
+    // Nothing real was ever locked — the old simulated flow is a safe,
+    // honest fallback.
+    const mock = await mockEscrowInstruction(kind, assetId);
+    return { signature: mock.txSignature, onChain: false };
+  }
+
+  // From here, real funds are genuinely sitting in an on-chain Trade PDA —
+  // any failure below must propagate, not get swallowed into a fake
+  // "completed" DB state while the money stays stuck on-chain.
+  const authorityAddress = await getEscrowAuthorityAddress();
+  if (!authorityAddress) {
+    throw new Error(
+      "This trade holds real on-chain funds, but the escrow authority isn't configured (ESCROW_AUTHORITY_SECRET_KEY).",
+    );
+  }
+  if (escrowTx.onChainTradeId == null || !escrowTx.buyer.walletAddress || !escrowTx.seller.walletAddress) {
+    throw new Error("This trade is marked on-chain but is missing the data needed to release/refund it.");
+  }
+
+  const signature =
+    kind === "release"
+      ? await releaseTradeToSeller({
+          buyer: escrowTx.buyer.walletAddress,
+          seller: escrowTx.seller.walletAddress,
+          tradeId: escrowTx.onChainTradeId,
+        })
+      : await refundTradeToBuyer({
+          buyer: escrowTx.buyer.walletAddress,
+          tradeId: escrowTx.onChainTradeId,
+        });
+  return { signature, onChain: true };
 }
 
 /** Warehouse verifies the slab, then ships it directly to the buyer's address. */
@@ -355,7 +436,7 @@ export async function warehouseApproveShip(inboundPackageId: string) {
   await requireAdmin();
   const pkg = await loadInboundPackage(inboundPackageId);
   const transfer = await mockTransferOwnership(pkg.assetId, pkg.escrowTx.buyerId);
-  const release = await mockEscrowInstruction("release", pkg.assetId);
+  const release = await releaseOrRefundEscrow("release", pkg.escrowTx, pkg.assetId);
 
   await prisma.$transaction([
     prisma.inboundPackage.update({
@@ -394,7 +475,8 @@ export async function warehouseApproveShip(inboundPackageId: string) {
           assetId: pkg.assetId,
           type: "OWNERSHIP_TRANSFERRED",
           note: "Digital ownership transferred to buyer; escrow released to seller.",
-          mockTxSignature: release.txSignature,
+          mockTxSignature: release.signature,
+          onChain: release.onChain,
         },
       ],
     }),
@@ -408,7 +490,7 @@ export async function warehouseApproveVault(inboundPackageId: string) {
   await requireAdmin();
   const pkg = await loadInboundPackage(inboundPackageId);
   const transfer = await mockTransferOwnership(pkg.assetId, pkg.escrowTx.buyerId);
-  const release = await mockEscrowInstruction("release", pkg.assetId);
+  const release = await releaseOrRefundEscrow("release", pkg.escrowTx, pkg.assetId);
 
   await prisma.$transaction([
     prisma.inboundPackage.update({
@@ -447,7 +529,8 @@ export async function warehouseApproveVault(inboundPackageId: string) {
           assetId: pkg.assetId,
           type: "OWNERSHIP_TRANSFERRED",
           note: "Digital ownership transferred to buyer; escrow released to seller.",
-          mockTxSignature: release.txSignature,
+          mockTxSignature: release.signature,
+          onChain: release.onChain,
         },
       ],
     }),
@@ -460,7 +543,7 @@ export async function warehouseApproveVault(inboundPackageId: string) {
 export async function warehouseReject(inboundPackageId: string) {
   await requireAdmin();
   const pkg = await loadInboundPackage(inboundPackageId);
-  const refund = await mockEscrowInstruction("refund", pkg.assetId);
+  const refund = await releaseOrRefundEscrow("refund", pkg.escrowTx, pkg.assetId);
 
   await prisma.$transaction([
     prisma.inboundPackage.update({
@@ -485,13 +568,14 @@ export async function warehouseReject(inboundPackageId: string) {
           assetId: pkg.assetId,
           type: "INSPECTION_REJECTED",
           note: "Declared certificate data did not match the official grading database. Item returned to seller.",
-          mockTxSignature: refund.txSignature,
+          mockTxSignature: refund.signature,
         },
         {
           assetId: pkg.assetId,
           type: "ESCROW_REFUNDED",
           note: "Buyer payment refunded in full.",
-          mockTxSignature: refund.txSignature,
+          mockTxSignature: refund.signature,
+          onChain: refund.onChain,
         },
       ],
     }),

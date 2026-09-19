@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { WalletActions } from "@/components/portfolio/wallet-actions";
 import { ShippingInfoDialog } from "@/components/portfolio/shipping-info-dialog";
+import { EditProfileDialog } from "@/components/portfolio/edit-profile-dialog";
 import { PortfolioValueChart } from "@/components/portfolio/portfolio-value-chart";
 import { useWalletStore } from "@/lib/web3/wallet-store";
 import { formatDate, shortSignature } from "@/lib/format";
@@ -65,6 +66,7 @@ export function ProfileHeader({
             <div className="flex flex-wrap items-baseline gap-x-2">
               <span className="truncate text-lg font-semibold">{name}</span>
               {handle && <span className="text-muted-foreground text-sm">@{handle}</span>}
+              <EditProfileDialog name={name} handle={handle} />
             </div>
             <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
               {walletAddress ? (

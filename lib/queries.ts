@@ -213,8 +213,23 @@ export async function getVaultAssets(userId: string) {
   });
 }
 
+// React's Flight serializer (Server Component -> Client Component props)
+// doesn't support raw BigInt — EscrowTransaction.onChainTradeId/lamportsLocked
+// are Prisma BigInt columns, and InboundTable/InspectionDialog below are
+// "use client" components, so those two fields must be stringified before
+// this data crosses that boundary.
+function serializeEscrowTx<T extends { onChainTradeId: bigint | null; lamportsLocked: bigint | null }>(
+  escrowTx: T,
+): Omit<T, "onChainTradeId" | "lamportsLocked"> & { onChainTradeId: string | null; lamportsLocked: string | null } {
+  return {
+    ...escrowTx,
+    onChainTradeId: escrowTx.onChainTradeId?.toString() ?? null,
+    lamportsLocked: escrowTx.lamportsLocked?.toString() ?? null,
+  };
+}
+
 export async function getWarehouseQueue() {
-  return prisma.inboundPackage.findMany({
+  const packages = await prisma.inboundPackage.findMany({
     where: { status: "PENDING_INSPECTION" },
     orderBy: { arrivedAt: "asc" },
     include: {
@@ -222,6 +237,7 @@ export async function getWarehouseQueue() {
       escrowTx: { include: { buyer: true, seller: true } },
     },
   });
+  return packages.map((pkg) => ({ ...pkg, escrowTx: serializeEscrowTx(pkg.escrowTx) }));
 }
 
 export async function getGradingSubmissions(userId: string) {
@@ -250,7 +266,7 @@ export async function getGradingSubmissionHistory() {
 }
 
 export async function getWarehouseHistory() {
-  return prisma.inboundPackage.findMany({
+  const packages = await prisma.inboundPackage.findMany({
     where: { status: { not: "PENDING_INSPECTION" } },
     orderBy: { resolvedAt: "desc" },
     take: 20,
@@ -259,6 +275,7 @@ export async function getWarehouseHistory() {
       escrowTx: { include: { buyer: true, seller: true } },
     },
   });
+  return packages.map((pkg) => ({ ...pkg, escrowTx: serializeEscrowTx(pkg.escrowTx) }));
 }
 
 export async function isAssetWatched(userId: string, assetId: string): Promise<boolean> {

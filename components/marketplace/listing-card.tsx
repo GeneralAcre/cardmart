@@ -3,7 +3,7 @@ import { Images } from "lucide-react";
 
 import { CardArt } from "@/components/asset/card-art";
 import { Badge } from "@/components/ui/badge";
-import { formatThb } from "@/lib/format";
+import { formatGrade, formatThb } from "@/lib/format";
 import { CATEGORY_LABELS, MARKET_STATUS_BADGE_CLASS, MARKET_STATUS_LABELS } from "@/lib/labels";
 import type { AssetSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -44,6 +44,15 @@ export function ListingCard({ asset }: { asset: AssetSummary }) {
           >
             {MARKET_STATUS_LABELS[asset.marketStatus]}
           </Badge>
+          {/* Grade is the single most decision-relevant fact for a graded
+              collectible — it needs to survive in the grid view even when a
+              real verification photo, not the grade-labeled generated art,
+              is what's shown (the generated art already renders it inline). */}
+          {photos.length > 0 && (
+            <span className="absolute left-2 top-2 rounded-full bg-foreground/90 px-2 py-0.5 text-[10px] font-semibold text-background backdrop-blur-sm">
+              {asset.gradingCompany === "RAW" ? "RAW" : `${asset.gradingCompany} ${formatGrade(asset.grade)}`}
+            </span>
+          )}
           {photos.length > 1 && (
             <span className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
               <Images className="size-3" />

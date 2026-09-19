@@ -136,6 +136,57 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
             </div>
           )}
 
+          {/* Purchase block comes right after the credibility signal (grade
+              seal / raw badge above) — this is a commerce page, so the
+              primary action shouldn't be buried below several supporting
+              detail panels the way it was before. */}
+          <BuyPanel
+            assetId={asset.id}
+            assetName={asset.name}
+            priceThb={asset.priceThb}
+            forSale={asset.forSale}
+            vaulted={asset.vaulted}
+            marketStatus={asset.marketStatus}
+            isOwner={isOwner}
+            sellerWalletAddress={asset.owner.walletAddress}
+          />
+
+          <Link
+            href={`/store/${asset.seller.id}`}
+            className="bg-card hover:bg-accent/50 flex items-center gap-3 rounded-xl border p-3 transition-colors"
+          >
+            <Avatar className="size-10 shrink-0">
+              {asset.seller.image && <AvatarImage src={asset.seller.image} alt={asset.seller.name ?? ""} />}
+              <AvatarFallback className="text-sm font-medium">{sellerInitials}</AvatarFallback>
+            </Avatar>
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <span className="text-muted-foreground text-xs">Listed by</span>
+              <span className="truncate text-sm font-semibold">{asset.seller.name}</span>
+              <RatingStars average={sellerRating.average} count={sellerRating.count} />
+            </div>
+          </Link>
+          {asset.owner.id !== asset.seller.id && (
+            <p className="text-muted-foreground text-xs">
+              Currently owned by{" "}
+              <Link href={`/store/${asset.owner.id}`} className="text-foreground font-medium hover:underline">
+                {asset.owner.name}
+              </Link>
+            </p>
+          )}
+
+          {reviewableEscrow && <LeaveReviewForm escrowTxId={reviewableEscrow.id} />}
+        </div>
+      </div>
+
+      {/* Everything below is supporting evidence for the decision already
+          made above — verification detail and price data a buyer can dig
+          into, not required reading before they can act. */}
+      <Separator className="my-10" />
+
+      <div className="grid grid-cols-1 gap-10 md:grid-cols-2">
+        <div className="flex flex-col gap-5">
+          <h2 className="text-lg font-semibold">Verification &amp; Price Data</h2>
+
           {psaCert && (
             <div className="bg-card rounded-xl border p-4">
               <div className="mb-3 flex items-center justify-between">
@@ -242,56 +293,17 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
             initialHistory={priceHistory.map((p) => ({ priceThb: p.priceThb, createdAt: p.createdAt.toISOString() }))}
             currentPriceThb={asset.priceThb}
           />
+        </div>
 
-          <Link
-            href={`/store/${asset.seller.id}`}
-            className="bg-card hover:bg-accent/50 flex items-center gap-3 rounded-xl border p-3 transition-colors"
-          >
-            <Avatar className="size-10 shrink-0">
-              {asset.seller.image && <AvatarImage src={asset.seller.image} alt={asset.seller.name ?? ""} />}
-              <AvatarFallback className="text-sm font-medium">{sellerInitials}</AvatarFallback>
-            </Avatar>
-            <div className="flex min-w-0 flex-col gap-0.5">
-              <span className="text-muted-foreground text-xs">Listed by</span>
-              <span className="truncate text-sm font-semibold">{asset.seller.name}</span>
-              <RatingStars average={sellerRating.average} count={sellerRating.count} />
+        <div>
+          <div className="mb-5 flex items-center gap-2">
+            <div className="bg-primary/10 text-primary flex size-7 items-center justify-center rounded-full">
+              <History className="size-3.5" />
             </div>
-          </Link>
-          {asset.owner.id !== asset.seller.id && (
-            <p className="text-muted-foreground text-xs">
-              Currently owned by{" "}
-              <Link href={`/store/${asset.owner.id}`} className="text-foreground font-medium hover:underline">
-                {asset.owner.name}
-              </Link>
-            </p>
-          )}
-
-          <Separator />
-
-          <BuyPanel
-            assetId={asset.id}
-            assetName={asset.name}
-            priceThb={asset.priceThb}
-            forSale={asset.forSale}
-            vaulted={asset.vaulted}
-            marketStatus={asset.marketStatus}
-            isOwner={isOwner}
-          />
-
-          {reviewableEscrow && <LeaveReviewForm escrowTxId={reviewableEscrow.id} />}
-        </div>
-      </div>
-
-      <Separator className="my-10" />
-
-      <div className="max-w-2xl">
-        <div className="mb-6 flex items-center gap-2">
-          <div className="bg-primary/10 text-primary flex size-7 items-center justify-center rounded-full">
-            <History className="size-3.5" />
+            <h2 className="text-lg font-semibold">Item History</h2>
           </div>
-          <h2 className="text-lg font-semibold">Provenance History</h2>
+          <ProvenanceTimeline events={asset.provenance} />
         </div>
-        <ProvenanceTimeline events={asset.provenance} />
       </div>
     </div>
   );

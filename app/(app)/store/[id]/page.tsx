@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ListingCard } from "@/components/marketplace/listing-card";
 import { RatingStars } from "@/components/store/rating-stars";
 import { SellerWalletAddress } from "@/components/store/seller-wallet-address";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CATEGORY_LABELS } from "@/lib/labels";
 import { formatDate, formatThb } from "@/lib/format";
 
@@ -46,81 +47,95 @@ export default async function StorePage({ params }: { params: Promise<{ id: stri
         </div>
       </div>
 
-      <h2 className="mb-4 text-lg font-semibold">Listings</h2>
-      {listings.length === 0 ? (
-        <div className="text-muted-foreground flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed py-24 text-center">
-          <PackageOpen className="size-8" />
-          <p className="text-sm">Nothing listed for sale right now.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4">
-          {listings.map((asset) => (
-            <ListingCard key={asset.id} asset={asset} />
-          ))}
-        </div>
-      )}
+      {/* Tabs instead of three always-stacked sections — a brand-new
+          seller with nothing listed, sold, or reviewed yet would otherwise
+          show three consecutive empty-state boxes on first view. */}
+      <Tabs defaultValue="listings">
+        <TabsList>
+          <TabsTrigger value="listings">Listings ({listings.length})</TabsTrigger>
+          <TabsTrigger value="sold">Sold History ({soldHistory.length})</TabsTrigger>
+          <TabsTrigger value="reviews">Reviews ({reviews.length})</TabsTrigger>
+        </TabsList>
 
-      <h2 className="mt-10 mb-4 text-lg font-semibold">Sold History</h2>
-      {soldHistory.length === 0 ? (
-        <div className="text-muted-foreground flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed py-16 text-center">
-          <CircleCheck className="size-8" />
-          <p className="text-sm">No completed sales yet.</p>
-        </div>
-      ) : (
-        <div className="flex max-w-2xl flex-col gap-2">
-          {soldHistory.map((tx) => {
-            const photo = tx.asset.verificationPhotos[0];
-            return (
-              <Link
-                key={tx.id}
-                href={`/item/${tx.asset.id}`}
-                className="bg-card flex items-center gap-3 rounded-xl border p-3 hover:bg-muted/40"
-              >
-                {photo ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={photo.url} alt={tx.asset.name} className="size-12 shrink-0 rounded-md border object-cover" />
-                ) : (
-                  <div className="bg-muted flex size-12 shrink-0 items-center justify-center rounded-md border">
-                    <PackageOpen className="text-muted-foreground size-5" />
+        <TabsContent value="listings" className="pt-6">
+          {listings.length === 0 ? (
+            <div className="text-muted-foreground flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed py-24 text-center">
+              <PackageOpen className="size-8" />
+              <p className="text-sm">Nothing listed for sale right now.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4">
+              {listings.map((asset) => (
+                <ListingCard key={asset.id} asset={asset} />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="sold" className="pt-6">
+          {soldHistory.length === 0 ? (
+            <div className="text-muted-foreground flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed py-16 text-center">
+              <CircleCheck className="size-8" />
+              <p className="text-sm">No completed sales yet.</p>
+            </div>
+          ) : (
+            <div className="flex max-w-2xl flex-col gap-2">
+              {soldHistory.map((tx) => {
+                const photo = tx.asset.verificationPhotos[0];
+                return (
+                  <Link
+                    key={tx.id}
+                    href={`/item/${tx.asset.id}`}
+                    className="bg-card flex items-center gap-3 rounded-xl border p-3 hover:bg-muted/40"
+                  >
+                    {photo ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={photo.url} alt={tx.asset.name} className="size-12 shrink-0 rounded-md border object-cover" />
+                    ) : (
+                      <div className="bg-muted flex size-12 shrink-0 items-center justify-center rounded-md border">
+                        <PackageOpen className="text-muted-foreground size-5" />
+                      </div>
+                    )}
+                    <div className="flex min-w-0 flex-1 flex-col">
+                      <span className="truncate text-sm font-medium">{tx.asset.name}</span>
+                      <span className="text-muted-foreground text-xs">
+                        {CATEGORY_LABELS[tx.asset.category]} &middot; Sold{" "}
+                        {tx.releasedAt ? formatDate(tx.releasedAt) : formatDate(tx.createdAt)}
+                      </span>
+                    </div>
+                    <span className="text-sm font-semibold">{formatThb(tx.amountThb)}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="reviews" className="pt-6">
+          {reviews.length === 0 ? (
+            <div className="text-muted-foreground flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed py-16 text-center">
+              <MessageSquare className="size-8" />
+              <p className="text-sm">No reviews yet — they show up here after a completed sale.</p>
+            </div>
+          ) : (
+            <div className="flex max-w-2xl flex-col gap-3">
+              {reviews.map((review) => (
+                <div key={review.id} className="bg-card flex flex-col gap-1.5 rounded-xl border p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <RatingStars average={review.rating} count={1} showCount={false} />
+                    <span className="text-muted-foreground text-xs">{formatDate(review.createdAt)}</span>
                   </div>
-                )}
-                <div className="flex min-w-0 flex-1 flex-col">
-                  <span className="truncate text-sm font-medium">{tx.asset.name}</span>
+                  {review.comment && <p className="text-sm">{review.comment}</p>}
                   <span className="text-muted-foreground text-xs">
-                    {CATEGORY_LABELS[tx.asset.category]} &middot; Sold{" "}
-                    {tx.releasedAt ? formatDate(tx.releasedAt) : formatDate(tx.createdAt)}
+                    {review.buyer.name ?? review.buyer.handle ?? "A buyer"} &middot; bought &quot;
+                    {review.escrowTx.asset.name}&quot;
                   </span>
                 </div>
-                <span className="text-sm font-semibold">{formatThb(tx.amountThb)}</span>
-              </Link>
-            );
-          })}
-        </div>
-      )}
-
-      <h2 className="mt-10 mb-4 text-lg font-semibold">Reviews</h2>
-      {reviews.length === 0 ? (
-        <div className="text-muted-foreground flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed py-16 text-center">
-          <MessageSquare className="size-8" />
-          <p className="text-sm">No reviews yet — they show up here after a completed sale.</p>
-        </div>
-      ) : (
-        <div className="flex max-w-2xl flex-col gap-3">
-          {reviews.map((review) => (
-            <div key={review.id} className="bg-card flex flex-col gap-1.5 rounded-xl border p-4">
-              <div className="flex items-center justify-between gap-3">
-                <RatingStars average={review.rating} count={1} showCount={false} />
-                <span className="text-muted-foreground text-xs">{formatDate(review.createdAt)}</span>
-              </div>
-              {review.comment && <p className="text-sm">{review.comment}</p>}
-              <span className="text-muted-foreground text-xs">
-                {review.buyer.name ?? review.buyer.handle ?? "A buyer"} &middot; bought &quot;
-                {review.escrowTx.asset.name}&quot;
-              </span>
+              ))}
             </div>
-          ))}
-        </div>
-      )}
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

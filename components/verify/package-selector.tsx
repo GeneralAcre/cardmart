@@ -21,7 +21,8 @@ export function PackageSelector({
           type="button"
           onClick={() => onChange("SELF_MINT")}
           className={cn(
-            "flex flex-col gap-3 rounded-xl border p-5 text-left transition-colors",
+            "flex flex-col gap-3 rounded-xl border p-5 text-left outline-none transition-colors",
+            "focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2",
             value === "SELF_MINT" ? "border-primary ring-1 ring-primary" : "hover:bg-accent/40",
           )}
         >
@@ -51,7 +52,8 @@ export function PackageSelector({
           type="button"
           onClick={() => onChange("FULL_SERVICE")}
           className={cn(
-            "flex flex-col gap-3 rounded-xl border p-5 text-left transition-colors",
+            "flex flex-col gap-3 rounded-xl border p-5 text-left outline-none transition-colors",
+            "focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2",
             value === "FULL_SERVICE" ? "border-primary ring-1 ring-primary" : "hover:bg-accent/40",
           )}
         >

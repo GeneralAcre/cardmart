@@ -42,6 +42,14 @@ export function OnboardingForm({
             title="Lowercase letters, numbers, and underscores only"
           />
         </div>
+        <p className="text-muted-foreground text-xs">Lowercase letters, numbers, and underscores only.</p>
+      </div>
+
+      <div className="flex flex-col gap-1 border-t pt-4">
+        <span className="text-xs font-semibold tracking-wide uppercase">Shipping</span>
+        <p className="text-muted-foreground text-xs">
+          Only used to send you physical items you buy, and to return items you sell.
+        </p>
       </div>
 
       <div className="flex flex-col gap-2">

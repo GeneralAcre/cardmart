@@ -1,0 +1,18 @@
+.anchor
+.DS_Store
+target
+**/*.rs.bk
+node_modules
+test-ledger
+.yarn
+.surfpool
+
+# Never commit a keypair. The program's own deploy keypair lives under
+# target/ (already ignored above), but this catches any wallet keypair
+# generated directly in this folder too — e.g. via `solana-keygen new`.
+*-keypair.json
+id.json
+deployer.json
+*.env
+.env*
+

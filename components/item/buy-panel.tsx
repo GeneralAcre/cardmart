@@ -20,6 +20,8 @@ import {
 } from "@/components/ui/dialog";
 import { buyListing, updateListingPrice } from "@/lib/actions";
 import { useWalletStore } from "@/lib/web3/wallet-store";
+import { buildLockPaymentTransaction, randomTradeId } from "@/lib/web3/escrow-program";
+import { thbToLamports } from "@/lib/pricing";
 import { formatThb } from "@/lib/format";
 
 interface BuyPanelProps {
@@ -30,11 +32,22 @@ interface BuyPanelProps {
   vaulted: boolean;
   marketStatus: MarketStatus;
   isOwner: boolean;
+  /** The current owner's real wallet address — null for demo/mock wallets, in which case escrow stays simulated. */
+  sellerWalletAddress: string | null;
 }
 
-export function BuyPanel({ assetId, assetName, priceThb, forSale, vaulted, marketStatus, isOwner }: BuyPanelProps) {
+export function BuyPanel({
+  assetId,
+  assetName,
+  priceThb,
+  forSale,
+  vaulted,
+  marketStatus,
+  isOwner,
+  sellerWalletAddress,
+}: BuyPanelProps) {
   const router = useRouter();
-  const { connected, connecting, connect, signMessage } = useWalletStore();
+  const { connected, connecting, connect, publicKey, signMessage, signAndSendRawTransaction } = useWalletStore();
 
   const [fulfillment, setFulfillment] = useState<"SHIP" | "VAULT">("SHIP");
   const [open, setOpen] = useState(false);
@@ -71,13 +84,40 @@ export function BuyPanel({ assetId, assetName, priceThb, forSale, vaulted, marke
   }
 
   async function handleConfirm() {
+    if (priceThb == null) return; // unreachable: this dialog only renders once priceThb is set
     setSigning(true);
     try {
       if (!connected) await connect();
-      await signMessage(`Confirm payment of ${priceThb} THB for this item`);
+
+      // Real on-chain escrow lock when both sides have a real wallet to
+      // work with — falls back to the old signed-message-only simulated
+      // flow otherwise (e.g. buying from a demo/seed seller with a mock
+      // wallet address), same "never hard-block" pattern used everywhere
+      // else real signing was added.
+      let escrowLock: { tradeId: string; txSignature: string; lamports: string; tradeAccount: string } | undefined;
+      if (sellerWalletAddress && publicKey) {
+        try {
+          const tradeId = randomTradeId();
+          const lamports = thbToLamports(priceThb);
+          const { transactionBytes, tradeAccount } = await buildLockPaymentTransaction({
+            buyer: publicKey,
+            seller: sellerWalletAddress,
+            tradeId,
+            lamports,
+          });
+          const txSignature = await signAndSendRawTransaction(transactionBytes);
+          escrowLock = { tradeId: tradeId.toString(), txSignature, lamports: lamports.toString(), tradeAccount };
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : "Could not lock payment on-chain.");
+          return;
+        }
+      } else {
+        await signMessage(`Confirm payment of ${priceThb} THB for this item`);
+      }
+
       startSubmit(async () => {
         try {
-          await buyListing(assetId, vaulted ? "VAULT" : fulfillment);
+          await buyListing(assetId, vaulted ? "VAULT" : fulfillment, escrowLock);
           toast.success(
             vaulted
               ? "Purchased! Digital ownership transferred instantly."

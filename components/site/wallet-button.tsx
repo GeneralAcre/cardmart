@@ -51,7 +51,7 @@ export function WalletButton() {
         }}
       >
         <Wallet />
-        {connecting ? "Connecting…" : "Connect Wallet"}
+        <span className="hidden sm:inline">{connecting ? "Connecting…" : "Connect Wallet"}</span>
       </Button>
     );
   }

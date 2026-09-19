@@ -30,7 +30,8 @@ function FilterPill({
       aria-pressed={active}
       onClick={onClick}
       className={cn(
-        "rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
+        "rounded-full border px-3 py-1.5 text-sm font-medium outline-none transition-colors",
+        "focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2",
         active
           ? "bg-primary text-primary-foreground border-primary"
           : "bg-background text-foreground hover:bg-accent hover:border-foreground/20",
@@ -55,9 +56,11 @@ function FilterSection({ label, children }: { label: string; children: React.Rea
 export function FilterBar({
   filters,
   onChange,
+  className,
 }: {
   filters: MarketplaceFilterState;
   onChange: (next: MarketplaceFilterState) => void;
+  className?: string;
 }) {
   function toggleCategory(category: AssetCategory) {
     const has = filters.categories.includes(category);
@@ -88,13 +91,13 @@ export function FilterBar({
   }
 
   return (
-    <div className="bg-card flex flex-col gap-5 rounded-xl border p-4 shadow-sm">
+    <div className={cn("bg-card flex flex-col gap-5 rounded-xl border p-4 shadow-sm", className)}>
       <div className="relative">
         <Search className="text-muted-foreground absolute left-3 top-1/2 size-4 -translate-y-1/2" />
         <Input
           value={filters.q}
           onChange={(e) => onChange({ ...filters, q: e.target.value })}
-          placeholder="Search name or serial…"
+          placeholder="Search by name, serial, or seller…"
           className="pl-9"
         />
       </div>

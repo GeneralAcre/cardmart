@@ -23,7 +23,16 @@ import { cn } from "@/lib/utils";
 
 export type InboundPackageWithRelations = InboundPackage & {
   asset: Asset;
-  escrowTx: EscrowTransaction & { buyer: User; seller: User };
+  // onChainTradeId/lamportsLocked come back as strings, not bigint — see
+  // serializeEscrowTx in lib/queries.ts (React's Flight serializer used to
+  // pass this from the server page into this "use client" component
+  // doesn't support raw BigInt).
+  escrowTx: Omit<EscrowTransaction, "onChainTradeId" | "lamportsLocked"> & {
+    onChainTradeId: string | null;
+    lamportsLocked: string | null;
+    buyer: User;
+    seller: User;
+  };
 };
 
 function AddressRow({
@@ -123,7 +132,7 @@ export function InspectionDialog({
           <DialogTitle>{pkg.asset.name}</DialogTitle>
           <DialogDescription>
             Compare the seller&apos;s declared certificate data against the
-            official grading database before releasing escrow.
+            official grading database before paying the seller.
           </DialogDescription>
         </DialogHeader>
 
@@ -136,7 +145,7 @@ export function InspectionDialog({
           <span>{pkg.escrowTx.seller.name}</span>
         </div>
         <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Escrow Amount</span>
+          <span className="text-muted-foreground">Sale Amount</span>
           <span className="font-semibold">{formatThb(pkg.escrowTx.amountThb)}</span>
         </div>
         <div className="flex items-center justify-between text-sm">

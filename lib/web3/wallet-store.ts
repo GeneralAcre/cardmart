@@ -31,6 +31,8 @@ export interface WalletStore {
   sendSol: (toAddress: string, amountSol: number) => Promise<string>;
   /** Signs and broadcasts a real on-chain Memo transaction. Returns the base58 transaction signature. */
   sendMemo: (memo: string) => Promise<string>;
+  /** Signs and broadcasts an already-built, unsigned transaction (e.g. from lib/web3/escrow-program.ts). Returns the base58 transaction signature. */
+  signAndSendRawTransaction: (transactionBytes: Uint8Array) => Promise<string>;
 }
 
 function toHex(bytes: Uint8Array): string {
@@ -112,7 +114,30 @@ function usePrivyWalletStore(): WalletStore {
     [wallet, signAndSendTransaction],
   );
 
-  return { connected, connecting, publicKey, connect, disconnect, signMessage, sendSol, sendMemo };
+  const signAndSendRawTransaction = useCallback(
+    async (transactionBytes: Uint8Array): Promise<string> => {
+      if (!wallet) throw new Error("Wallet not connected");
+      const { signature } = await signAndSendTransaction({
+        transaction: transactionBytes,
+        wallet,
+        chain: "solana:devnet",
+      });
+      return getBase58Decoder().decode(signature);
+    },
+    [wallet, signAndSendTransaction],
+  );
+
+  return {
+    connected,
+    connecting,
+    publicKey,
+    connect,
+    disconnect,
+    signMessage,
+    sendSol,
+    sendMemo,
+    signAndSendRawTransaction,
+  };
 }
 
 /** Used when NEXT_PUBLIC_PRIVY_APP_ID isn't set — no PrivyProvider is
@@ -133,6 +158,9 @@ function useUnconfiguredWalletStore(): WalletStore {
       throw new Error("Wallet sign-in isn't configured yet.");
     },
     sendMemo: async () => {
+      throw new Error("Wallet sign-in isn't configured yet.");
+    },
+    signAndSendRawTransaction: async () => {
       throw new Error("Wallet sign-in isn't configured yet.");
     },
   };

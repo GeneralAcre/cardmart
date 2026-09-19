@@ -34,7 +34,7 @@ export default async function WarehouseAdminPage() {
         <h1 className="text-2xl font-semibold">Physical Warehouse Inspection</h1>
         <p className="text-muted-foreground text-sm">
           Verify each inbound package against the official grading database
-          before releasing escrow to the seller.
+          before paying the seller.
         </p>
       </div>
 

@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { delistAsset, updateListingPrice, vaultRedeem, vaultRelist } from "@/lib/actions";
 import { useWalletStore } from "@/lib/web3/wallet-store";
-import { formatThb } from "@/lib/format";
+import { formatGrade, formatThb } from "@/lib/format";
 import { CATEGORY_LABELS } from "@/lib/labels";
 import type { AssetSummary } from "@/lib/types";
 
@@ -107,7 +107,7 @@ export function PortfolioItemCard({ asset }: { asset: AssetSummary }) {
 
   return (
     <div className="bg-card flex flex-col gap-3 rounded-xl border p-3 shadow-sm">
-      <Link href={`/item/${asset.id}`}>
+      <Link href={`/item/${asset.id}`} className="relative block">
         {thumbnail ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -122,6 +122,11 @@ export function PortfolioItemCard({ asset }: { asset: AssetSummary }) {
             gradingCompany={asset.gradingCompany}
             grade={asset.grade}
           />
+        )}
+        {thumbnail && (
+          <span className="absolute left-2 top-2 rounded-full bg-foreground/90 px-2 py-0.5 text-[10px] font-semibold text-background backdrop-blur-sm">
+            {asset.gradingCompany === "RAW" ? "RAW" : `${asset.gradingCompany} ${formatGrade(asset.grade)}`}
+          </span>
         )}
       </Link>
       <div className="flex flex-col gap-1">

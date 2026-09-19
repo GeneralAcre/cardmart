@@ -38,9 +38,7 @@ export async function SiteHeader() {
             <NavLinks isAdmin={user.isAdmin} />
           </div>
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-            <div className="hidden sm:block">
-              <WalletButton />
-            </div>
+            <WalletButton />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="rounded-full">

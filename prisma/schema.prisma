@@ -265,6 +265,15 @@ model EscrowTransaction {
   createdAt         DateTime          @default(now())
   releasedAt        DateTime?
 
+  // Real on-chain custody via the escrow program in contracts/escrow — set
+  // only when the buyer actually signed a lock_payment transaction, never
+  // backfilled. Falls back to the old DB-only simulated flow when false (no
+  // wallet available), same pattern as ProvenanceEvent.onChain.
+  onChain         Boolean @default(false)
+  onChainTradeId  BigInt? // u64 seed used to derive the on-chain Trade PDA
+  tradeAccount    String? // base58 address of the Trade PDA, for convenience
+  lamportsLocked  BigInt? // actual lamports locked on-chain (THB -> SOL at lock time)
+
   assetId  String
   asset    Asset  @relation(fields: [assetId], references: [id])
   buyerId  String
