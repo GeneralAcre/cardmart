@@ -3,7 +3,7 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
-import { PRIVY_ENFORCED, getPrivySessionUser, primarySolanaWallet } from "@/lib/privy-server";
+import { PRIVY_ENFORCED, getPrivyUserProfile, primarySolanaWallet, verifyPrivySession } from "@/lib/privy-server";
 
 // Privy sign-in is wired up but not enforced until NEXT_PUBLIC_PRIVY_APP_ID
 // and PRIVY_APP_SECRET are both configured — until then, every page acts as
@@ -18,15 +18,25 @@ export const getSessionUser = cache(async () => {
     return prisma.user.findUniqueOrThrow({ where: { handle: "you" } });
   }
 
-  const privyUser = await getPrivySessionUser();
+  const session = await verifyPrivySession();
   // "/" not "/login" — there's no separate login page, the landing page IS
   // the sign-in surface.
-  if (!privyUser) redirect("/");
+  if (!session) redirect("/");
 
-  const existing = await prisma.user.findUnique({ where: { privyUserId: privyUser.id } });
+  // Fast path — every page load after the first hits this: a local JWT
+  // check plus one DB lookup by an already-indexed column, no Privy API
+  // call. Previously this called Privy's getUser() on every single page
+  // load just to re-fetch a profile the vast majority of requests never
+  // used, which meant every page paid for a Privy API round trip it didn't
+  // need.
+  const existing = await prisma.user.findUnique({ where: { privyUserId: session.userId } });
   if (existing) return existing;
 
-  // First time we've seen this Privy identity — create our own row for it.
+  // First time we've seen this Privy identity — this is the one case that
+  // actually needs the full profile (name/email/wallet) to seed our row.
+  const privyUser = await getPrivyUserProfile(session.userId);
+  if (!privyUser) redirect("/");
+
   return prisma.user.create({
     data: {
       privyUserId: privyUser.id,

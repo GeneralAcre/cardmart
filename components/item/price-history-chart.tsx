@@ -18,7 +18,7 @@ interface PricePoint {
 const RANGE_LABELS: Record<PriceHistoryRange, string> = { "1d": "24H", "7d": "7D", "30d": "30D" };
 
 const chartConfig = {
-  priceThb: { label: "Price", color: "var(--foreground)" },
+  priceThb: { label: "Price", color: "var(--highlight)" },
 } satisfies ChartConfig;
 
 // Real price points only, recorded from lib/queries.ts's PriceSnapshot table

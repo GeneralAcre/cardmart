@@ -13,6 +13,10 @@ interface CardArtProps {
   grade: number | null;
   className?: string;
   size?: "sm" | "lg";
+  // Set to false when this is nested inside a container that already owns
+  // the visible frame (e.g. a listing card) — otherwise the two rounded
+  // borders stack into a "frame within a frame" look.
+  bordered?: boolean;
 }
 
 export function CardArt({
@@ -22,6 +26,7 @@ export function CardArt({
   grade,
   className,
   size = "sm",
+  bordered = true,
 }: CardArtProps) {
   const [from, to] = gradientFor(themeIndex);
   const Icon = CATEGORY_ICONS[category];
@@ -29,7 +34,8 @@ export function CardArt({
   return (
     <div
       className={cn(
-        "relative isolate flex aspect-[3/4] w-full items-center justify-center overflow-hidden rounded-lg border",
+        "relative isolate flex aspect-[3/4] w-full items-center justify-center overflow-hidden",
+        bordered && "rounded-lg border",
         className,
       )}
       style={{

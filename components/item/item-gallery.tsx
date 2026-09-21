@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { ZoomIn } from "lucide-react";
 import type { AssetCategory, GradingCompany } from "@prisma/client";
@@ -42,14 +43,16 @@ export function ItemGallery({ themeIndex, category, gradingCompany, grade, photo
         onClick={() => setZoomOpen(true)}
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
-        className="group relative w-full"
+        className="group relative aspect-[3/4] w-full"
       >
         {selectedPhoto ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <Image
             src={selectedPhoto.url}
             alt={selectedPhoto.viewLabel}
-            className="aspect-[3/4] w-full rounded-lg border object-cover"
+            fill
+            sizes="(max-width: 1024px) 100vw, 50vw"
+            priority
+            className="rounded-lg border object-cover"
           />
         ) : (
           <CardArt themeIndex={themeIndex} category={category} gradingCompany={gradingCompany} grade={grade} size="lg" />
@@ -74,6 +77,7 @@ export function ItemGallery({ themeIndex, category, gradingCompany, grade, photo
               category={category}
               gradingCompany={gradingCompany}
               grade={grade}
+              bordered={false}
               className="aspect-square"
             />
           </button>
@@ -83,14 +87,13 @@ export function ItemGallery({ themeIndex, category, gradingCompany, grade, photo
               type="button"
               onClick={() => setSelectedId(photo.id)}
               className={cn(
-                "overflow-hidden rounded-md border-2 transition-colors",
+                "relative aspect-square overflow-hidden rounded-md border-2 transition-colors",
                 selectedId === photo.id
                   ? "border-foreground"
                   : "border-transparent hover:border-muted-foreground/30",
               )}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={photo.url} alt={photo.viewLabel} className="aspect-square w-full object-cover" />
+              <Image src={photo.url} alt={photo.viewLabel} fill sizes="20vw" className="object-cover" />
             </button>
           ))}
         </div>
@@ -108,8 +111,15 @@ export function ItemGallery({ themeIndex, category, gradingCompany, grade, photo
             Zoomed {selectedPhoto ? selectedPhoto.viewLabel : "certificate artwork"}
           </DialogTitle>
           {selectedPhoto ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={selectedPhoto.url} alt={selectedPhoto.viewLabel} className="aspect-square w-full rounded-lg object-cover" />
+            <div className="relative aspect-square w-full">
+              <Image
+                src={selectedPhoto.url}
+                alt={selectedPhoto.viewLabel}
+                fill
+                sizes="(max-width: 448px) 100vw, 448px"
+                className="rounded-lg object-cover"
+              />
+            </div>
           ) : (
             <CardArt
               themeIndex={themeIndex}

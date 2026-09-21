@@ -140,9 +140,8 @@ export function BuyPanel({
         <div className="flex items-start gap-3 rounded-lg border bg-indigo-500/5 p-4 text-sm">
           <Vault className="mt-0.5 size-4 shrink-0 text-indigo-500" />
           <p>
-            This item is already stored in our vault. Buying transfers digital
-            ownership <strong>instantly</strong>, with zero shipping fees. You
-            can redeem the physical item anytime from your vault.
+            Already in our vault — ownership transfers <strong>instantly</strong>,
+            no shipping. Redeem it anytime.
           </p>
         </div>
       ) : (
@@ -160,25 +159,22 @@ export function BuyPanel({
           </Tabs>
           <p className="text-muted-foreground text-xs">
             {fulfillment === "SHIP"
-              ? "After the warehouse checks the item, it ships directly to your address."
-              : "After the warehouse checks the item, it's stored safely in the platform vault under your name."}
+              ? "Ships to your address after inspection."
+              : "Stored safely in the vault after inspection."}
           </p>
         </div>
       )}
 
       <Button size="lg" onClick={() => setOpen(true)}>
         <ShieldCheck />
-        Buy with Buyer Protection — {formatThb(priceThb)}
+        Buy Now — {formatThb(priceThb)}
       </Button>
 
       <Dialog open={open} onOpenChange={(o) => !signing && !submitting && setOpen(o)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Confirm Purchase</DialogTitle>
-            <DialogDescription>
-              Your payment is held safely until the item passes a check at
-              our warehouse — you only pay for what you actually receive.
-            </DialogDescription>
+            <DialogDescription>Payment stays protected until the item is verified.</DialogDescription>
           </DialogHeader>
           <div className="bg-muted/40 flex flex-col gap-2 rounded-lg border p-3 text-sm">
             <div className="flex justify-between">

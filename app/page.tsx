@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-import { PRIVY_ENFORCED, getPrivySessionUser } from "@/lib/privy-server";
+import { PRIVY_ENFORCED, verifyPrivySession } from "@/lib/privy-server";
 import { LandingPage } from "@/components/landing/landing-page";
 
 export const metadata = {
@@ -16,6 +16,6 @@ export const metadata = {
 export default async function RootPage() {
   if (!PRIVY_ENFORCED) redirect("/marketplace"); // demo mode: no real signed-out state to show
 
-  const user = await getPrivySessionUser();
-  return <LandingPage authenticated={Boolean(user)} />;
+  const session = await verifyPrivySession();
+  return <LandingPage authenticated={Boolean(session)} />;
 }

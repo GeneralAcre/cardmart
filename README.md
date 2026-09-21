@@ -83,6 +83,30 @@ exactly this reason. Free tier is 100 requests/day; lookups are cached for
 6 hours per query to stay well under that. Without this key, no reference
 price is shown — nothing else is affected.
 
+### Set up eBay's Browse API (optional — live market reference, every category)
+
+Every item page also shows an "eBay Market Reference" card, sourced from
+[eBay's Buy Browse API](https://developer.ebay.com/api-docs/buy/browse/overview.html).
+Unlike TCG API above, this covers sports cards and comics too, not just
+Pokemon, and the search query is grade-aware (e.g. searches "Charizard VMAX
+PSA 10", not just "Charizard VMAX"). Register a free **Production** keyset at
+[developer.ebay.com/my/keys](https://developer.ebay.com/my/keys) — this is
+self-serve, no approval wait like PSA — and add the App ID / Cert ID to `.env`:
+
+```
+EBAY_APP_ID="..."
+EBAY_CERT_ID="..."
+```
+
+One thing worth knowing: eBay's self-serve Browse API only returns **active
+listings**, not sold prices — real sold-comp data lives behind eBay's
+Marketplace Insights API, which is limited-release and needs a separate
+approval from eBay. So the median/low/high shown here are honestly labeled
+as current asking prices, not sold prices. The item page also always links
+straight to eBay's own sold/completed-listings search (`LH_Sold=1`) for a
+real, verifiable sold-price reference — that link needs no API key at all,
+so it shows up even without these two variables set.
+
 ### Set up Google sign-in (required — the whole site is gated behind it)
 
 1. In the [Google Cloud Console](https://console.cloud.google.com/apis/credentials), create an OAuth 2.0 Client ID (application type **Web application**).

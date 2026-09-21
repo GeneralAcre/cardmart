@@ -13,7 +13,7 @@ import { RatingStars } from "@/components/store/rating-stars";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ExternalLink, History, ScanSearch, TrendingUp } from "lucide-react";
+import { ArrowLeft, ExternalLink, History, ScanSearch, TrendingUp } from "lucide-react";
 
 import { formatGrade } from "@/lib/format";
 import {
@@ -25,6 +25,7 @@ import {
 } from "@/lib/labels";
 import { extractPsaCertNumber, lookupPsaCert, lookupPsaPopulation, psaCertUrl } from "@/lib/psa";
 import { lookupCardPrice } from "@/lib/tcg-price";
+import { buildMarketQuery, ebaySoldListingsUrl, lookupEbayPrice } from "@/lib/ebay";
 import { cn } from "@/lib/utils";
 import { formatUsd } from "@/lib/format";
 
@@ -34,13 +35,17 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
 
   if (!asset) notFound();
 
-  // These four are all independent of each other (only psaPopulation below
+  // Grade-aware, e.g. "Charizard VMAX PSA 10" — narrows eBay's own fuzzy
+  // search to comps that are actually the same grading tier as this listing.
+  const ebayQuery = buildMarketQuery(asset.name, asset.gradingCompany, asset.grade);
+
+  // These five are all independent of each other (only psaPopulation below
   // depends on one of them) — awaiting them one at a time was serializing
-  // several real external network round trips (PSA, TCG API) on every page
-  // load, which is what was pushing this page to 5-10s and occasionally
+  // several real external network round trips (PSA, TCG API, eBay) on every
+  // page load, which is what was pushing this page to 5-10s and occasionally
   // outrunning the client's patience ("destination stream closed early").
   // Running them concurrently caps the wait at the slowest single call.
-  const [psaCert, priceQuote, priceHistory, sellerRating] = await Promise.all([
+  const [psaCert, priceQuote, ebayQuote, priceHistory, sellerRating] = await Promise.all([
     // Live PSA cert lookup for display — best-effort, and never blocks the
     // page: it silently returns null whenever PSA isn't configured, the
     // account isn't approved for live access yet, or the request fails.
@@ -50,6 +55,12 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
     // exists in that data at all, so it's deliberately never shown as "the"
     // price for a graded slab — see the disclaimer rendered alongside it.
     asset.category === "TRADING_CARD" ? lookupCardPrice(asset.name) : Promise.resolve(null),
+    // Live current-asking-price reference from eBay's Browse API — covers
+    // every category (sports cards, comics too, not just Pokemon), and is
+    // grade-aware. Best-effort: null whenever eBay isn't configured or
+    // nothing matched: ebaySoldListingsUrl below still gives a real,
+    // verifiable price reference either way.
+    lookupEbayPrice(ebayQuery),
     // Default range matches PriceHistoryChart's own default state (7d) — the
     // client re-fetches on range change, this is just the initial paint.
     getPriceHistory(asset.id, "7d"),
@@ -76,7 +87,18 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
 
   return (
     <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6">
-      <div className="grid grid-cols-1 gap-10 md:grid-cols-2">
+      <Link
+        href="/marketplace"
+        className="text-muted-foreground hover:text-foreground mb-6 inline-flex items-center gap-1.5 text-sm transition-colors"
+      >
+        <ArrowLeft className="size-4" />
+        Back to Marketplace
+      </Link>
+
+      {/* items-start — without it, CSS Grid stretches the shorter info
+          column to match the (usually much taller) image column's height,
+          which just left a dead black gap below the last card on the right. */}
+      <div className="grid grid-cols-1 items-start gap-10 md:grid-cols-2">
         <div className="flex flex-col gap-4">
           <ItemGallery
             themeIndex={asset.themeIndex}
@@ -187,7 +209,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
           into, not required reading before they can act. */}
       <Separator className="my-10" />
 
-      <div className="grid grid-cols-1 gap-10 md:grid-cols-2">
+      <div className="grid grid-cols-1 items-start gap-10 md:grid-cols-2">
         <div className="flex flex-col gap-5">
           <h2 className="text-lg font-semibold">Verification &amp; Price Data</h2>
 
@@ -291,6 +313,50 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
               </p>
             </div>
           )}
+
+          {/* Always shown, even with no EBAY_APP_ID/EBAY_CERT_ID configured
+              — the sold-listings link alone is a real, verifiable price
+              reference with zero API dependency. The median/range figures
+              on top of it are a bonus once eBay's Browse API is wired up. */}
+          <div className="bg-card rounded-xl border p-4">
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <div className="bg-foreground text-background flex size-7 items-center justify-center rounded-lg">
+                  <TrendingUp className="size-3.5" />
+                </div>
+                <span className="text-sm font-semibold">eBay Market Reference</span>
+                {ebayQuote && (
+                  <Badge variant="outline" className="text-[10px]">
+                    {asset.gradingCompany === "RAW" ? "Ungraded" : `${asset.gradingCompany} ${formatGrade(asset.grade)}`}
+                  </Badge>
+                )}
+              </div>
+              {ebayQuote && (
+                <span className="text-2xl leading-none font-bold tabular-nums">
+                  {formatUsd(ebayQuote.medianPriceUsd)}
+                </span>
+              )}
+            </div>
+            {ebayQuote ? (
+              <p className="text-muted-foreground text-xs">
+                Median asking price across {ebayQuote.itemCount} active listing
+                {ebayQuote.itemCount === 1 ? "" : "s"} for &quot;{ebayQuote.query}&quot; — range{" "}
+                {formatUsd(ebayQuote.lowPriceUsd)}–{formatUsd(ebayQuote.highPriceUsd)}.
+              </p>
+            ) : (
+              <p className="text-muted-foreground text-xs">
+                Live pricing isn&apos;t connected yet — compare manually against real sold listings on eBay.
+              </p>
+            )}
+            <a
+              href={ebaySoldListingsUrl(ebayQuery)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-foreground mt-3 inline-flex items-center gap-1 border-t pt-3 text-xs font-medium hover:underline"
+            >
+              View sold listings on eBay <ExternalLink className="size-3" />
+            </a>
+          </div>
 
           <PriceHistoryChart
             assetId={asset.id}

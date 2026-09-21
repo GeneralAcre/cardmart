@@ -92,7 +92,7 @@ export function LandingPage({ authenticated }: { authenticated: boolean }) {
     <div className="flex min-h-full flex-1 flex-col">
       <LandingNav authenticated={authenticated} />
 
-      <div className="relative overflow-hidden border-b bg-[radial-gradient(120%_140%_at_50%_-10%,rgba(0,0,0,0.05),transparent_60%)] sm:bg-[radial-gradient(120%_140%_at_10%_-10%,rgba(0,0,0,0.05),transparent_60%)]">
+      <div className="relative overflow-hidden border-b bg-[radial-gradient(120%_140%_at_50%_-10%,rgba(255,255,255,0.08),transparent_60%)] sm:bg-[radial-gradient(120%_140%_at_10%_-10%,rgba(255,255,255,0.08),transparent_60%)]">
         <div className="mx-auto flex max-w-7xl flex-col items-center gap-6 px-4 py-14 text-center sm:items-start sm:px-6 sm:py-28 sm:text-left">
           <span className="bg-foreground text-background inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium">
             <Gem className="size-3.5" />

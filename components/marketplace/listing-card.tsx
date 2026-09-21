@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { Images } from "lucide-react";
 
@@ -16,17 +17,21 @@ export function ListingCard({ asset }: { asset: AssetSummary }) {
       href={`/item/${asset.id}`}
       className="group focus-visible:ring-ring rounded-xl outline-none focus-visible:ring-2"
     >
-      <div className="bg-card flex flex-col gap-3 rounded-xl border p-3 shadow-sm transition-shadow group-hover:shadow-md">
-        <div className="relative">
+      <div className="bg-card flex flex-col gap-3 overflow-hidden rounded-xl border shadow-sm transition-shadow group-hover:shadow-md">
+        <div className="relative aspect-[3/4]">
           {photos.length > 0 ? (
             // Real live-camera capture instead of the generated digital-twin
             // art whenever one exists — this is what the item actually
-            // looks like, not a placeholder.
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            // looks like, not a placeholder. next/image handles resizing,
+            // format conversion, and lazy-loading automatically — no manual
+            // step needed per upload, it optimizes on request from the
+            // original Blob URL every time this card renders.
+            <Image
               src={photos[0].url}
               alt={asset.name}
-              className="aspect-[3/4] w-full rounded-lg border object-cover"
+              fill
+              sizes="(max-width: 640px) 50vw, (max-width: 1280px) 33vw, 25vw"
+              className="object-cover"
             />
           ) : (
             <CardArt
@@ -34,6 +39,7 @@ export function ListingCard({ asset }: { asset: AssetSummary }) {
               category={asset.category}
               gradingCompany={asset.gradingCompany}
               grade={asset.grade}
+              bordered={false}
             />
           )}
           <Badge
@@ -60,14 +66,13 @@ export function ListingCard({ asset }: { asset: AssetSummary }) {
             </span>
           )}
         </div>
-        <div className="flex flex-col gap-1">
-          <span className="text-muted-foreground text-xs">{CATEGORY_LABELS[asset.category]}</span>
-          <h3 className="line-clamp-1 text-sm font-semibold">{asset.name}</h3>
-          <p className="text-muted-foreground line-clamp-1 text-xs">{asset.subtitle}</p>
-        </div>
-        <div className="flex items-center justify-between gap-2 pt-1">
-          <span className="text-muted-foreground font-mono text-[11px]">{asset.serial}</span>
-          <span className="text-sm font-semibold">
+        <div className="flex flex-col gap-3 px-3 pb-3">
+          <div className="flex flex-col gap-1">
+            <span className="text-muted-foreground text-xs">{CATEGORY_LABELS[asset.category]}</span>
+            <h3 className="line-clamp-1 text-sm font-semibold">{asset.name}</h3>
+            <p className="text-muted-foreground line-clamp-1 text-xs">{asset.subtitle}</p>
+          </div>
+          <span className="text-lg font-bold tabular-nums">
             {asset.priceThb != null ? formatThb(asset.priceThb) : "Not for sale"}
           </span>
         </div>

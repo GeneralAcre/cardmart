@@ -19,7 +19,7 @@ export function NavLinks({ isAdmin = false }: { isAdmin?: boolean }) {
           key={l.href}
           href={l.href}
           className={cn(
-            "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+            "rounded-md px-3 py-1.5 text-xs font-semibold tracking-wide uppercase transition-colors",
             isNavLinkActive(pathname, l.href)
               ? "bg-accent text-accent-foreground"
               : "text-muted-foreground hover:text-foreground hover:bg-accent/50",

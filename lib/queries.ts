@@ -12,8 +12,14 @@ export interface MarketplaceFilters {
   vaultedStatus?: "ALL" | "IN_VAULT" | "SHIPPING";
 }
 
+// IN_ESCROW is deliberately excluded — once an item is mid-sale it's not
+// actually buyable anymore, so it disappears from browse/store listings
+// instead of sitting there with a "Sale Pending" badge that just invites a
+// wasted click. It reappears in the seller's own Portfolio and in a
+// buyer's Watchlist (both intentionally unfiltered — those views are about
+// tracking status, not shopping) once it resolves either way.
 const MARKETPLACE_VISIBLE_STATUSES: Prisma.AssetWhereInput["marketStatus"] = {
-  in: ["READY_TO_SHIP", "IN_VAULT", "IN_ESCROW"],
+  in: ["READY_TO_SHIP", "IN_VAULT"],
 };
 
 export async function getMarketplaceListings(filters: MarketplaceFilters = {}) {

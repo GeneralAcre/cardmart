@@ -32,8 +32,8 @@ export function PrivyProvider({ children }: { children: React.ReactNode }) {
         // (Phantom, Backpack, etc.) instead of Google/email.
         loginMethods: ["google", "email", "wallet"],
         appearance: {
-          theme: "light",
-          accentColor: "#18181b",
+          theme: "dark",
+          accentColor: "#ffffff",
         },
         embeddedWallets: {
           solana: { createOnLogin: "users-without-wallets" },

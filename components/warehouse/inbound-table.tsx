@@ -168,11 +168,11 @@ export function InboundTable({ packages }: { packages: InboundPackageWithRelatio
                   </TableCell>
                   <TableCell>
                     {allMatch ? (
-                      <Badge className="border-0 bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300">
+                      <Badge className="border-0 bg-emerald-500/15 text-emerald-300">
                         <CheckCircle2 /> Match
                       </Badge>
                     ) : (
-                      <Badge className="border-0 bg-red-100 text-red-800 dark:bg-red-500/15 dark:text-red-300">
+                      <Badge className="border-0 bg-red-500/15 text-red-300">
                         <AlertTriangle /> Mismatch
                       </Badge>
                     )}

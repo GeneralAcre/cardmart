@@ -6,6 +6,7 @@ import type { AssetCategory } from "@prisma/client";
 
 import { FilterBar } from "@/components/marketplace/filter-bar";
 import { ListingCard } from "@/components/marketplace/listing-card";
+import { TrendingStrip, type TrendingListing } from "@/components/marketplace/trending-strip";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -46,7 +47,13 @@ function countActiveFilters(filters: MarketplaceFilterState): number {
   );
 }
 
-export function MarketplaceExplorer({ initialListings }: { initialListings: AssetSummary[] }) {
+export function MarketplaceExplorer({
+  initialListings,
+  trending,
+}: {
+  initialListings: AssetSummary[];
+  trending: TrendingListing[];
+}) {
   const [filters, setFilters] = useState<MarketplaceFilterState>(EMPTY_FILTERS);
   const [listings, setListings] = useState<AssetSummary[]>(initialListings);
   const [loading, setLoading] = useState(false);
@@ -102,60 +109,63 @@ export function MarketplaceExplorer({ initialListings }: { initialListings: Asse
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* A storefront-style "pick what you're into" row — the sidebar/sheet
-          filters below still cover everything in depth, but this gives the
-          page an inviting entry point instead of opening straight into a
-          dense filter form. */}
-      <div className="scrollbar-none -mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0">
-        {CATEGORY_TILES.map(({ category, label, icon: Icon }) => {
-          const active = isCategoryTileActive(category);
-          return (
-            <button
-              key={category}
-              type="button"
-              onClick={() => selectCategoryTile(category)}
-              className={cn(
-                "flex shrink-0 items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium outline-none transition-colors",
-                "focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2",
-                active
-                  ? "bg-foreground text-background border-foreground"
-                  : "bg-card text-foreground hover:bg-accent border-border",
-              )}
-            >
-              <Icon className="size-4" />
-              {label}
-            </button>
-          );
-        })}
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[280px_1fr]">
+      {/* Desktop: filters sit in a sticky sidebar that runs the full height
+          of the page — alongside Trending and the category tiles too, not
+          just the results grid — so they stay reachable while scrolling. */}
+      <div className="hidden lg:block">
+        <div className="sticky top-4">
+          <FilterBar filters={filters} onChange={setFilters} />
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[280px_1fr]">
-        {/* Desktop: filters sit in a sticky sidebar so they stay reachable
-            while scrolling a long result list. */}
-        <div className="hidden lg:block">
-          <div className="sticky top-4">
-            <FilterBar filters={filters} onChange={setFilters} />
+      {/* Mobile: filters live behind a sheet instead of pushing every
+          result below a full-height filter panel on first load. */}
+      <Sheet open={filterSheetOpen} onOpenChange={setFilterSheetOpen}>
+        <SheetContent side="bottom" className="lg:hidden">
+          <SheetHeader>
+            <SheetTitle>Filters</SheetTitle>
+          </SheetHeader>
+          <div className="overflow-y-auto px-4 pb-4">
+            <FilterBar filters={filters} onChange={setFilters} className="border-0 p-0 shadow-none" />
           </div>
-        </div>
+          <SheetFooter>
+            <Button onClick={() => setFilterSheetOpen(false)} disabled={loading}>
+              {loading ? "Searching…" : `Show ${listings.length} item${listings.length === 1 ? "" : "s"}`}
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
 
-        {/* Mobile: filters live behind a sheet instead of pushing every
-            result below a full-height filter panel on first load. */}
-        <Sheet open={filterSheetOpen} onOpenChange={setFilterSheetOpen}>
-          <SheetContent side="bottom" className="lg:hidden">
-            <SheetHeader>
-              <SheetTitle>Filters</SheetTitle>
-            </SheetHeader>
-            <div className="overflow-y-auto px-4 pb-4">
-              <FilterBar filters={filters} onChange={setFilters} className="border-0 p-0 shadow-none" />
-            </div>
-            <SheetFooter>
-              <Button onClick={() => setFilterSheetOpen(false)} disabled={loading}>
-                {loading ? "Searching…" : `Show ${listings.length} item${listings.length === 1 ? "" : "s"}`}
-              </Button>
-            </SheetFooter>
-          </SheetContent>
-        </Sheet>
+      <div className="flex flex-col gap-6">
+        <TrendingStrip listings={trending} />
+
+        {/* A storefront-style "pick what you're into" row — the sidebar/sheet
+            filters above still cover everything in depth, but this gives the
+            page an inviting entry point instead of opening straight into a
+            dense filter form. */}
+        <div className="scrollbar-none -mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0">
+          {CATEGORY_TILES.map(({ category, label, icon: Icon }) => {
+            const active = isCategoryTileActive(category);
+            return (
+              <button
+                key={category}
+                type="button"
+                onClick={() => selectCategoryTile(category)}
+                className={cn(
+                  "flex shrink-0 items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium outline-none transition-colors",
+                  "focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2",
+                  active
+                    ? "bg-foreground text-background border-foreground"
+                    : "bg-card text-foreground hover:bg-accent border-border",
+                )}
+              >
+                <Icon className="size-4" />
+                {label}
+              </button>
+            );
+          })}
+        </div>
 
         <div>
           <div className="mb-4 flex items-center justify-between gap-3">

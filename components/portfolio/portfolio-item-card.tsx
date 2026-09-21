@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -107,13 +108,17 @@ export function PortfolioItemCard({ asset }: { asset: AssetSummary }) {
 
   return (
     <div className="bg-card flex flex-col gap-3 rounded-xl border p-3 shadow-sm">
-      <Link href={`/item/${asset.id}`} className="relative block">
+      {/* The image bleeds to the card's own edges (negative margin,
+          matching corner radius) instead of sitting in its own inset
+          border — a separate inner frame read as "double framed". */}
+      <Link href={`/item/${asset.id}`} className="relative -mx-3 -mt-3 block aspect-[3/4]">
         {thumbnail ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <Image
             src={thumbnail.url}
             alt={asset.name}
-            className="aspect-[3/4] w-full rounded-lg border object-cover"
+            fill
+            sizes="(max-width: 640px) 50vw, (max-width: 1280px) 33vw, 25vw"
+            className="rounded-t-xl object-cover"
           />
         ) : (
           <CardArt
@@ -121,6 +126,8 @@ export function PortfolioItemCard({ asset }: { asset: AssetSummary }) {
             category={asset.category}
             gradingCompany={asset.gradingCompany}
             grade={asset.grade}
+            bordered={false}
+            className="rounded-t-xl"
           />
         )}
         {thumbnail && (

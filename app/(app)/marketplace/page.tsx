@@ -1,7 +1,6 @@
 import { Gem } from "lucide-react";
 
 import { MarketplaceExplorer } from "@/components/marketplace/marketplace-explorer";
-import { TrendingStrip } from "@/components/marketplace/trending-strip";
 import { getMarketplaceListings, getTrendingListings } from "@/lib/queries";
 
 export default async function MarketplacePage() {
@@ -19,8 +18,7 @@ export default async function MarketplacePage() {
           Browse certified collectibles for sale — filter by grading company, grade, price, and vault status.
         </p>
       </div>
-      <TrendingStrip listings={trending} />
-      <MarketplaceExplorer initialListings={listings} />
+      <MarketplaceExplorer initialListings={listings} trending={trending} />
     </div>
   );
 }
