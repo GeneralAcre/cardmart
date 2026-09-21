@@ -1,6 +1,6 @@
 "use client";
 
-import { Search } from "lucide-react";
+import { Award, Layers, Search, Star, Wallet } from "lucide-react";
 import type { AssetCategory, GradingCompany } from "@prisma/client";
 
 import { Input } from "@/components/ui/input";
@@ -42,12 +42,21 @@ function FilterPill({
   );
 }
 
-function FilterSection({ label, children }: { label: string; children: React.ReactNode }) {
+function FilterSection({
+  label,
+  icon: Icon,
+  children,
+}: {
+  label: string;
+  icon: typeof Search;
+  children: React.ReactNode;
+}) {
   return (
     <div className="flex flex-col gap-2.5">
-      <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        {label}
-      </span>
+      <div className="flex items-center gap-1.5">
+        <Icon className="text-muted-foreground size-3.5" />
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</span>
+      </div>
       <div className="flex flex-wrap gap-2">{children}</div>
     </div>
   );
@@ -115,7 +124,7 @@ export function FilterBar({
 
       <Separator />
 
-      <FilterSection label="Category">
+      <FilterSection label="Category" icon={Layers}>
         {CATEGORIES.map((category) => (
           <FilterPill
             key={category}
@@ -127,7 +136,7 @@ export function FilterBar({
         ))}
       </FilterSection>
 
-      <FilterSection label="Grading Company">
+      <FilterSection label="Grading Company" icon={Award}>
         {GRADING_COMPANIES.map((company) => (
           <FilterPill
             key={company}
@@ -139,7 +148,7 @@ export function FilterBar({
         ))}
       </FilterSection>
 
-      <FilterSection label="Grade">
+      <FilterSection label="Grade" icon={Star}>
         {GRADES.map((grade) => (
           <FilterPill key={grade} active={filters.grades.includes(grade)} onClick={() => toggleGrade(grade)}>
             {grade}
@@ -148,9 +157,12 @@ export function FilterBar({
       </FilterSection>
 
       <div className="flex flex-col gap-2.5">
-        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Price Range (THB)
-        </span>
+        <div className="flex items-center gap-1.5">
+          <Wallet className="text-muted-foreground size-3.5" />
+          <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Price Range (THB)
+          </span>
+        </div>
         <div className="flex items-center gap-2">
           <Input
             type="number"

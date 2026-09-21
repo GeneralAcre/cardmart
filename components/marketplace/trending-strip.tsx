@@ -1,0 +1,78 @@
+import Link from "next/link";
+import { TrendingUp } from "lucide-react";
+
+import { CardArt } from "@/components/asset/card-art";
+import { formatThb } from "@/lib/format";
+import type { AssetSummary } from "@/lib/types";
+
+export interface TrendingListing {
+  asset: AssetSummary;
+  previousPriceThb: number;
+  currentPriceThb: number;
+  gainPct: number;
+}
+
+// Real "rising stars" — every entry here actually gained value between two
+// real PriceSnapshot rows (see getTrendingListings in lib/queries.ts), never
+// a fabricated trend. That's also why this only ever renders when there's
+// at least one real gainer: an empty or padded-out "Trending" row would be
+// worse than no section at all.
+export function TrendingStrip({ listings }: { listings: TrendingListing[] }) {
+  if (listings.length === 0) return null;
+
+  return (
+    <div className="mb-10 flex flex-col gap-4">
+      <div className="flex items-center gap-2">
+        <div className="bg-foreground text-background flex size-7 items-center justify-center rounded-lg">
+          <TrendingUp className="size-3.5" />
+        </div>
+        <h2 className="text-lg font-semibold">Trending</h2>
+        <span className="text-muted-foreground text-xs">Biggest price gains this week</span>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        {listings.map(({ asset, previousPriceThb, currentPriceThb, gainPct }) => {
+          const photo = asset.verificationPhotos[0];
+          return (
+            <Link
+              key={asset.id}
+              href={`/item/${asset.id}`}
+              className="group focus-visible:ring-ring rounded-xl outline-none focus-visible:ring-2"
+            >
+              <div className="bg-card flex flex-col gap-3 rounded-xl border p-3 shadow-sm transition-shadow group-hover:shadow-md">
+                <div className="relative">
+                  {photo ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={photo.url}
+                      alt={asset.name}
+                      className="aspect-[3/4] w-full rounded-lg border object-cover"
+                    />
+                  ) : (
+                    <CardArt
+                      themeIndex={asset.themeIndex}
+                      category={asset.category}
+                      gradingCompany={asset.gradingCompany}
+                      grade={asset.grade}
+                    />
+                  )}
+                  <span className="bg-foreground text-background absolute right-2 top-2 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-sm font-bold">
+                    <TrendingUp className="size-3.5" />+{Math.round(gainPct)}%
+                  </span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <h3 className="line-clamp-1 text-sm font-semibold">{asset.name}</h3>
+                  <p className="text-muted-foreground line-clamp-1 text-xs">{asset.subtitle}</p>
+                </div>
+                <div className="flex items-center justify-between gap-2 pt-1">
+                  <span className="text-muted-foreground text-xs line-through">{formatThb(previousPriceThb)}</span>
+                  <span className="text-sm font-semibold">{formatThb(currentPriceThb)}</span>
+                </div>
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
