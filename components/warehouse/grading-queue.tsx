@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -30,12 +31,28 @@ import {
   adminCompleteGrading,
   adminMarkAtGradingCompany,
   adminRejectGradingSubmission,
+  bulkMarkAtGradingCompany,
+  type BulkActionResult,
 } from "@/lib/actions";
 import { useWalletStore } from "@/lib/web3/wallet-store";
 import { CATEGORY_LABELS, GRADING_COMPANY_LABELS, GRADING_SUBMISSION_STATUS_LABELS } from "@/lib/labels";
 import { formatDate } from "@/lib/format";
 
 type SubmissionWithSeller = GradingSubmission & { seller: User };
+
+function reportBulkResult(result: BulkActionResult, verb: string) {
+  if (result.succeeded.length > 0) {
+    toast.success(`${verb} ${result.succeeded.length} item${result.succeeded.length === 1 ? "" : "s"}.`);
+  }
+  if (result.skipped.length > 0) {
+    toast.error(
+      `Skipped ${result.skipped.length}: ${result.skipped
+        .slice(0, 3)
+        .map((s) => `${s.itemName} (${s.reason})`)
+        .join("; ")}${result.skipped.length > 3 ? "…" : ""}`,
+    );
+  }
+}
 
 export function GradingQueue({ submissions }: { submissions: SubmissionWithSeller[] }) {
   const router = useRouter();
@@ -45,6 +62,41 @@ export function GradingQueue({ submissions }: { submissions: SubmissionWithSelle
   const [gradeTarget, setGradeTarget] = useState<SubmissionWithSeller | null>(null);
   const [rejectTarget, setRejectTarget] = useState<SubmissionWithSeller | null>(null);
   const [grade, setGrade] = useState("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkPending, startBulkTransition] = useTransition();
+
+  // Only shipment confirmation is a real bulk candidate — completing a
+  // grade needs one number typed per item, and rejecting needs individual
+  // judgment, so only AWAITING_SHIPMENT_TO_GRADER rows are selectable.
+  const shippable = submissions.filter((s) => s.status === "AWAITING_SHIPMENT_TO_GRADER");
+  const allShippableSelected = shippable.length > 0 && shippable.every((s) => selected.has(s.id));
+
+  function toggleAllShippable() {
+    setSelected(allShippableSelected ? new Set() : new Set(shippable.map((s) => s.id)));
+  }
+
+  function toggleOne(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function bulkMarkShipped() {
+    const ids = Array.from(selected);
+    startBulkTransition(async () => {
+      try {
+        const result = await bulkMarkAtGradingCompany(ids);
+        reportBulkResult(result, "Marked shipped for");
+        setSelected(new Set());
+        router.refresh();
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Bulk action failed.");
+      }
+    });
+  }
 
   function markShipped(id: string) {
     setBusyId(id);
@@ -126,10 +178,26 @@ export function GradingQueue({ submissions }: { submissions: SubmissionWithSelle
   }
 
   return (
-    <div className="rounded-xl border">
+    <div className="flex flex-col gap-3">
+      {selected.size > 0 && (
+        <div className="bg-card flex flex-wrap items-center justify-between gap-2 rounded-xl border p-3">
+          <span className="text-sm font-medium">{selected.size} selected</span>
+          <Button size="sm" onClick={bulkMarkShipped} disabled={bulkPending}>
+            {bulkPending ? <Loader2 className="animate-spin" /> : <PackageCheck />}
+            Mark Shipped Selected
+          </Button>
+        </div>
+      )}
+
+      <div className="rounded-xl border">
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead className="w-10">
+              {shippable.length > 0 && (
+                <Checkbox checked={allShippableSelected} onCheckedChange={toggleAllShippable} aria-label="Select all shippable" />
+              )}
+            </TableHead>
             <TableHead>Item</TableHead>
             <TableHead>Seller</TableHead>
             <TableHead>Grading Co.</TableHead>
@@ -140,7 +208,16 @@ export function GradingQueue({ submissions }: { submissions: SubmissionWithSelle
         </TableHeader>
         <TableBody>
           {submissions.map((s) => (
-            <TableRow key={s.id}>
+            <TableRow key={s.id} data-state={selected.has(s.id) ? "selected" : undefined}>
+              <TableCell>
+                {s.status === "AWAITING_SHIPMENT_TO_GRADER" && (
+                  <Checkbox
+                    checked={selected.has(s.id)}
+                    onCheckedChange={() => toggleOne(s.id)}
+                    aria-label={`Select ${s.itemName}`}
+                  />
+                )}
+              </TableCell>
               <TableCell>
                 <div className="flex flex-col">
                   <span className="font-medium">{s.itemName}</span>
@@ -186,6 +263,7 @@ export function GradingQueue({ submissions }: { submissions: SubmissionWithSelle
           ))}
         </TableBody>
       </Table>
+      </div>
 
       <Dialog open={!!gradeTarget} onOpenChange={(o) => !pending && !o && setGradeTarget(null)}>
         <DialogContent>

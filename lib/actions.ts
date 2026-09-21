@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import type { AssetCategory, GradingCompany } from "@prisma/client";
+import type { AssetCategory, GradingCompany, NotificationType } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, requireAdmin } from "@/lib/session";
@@ -31,6 +31,40 @@ function revalidateMarketplace(assetId?: string) {
   revalidatePath("/portfolio");
   revalidatePath("/admin/warehouse");
   if (assetId) revalidatePath(`/item/${assetId}`);
+}
+
+// Real notifications only, fired at the moment something real actually
+// happens elsewhere in this file (an item sold, a grade came back, etc.) —
+// never backfilled or synthesized after the fact. notifyUser is for a
+// specific buyer/seller; notifyAdmins broadcasts to every isAdmin user by
+// leaving userId unset, since staff alerts aren't addressed to one person.
+async function notifyUser(userId: string, type: NotificationType, title: string, body: string, href?: string) {
+  await prisma.notification.create({
+    data: { audience: "USER", userId, type, title, body, href },
+  });
+}
+
+async function notifyAdmins(type: NotificationType, title: string, body: string, href?: string) {
+  await prisma.notification.create({
+    data: { audience: "ADMIN", type, title, body, href },
+  });
+}
+
+/** Notifies everyone watching an asset when its price genuinely drops (never on a price increase or first listing). */
+async function notifyWatchersOfPriceDrop(assetId: string, assetName: string, oldPriceThb: number, newPriceThb: number) {
+  if (newPriceThb >= oldPriceThb) return;
+  const watchers = await prisma.watchlistItem.findMany({ where: { assetId }, select: { userId: true } });
+  await Promise.all(
+    watchers.map((w) =>
+      notifyUser(
+        w.userId,
+        "PRICE_DROP_WATCHED",
+        "Price drop on an item you're watching",
+        `${assetName} dropped from ${oldPriceThb.toLocaleString()} to ${newPriceThb.toLocaleString()} THB.`,
+        `/item/${assetId}`,
+      ),
+    ),
+  );
 }
 
 const verificationPhotoSchema = z.object({
@@ -117,6 +151,7 @@ export async function createListing(
   formData: FormData,
 ): Promise<CreateListingState> {
   const user = await getCurrentUser();
+  if (user.isBanned) return { error: "Your account is suspended and can't create new listings." };
   const parsed = createListingSchema.safeParse({
     name: formData.get("name"),
     subtitle: formData.get("subtitle"),
@@ -148,6 +183,12 @@ export async function createListing(
   if (!data.raw) {
     const existing = await prisma.asset.findUnique({ where: { serial } });
     if (existing) {
+      await notifyAdmins(
+        "DUPLICATE_CERT_ATTEMPT",
+        "Duplicate certificate submission",
+        `${user.name ?? user.handle ?? "A user"} tried to list "${data.name}" using certificate ${serial}, which is already registered to another item.`,
+        `/item/${existing.id}`,
+      );
       return { error: `Serial ${serial} is already registered on the platform.` };
     }
   }
@@ -248,6 +289,7 @@ export async function buyListing(
   escrowLock?: { tradeId: string; txSignature: string; lamports: string; tradeAccount: string },
 ) {
   const user = await getCurrentUser();
+  if (user.isBanned) throw new Error("Your account is suspended and can't make purchases.");
   const asset = await prisma.asset.findUniqueOrThrow({ where: { id: assetId }, include: { owner: true } });
 
   if (!asset.forSale || asset.priceThb == null) {
@@ -327,6 +369,13 @@ export async function buyListing(
         actorId: user.id,
       },
     });
+    await notifyUser(
+      asset.ownerId,
+      "ITEM_SOLD",
+      "Item sold",
+      `${asset.name} sold instantly from your vault for ${asset.priceThb.toLocaleString()} THB.`,
+      `/item/${assetId}`,
+    );
   } else {
     await prisma.asset.update({
       where: { id: assetId },
@@ -369,6 +418,12 @@ export async function buyListing(
         status: "PENDING_INSPECTION",
       },
     });
+    await notifyAdmins(
+      "NEW_SUBMISSION",
+      "New inbound package",
+      `${asset.name} sold for ${asset.priceThb.toLocaleString()} THB and is awaiting warehouse inspection.`,
+      `/admin/warehouse`,
+    );
   }
 
   revalidateMarketplace(assetId);
@@ -482,11 +537,18 @@ export async function warehouseApproveShip(inboundPackageId: string) {
     }),
   ]);
 
+  await notifyUser(
+    pkg.escrowTx.sellerId,
+    "ITEM_SOLD",
+    "Item sold",
+    `${pkg.asset.name} passed inspection and sold for ${pkg.escrowTx.amountThb.toLocaleString()} THB.`,
+    `/item/${pkg.assetId}`,
+  );
   revalidateMarketplace(pkg.assetId);
 }
 
 /** Warehouse verifies the slab, then deposits it into the platform vault for the buyer. */
-export async function warehouseApproveVault(inboundPackageId: string) {
+export async function warehouseApproveVault(inboundPackageId: string, vaultLocation?: string) {
   await requireAdmin();
   const pkg = await loadInboundPackage(inboundPackageId);
   const transfer = await mockTransferOwnership(pkg.assetId, pkg.escrowTx.buyerId);
@@ -509,6 +571,7 @@ export async function warehouseApproveVault(inboundPackageId: string) {
         vaulted: true,
         marketStatus: "IN_VAULT",
         pipelineStage: "NONE",
+        vaultLocation: vaultLocation?.trim() || undefined,
       },
     }),
     prisma.provenanceEvent.createMany({
@@ -536,6 +599,13 @@ export async function warehouseApproveVault(inboundPackageId: string) {
     }),
   ]);
 
+  await notifyUser(
+    pkg.escrowTx.sellerId,
+    "ITEM_SOLD",
+    "Item sold",
+    `${pkg.asset.name} passed inspection and sold for ${pkg.escrowTx.amountThb.toLocaleString()} THB.`,
+    `/item/${pkg.assetId}`,
+  );
   revalidateMarketplace(pkg.assetId);
 }
 
@@ -584,6 +654,75 @@ export async function warehouseReject(inboundPackageId: string) {
   revalidateMarketplace(pkg.assetId);
 }
 
+export interface BulkActionResult {
+  succeeded: string[];
+  skipped: { id: string; itemName: string; reason: string }[];
+}
+
+/**
+ * Bulk-approves every selected inbound package that has NO mismatch
+ * between declared and official grading data — routes each to
+ * warehouseApproveShip or warehouseApproveVault based on that trade's own
+ * fulfillment choice (a buyer decision, not something staff picks in
+ * bulk). Anything with a mismatch is skipped, never silently approved —
+ * bulk action can never bypass the per-item verification check that
+ * warehouseReject exists to catch; those still need the individual
+ * Inspect dialog. One item failing (e.g. an on-chain release error)
+ * doesn't abort the rest of the batch.
+ */
+export async function bulkApproveInboundPackages(inboundPackageIds: string[]): Promise<BulkActionResult> {
+  await requireAdmin();
+  const succeeded: string[] = [];
+  const skipped: BulkActionResult["skipped"] = [];
+
+  for (const id of inboundPackageIds) {
+    let itemName = id;
+    try {
+      const pkg = await loadInboundPackage(id);
+      itemName = pkg.asset.name;
+      const allMatch =
+        pkg.declaredSerial === pkg.officialSerial &&
+        pkg.declaredGradingCompany === pkg.officialGradingCompany &&
+        pkg.declaredGrade === pkg.officialGrade;
+      if (!allMatch) {
+        skipped.push({ id, itemName, reason: "Certificate data mismatch — needs individual review." });
+        continue;
+      }
+      if (pkg.escrowTx.fulfillmentChoice === "VAULT") {
+        await warehouseApproveVault(id);
+      } else {
+        await warehouseApproveShip(id);
+      }
+      succeeded.push(id);
+    } catch (err) {
+      skipped.push({ id, itemName, reason: err instanceof Error ? err.message : "Action failed." });
+    }
+  }
+
+  return { succeeded, skipped };
+}
+
+/** Bulk-rejects the selected inbound packages — safe for any selection, mismatched or not. */
+export async function bulkRejectInboundPackages(inboundPackageIds: string[]): Promise<BulkActionResult> {
+  await requireAdmin();
+  const succeeded: string[] = [];
+  const skipped: BulkActionResult["skipped"] = [];
+
+  for (const id of inboundPackageIds) {
+    let itemName = id;
+    try {
+      const pkg = await loadInboundPackage(id);
+      itemName = pkg.asset.name;
+      await warehouseReject(id);
+      succeeded.push(id);
+    } catch (err) {
+      skipped.push({ id, itemName, reason: err instanceof Error ? err.message : "Action failed." });
+    }
+  }
+
+  return { succeeded, skipped };
+}
+
 /**
  * Real on-chain signature takes priority when the client actually signed
  * one (see components/portfolio/portfolio-item-card.tsx's use of
@@ -624,6 +763,9 @@ export async function vaultRelist(assetId: string, priceThb: number, txSignature
       actorId: user.id,
     },
   });
+  if (asset.priceThb != null) {
+    await notifyWatchersOfPriceDrop(assetId, asset.name, asset.priceThb, priceThb);
+  }
 
   revalidateMarketplace(assetId);
 }
@@ -666,6 +808,9 @@ export async function updateListingPrice(assetId: string, priceThb: number, txSi
       actorId: user.id,
     },
   });
+  if (asset.priceThb != null) {
+    await notifyWatchersOfPriceDrop(assetId, asset.name, asset.priceThb, priceThb);
+  }
 
   revalidateMarketplace(assetId);
 }
@@ -722,6 +867,7 @@ export async function submitForGrading(
   formData: FormData,
 ): Promise<SubmitForGradingState> {
   const user = await getCurrentUser();
+  if (user.isBanned) return { error: "Your account is suspended and can't submit items for grading." };
   const parsed = submitForGradingSchema.safeParse({
     itemName: formData.get("itemName"),
     itemSubtitle: formData.get("itemSubtitle"),
@@ -769,6 +915,27 @@ export async function adminMarkAtGradingCompany(submissionId: string) {
   });
   revalidatePath("/admin/warehouse");
   revalidatePath("/portfolio");
+}
+
+/** Bulk version — for when staff physically ship a batch of raw items to the grading company in one box. */
+export async function bulkMarkAtGradingCompany(submissionIds: string[]): Promise<BulkActionResult> {
+  await requireAdmin();
+  const succeeded: string[] = [];
+  const skipped: BulkActionResult["skipped"] = [];
+
+  for (const id of submissionIds) {
+    let itemName = id;
+    try {
+      const submission = await loadGradingSubmission(id);
+      itemName = submission.itemName;
+      await adminMarkAtGradingCompany(id);
+      succeeded.push(id);
+    } catch (err) {
+      skipped.push({ id, itemName, reason: err instanceof Error ? err.message : "Action failed." });
+    }
+  }
+
+  return { succeeded, skipped };
 }
 
 const completeGradingSchema = z.object({
@@ -848,6 +1015,14 @@ export async function adminCompleteGrading(
       actorId: submission.sellerId,
     },
   });
+
+  await notifyUser(
+    submission.sellerId,
+    "GRADING_COMPLETE",
+    "Grading complete",
+    `${submission.itemName} came back graded ${submission.gradingCompany} ${parsed.data.grade} — set a price to list it.`,
+    `/item/${asset.id}`,
+  );
 
   revalidateMarketplace(asset.id);
   return { assetId: asset.id };
@@ -1013,4 +1188,77 @@ export async function toggleWatchlist(assetId: string): Promise<{ watching: bool
   revalidatePath("/portfolio");
   revalidatePath(`/item/${assetId}`);
   return { watching: true };
+}
+
+// ---------------------------------------------------------------------------
+// Notifications — consumer-facing actions only ever touch the current
+// user's own USER-audience rows (never take a userId param from the
+// client). Admin actions are separately gated by requireAdmin() below.
+// ---------------------------------------------------------------------------
+
+/** Marks one of the current user's own notifications as read. No-ops silently if it's not theirs or already read. */
+export async function markNotificationRead(notificationId: string) {
+  const user = await getCurrentUser();
+  await prisma.notification.updateMany({
+    where: { id: notificationId, userId: user.id, audience: "USER" },
+    data: { readAt: new Date() },
+  });
+  revalidatePath("/marketplace");
+}
+
+/** Marks every one of the current user's unread notifications as read (the "clear all" action in the bell). */
+export async function markAllNotificationsRead() {
+  const user = await getCurrentUser();
+  await prisma.notification.updateMany({
+    where: { userId: user.id, audience: "USER", readAt: null },
+    data: { readAt: new Date() },
+  });
+  revalidatePath("/marketplace");
+}
+
+/** Staff-only: marks one broadcast alert read. Since ADMIN alerts aren't addressed to one person, this is "read by staff" in general, not per-admin. */
+export async function markAdminAlertRead(notificationId: string) {
+  await requireAdmin();
+  await prisma.notification.updateMany({
+    where: { id: notificationId, audience: "ADMIN" },
+    data: { readAt: new Date() },
+  });
+  revalidatePath("/admin/warehouse");
+}
+
+/**
+ * Staff-only: sets or updates where a vaulted item physically sits in the
+ * warehouse (Row/Shelf/Box, however the warehouse labels it) — set once
+ * when it's first deposited (see warehouseApproveVault), editable here
+ * afterward for when it's physically moved.
+ */
+export async function updateVaultLocation(assetId: string, vaultLocation: string) {
+  await requireAdmin();
+  const asset = await prisma.asset.findUniqueOrThrow({ where: { id: assetId } });
+  if (!asset.vaulted) throw new Error("This item isn't in the vault.");
+
+  await prisma.asset.update({
+    where: { id: assetId },
+    data: { vaultLocation: vaultLocation.trim() || null },
+  });
+  revalidatePath("/admin/warehouse");
+}
+
+/**
+ * Staff-only: suspends or restores a user's ability to list, submit for
+ * grading, or buy. Never touches their existing listings, escrows, or
+ * reviews — reversible, no destructive side effect, matching how the rest
+ * of this app treats an admin action as a real state flip, not a wipe.
+ */
+export async function toggleUserBan(userId: string): Promise<{ isBanned: boolean }> {
+  const admin = await requireAdmin();
+  if (userId === admin.id) throw new Error("You can't suspend your own account.");
+
+  const target = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: { isBanned: !target.isBanned },
+  });
+  revalidatePath("/admin/warehouse");
+  return { isBanned: updated.isBanned };
 }

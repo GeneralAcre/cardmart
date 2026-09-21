@@ -121,6 +121,13 @@ model User {
   // Defaults false; only rows explicitly flagged true in the database get in.
   isAdmin Boolean @default(false)
 
+  // Staff seller-management control (back office "suspension/ban"). A
+  // banned user can't create new listings, submit for grading, or buy —
+  // existing listings/escrows are left alone (no destructive side effect,
+  // reversible by un-banning). Checked in lib/actions.ts, never surfaced
+  // anywhere on the buyer/seller side beyond a plain rejection message.
+  isBanned Boolean @default(false)
+
   listedAssets       Asset[]             @relation("AssetSeller")
   ownedAssets        Asset[]             @relation("AssetOwner")
   provenanceEvents   ProvenanceEvent[]
@@ -130,6 +137,7 @@ model User {
   reviewsReceived    Review[]            @relation("SellerReviews")
   reviewsGiven       Review[]            @relation("BuyerReviews")
   watchlist          WatchlistItem[]
+  notifications      Notification[]
 }
 
 model Asset {
@@ -151,6 +159,13 @@ model Asset {
   mintFeeThb          Int                 @default(50)
   createdAt           DateTime            @default(now())
   updatedAt           DateTime            @updatedAt
+
+  // Physical shelf/box location inside the warehouse vault — staff-only data,
+  // set when an item is deposited and editable later (item gets moved, or
+  // pulled for redemption/withdrawal). Never surfaced on any buyer/seller
+  // page; only read by the admin-only queries and components under
+  // components/warehouse/.
+  vaultLocation String?
 
   sellerId String
   seller   User   @relation("AssetSeller", fields: [sellerId], references: [id])
@@ -336,4 +351,46 @@ model ContactMessage {
   email     String
   message   String
   createdAt DateTime @default(now())
+}
+
+// USER: a personal notice for one specific buyer/seller (userId set).
+// ADMIN: a staff broadcast alert visible to every isAdmin user (userId
+// null) — a new high-value submission, a duplicate-cert fraud attempt, etc.
+// One shared model/table (same reasoning as EscrowTransaction and
+// ProvenanceEvent already being read by both sides), but the two audiences
+// are queried and rendered through completely separate code paths — see
+// getMyNotifications/getAdminAlerts in lib/queries.ts and
+// components/site/notification-bell.tsx (consumer) vs
+// components/warehouse/admin-alerts.tsx (staff-only).
+enum NotificationAudience {
+  USER
+  ADMIN
+}
+
+enum NotificationType {
+  ITEM_SOLD
+  INSPECTION_PASSED
+  GRADING_COMPLETE
+  PRICE_DROP_WATCHED
+  NEW_SUBMISSION
+  DUPLICATE_CERT_ATTEMPT
+}
+
+model Notification {
+  id        String               @id @default(cuid())
+  audience  NotificationAudience
+  type      NotificationType
+  title     String
+  body      String
+  // Optional deep link, e.g. "/item/<id>" — where clicking the notification takes you.
+  href      String?
+  readAt    DateTime?
+  createdAt DateTime             @default(now())
+
+  // Only set for USER-audience rows; always null for ADMIN broadcast alerts.
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
+
+  @@index([userId, readAt])
+  @@index([audience, readAt])
 }

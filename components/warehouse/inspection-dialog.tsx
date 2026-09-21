@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { warehouseApproveShip, warehouseApproveVault, warehouseReject } from "@/lib/actions";
 import { formatGrade, formatThb } from "@/lib/format";
 import { extractPsaCertNumber, psaCertUrl } from "@/lib/psa-client";
@@ -97,6 +98,7 @@ export function InspectionDialog({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [action, setAction] = useState<"ship" | "vault" | "reject" | null>(null);
+  const [vaultLocation, setVaultLocation] = useState("");
 
   const allMatch =
     pkg.declaredSerial === pkg.officialSerial &&
@@ -205,6 +207,19 @@ export function InspectionDialog({
           )}
         </div>
 
+        {pkg.escrowTx.fulfillmentChoice === "VAULT" && (
+          <div className="flex flex-col gap-1.5">
+            <span className="text-muted-foreground text-xs font-medium">Vault location (optional)</span>
+            <Input
+              value={vaultLocation}
+              onChange={(e) => setVaultLocation(e.target.value)}
+              placeholder="e.g. Row 3, Shelf B, Box 12"
+              className="h-8 text-xs"
+              disabled={pending}
+            />
+          </div>
+        )}
+
         <DialogFooter className="sm:flex-wrap sm:justify-between gap-2">
           <Button
             variant="destructive"
@@ -217,7 +232,7 @@ export function InspectionDialog({
           <div className="flex flex-wrap gap-2">
             <Button
               variant={pkg.escrowTx.fulfillmentChoice === "VAULT" ? "default" : "outline"}
-              onClick={() => run("vault", () => warehouseApproveVault(pkg.id))}
+              onClick={() => run("vault", () => warehouseApproveVault(pkg.id, vaultLocation))}
               disabled={pending}
             >
               {pending && action === "vault" ? <Loader2 className="animate-spin" /> : <Vault />}

@@ -350,3 +350,92 @@ export async function getWatchlist(userId: string) {
   });
   return items.map((i) => i.asset);
 }
+
+// ---------------------------------------------------------------------------
+// Notifications — one shared table, two completely separate audiences. The
+// "get my ..." functions below are consumer-facing (any signed-in user reads
+// their own USER-audience rows); the "getAdmin*" functions are staff-only
+// (ADMIN-audience rows, broadcast to every isAdmin user, not tied to one
+// userId) — same naming convention as getWarehouseQueue/getGradingSubmissionQueue
+// above for "this one's admin-only," gated at the page/action layer via
+// requireAdmin(), not by anything in the query itself.
+// ---------------------------------------------------------------------------
+
+export async function getMyNotifications(userId: string, limit = 20) {
+  return prisma.notification.findMany({
+    where: { audience: "USER", userId },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+  });
+}
+
+export async function getUnreadNotificationCount(userId: string): Promise<number> {
+  return prisma.notification.count({
+    where: { audience: "USER", userId, readAt: null },
+  });
+}
+
+export async function getAdminAlerts(limit = 20) {
+  return prisma.notification.findMany({
+    where: { audience: "ADMIN" },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+  });
+}
+
+export async function getUnreadAdminAlertCount(): Promise<number> {
+  return prisma.notification.count({
+    where: { audience: "ADMIN", readAt: null },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Vault storage mapping — staff-only (see Asset.vaultLocation in
+// schema.prisma). Never joined into any buyer/seller-facing query.
+// ---------------------------------------------------------------------------
+
+export async function getVaultInventory() {
+  return prisma.asset.findMany({
+    where: { vaulted: true },
+    orderBy: { vaultLocation: "asc" },
+    include: {
+      owner: { select: { id: true, name: true, handle: true } },
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Seller management — staff-only. Real counts (listings, completed sales,
+// average rating) pulled from data that already exists elsewhere in the
+// app, not a separate fabricated "seller score."
+// ---------------------------------------------------------------------------
+
+export async function getSellerManagementList() {
+  const users = await prisma.user.findMany({
+    where: { profileComplete: true },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      name: true,
+      handle: true,
+      email: true,
+      createdAt: true,
+      isAdmin: true,
+      isBanned: true,
+      _count: { select: { listedAssets: true, sales: true } },
+    },
+  });
+
+  const ratings = await prisma.review.groupBy({
+    by: ["sellerId"],
+    _avg: { rating: true },
+    _count: true,
+  });
+  const ratingBySeller = new Map(ratings.map((r) => [r.sellerId, r]));
+
+  return users.map((u) => ({
+    ...u,
+    rating: ratingBySeller.get(u.id)?._avg.rating ?? null,
+    reviewCount: ratingBySeller.get(u.id)?._count ?? 0,
+  }));
+}

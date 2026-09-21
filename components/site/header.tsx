@@ -2,9 +2,11 @@ import Link from "next/link";
 import { Gem } from "lucide-react";
 
 import { getCurrentUser } from "@/lib/session";
+import { getMyNotifications, getUnreadNotificationCount } from "@/lib/queries";
 import { WalletButton } from "@/components/site/wallet-button";
 import { NavLinks } from "@/components/site/nav-links";
 import { MobileBottomNav } from "@/components/site/mobile-bottom-nav";
+import { NotificationBell } from "@/components/site/notification-bell";
 import { SignOutButton } from "@/components/site/sign-out-button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -18,6 +20,10 @@ import {
 
 export async function SiteHeader() {
   const user = await getCurrentUser();
+  const [notifications, unreadCount] = await Promise.all([
+    getMyNotifications(user.id),
+    getUnreadNotificationCount(user.id),
+  ]);
   const displayName = user.name ?? user.handle ?? "Collector";
   const initials = displayName
     .split(" ")
@@ -38,6 +44,17 @@ export async function SiteHeader() {
             <NavLinks isAdmin={user.isAdmin} />
           </div>
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+            <NotificationBell
+              initialNotifications={notifications.map((n) => ({
+                id: n.id,
+                title: n.title,
+                body: n.body,
+                href: n.href,
+                readAt: n.readAt?.toISOString() ?? null,
+                createdAt: n.createdAt.toISOString(),
+              }))}
+              initialUnreadCount={unreadCount}
+            />
             <WalletButton />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
