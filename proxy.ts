@@ -35,11 +35,15 @@ export function proxy(req: NextRequest) {
 }
 
 export const config = {
-  // Excludes Next.js internals AND any actual static file (extension in the
-  // last path segment) — without the file-extension exclusion, requests for
-  // public/ assets like /X-logo.png were being caught by this same
-  // middleware and redirected to "/" when signed out, breaking images (and
-  // would break any public file) sitewide, including on pages like /terms
-  // and /privacy that are supposed to be reachable without signing in.
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.[\\w]+$).*)"],
+  // Excludes Next.js internals, any actual static file (extension in the
+  // last path segment), AND everything under /api — without the
+  // file-extension exclusion, requests for public/ assets like
+  // /X-logo.png were being caught by this same middleware and redirected
+  // to "/" when signed out, breaking images sitewide. The /api exclusion
+  // matters just as much: an API route should never get silently rewritten
+  // into an HTML redirect for a caller that was never going to have a
+  // Privy browser cookie in the first place (e.g. app/api/verify's
+  // separate API-key auth for an external QA tool) — each API route
+  // authenticates itself and returns a proper JSON error instead.
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/|.*\\.[\\w]+$).*)"],
 };

@@ -37,6 +37,7 @@ function SheetOverlay({ className, ...props }: React.ComponentProps<typeof Dialo
 
 function SheetContent({
   className,
+  style,
   children,
   side = "bottom",
   ...props
@@ -60,6 +61,11 @@ function SheetContent({
             "inset-y-0 right-0 h-full w-3/4 max-w-sm border-l data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right",
           className,
         )}
+        // A bottom sheet sits flush against the screen edge, right where an
+        // iPhone's home-indicator gesture bar lives — without this, the
+        // footer button ends up crammed under it (same fix already applied
+        // to MobileBottomNav).
+        style={side === "bottom" ? { paddingBottom: "env(safe-area-inset-bottom, 0px)", ...style } : style}
         {...props}
       >
         {children}

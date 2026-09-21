@@ -34,25 +34,29 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
 
   if (!asset) notFound();
 
-  // Live PSA cert + population lookup for display — best-effort, and never
-  // blocks the page: it silently returns null whenever PSA isn't
-  // configured, the account isn't approved for live access yet, or the
-  // request fails for any other reason.
-  const psaCert = asset.gradingCompany === "PSA" ? await lookupPsaCert(extractPsaCertNumber(asset.serial)) : null;
-  const psaPopulation =
-    psaCert?.specId != null ? await lookupPsaPopulation(psaCert.specId) : null;
+  // These four are all independent of each other (only psaPopulation below
+  // depends on one of them) — awaiting them one at a time was serializing
+  // several real external network round trips (PSA, TCG API) on every page
+  // load, which is what was pushing this page to 5-10s and occasionally
+  // outrunning the client's patience ("destination stream closed early").
+  // Running them concurrently caps the wait at the slowest single call.
+  const [psaCert, priceQuote, priceHistory, sellerRating] = await Promise.all([
+    // Live PSA cert lookup for display — best-effort, and never blocks the
+    // page: it silently returns null whenever PSA isn't configured, the
+    // account isn't approved for live access yet, or the request fails.
+    asset.gradingCompany === "PSA" ? lookupPsaCert(extractPsaCertNumber(asset.serial)) : Promise.resolve(null),
+    // Reference raw-card market price — TCG API (TCGPlayer data), Pokemon/TCG
+    // only, so this only ever runs for TRADING_CARD. No grade-tier pricing
+    // exists in that data at all, so it's deliberately never shown as "the"
+    // price for a graded slab — see the disclaimer rendered alongside it.
+    asset.category === "TRADING_CARD" ? lookupCardPrice(asset.name) : Promise.resolve(null),
+    // Default range matches PriceHistoryChart's own default state (7d) — the
+    // client re-fetches on range change, this is just the initial paint.
+    getPriceHistory(asset.id, "7d"),
+    getSellerRating(asset.seller.id),
+  ]);
 
-  // Reference raw-card market price — TCG API (TCGPlayer data), Pokemon/TCG
-  // only, so this only ever runs for TRADING_CARD. No grade-tier pricing
-  // exists in that data at all, so it's deliberately never shown as "the"
-  // price for a graded slab — see the disclaimer rendered alongside it.
-  const priceQuote = asset.category === "TRADING_CARD" ? await lookupCardPrice(asset.name) : null;
-
-  // Default range matches PriceHistoryChart's own default state (7d) — the
-  // client re-fetches on range change, this is just the initial paint.
-  const priceHistory = await getPriceHistory(asset.id, "7d");
-
-  const sellerRating = await getSellerRating(asset.seller.id);
+  const psaPopulation = psaCert?.specId != null ? await lookupPsaPopulation(psaCert.specId) : null;
   const sellerInitials = (asset.seller.name ?? "?")
     .split(" ")
     .map((n) => n[0])
@@ -191,7 +195,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
             <div className="bg-card rounded-xl border p-4">
               <div className="mb-3 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="bg-primary/10 text-primary flex size-7 items-center justify-center rounded-full">
+                  <div className="bg-foreground text-background flex size-7 items-center justify-center rounded-lg">
                     <ScanSearch className="size-3.5" />
                   </div>
                   <span className="text-sm font-semibold">Card Details</span>
@@ -265,7 +269,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
             <div className="bg-card rounded-xl border p-4">
               <div className="mb-3 flex items-start justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <div className="bg-primary/10 text-primary flex size-7 items-center justify-center rounded-full">
+                  <div className="bg-foreground text-background flex size-7 items-center justify-center rounded-lg">
                     <TrendingUp className="size-3.5" />
                   </div>
                   <span className="text-sm font-semibold">Reference Market Price</span>
@@ -297,7 +301,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
 
         <div>
           <div className="mb-5 flex items-center gap-2">
-            <div className="bg-primary/10 text-primary flex size-7 items-center justify-center rounded-full">
+            <div className="bg-foreground text-background flex size-7 items-center justify-center rounded-lg">
               <History className="size-3.5" />
             </div>
             <h2 className="text-lg font-semibold">Item History</h2>

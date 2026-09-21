@@ -92,14 +92,16 @@ export function LandingPage({ authenticated }: { authenticated: boolean }) {
     <div className="flex min-h-full flex-1 flex-col">
       <LandingNav authenticated={authenticated} />
 
-      <div className="relative overflow-hidden border-b bg-[radial-gradient(120%_140%_at_50%_-10%,rgba(99,102,241,0.16),transparent_60%)] sm:bg-[radial-gradient(120%_140%_at_10%_-10%,rgba(99,102,241,0.16),transparent_60%)]">
-        <div className="mx-auto flex max-w-7xl flex-col items-center gap-5 px-4 py-14 text-center sm:items-start sm:px-6 sm:py-24 sm:text-left">
-          <span className="bg-primary/10 text-primary inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium">
+      <div className="relative overflow-hidden border-b bg-[radial-gradient(120%_140%_at_50%_-10%,rgba(0,0,0,0.05),transparent_60%)] sm:bg-[radial-gradient(120%_140%_at_10%_-10%,rgba(0,0,0,0.05),transparent_60%)]">
+        <div className="mx-auto flex max-w-7xl flex-col items-center gap-6 px-4 py-14 text-center sm:items-start sm:px-6 sm:py-28 sm:text-left">
+          <span className="bg-foreground text-background inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium">
             <Gem className="size-3.5" />
             Beta &middot; Running on a Test Blockchain
           </span>
-          <h1 className="max-w-2xl text-4xl leading-[1.1] font-semibold tracking-tight text-balance sm:text-5xl">
-            Trade real collectibles, protected by secure payments &amp; digital certificates.
+          <h1 className="max-w-3xl text-4xl leading-[1.08] font-semibold tracking-tight text-balance sm:text-6xl sm:leading-[1.02] lg:text-7xl">
+            Trade real collectibles.
+            <br />
+            <span className="text-muted-foreground">Protected, verified, real.</span>
           </h1>
           <p className="text-muted-foreground max-w-xl text-base text-balance sm:text-lg">
             List PSA, BGS, and CGC certified trading cards. Every sale is
@@ -118,8 +120,10 @@ export function LandingPage({ authenticated }: { authenticated: boolean }) {
       </div>
 
       <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 sm:py-20">
-        <div className="mb-8 flex flex-col gap-2 sm:mb-10">
-          <span className="text-primary text-sm font-semibold uppercase tracking-wide">Why Proof</span>
+        <div className="mb-8 flex flex-col gap-3 sm:mb-10">
+          <span className="bg-foreground text-background w-fit rounded-full px-3 py-1 text-xs font-semibold tracking-wide uppercase">
+            Why Proof
+          </span>
           <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
             Built so nobody has to just take your word for it.
           </h2>
@@ -130,7 +134,7 @@ export function LandingPage({ authenticated }: { authenticated: boolean }) {
               key={f.title}
               className="bg-card flex flex-col gap-3 rounded-xl border p-5 transition-shadow sm:hover:shadow-md"
             >
-              <div className="bg-primary/10 text-primary flex size-10 items-center justify-center rounded-full">
+              <div className="bg-foreground text-background flex size-10 items-center justify-center rounded-lg">
                 <f.icon className="size-5" />
               </div>
               <h3 className="font-semibold">{f.title}</h3>
@@ -142,8 +146,10 @@ export function LandingPage({ authenticated }: { authenticated: boolean }) {
 
       <div className="border-y bg-[color-mix(in_oklch,var(--muted)_40%,transparent)]">
         <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 sm:py-20">
-          <div className="mb-8 flex flex-col gap-2 sm:mb-10">
-            <span className="text-primary text-sm font-semibold uppercase tracking-wide">How it works</span>
+          <div className="mb-8 flex flex-col gap-3 sm:mb-10">
+            <span className="bg-foreground text-background w-fit rounded-full px-3 py-1 text-xs font-semibold tracking-wide uppercase">
+              How it works
+            </span>
             <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">From sign-in to sold, in four steps.</h2>
           </div>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-8 lg:grid-cols-4">
@@ -161,7 +167,7 @@ export function LandingPage({ authenticated }: { authenticated: boolean }) {
       </div>
 
       <div className="mx-auto flex w-full max-w-3xl flex-col items-center gap-6 px-4 py-14 text-center sm:px-6 sm:py-24">
-        <div className="bg-primary/10 text-primary flex size-14 items-center justify-center rounded-full">
+        <div className="bg-foreground text-background flex size-14 items-center justify-center rounded-full">
           <Sparkles className="size-7" />
         </div>
         <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">

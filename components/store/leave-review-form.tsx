@@ -49,10 +49,13 @@ export function LeaveReviewForm({ escrowTxId }: { escrowTxId: string }) {
         onChange={(e) => setComment(e.target.value)}
         rows={2}
       />
-      <Button size="sm" className="w-fit" disabled={rating === 0 || pending} onClick={handleSubmit}>
-        {pending && <Loader2 className="animate-spin" />}
-        Submit Review
-      </Button>
+      <div className="flex items-center gap-2">
+        <Button size="sm" className="w-fit" disabled={rating === 0 || pending} onClick={handleSubmit}>
+          {pending && <Loader2 className="animate-spin" />}
+          Submit Review
+        </Button>
+        {rating === 0 && <span className="text-muted-foreground text-xs">Select a rating first</span>}
+      </div>
     </div>
   );
 }

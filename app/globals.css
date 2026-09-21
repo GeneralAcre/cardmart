@@ -22,7 +22,11 @@
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
-  --background: oklch(1 0 0);
+  /* A soft off-white canvas (not pure white) so white cards read as
+     slightly "lifted" against the page, like the reference deck's light
+     gray background behind bright-white panels — pure white-on-white had
+     nothing to separate a card's edge but its border. */
+  --background: oklch(0.975 0.002 106);
   --foreground: oklch(0.145 0 0);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);

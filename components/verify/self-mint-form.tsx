@@ -128,7 +128,7 @@ export function SelfMintForm() {
       // Solana-Explorer-verifiable event instead of a simulated one.
       const memo = `Proof mint: ${name} | ${raw ? "Raw/Ungraded" : `${gradingCompany} ${serial}`} | ${priceThb} THB`;
       const mintTxSignature = await sendMemo(memo);
-      toast.success("Confirmed on the blockchain", { description: `${mintTxSignature.slice(0, 8)}…` });
+      toast.success("Confirmed", { description: `${mintTxSignature.slice(0, 8)}…` });
 
       const photos = checklist.map((v) => ({
         viewKey: v.key,
@@ -361,10 +361,10 @@ export function SelfMintForm() {
           <DialogHeader>
             <DialogTitle>Confirm &amp; Create Your Certificate</DialogTitle>
             <DialogDescription>
-              You&apos;ll approve a one-time blockchain record for this item, so
-              anyone can verify it&apos;s really yours. Full on-chain ownership
-              tracking is coming in a future update — for now it&apos;s also kept
-              in our database.
+              You&apos;ll approve this with your wallet to create a permanent
+              record for this listing that anyone can check. Ownership
+              itself is still tracked in our database for now — that&apos;s
+              coming in a future update too.
             </DialogDescription>
           </DialogHeader>
           <div className="bg-muted/40 rounded-lg border p-3 text-sm">

@@ -108,7 +108,7 @@ export function BuyPanel({
           const txSignature = await signAndSendRawTransaction(transactionBytes);
           escrowLock = { tradeId: tradeId.toString(), txSignature, lamports: lamports.toString(), tradeAccount };
         } catch (err) {
-          toast.error(err instanceof Error ? err.message : "Could not lock payment on-chain.");
+          toast.error(err instanceof Error ? err.message : "Could not lock in your payment. Try again.");
           return;
         }
       } else {

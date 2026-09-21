@@ -55,7 +55,7 @@ export function PriceHistoryChart({
     <div className="bg-card rounded-xl border p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <div className="bg-primary/10 text-primary flex size-7 items-center justify-center rounded-full">
+          <div className="bg-foreground text-background flex size-7 items-center justify-center rounded-lg">
             <LineChart className="size-3.5" />
           </div>
           <span className="text-sm font-semibold">Price History</span>

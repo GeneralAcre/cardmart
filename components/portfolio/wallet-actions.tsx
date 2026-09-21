@@ -13,6 +13,11 @@ import { requestSolAirdrop } from "@/lib/actions";
 
 const AIRDROP_PRESETS_SOL = [0.5, 1, 2];
 
+// Real Solana addresses are base58 (no 0, O, I, or l) and 32-44 characters —
+// catches an obviously-mistyped address before signing, instead of letting
+// the user find out only after sendSol throws.
+const SOLANA_ADDRESS_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+
 // Devnet real SOL transfers are visible on the real (devnet) block explorer —
 // this isn't a mock link, the transaction actually lands on-chain.
 function explorerTxUrl(signature: string) {
@@ -165,13 +170,15 @@ function WithdrawDialog({
   const [signature, setSignature] = useState<string | null>(null);
 
   const amountNumber = Number(amount);
-  const canSend = toAddress.trim().length >= 32 && amountNumber > 0 && !sending;
+  const addressTrimmed = toAddress.trim();
+  const addressValid = SOLANA_ADDRESS_RE.test(addressTrimmed);
+  const canSend = addressValid && amountNumber > 0 && !sending;
 
   async function handleSend() {
     setSending(true);
     setSignature(null);
     try {
-      const sig = await sendSol(toAddress.trim(), amountNumber);
+      const sig = await sendSol(addressTrimmed, amountNumber);
       setSignature(sig);
       toast.success("Sent");
       router.refresh();
@@ -200,13 +207,18 @@ function WithdrawDialog({
           <DialogTitle className="text-center">Withdraw</DialogTitle>
         </DialogHeader>
 
-        <Input
-          placeholder="Recipient address"
-          value={toAddress}
-          onChange={(e) => setToAddress(e.target.value)}
-          disabled={sending}
-          className="font-mono text-xs"
-        />
+        <div className="flex flex-col gap-1">
+          <Input
+            placeholder="Recipient address"
+            value={toAddress}
+            onChange={(e) => setToAddress(e.target.value)}
+            disabled={sending}
+            className="font-mono text-xs"
+          />
+          {addressTrimmed.length > 0 && !addressValid && (
+            <span className="text-destructive text-xs">That doesn&apos;t look like a valid address.</span>
+          )}
+        </div>
 
         <div className="relative">
           <Input

@@ -127,6 +127,10 @@ function CameraCaptureDialog({
   );
   const [error, setError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(CAPTURE_HOLD_SECONDS);
+  // Bumped by the "Try Again" button to re-run the getUserMedia effect below
+  // without needing a different view — e.g. after the user grants a
+  // permission they'd previously denied.
+  const [retryToken, setRetryToken] = useState(0);
 
   useEffect(() => {
     unmountedRef.current = false;
@@ -138,12 +142,21 @@ function CameraCaptureDialog({
   useEffect(() => {
     let cancelled = false;
 
+    async function getStream() {
+      try {
+        // Rear camera first (what you actually want on a phone) — falls
+        // back to whatever camera is available otherwise, since laptops
+        // used for testing/demoing often have no "environment" camera at
+        // all and would otherwise dead-end here every time.
+        return await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+      } catch {
+        return navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      }
+    }
+
     async function start() {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment" },
-          audio: false,
-        });
+        const stream = await getStream();
         if (cancelled) {
           stream.getTracks().forEach((t) => t.stop());
           return;
@@ -168,7 +181,7 @@ function CameraCaptureDialog({
       streamRef.current?.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
     };
-  }, [view.key]);
+  }, [view.key, retryToken]);
 
   const capture = useCallback(() => {
     const video = videoRef.current;
@@ -273,6 +286,11 @@ function CameraCaptureDialog({
           {status === "positioning" && (
             <Button onClick={() => setStatus("counting")} className="flex-1">
               <Camera /> Start Capture
+            </Button>
+          )}
+          {status === "error" && (
+            <Button onClick={() => setRetryToken((t) => t + 1)} className="flex-1">
+              <Video /> Try Again
             </Button>
           )}
         </div>
