@@ -182,6 +182,14 @@ model Asset {
 
   @@index([sellerId])
   @@index([ownerId])
+  // The marketplace's main query (getMarketplaceListings) filters on
+  // marketStatus and sorts by createdAt on every single page load — without
+  // this, Postgres has no choice but to scan every Asset row every time,
+  // and that scan only gets slower as the table grows.
+  @@index([marketStatus, createdAt])
+  // getTrendingListings filters on exactly this pair (forSale + marketStatus)
+  // before it ever touches price data — same reasoning, different query shape.
+  @@index([forSale, marketStatus])
 }
 
 // A buyer saving a listing to keep an eye on — one row per (user, asset),
@@ -300,6 +308,9 @@ model EscrowTransaction {
   review         Review?
 
   @@index([assetId])
+  // getSellerProfile's sold-history section filters on exactly this pair on
+  // every storefront page view — sellerId alone wasn't indexed at all.
+  @@index([sellerId, status])
 }
 
 // A buyer's rating of the seller after a completed (RELEASED) purchase —

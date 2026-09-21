@@ -167,7 +167,7 @@ export function BuyPanel({
 
       <Button size="lg" onClick={() => setOpen(true)}>
         <ShieldCheck />
-        Buy Now — {formatThb(priceThb)}
+        Buy — {formatThb(priceThb)}
       </Button>
 
       <Dialog open={open} onOpenChange={(o) => !signing && !submitting && setOpen(o)}>

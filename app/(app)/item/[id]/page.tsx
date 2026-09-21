@@ -57,10 +57,11 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
     asset.category === "TRADING_CARD" ? lookupCardPrice(asset.name) : Promise.resolve(null),
     // Live current-asking-price reference from eBay's Browse API — covers
     // every category (sports cards, comics too, not just Pokemon), and is
-    // grade-aware. Best-effort: null whenever eBay isn't configured or
-    // nothing matched: ebaySoldListingsUrl below still gives a real,
-    // verifiable price reference either way.
-    lookupEbayPrice(ebayQuery),
+    // grade-aware (with a bare-name fallback if the grade-qualified search
+    // finds nothing — see lib/ebay.ts). Best-effort: null whenever eBay
+    // isn't configured or nothing matched: ebaySoldListingsUrl below still
+    // gives a real, verifiable price reference either way.
+    lookupEbayPrice(asset.name, asset.gradingCompany, asset.grade),
     // Default range matches PriceHistoryChart's own default state (7d) — the
     // client re-fetches on range change, this is just the initial paint.
     getPriceHistory(asset.id, "7d"),

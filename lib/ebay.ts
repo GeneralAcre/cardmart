@@ -89,16 +89,7 @@ function median(values: number[]): number {
   return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
-/**
- * Best-effort current-asking-price lookup on eBay's Browse API. Returns null
- * whenever eBay isn't configured, the request fails, or nothing USD-priced
- * matched — callers should always still render ebaySoldListingsUrl so there
- * is a real, verifiable price reference even with no API key at all.
- */
-export async function lookupEbayPrice(query: string): Promise<EbayPriceQuote | null> {
-  const token = await getAccessToken();
-  if (!token) return null;
-
+async function searchOnce(query: string, token: string): Promise<EbayPriceQuote | null> {
   try {
     const sp = new URLSearchParams({
       q: query,
@@ -142,6 +133,35 @@ export async function lookupEbayPrice(query: string): Promise<EbayPriceQuote | n
   } catch {
     return null;
   }
+}
+
+/**
+ * Best-effort current-asking-price lookup on eBay's Browse API. Returns null
+ * whenever eBay isn't configured, the request fails, or nothing USD-priced
+ * matched — callers should always still render ebaySoldListingsUrl so there
+ * is a real, verifiable price reference even with no API key at all.
+ *
+ * Tries the grade-qualified query first (e.g. "Charizard VMAX PSA 10"), and
+ * only if that finds nothing falls back to the bare card name. Sellers don't
+ * all format grade info the same way in their listing titles ("PSA10", "PSA
+ * Gem Mint 10", no grade at all if they undersell it), so a query that's too
+ * specific can genuinely zero out even though real comps exist under a
+ * looser search — a real reference for the raw card beats no reference at
+ * all, and the returned `query` field always says exactly what matched.
+ */
+export async function lookupEbayPrice(
+  name: string,
+  gradingCompany: string,
+  grade: number | null,
+): Promise<EbayPriceQuote | null> {
+  const token = await getAccessToken();
+  if (!token) return null;
+
+  const gradedQuery = buildMarketQuery(name, gradingCompany, grade);
+  const graded = await searchOnce(gradedQuery, token);
+  if (graded) return graded;
+
+  return gradedQuery !== name ? searchOnce(name, token) : null;
 }
 
 /**

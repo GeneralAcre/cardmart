@@ -98,6 +98,12 @@ export async function getTrendingListings(limit = 8) {
       if (snapshots.length < 2) return null;
 
       const latest = snapshots[snapshots.length - 1];
+      // If nothing was actually repriced within the lookback window, this
+      // isn't a "this week" trend at all — without this check, the ??
+      // fallback below could pair a current price against the asset's very
+      // first-ever snapshot from months ago and mislabel that ancient,
+      // unrelated gain as recent.
+      if (latest.createdAt < since) return null;
       const baseline = snapshots.find((s) => s.createdAt >= since) ?? snapshots[0];
       if (baseline === latest || baseline.priceThb <= 0) return null;
 
