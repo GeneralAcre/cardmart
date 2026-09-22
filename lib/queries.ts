@@ -7,6 +7,7 @@ export interface MarketplaceFilters {
   categories?: AssetCategory[];
   gradingCompanies?: GradingCompany[];
   grades?: number[];
+  blackLabelOnly?: boolean;
   priceMin?: number;
   priceMax?: number;
   vaultedStatus?: "ALL" | "IN_VAULT" | "SHIPPING";
@@ -46,6 +47,9 @@ export async function getMarketplaceListings(filters: MarketplaceFilters = {}) {
   }
   if (filters.grades?.length) {
     where.grade = { in: filters.grades };
+  }
+  if (filters.blackLabelOnly) {
+    where.isBlackLabel = true;
   }
   if (filters.priceMin != null || filters.priceMax != null) {
     where.priceThb = {

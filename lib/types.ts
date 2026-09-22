@@ -30,6 +30,8 @@ export interface MarketplaceFilterState {
   categories: AssetCategory[];
   gradingCompanies: GradingCompany[];
   grades: number[];
+  /** BGS Black Label only — a separate toggle since it's not a distinct numeric grade (see Asset.isBlackLabel). */
+  blackLabelOnly: boolean;
   priceMin: number | null;
   priceMax: number | null;
   vaultedStatus: "ALL" | "IN_VAULT" | "SHIPPING";
@@ -40,6 +42,7 @@ export const EMPTY_FILTERS: MarketplaceFilterState = {
   categories: [],
   gradingCompanies: [],
   grades: [],
+  blackLabelOnly: false,
   priceMin: null,
   priceMax: null,
   vaultedStatus: "ALL",

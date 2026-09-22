@@ -12,6 +12,7 @@ export async function GET(request: NextRequest) {
     .getAll("grade")
     .map(Number)
     .filter((n) => !Number.isNaN(n));
+  const blackLabelOnly = sp.get("blackLabel") === "true";
   const priceMin = sp.has("priceMin") ? Number(sp.get("priceMin")) : undefined;
   const priceMax = sp.has("priceMax") ? Number(sp.get("priceMax")) : undefined;
   const vaultedStatus = (sp.get("vaultedStatus") as "ALL" | "IN_VAULT" | "SHIPPING" | null) ?? "ALL";
@@ -22,6 +23,7 @@ export async function GET(request: NextRequest) {
     categories: categories.length ? categories : undefined,
     gradingCompanies: gradingCompanies.length ? gradingCompanies : undefined,
     grades: grades.length ? grades : undefined,
+    blackLabelOnly,
     priceMin,
     priceMax,
     vaultedStatus,

@@ -99,6 +99,10 @@ export function FilterBar({
     });
   }
 
+  function toggleBlackLabel() {
+    onChange({ ...filters, blackLabelOnly: !filters.blackLabelOnly });
+  }
+
   return (
     <div className={cn("bg-card flex flex-col gap-5 rounded-xl border p-4 shadow-sm", className)}>
       <div className="relative">
@@ -149,6 +153,13 @@ export function FilterBar({
       </FilterSection>
 
       <FilterSection label="Grade" icon={Star}>
+        {/* BGS Black Label is a distinct top tier, not a numeric grade of its
+            own (it shares grade 10 with a regular Pristine 10 — see
+            Asset.isBlackLabel), so it's a separate toggle rather than one
+            more entry in GRADES. Listed first to match how it ranks. */}
+        <FilterPill active={filters.blackLabelOnly} onClick={toggleBlackLabel}>
+          Black Label
+        </FilterPill>
         {GRADES.map((grade) => (
           <FilterPill key={grade} active={filters.grades.includes(grade)} onClick={() => toggleGrade(grade)}>
             {grade}
