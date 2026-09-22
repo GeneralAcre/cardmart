@@ -10,7 +10,7 @@ export const DEFAULT_LOCALE: Locale = "en";
 export const LANDING_DICTIONARY = {
   en: {
     nav: {
-      goToMarketplace: "Go to Marketplace",
+      goToMarketplace: "Login",
     },
     login: {
       continue: "Continue with Google or Email",

@@ -258,6 +258,9 @@ model Auction {
   // same "cache the current figure" pattern as PriceSnapshot/Asset.priceThb.
   // Null until the first bid comes in.
   currentBidThb Int?
+  // An auction may be scheduled ahead of time. It is visible and accepts bids
+  // only once this time has arrived.
+  startTime     DateTime      @default(now())
   endTime       DateTime
   status        AuctionStatus @default(ACTIVE)
   createdAt     DateTime      @default(now())
@@ -269,6 +272,7 @@ model Auction {
   bids Bid[]
 
   @@index([assetId])
+  @@index([status, startTime])
   @@index([status, endTime])
 }
 
@@ -506,6 +510,7 @@ enum NotificationType {
   NEW_SUBMISSION
   DUPLICATE_CERT_ATTEMPT
   OUTBID
+  AUCTION_STARTING
   AUCTION_WON
   AUCTION_ENDED_SELLER
   OFFER_RECEIVED

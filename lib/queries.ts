@@ -481,7 +481,7 @@ async function settleIfExpiredNoBids(auction: { id: string; endTime: Date; statu
 
 export async function getActiveAuctions() {
   const auctions = await prisma.auction.findMany({
-    where: { status: "ACTIVE" },
+    where: { status: "ACTIVE", startTime: { lte: new Date() } },
     orderBy: { endTime: "asc" },
     include: {
       asset: { include: { seller: true, owner: true, verificationPhotos: { orderBy: { createdAt: "asc" } } } },
@@ -491,7 +491,7 @@ export async function getActiveAuctions() {
   // Re-read rather than filter in place — settleIfExpiredNoBids may have
   // just closed some of these out from under us.
   return prisma.auction.findMany({
-    where: { status: "ACTIVE" },
+    where: { status: "ACTIVE", startTime: { lte: new Date() } },
     orderBy: { endTime: "asc" },
     include: {
       asset: { include: { seller: true, owner: true, verificationPhotos: { orderBy: { createdAt: "asc" } } } },

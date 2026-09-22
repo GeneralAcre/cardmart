@@ -1,19 +1,28 @@
 import { Gavel } from "lucide-react";
 
-import { getActiveAuctions } from "@/lib/queries";
+import { getActiveAuctions, getVaultAssets } from "@/lib/queries";
+import { getCurrentUser } from "@/lib/session";
 import { AuctionCard } from "@/components/auction/auction-card";
+import { CreateAuctionButton } from "@/components/auction/create-auction-button";
 
 export default async function AuctionsPage() {
-  const auctions = await getActiveAuctions();
+  const user = await getCurrentUser();
+  const [auctions, myAssets] = await Promise.all([getActiveAuctions(), getVaultAssets(user.id)]);
+  const eligibleAssets = myAssets
+    .filter((a) => a.marketStatus !== "IN_AUCTION" && a.marketStatus !== "IN_ESCROW")
+    .map((a) => ({ id: a.id, name: a.name, subtitle: a.subtitle, priceThb: a.priceThb }));
 
   return (
     <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6">
-      <div className="mb-8 flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold">Auctions</h1>
-        <p className="text-muted-foreground max-w-2xl text-sm">
-          Time-limited bidding on real, verified certificates — a separate sale channel from the
-          fixed-price marketplace. Start one from any item in your Portfolio.
-        </p>
+      <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-2xl font-semibold">Auctions</h1>
+          <p className="text-muted-foreground max-w-2xl text-sm">
+            Time-limited bidding on real, verified certificates — a separate sale channel from the
+            fixed-price marketplace.
+          </p>
+        </div>
+        <CreateAuctionButton eligibleAssets={eligibleAssets} />
       </div>
 
       {auctions.length === 0 ? (

@@ -194,7 +194,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
           {/* Owner / serial / on-chain mint — the same three facts a
               blockchain-native marketplace leads with (owner, address,
               token id), backed by this platform's own real SPL mint. */}
-          <div className="grid grid-cols-3 divide-x rounded-xl border text-sm">
+          <div className="detail-panel grid grid-cols-3 divide-x rounded-xl border text-sm">
             <div className="flex min-w-0 flex-col gap-0.5 p-3">
               <span className="text-muted-foreground text-xs">Owned by</span>
               <Link href={`/store/${asset.owner.id}`} className="truncate font-medium hover:underline">
@@ -226,7 +226,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
               second figure comes from a real prior PriceSnapshot, not a
               fabricated "last sale". Auctions/offers are a separate sale
               channel (see below) and don't feed into this fixed-price figure. */}
-          <div className="grid grid-cols-2 divide-x rounded-xl border">
+          <div className="detail-panel grid grid-cols-2 divide-x rounded-xl border">
             <div className="flex flex-col gap-0.5 p-3">
               <span className="text-muted-foreground text-xs">Listing Price</span>
               <span className="text-lg leading-none font-bold tabular-nums">
@@ -298,7 +298,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
 
           <Link
             href={`/store/${asset.seller.id}`}
-            className="bg-card hover:bg-accent/50 flex items-center gap-3 rounded-xl border p-3 transition-colors"
+            className="detail-panel hover:bg-highlight/15 flex items-center gap-3 rounded-xl border p-3 transition-colors"
           >
             <Avatar className="size-10 shrink-0">
               {asset.seller.image && <AvatarImage src={asset.seller.image} alt={asset.seller.name ?? ""} />}
@@ -324,7 +324,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
           {/* Collapsible key-value spec sheet — every field the old grade
               seal + PSA panel showed, just laid out as rows instead of a
               separate solid badge and a separate card. */}
-          <details className="group rounded-xl border" open>
+          <details className="detail-panel group rounded-xl border" open>
             <summary className="flex cursor-pointer list-none items-center justify-between p-4 text-sm font-semibold">
               Card Details
               <ChevronDown className="text-muted-foreground size-4 transition-transform group-open:rotate-180" />
@@ -424,7 +424,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
           <h2 className="text-lg font-semibold">Market Reference</h2>
 
           {priceQuote && (
-            <div className="bg-card rounded-xl border p-4">
+            <div className="detail-panel rounded-xl border p-4">
               <div className="mb-3 flex items-start justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <div className="bg-foreground text-background flex size-7 items-center justify-center rounded-lg">
@@ -454,7 +454,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
               — the sold-listings link alone is a real, verifiable price
               reference with zero API dependency. The median/range figures
               on top of it are a bonus once eBay's Browse API is wired up. */}
-          <div className="bg-card rounded-xl border p-4">
+          <div className="detail-panel rounded-xl border p-4">
             <div className="mb-3 flex items-start justify-between gap-3">
               <div className="flex items-center gap-2">
                 <div className="bg-foreground text-background flex size-7 items-center justify-center rounded-lg">

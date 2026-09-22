@@ -7,13 +7,13 @@ import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { markAllNotificationsRead, markNotificationRead } from "@/lib/actions";
 import { formatDateTime } from "@/lib/format";
 
@@ -60,8 +60,8 @@ export function NotificationBell({
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
+    <Sheet>
+      <SheetTrigger asChild>
         <Button variant="ghost" size="icon" className="relative rounded-full">
           <Bell className="size-4" />
           {unreadCount > 0 && (
@@ -71,10 +71,17 @@ export function NotificationBell({
           )}
           <span className="sr-only">Notifications</span>
         </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-80">
-        <div className="flex items-center justify-between gap-2 px-2 py-1">
-          <DropdownMenuLabel className="p-0 text-sm font-semibold">Notifications</DropdownMenuLabel>
+      </SheetTrigger>
+      <SheetContent side="right" className="w-full gap-0 p-0 sm:w-[28rem] sm:max-w-none">
+        <SheetHeader className="border-b p-5 pr-12">
+          <div className="flex items-center justify-between gap-3">
+            <SheetTitle>Notifications</SheetTitle>
+            {unreadCount > 0 && <Badge variant="secondary">{unreadCount} new</Badge>}
+          </div>
+          <p className="text-muted-foreground text-sm">Updates about your collection, offers, and auctions.</p>
+        </SheetHeader>
+        <div className="flex items-center justify-between border-b px-5 py-3">
+          <span className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Recent activity</span>
           {unreadCount > 0 && (
             <button
               type="button"
@@ -85,36 +92,48 @@ export function NotificationBell({
             </button>
           )}
         </div>
-        <DropdownMenuSeparator />
         {notifications.length === 0 ? (
-          <p className="text-muted-foreground px-2 py-6 text-center text-sm">Nothing yet.</p>
+          <div className="text-muted-foreground flex flex-1 items-center justify-center px-6 text-center text-sm">
+            Nothing yet. Auction, offer, and collection updates will appear here.
+          </div>
         ) : (
-          <div className="max-h-96 overflow-y-auto">
+          <div className="min-h-0 flex-1 overflow-y-auto">
             {notifications.map((n) => {
               const unread = !n.readAt;
               const body = (
-                <div className="flex w-full flex-col gap-0.5 py-0.5">
+                <div className="flex w-full flex-col gap-1">
                   <div className="flex items-center gap-1.5">
                     {unread && <span className="bg-foreground size-1.5 shrink-0 rounded-full" />}
-                    <span className="line-clamp-1 text-sm font-medium">{n.title}</span>
+                    <span className="text-sm font-semibold">{n.title}</span>
                   </div>
-                  <p className="text-muted-foreground line-clamp-2 text-xs">{n.body}</p>
-                  <span className="text-muted-foreground text-[10px]">{formatDateTime(n.createdAt)}</span>
+                  <p className="text-muted-foreground text-sm leading-relaxed">{n.body}</p>
+                  <span className="text-muted-foreground pt-1 text-xs">{formatDateTime(n.createdAt)}</span>
                 </div>
               );
               return n.href ? (
-                <DropdownMenuItem key={n.id} asChild className="items-start" onSelect={() => handleOpen(n)}>
-                  <Link href={n.href}>{body}</Link>
-                </DropdownMenuItem>
+                <SheetClose key={n.id} asChild>
+                  <Link
+                    href={n.href}
+                    onClick={() => handleOpen(n)}
+                    className={`hover:bg-accent/60 block border-b px-5 py-4 transition-colors ${unread ? "bg-card" : ""}`}
+                  >
+                    {body}
+                  </Link>
+                </SheetClose>
               ) : (
-                <DropdownMenuItem key={n.id} className="items-start" onSelect={() => handleOpen(n)}>
+                <button
+                  key={n.id}
+                  type="button"
+                  onClick={() => handleOpen(n)}
+                  className={`hover:bg-accent/60 block w-full border-b px-5 py-4 text-left transition-colors ${unread ? "bg-card" : ""}`}
+                >
                   {body}
-                </DropdownMenuItem>
+                </button>
               );
             })}
           </div>
         )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+      </SheetContent>
+    </Sheet>
   );
 }

@@ -22,14 +22,14 @@ export function LandingNav({ authenticated }: { authenticated: boolean }) {
           <span>Proof</span>
         </Link>
         <div className="flex items-center gap-2">
-          <LanguageSwitcher />
           {authenticated ? (
             <Button asChild size="sm">
               <Link href="/marketplace">{t.nav.goToMarketplace}</Link>
             </Button>
           ) : (
-            <LoginButton size="sm" className="w-auto" />
+            <LoginButton size="sm" className="w-auto" label="Login" />
           )}
+          <LanguageSwitcher />
         </div>
       </div>
     </header>

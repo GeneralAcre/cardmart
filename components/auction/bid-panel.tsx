@@ -18,8 +18,8 @@ export function BidPanel({ auctionId, minBid }: { auctionId: string; minBid: num
   function submit() {
     startTransition(async () => {
       try {
-        await placeBid(auctionId, Number(amount));
-        toast.success("Bid placed!");
+        const result = await placeBid(auctionId, Number(amount));
+        toast.success(result.extended ? "Bid placed — auction extended by 5 minutes." : "Bid placed!");
         router.refresh();
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Could not place bid.");
@@ -43,6 +43,7 @@ export function BidPanel({ auctionId, minBid }: { auctionId: string; minBid: num
         </Button>
       </div>
       <p className="text-muted-foreground text-xs">Minimum bid: {formatThb(minBid)}</p>
+      <p className="text-muted-foreground text-xs">Anti-sniping: bids in the final 5 minutes extend the auction by 5 minutes.</p>
     </div>
   );
 }

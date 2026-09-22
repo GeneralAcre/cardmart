@@ -523,17 +523,20 @@ export async function buyListing(
 // ---------------------------------------------------------------------------
 
 const MIN_BID_INCREMENT_THB = 50;
+const ANTI_SNIPING_WINDOW_MS = 5 * 60_000;
+const ANTI_SNIPING_EXTENSION_MS = 5 * 60_000;
 
 const startAuctionSchema = z.object({
   startPriceThb: z.coerce.number().int().min(100),
   durationDays: z.coerce.number().int().min(1).max(14),
+  startTime: z.string().datetime().optional(),
 });
 
 /** Seller puts an item up for auction — supersedes any fixed-price listing (forSale is cleared). */
-export async function startAuction(assetId: string, startPriceThb: number, durationDays: number) {
+export async function startAuction(assetId: string, startPriceThb: number, durationDays: number, startTime?: string) {
   const user = await getCurrentUser();
   if (user.isBanned) throw new Error("Your account is suspended and can't start an auction.");
-  const parsed = startAuctionSchema.safeParse({ startPriceThb, durationDays });
+  const parsed = startAuctionSchema.safeParse({ startPriceThb, durationDays, startTime });
   if (!parsed.success) throw new Error(parsed.error.issues[0]?.message ?? "Invalid auction details.");
 
   const asset = await prisma.asset.findUniqueOrThrow({ where: { id: assetId } });
@@ -541,17 +544,35 @@ export async function startAuction(assetId: string, startPriceThb: number, durat
   if (asset.marketStatus === "IN_ESCROW") throw new Error("This item is locked in an active sale.");
   if (asset.marketStatus === "IN_AUCTION") throw new Error("This item is already up for auction.");
 
-  const endTime = new Date(Date.now() + parsed.data.durationDays * 86_400_000);
+  const auctionStartTime = parsed.data.startTime ? new Date(parsed.data.startTime) : new Date();
+  if (auctionStartTime.getTime() < Date.now() - 60_000) throw new Error("Choose a future auction start time.");
+  if (auctionStartTime.getTime() > Date.now() + 30 * 86_400_000) throw new Error("Auctions can be scheduled up to 30 days ahead.");
+  const endTime = new Date(auctionStartTime.getTime() + parsed.data.durationDays * 86_400_000);
 
   await prisma.$transaction([
     prisma.auction.create({
-      data: { assetId, startPriceThb: parsed.data.startPriceThb, endTime },
+      data: { assetId, startPriceThb: parsed.data.startPriceThb, startTime: auctionStartTime, endTime },
     }),
     prisma.asset.update({
       where: { id: assetId },
       data: { forSale: false, marketStatus: "IN_AUCTION", transferApproved: false },
     }),
   ]);
+
+  if (auctionStartTime > new Date()) {
+    const watchers = await prisma.watchlistItem.findMany({ where: { assetId }, select: { userId: true } });
+    await Promise.all(
+      watchers.map((watcher) =>
+        notifyUser(
+          watcher.userId,
+          "AUCTION_STARTING",
+          "Auction scheduled",
+          `${asset.name} starts bidding on ${auctionStartTime.toLocaleString()}.`,
+          `/item/${assetId}`,
+        ),
+      ),
+    );
+  }
 
   revalidateMarketplace(assetId);
   revalidatePath("/auctions");
@@ -594,6 +615,8 @@ export async function placeBid(auctionId: string, amountThb: number) {
 
   const auction = await prisma.auction.findUniqueOrThrow({ where: { id: auctionId }, include: { asset: true } });
   if (auction.asset.ownerId === user.id) throw new Error("You can't bid on your own item.");
+  const now = new Date();
+  if (auction.startTime > now) throw new Error("This auction has not started yet.");
   if (auction.status !== "ACTIVE" || auction.endTime <= new Date()) {
     throw new Error("This auction has ended.");
   }
@@ -609,9 +632,15 @@ export async function placeBid(auctionId: string, amountThb: number) {
   // scale and isn't worth a DB-level lock here.
   const previousTopBid = await prisma.bid.findFirst({ where: { auctionId }, orderBy: { amountThb: "desc" } });
 
+  const shouldExtend = auction.endTime.getTime() - now.getTime() <= ANTI_SNIPING_WINDOW_MS;
+  const extendedEndTime = shouldExtend ? new Date(auction.endTime.getTime() + ANTI_SNIPING_EXTENSION_MS) : auction.endTime;
+
   await prisma.$transaction([
     prisma.bid.create({ data: { auctionId, bidderId: user.id, amountThb: parsed.data.amountThb } }),
-    prisma.auction.update({ where: { id: auctionId }, data: { currentBidThb: parsed.data.amountThb } }),
+    prisma.auction.update({
+      where: { id: auctionId },
+      data: { currentBidThb: parsed.data.amountThb, ...(shouldExtend ? { endTime: extendedEndTime } : {}) },
+    }),
   ]);
 
   if (previousTopBid && previousTopBid.bidderId !== user.id) {
@@ -626,6 +655,7 @@ export async function placeBid(auctionId: string, amountThb: number) {
 
   revalidatePath(`/auctions/${auctionId}`);
   revalidatePath("/auctions");
+  return { extended: shouldExtend, endTime: extendedEndTime.toISOString() };
 }
 
 /**
@@ -670,6 +700,14 @@ export async function claimAuctionWin(
     soldNote: `${auction.asset.name} sold at auction for ${topBid.amountThb.toLocaleString()} THB.`,
     purchasedNote: `You won the auction for ${auction.asset.name} at ${topBid.amountThb.toLocaleString()} THB.`,
   });
+
+  await notifyUser(
+    user.id,
+    "AUCTION_WON",
+    "You won the auction",
+    `You won ${auction.asset.name} for ${topBid.amountThb.toLocaleString()} THB.`,
+    `/auctions/${auctionId}`,
+  );
 
   revalidatePath(`/auctions/${auctionId}`);
 }

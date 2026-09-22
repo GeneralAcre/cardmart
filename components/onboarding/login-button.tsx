@@ -11,9 +11,11 @@ import { useLanguage } from "@/components/landing/language-provider";
 export function LoginButton({
   className,
   size = "lg",
+  label,
 }: {
   className?: string;
   size?: "sm" | "default" | "lg";
+  label?: string;
 }) {
   const { t } = useLanguage();
   const { ready, authenticated } = usePrivy();
@@ -55,7 +57,7 @@ export function LoginButton({
   return (
     <Button type="button" size={size} className={cn("w-full", className)} onClick={() => login()} disabled={!ready}>
       {ready ? <Wallet /> : <Loader2 className="animate-spin" />}
-      {t.login.continue}
+      {label ?? t.login.continue}
     </Button>
   );
 }

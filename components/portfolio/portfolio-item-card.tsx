@@ -51,6 +51,7 @@ export function PortfolioItemCard({
   const [price, setPrice] = useState(asset.priceThb ? String(asset.priceThb) : "");
   const [auctionStartPrice, setAuctionStartPrice] = useState(asset.priceThb ? String(asset.priceThb) : "");
   const [auctionDurationDays, setAuctionDurationDays] = useState("3");
+  const [auctionStartTime, setAuctionStartTime] = useState("");
   const [pending, startTransition] = useTransition();
 
   // A real Approve (delegating the escrow authority as a 1-token spender)
@@ -143,8 +144,13 @@ export function PortfolioItemCard({
   function handleStartAuction() {
     startTransition(async () => {
       try {
-        await startAuction(asset.id, Number(auctionStartPrice), Number(auctionDurationDays));
-        toast.success("Auction started.");
+        await startAuction(
+          asset.id,
+          Number(auctionStartPrice),
+          Number(auctionDurationDays),
+          auctionStartTime ? new Date(auctionStartTime).toISOString() : undefined,
+        );
+        toast.success(auctionStartTime ? "Auction scheduled." : "Auction started.");
         setAuctionOpen(false);
         router.refresh();
       } catch (err) {
@@ -192,6 +198,16 @@ export function PortfolioItemCard({
                 <SelectItem value="14">14 days</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="auction-start-time">Start time</Label>
+            <Input
+              id="auction-start-time"
+              type="datetime-local"
+              value={auctionStartTime}
+              onChange={(e) => setAuctionStartTime(e.target.value)}
+            />
+            <p className="text-muted-foreground text-xs">Leave blank to start immediately. You can schedule up to 30 days ahead.</p>
           </div>
         </div>
         <DialogFooter>

@@ -11,7 +11,7 @@ export const metadata = {
 // the ONLY sign-in surface in the app (there's no separate /login route);
 // unauthenticated visits to any gated page land here. Always renders,
 // signed in or not — it doesn't auto-redirect a returning signed-in visitor
-// away, it just swaps the CTA (Log In -> Go to Marketplace) so "/" stays the
+// away, it just swaps the CTA (Login -> marketplace) so "/" stays the
 // one stable landing spot.
 export default async function RootPage() {
   if (!PRIVY_ENFORCED) redirect("/marketplace"); // demo mode: no real signed-out state to show

@@ -36,7 +36,7 @@
   /* The one deliberate spot of color on an otherwise strict black-and-white
      site — used sparingly, only where a number is genuinely about price
      movement (the price chart line, the trending "gained value" badge). */
-  --highlight: #eec750;
+  --highlight: #fbdf6d;
   --highlight-foreground: oklch(0.145 0 0);
 }
 
@@ -95,6 +95,17 @@
 }
 
 @layer utilities {
+  /* Shared elevated surface for card and auction detail pages. The warm
+     yellow tint separates important information panels from the black canvas
+     without competing with the collectible image or primary actions. */
+  .detail-panel {
+    @apply border-highlight bg-highlight text-highlight-foreground shadow-[0_10px_30px_rgba(251,223,109,0.2)];
+  }
+
+  .detail-panel .text-muted-foreground {
+    color: color-mix(in oklab, var(--highlight-foreground) 68%, transparent);
+  }
+
   /* Keeps horizontal touch/swipe scrolling (e.g. an overflowing TabsList on
      mobile) but hides the browser's own scrollbar track/arrows, which read
      as a broken desktop-era control on a phone-width layout. */

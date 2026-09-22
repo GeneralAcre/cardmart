@@ -27,6 +27,7 @@ export default async function AuctionDetailPage({ params }: { params: Promise<{ 
   const { asset } = auction;
   const gradeTier = gradeTierLabel(asset.gradingCompany, asset.grade, asset.isBlackLabel);
   const isOwner = asset.ownerId === user.id;
+  const hasNotStarted = auction.startTime > new Date();
   const hasEnded = auction.status !== "ACTIVE" || auction.endTime <= new Date();
   const topBid = auction.bids[0] ?? null;
   const isWinner = hasEnded && topBid?.bidderId === user.id;
@@ -76,9 +77,13 @@ export default async function AuctionDetailPage({ params }: { params: Promise<{ 
             <div className="flex shrink-0 flex-col items-end gap-1.5">
               <Badge className="bg-foreground text-background border-0">
                 <Gavel className="size-3" />
-                {hasEnded ? "Ended" : "Live"}
+                {hasEnded ? "Ended" : hasNotStarted ? "Scheduled" : "Live"}
               </Badge>
-              {!hasEnded && (
+              {hasNotStarted ? (
+                <span className="text-sm font-medium tabular-nums">
+                  Starts in <CountdownTimer endTime={auction.startTime.toISOString()} />
+                </span>
+              ) : !hasEnded && (
                 <span className="text-sm font-medium tabular-nums">
                   Ends in <CountdownTimer endTime={auction.endTime.toISOString()} />
                 </span>
@@ -86,7 +91,7 @@ export default async function AuctionDetailPage({ params }: { params: Promise<{ 
             </div>
           </div>
 
-          <div className="grid grid-cols-2 divide-x rounded-xl border">
+          <div className="detail-panel grid grid-cols-2 divide-x rounded-xl border">
             <div className="flex flex-col gap-0.5 p-3">
               <span className="text-muted-foreground text-xs">
                 {auction.currentBidThb != null ? "Current Bid" : "Starting Bid"}
@@ -102,7 +107,7 @@ export default async function AuctionDetailPage({ params }: { params: Promise<{ 
           </div>
 
           {isOwner ? (
-            <div className="flex flex-col gap-3 rounded-lg border border-dashed p-4">
+            <div className="detail-panel flex flex-col gap-3 rounded-lg border border-dashed p-4">
               <p className="text-muted-foreground text-sm">
                 This is your auction — manage it from{" "}
                 <Link href="/portfolio" className="text-foreground underline">
@@ -114,6 +119,10 @@ export default async function AuctionDetailPage({ params }: { params: Promise<{ 
                 <CancelAuctionButton auctionId={auction.id} />
               )}
             </div>
+          ) : hasNotStarted ? (
+            <p className="detail-panel text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
+              Bidding opens <span className="font-medium text-foreground">{auction.startTime.toLocaleString()}</span>.
+            </p>
           ) : isWinner ? (
             <ClaimWinButton
               auctionId={auction.id}
@@ -122,7 +131,7 @@ export default async function AuctionDetailPage({ params }: { params: Promise<{ 
               sellerWalletAddress={asset.owner.walletAddress}
             />
           ) : hasEnded ? (
-            <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
+            <p className="detail-panel text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
               {topBid
                 ? `This auction ended — sold to the highest bidder for ${formatThb(topBid.amountThb)}.`
                 : "This auction ended with no bids."}
@@ -133,7 +142,7 @@ export default async function AuctionDetailPage({ params }: { params: Promise<{ 
 
           <Link
             href={`/store/${asset.seller.id}`}
-            className="bg-card hover:bg-accent/50 flex items-center gap-3 rounded-xl border p-3 transition-colors"
+            className="detail-panel hover:bg-highlight/15 flex items-center gap-3 rounded-xl border p-3 transition-colors"
           >
             <Avatar className="size-10 shrink-0">
               {asset.seller.image && <AvatarImage src={asset.seller.image} alt={asset.seller.name ?? ""} />}
