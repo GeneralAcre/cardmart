@@ -16,6 +16,7 @@ import { mintDigitalTwinToken, transferDigitalTwinToken } from "@/lib/web3/token
 import { SELF_MINT_FEE_THB, FULL_SERVICE_PACKAGE_PRICE_THB } from "@/lib/pricing";
 import { themeIndexForSerial } from "@/lib/theme";
 import { getVerificationChecklist } from "@/lib/verification-checklist";
+import { BGS_BLACK_LABEL_GRADE, gradeTierLabel } from "@/lib/labels";
 import { requestDevnetAirdrop } from "@/lib/solana";
 import { getPortfolioPriceHistory, getPriceHistory, type PriceHistoryRange } from "@/lib/queries";
 import {
@@ -82,6 +83,12 @@ const createListingSchema = z
     raw: z.enum(["true", "false"]).transform((v) => v === "true"),
     gradingCompany: z.enum(["PSA", "BGS", "CGC", "RAW"]),
     grade: z.coerce.number().min(1).max(10).optional(),
+    // Only meaningful for a BGS grade-10 cert — guarded again below so a
+    // tampered form field can't mislabel any other company/grade.
+    isBlackLabel: z
+      .enum(["true", "false"])
+      .optional()
+      .transform((v) => v === "true"),
     serial: z.string().min(4).optional(),
     priceThb: z.coerce.number().int().min(100),
     photos: z.string().transform((raw, ctx) => {
@@ -159,6 +166,7 @@ export async function createListing(
     raw: formData.get("raw"),
     gradingCompany: formData.get("gradingCompany"),
     grade: formData.get("grade") || undefined,
+    isBlackLabel: formData.get("isBlackLabel") || undefined,
     serial: formData.get("serial") || undefined,
     priceThb: formData.get("priceThb"),
     photos: formData.get("photos"),
@@ -231,6 +239,9 @@ export async function createListing(
     isOnChain = false;
   }
 
+  const isBlackLabel =
+    !data.raw && data.gradingCompany === "BGS" && data.grade === BGS_BLACK_LABEL_GRADE && Boolean(data.isBlackLabel);
+
   const asset = await prisma.asset.create({
     data: {
       name: data.name,
@@ -238,6 +249,7 @@ export async function createListing(
       category: data.category as AssetCategory,
       gradingCompany: data.gradingCompany as GradingCompany,
       grade: data.raw ? null : data.grade,
+      isBlackLabel,
       serial,
       themeIndex: themeIndexForSerial(serial),
       priceThb: data.priceThb,
@@ -1035,6 +1047,10 @@ export async function bulkMarkAtGradingCompany(submissionIds: string[]): Promise
 
 const completeGradingSchema = z.object({
   grade: z.coerce.number().min(1).max(10),
+  isBlackLabel: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((v) => v === "true"),
 });
 
 export interface CompleteGradingState {
@@ -1058,10 +1074,14 @@ export async function adminCompleteGrading(
   }
   const parsed = completeGradingSchema.safeParse({
     grade: formData.get("grade"),
+    isBlackLabel: formData.get("isBlackLabel") || undefined,
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Enter a valid grade." };
   }
+  const isBlackLabel =
+    submission.gradingCompany === "BGS" && parsed.data.grade === BGS_BLACK_LABEL_GRADE && Boolean(parsed.data.isBlackLabel);
+  const gradeTier = gradeTierLabel(submission.gradingCompany, parsed.data.grade, isBlackLabel);
 
   const serial = `${submission.gradingCompany}-${Math.floor(10_000_000 + Math.random() * 89_999_999)}`;
   const themeIndex = serial.length % 8;
@@ -1090,6 +1110,7 @@ export async function adminCompleteGrading(
       category: submission.category,
       gradingCompany: submission.gradingCompany,
       grade: parsed.data.grade,
+      isBlackLabel,
       serial,
       themeIndex,
       forSale: false,
@@ -1114,7 +1135,7 @@ export async function adminCompleteGrading(
     data: {
       assetId: asset.id,
       type: "MINTED_DIGITAL_TWIN",
-      note: `Full-Service package (${submission.packagePriceThb.toLocaleString()} THB): graded ${submission.gradingCompany} ${parsed.data.grade} by the grading company, digital twin minted by the platform.`,
+      note: `Full-Service package (${submission.packagePriceThb.toLocaleString()} THB): graded ${submission.gradingCompany} ${parsed.data.grade}${gradeTier ? ` (${gradeTier})` : ""} by the grading company, digital twin minted by the platform.`,
       mockTxSignature: mintTxSignature,
       onChain: isOnChain,
       actorId: submission.sellerId,

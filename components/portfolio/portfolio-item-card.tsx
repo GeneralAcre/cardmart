@@ -26,6 +26,7 @@ import { useWalletStore } from "@/lib/web3/wallet-store";
 import { formatGrade, formatThb } from "@/lib/format";
 import { CATEGORY_LABELS } from "@/lib/labels";
 import type { AssetSummary } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 export function PortfolioItemCard({
   asset,
@@ -151,13 +152,20 @@ export function PortfolioItemCard({
             category={asset.category}
             gradingCompany={asset.gradingCompany}
             grade={asset.grade}
+            isBlackLabel={asset.isBlackLabel}
             bordered={false}
             className="rounded-t-xl"
           />
         )}
         {thumbnail && (
-          <span className="absolute left-2 top-2 rounded-full bg-foreground/90 px-2 py-0.5 text-[10px] font-semibold text-background backdrop-blur-sm">
+          <span
+            className={cn(
+              "absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-semibold backdrop-blur-sm",
+              asset.isBlackLabel ? "bg-neutral-900/90 text-amber-400" : "bg-foreground/90 text-background",
+            )}
+          >
             {asset.gradingCompany === "RAW" ? "RAW" : `${asset.gradingCompany} ${formatGrade(asset.grade)}`}
+            {asset.isBlackLabel && " · Black Label"}
           </span>
         )}
       </Link>

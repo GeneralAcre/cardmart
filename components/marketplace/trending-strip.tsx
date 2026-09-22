@@ -56,6 +56,7 @@ export function TrendingStrip({ listings }: { listings: TrendingListing[] }) {
                       category={asset.category}
                       gradingCompany={asset.gradingCompany}
                       grade={asset.grade}
+                      isBlackLabel={asset.isBlackLabel}
                       bordered={false}
                     />
                   )}

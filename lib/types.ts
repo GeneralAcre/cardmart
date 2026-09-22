@@ -7,6 +7,8 @@ export interface AssetSummary {
   category: AssetCategory;
   gradingCompany: GradingCompany;
   grade: number | null;
+  /** BGS Black Label only — see prisma/schema.prisma Asset.isBlackLabel. */
+  isBlackLabel: boolean;
   serial: string;
   themeIndex: number;
   priceThb: number | null;

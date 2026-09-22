@@ -8,6 +8,7 @@ import type { AssetCategory, GradingCompany } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
@@ -32,7 +33,13 @@ import { CameraCaptureGrid, type CaptureMap } from "@/components/verify/camera-c
 import { StepHeading } from "@/components/verify/step-heading";
 import { confirmListingApproval, createListing, lookupPsaCertForForm, type PsaCertLookupResult } from "@/lib/actions";
 import { useWalletStore } from "@/lib/web3/wallet-store";
-import { CATEGORY_GRADING_COMPANIES, CATEGORY_LABELS, GRADING_COMPANY_LABELS } from "@/lib/labels";
+import {
+  BGS_BLACK_LABEL_GRADE,
+  CATEGORY_GRADING_COMPANIES,
+  CATEGORY_LABELS,
+  GRADING_COMPANY_LABELS,
+  gradeTierLabel,
+} from "@/lib/labels";
 import { SELF_MINT_FEE_THB } from "@/lib/pricing";
 import { themeIndexForSerial } from "@/lib/theme";
 import { getVerificationChecklist } from "@/lib/verification-checklist";
@@ -51,6 +58,12 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
   const [name, setName] = useState("");
   const [subtitle, setSubtitle] = useState("");
   const [grade, setGrade] = useState("");
+  // BGS Black Label only applies at grade 10 — shown as a checkbox right
+  // next to the grade field instead of a separate select option, since it's
+  // otherwise indistinguishable from a regular BGS Pristine 10.
+  const [isBlackLabel, setIsBlackLabel] = useState(false);
+  const showBlackLabelOption = gradingCompany === "BGS" && Number(grade) === BGS_BLACK_LABEL_GRADE;
+  const gradeTier = !raw ? gradeTierLabel(gradingCompany, Number(grade) || null, isBlackLabel) : null;
   const [priceThb, setPriceThb] = useState("");
   const [captures, setCaptures] = useState<CaptureMap>({});
 
@@ -114,6 +127,7 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
   function handleCategoryChange(next: AssetCategory) {
     setCategory(next);
     setGradingCompany(CATEGORY_GRADING_COMPANIES[next][0]); // institute list is category-specific
+    setIsBlackLabel(false);
     setCaptures({}); // checklist changes per category — start over
   }
 
@@ -135,6 +149,7 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
         if (!raw) {
           fd.set("grade", grade);
           fd.set("serial", serial);
+          if (showBlackLabelOption) fd.set("isBlackLabel", String(isBlackLabel));
         }
         fd.set("priceThb", priceThb);
         fd.set("photos", JSON.stringify(photos));
@@ -232,7 +247,13 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
             {!raw && (
               <div className="flex flex-col gap-2">
                 <Label>Who graded it?</Label>
-                <Select value={gradingCompany} onValueChange={(v) => setGradingCompany(v as GradingCompany)}>
+                <Select
+                  value={gradingCompany}
+                  onValueChange={(v) => {
+                    setGradingCompany(v as GradingCompany);
+                    if (v !== "BGS") setIsBlackLabel(false);
+                  }}
+                >
                   <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
@@ -290,8 +311,21 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
                   max={10}
                   placeholder="e.g. 10"
                   value={grade}
-                  onChange={(e) => setGrade(e.target.value)}
+                  onChange={(e) => {
+                    setGrade(e.target.value);
+                    if (Number(e.target.value) !== BGS_BLACK_LABEL_GRADE) setIsBlackLabel(false);
+                  }}
                 />
+                {gradeTier && <p className="text-muted-foreground text-xs">{gradeTier}</p>}
+                {showBlackLabelOption && (
+                  <label className="mt-1 flex items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={isBlackLabel}
+                      onCheckedChange={(checked) => setIsBlackLabel(checked === true)}
+                    />
+                    Black Label (every sub-grade a perfect 10)
+                  </label>
+                )}
               </div>
             </div>
           )}
@@ -350,6 +384,7 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
           category={category}
           gradingCompany={raw ? "RAW" : gradingCompany}
           grade={raw ? null : Number(grade) || null}
+          isBlackLabel={!raw && showBlackLabelOption && isBlackLabel}
           size="lg"
           className={!allCaptured ? "opacity-40 grayscale" : undefined}
         />

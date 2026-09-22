@@ -34,7 +34,13 @@ import {
   bulkMarkAtGradingCompany,
   type BulkActionResult,
 } from "@/lib/actions";
-import { CATEGORY_LABELS, GRADING_COMPANY_LABELS, GRADING_SUBMISSION_STATUS_LABELS } from "@/lib/labels";
+import {
+  BGS_BLACK_LABEL_GRADE,
+  CATEGORY_LABELS,
+  GRADING_COMPANY_LABELS,
+  GRADING_SUBMISSION_STATUS_LABELS,
+  gradeTierLabel,
+} from "@/lib/labels";
 import { formatDate } from "@/lib/format";
 
 type SubmissionWithSeller = GradingSubmission & { seller: User };
@@ -60,6 +66,9 @@ export function GradingQueue({ submissions }: { submissions: SubmissionWithSelle
   const [gradeTarget, setGradeTarget] = useState<SubmissionWithSeller | null>(null);
   const [rejectTarget, setRejectTarget] = useState<SubmissionWithSeller | null>(null);
   const [grade, setGrade] = useState("");
+  const [isBlackLabel, setIsBlackLabel] = useState(false);
+  const showBlackLabelOption = gradeTarget?.gradingCompany === "BGS" && Number(grade) === BGS_BLACK_LABEL_GRADE;
+  const gradeTier = gradeTarget ? gradeTierLabel(gradeTarget.gradingCompany, Number(grade) || null, isBlackLabel) : null;
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkPending, startBulkTransition] = useTransition();
 
@@ -121,6 +130,7 @@ export function GradingQueue({ submissions }: { submissions: SubmissionWithSelle
         // token anyway, so there's nothing to sign here.
         const fd = new FormData();
         fd.set("grade", grade);
+        if (showBlackLabelOption) fd.set("isBlackLabel", String(isBlackLabel));
 
         const res = await adminCompleteGrading(gradeTarget.id, {}, fd);
         if (res.error) {
@@ -130,6 +140,7 @@ export function GradingQueue({ submissions }: { submissions: SubmissionWithSelle
         toast.success("Graded and minted on-chain. The seller can now price and list it.");
         setGradeTarget(null);
         setGrade("");
+        setIsBlackLabel(false);
         router.refresh();
       } finally {
         setBusyId(null);
@@ -251,7 +262,15 @@ export function GradingQueue({ submissions }: { submissions: SubmissionWithSelle
       </Table>
       </div>
 
-      <Dialog open={!!gradeTarget} onOpenChange={(o) => !pending && !o && setGradeTarget(null)}>
+      <Dialog
+        open={!!gradeTarget}
+        onOpenChange={(o) => {
+          if (pending || o) return;
+          setGradeTarget(null);
+          setGrade("");
+          setIsBlackLabel(false);
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Record Grading Result</DialogTitle>
@@ -269,11 +288,29 @@ export function GradingQueue({ submissions }: { submissions: SubmissionWithSelle
               min={1}
               max={10}
               value={grade}
-              onChange={(e) => setGrade(e.target.value)}
+              onChange={(e) => {
+                setGrade(e.target.value);
+                if (Number(e.target.value) !== BGS_BLACK_LABEL_GRADE) setIsBlackLabel(false);
+              }}
             />
+            {gradeTier && <p className="text-muted-foreground text-xs">{gradeTier}</p>}
+            {showBlackLabelOption && (
+              <label className="mt-1 flex items-center gap-2 text-sm">
+                <Checkbox checked={isBlackLabel} onCheckedChange={(checked) => setIsBlackLabel(checked === true)} />
+                Black Label (every sub-grade a perfect 10)
+              </label>
+            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setGradeTarget(null)} disabled={pending}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setGradeTarget(null);
+                setGrade("");
+                setIsBlackLabel(false);
+              }}
+              disabled={pending}
+            >
               Cancel
             </Button>
             <Button onClick={completeGrading} disabled={pending || !grade}>

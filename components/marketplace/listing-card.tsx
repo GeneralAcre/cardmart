@@ -39,6 +39,7 @@ export function ListingCard({ asset }: { asset: AssetSummary }) {
               category={asset.category}
               gradingCompany={asset.gradingCompany}
               grade={asset.grade}
+              isBlackLabel={asset.isBlackLabel}
               bordered={false}
             />
           )}
@@ -55,8 +56,14 @@ export function ListingCard({ asset }: { asset: AssetSummary }) {
               real verification photo, not the grade-labeled generated art,
               is what's shown (the generated art already renders it inline). */}
           {photos.length > 0 && (
-            <span className="absolute left-2 top-2 rounded-full bg-foreground/90 px-2 py-0.5 text-[10px] font-semibold text-background backdrop-blur-sm">
+            <span
+              className={cn(
+                "absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-semibold backdrop-blur-sm",
+                asset.isBlackLabel ? "bg-neutral-900/90 text-amber-400" : "bg-foreground/90 text-background",
+              )}
+            >
               {asset.gradingCompany === "RAW" ? "RAW" : `${asset.gradingCompany} ${formatGrade(asset.grade)}`}
+              {asset.isBlackLabel && " · Black Label"}
             </span>
           )}
           {photos.length > 1 && (

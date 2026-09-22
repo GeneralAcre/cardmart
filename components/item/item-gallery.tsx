@@ -21,6 +21,7 @@ interface Props {
   category: AssetCategory;
   gradingCompany: GradingCompany;
   grade: number | null;
+  isBlackLabel?: boolean;
   photos: Photo[];
 }
 
@@ -29,7 +30,7 @@ interface Props {
 // checklist required) into one selectable gallery — previously only the
 // generated art showed up front, with the real photos tucked into a
 // separate section far below the fold.
-export function ItemGallery({ themeIndex, category, gradingCompany, grade, photos }: Props) {
+export function ItemGallery({ themeIndex, category, gradingCompany, grade, isBlackLabel, photos }: Props) {
   // Default to the first real photo when one exists — that's what the item
   // actually looks like; the generated art is a stylized fallback/twin.
   const [selectedId, setSelectedId] = useState<string>(photos[0]?.id ?? "twin");
@@ -55,7 +56,14 @@ export function ItemGallery({ themeIndex, category, gradingCompany, grade, photo
             className="rounded-lg border object-cover"
           />
         ) : (
-          <CardArt themeIndex={themeIndex} category={category} gradingCompany={gradingCompany} grade={grade} size="lg" />
+          <CardArt
+            themeIndex={themeIndex}
+            category={category}
+            gradingCompany={gradingCompany}
+            grade={grade}
+            isBlackLabel={isBlackLabel}
+            size="lg"
+          />
         )}
         <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/0 opacity-0 transition-all group-hover:bg-black/20 group-hover:opacity-100">
           <ZoomIn className="size-8 text-white drop-shadow" />
@@ -77,6 +85,7 @@ export function ItemGallery({ themeIndex, category, gradingCompany, grade, photo
               category={category}
               gradingCompany={gradingCompany}
               grade={grade}
+              isBlackLabel={isBlackLabel}
               bordered={false}
               className="aspect-square"
             />
@@ -126,6 +135,7 @@ export function ItemGallery({ themeIndex, category, gradingCompany, grade, photo
               category={category}
               gradingCompany={gradingCompany}
               grade={grade}
+              isBlackLabel={isBlackLabel}
               size="lg"
               className="aspect-square"
             />

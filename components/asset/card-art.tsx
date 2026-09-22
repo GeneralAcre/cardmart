@@ -11,6 +11,8 @@ interface CardArtProps {
   category: AssetCategory;
   gradingCompany: GradingCompany;
   grade: number | null;
+  // BGS Black Label only — see prisma/schema.prisma Asset.isBlackLabel.
+  isBlackLabel?: boolean;
   className?: string;
   size?: "sm" | "lg";
   // Set to false when this is nested inside a container that already owns
@@ -24,6 +26,7 @@ export function CardArt({
   category,
   gradingCompany,
   grade,
+  isBlackLabel,
   className,
   size = "sm",
   bordered = true,
@@ -57,10 +60,21 @@ export function CardArt({
         )}
         strokeWidth={1.5}
       />
-      <div className="absolute left-2 top-2 flex items-center gap-1 rounded border bg-white/85 px-1.5 py-0.5 shadow-sm backdrop-blur-sm">
-        <ShieldCheck className="text-primary size-3" />
-        <span className="text-[10px] font-semibold tracking-wide text-neutral-800">
+      <div
+        className={cn(
+          "absolute left-2 top-2 flex items-center gap-1 rounded border px-1.5 py-0.5 shadow-sm backdrop-blur-sm",
+          isBlackLabel ? "border-neutral-700 bg-neutral-900/90" : "bg-white/85",
+        )}
+      >
+        <ShieldCheck className={cn("size-3", isBlackLabel ? "text-amber-400" : "text-primary")} />
+        <span
+          className={cn(
+            "text-[10px] font-semibold tracking-wide",
+            isBlackLabel ? "text-amber-400" : "text-neutral-800",
+          )}
+        >
           {gradingCompany === "RAW" ? "RAW" : `${gradingCompany} ${formatGrade(grade)}`}
+          {isBlackLabel && " · Black Label"}
         </span>
       </div>
     </div>

@@ -148,6 +148,12 @@ model Asset {
   category            AssetCategory
   gradingCompany      GradingCompany
   grade               Float?
+  // True only for a BGS "Black Label" 10 — a distinct top tier (every
+  // sub-grade a perfect 10) from a regular Pristine 10, which shares the
+  // same numeric grade and so can't be told apart by grade+gradingCompany
+  // alone. Meaningless for any other company or grade — see
+  // lib/labels.ts::gradeTierLabel.
+  isBlackLabel        Boolean             @default(false)
   serial              String              @unique
   themeIndex          Int                 @default(0)
   priceThb            Int?

@@ -31,6 +31,46 @@ export const CATEGORY_GRADING_COMPANIES: Record<AssetCategory, GradingCompany[]>
   COMIC: ["CGC"],
 };
 
+// Each institute's own name for its top numeric grades — shown as a hint
+// next to the raw number wherever a grade is entered or displayed, not
+// meant to be exhaustive down to the bottom of the scale. BGS's Black
+// Label is deliberately left out here: it shares grade 10 with a regular
+// Pristine 10, so it can't be looked up by grade alone — see
+// Asset.isBlackLabel and gradeTierLabel below.
+export const GRADE_TIER_LABELS: Partial<Record<GradingCompany, { grade: number; label: string }[]>> = {
+  BGS: [
+    { grade: 10, label: "Pristine 10" },
+    { grade: 9.5, label: "Gem Mint 9.5" },
+    { grade: 9, label: "Mint 9" },
+  ],
+  PSA: [
+    { grade: 10, label: "Gem Mint 10" },
+    { grade: 9, label: "Mint 9" },
+    { grade: 8, label: "Near Mint-Mint 8" },
+  ],
+  CGC: [
+    { grade: 10, label: "Pristine 10" },
+    { grade: 9.5, label: "Gem Mint 9.5" },
+    { grade: 9, label: "Mint 9" },
+  ],
+};
+
+/** The only grade BGS's Black Label designation ever applies to. */
+export const BGS_BLACK_LABEL_GRADE = 10;
+
+/** The named rank for a company + numeric grade (+ Black Label), or null when it's outside the known top tiers. */
+export function gradeTierLabel(
+  company: GradingCompany,
+  grade: number | null,
+  isBlackLabel = false,
+): string | null {
+  if (grade == null) return null;
+  if (company === "BGS" && grade === BGS_BLACK_LABEL_GRADE && isBlackLabel) {
+    return "Pristine 10 (Black Label)";
+  }
+  return GRADE_TIER_LABELS[company]?.find((t) => t.grade === grade)?.label ?? null;
+}
+
 export const MARKET_STATUS_LABELS: Record<MarketStatus, string> = {
   READY_TO_SHIP: "Ready to Ship",
   IN_VAULT: "In Vault",
