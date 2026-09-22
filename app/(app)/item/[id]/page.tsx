@@ -1,19 +1,28 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { getAssetById, getPriceHistory, getSellerRating, isAssetWatched } from "@/lib/queries";
+import {
+  getAcceptedOfferForViewer,
+  getActiveAuctionForAsset,
+  getAssetById,
+  getPriceHistory,
+  getSellerRating,
+  isAssetWatched,
+} from "@/lib/queries";
 import { getCurrentUser } from "@/lib/session";
 import { ItemGallery } from "@/components/item/item-gallery";
 import { PriceHistoryChart } from "@/components/item/price-history-chart";
 import { ProvenanceTimeline } from "@/components/item/provenance-timeline";
 import { BuyPanel } from "@/components/item/buy-panel";
 import { WatchButton } from "@/components/item/watch-button";
+import { MakeOfferButton } from "@/components/item/make-offer-button";
+import { AcceptedOfferBanner } from "@/components/item/accepted-offer-banner";
 import { LeaveReviewForm } from "@/components/store/leave-review-form";
 import { RatingStars } from "@/components/store/rating-stars";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, ChevronDown, ExternalLink, History, TrendingUp } from "lucide-react";
+import { ArrowLeft, ChevronDown, ExternalLink, Gavel, History, TrendingUp } from "lucide-react";
 
 import { formatGrade, formatThb, formatUsd } from "@/lib/format";
 import {
@@ -87,6 +96,11 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
 
   const isOwner = asset.ownerId === user.id;
   const isWatching = !isOwner && (await isAssetWatched(user.id, asset.id));
+
+  const [activeAuction, acceptedOffer] = await Promise.all([
+    asset.marketStatus === "IN_AUCTION" ? getActiveAuctionForAsset(asset.id) : Promise.resolve(null),
+    !isOwner ? getAcceptedOfferForViewer(asset.id, user.id) : Promise.resolve(null),
+  ]);
 
   // The price snapshot immediately before the current one, from the same
   // real PriceSnapshot rows the chart below uses — null for a brand-new
@@ -210,8 +224,8 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
 
           {/* Price stat box, same shape as the owner/serial row above — the
               second figure comes from a real prior PriceSnapshot, not a
-              fabricated "last sale" (this platform has no bidding, so
-              there's no equivalent of an offer to show here). */}
+              fabricated "last sale". Auctions/offers are a separate sale
+              channel (see below) and don't feed into this fixed-price figure. */}
           <div className="grid grid-cols-2 divide-x rounded-xl border">
             <div className="flex flex-col gap-0.5 p-3">
               <span className="text-muted-foreground text-xs">Listing Price</span>
@@ -227,16 +241,54 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
             </div>
           </div>
 
-          <BuyPanel
-            assetId={asset.id}
-            assetName={asset.name}
-            priceThb={asset.priceThb}
-            forSale={asset.forSale}
-            vaulted={asset.vaulted}
-            marketStatus={asset.marketStatus}
-            isOwner={isOwner}
-            sellerWalletAddress={asset.owner.walletAddress}
-          />
+          {activeAuction ? (
+            <Link
+              href={`/auctions/${activeAuction.id}`}
+              className="bg-foreground text-background flex items-center gap-3 rounded-xl p-4 transition-opacity hover:opacity-90"
+            >
+              <Gavel className="size-5 shrink-0" />
+              <div className="flex flex-col">
+                <span className="font-semibold">This item is up for auction</span>
+                <span className="text-background/80 text-sm">
+                  {activeAuction.currentBidThb != null
+                    ? `Current bid ${formatThb(activeAuction.currentBidThb)}`
+                    : `Starting at ${formatThb(activeAuction.startPriceThb)}`}{" "}
+                  — view the live auction to bid
+                </span>
+              </div>
+            </Link>
+          ) : (
+            <>
+              {acceptedOffer && (
+                <AcceptedOfferBanner
+                  offerId={acceptedOffer.id}
+                  amountThb={acceptedOffer.amountThb}
+                  vaulted={asset.vaulted}
+                  sellerWalletAddress={asset.owner.walletAddress}
+                />
+              )}
+              <BuyPanel
+                assetId={asset.id}
+                assetName={asset.name}
+                priceThb={asset.priceThb}
+                forSale={asset.forSale}
+                vaulted={asset.vaulted}
+                marketStatus={asset.marketStatus}
+                isOwner={isOwner}
+                sellerWalletAddress={asset.owner.walletAddress}
+              />
+              {!isOwner && asset.forSale && (
+                <MakeOfferButton
+                  assetId={asset.id}
+                  assetName={asset.name}
+                  listPriceThb={asset.priceThb}
+                  size="default"
+                  variant="secondary"
+                  className="w-full"
+                />
+              )}
+            </>
+          )}
 
           <PriceHistoryChart
             assetId={asset.id}

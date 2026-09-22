@@ -455,3 +455,99 @@ export async function getSellerManagementList() {
     reviewCount: ratingBySeller.get(u.id)?._count ?? 0,
   }));
 }
+
+// No cron job settles an expired auction — it's checked lazily, right here,
+// every time an auction is actually read. An expired ACTIVE auction with no
+// bids just closes itself out (ENDED_NO_BIDS, asset goes back to its normal
+// market status); one with a bid needs its winner to actively claim it (see
+// claimAuctionWin in lib/actions.ts), so it's left ACTIVE with endTime in
+// the past — getActiveAuctions/getAuctionById below treat that as "ended,
+// awaiting claim" without a status change of their own.
+async function settleIfExpiredNoBids(auction: { id: string; endTime: Date; status: string; assetId: string }) {
+  if (auction.status !== "ACTIVE" || auction.endTime > new Date()) return;
+  const bidCount = await prisma.bid.count({ where: { auctionId: auction.id } });
+  if (bidCount > 0) return; // has a bid — leave ACTIVE, awaiting the winner's claim
+  await prisma.$transaction([
+    prisma.auction.update({
+      where: { id: auction.id },
+      data: { status: "ENDED_NO_BIDS", settledAt: new Date() },
+    }),
+    prisma.asset.update({
+      where: { id: auction.assetId },
+      data: { marketStatus: "READY_TO_SHIP" },
+    }),
+  ]);
+}
+
+export async function getActiveAuctions() {
+  const auctions = await prisma.auction.findMany({
+    where: { status: "ACTIVE" },
+    orderBy: { endTime: "asc" },
+    include: {
+      asset: { include: { seller: true, owner: true, verificationPhotos: { orderBy: { createdAt: "asc" } } } },
+    },
+  });
+  await Promise.all(auctions.map(settleIfExpiredNoBids));
+  // Re-read rather than filter in place — settleIfExpiredNoBids may have
+  // just closed some of these out from under us.
+  return prisma.auction.findMany({
+    where: { status: "ACTIVE" },
+    orderBy: { endTime: "asc" },
+    include: {
+      asset: { include: { seller: true, owner: true, verificationPhotos: { orderBy: { createdAt: "asc" } } } },
+    },
+  });
+}
+
+const AUCTION_DETAIL_INCLUDE = {
+  asset: { include: { seller: true, owner: true, verificationPhotos: { orderBy: { createdAt: "asc" as const } } } },
+  bids: { orderBy: { amountThb: "desc" as const }, include: { bidder: true } },
+};
+
+/** Detail-page lookup, keyed by the auction's own id (routed at /auctions/[id]). */
+export async function getAuctionById(auctionId: string) {
+  const auction = await prisma.auction.findUnique({
+    where: { id: auctionId },
+    include: AUCTION_DETAIL_INCLUDE,
+  });
+  if (!auction) return null;
+  await settleIfExpiredNoBids(auction);
+  if (auction.status === "ACTIVE") return auction; // still active, or ended-with-a-bid awaiting claim — no status change either way
+  return prisma.auction.findUnique({ where: { id: auctionId }, include: AUCTION_DETAIL_INCLUDE });
+}
+
+/** Whether this asset currently has a live auction — used to gate the fixed-price buy/offer UI on the item page and Portfolio. */
+export async function getActiveAuctionForAsset(assetId: string) {
+  const auction = await prisma.auction.findFirst({
+    where: { assetId, status: "ACTIVE" },
+    orderBy: { createdAt: "desc" },
+  });
+  if (!auction) return null;
+  await settleIfExpiredNoBids(auction);
+  return auction.status === "ACTIVE" ? auction : null;
+}
+
+/** Pending offers a seller has received across all their listings — for the Portfolio "Offers" tab. */
+export async function getOffersReceived(sellerId: string) {
+  return prisma.offer.findMany({
+    where: { sellerId, status: "PENDING" },
+    orderBy: { createdAt: "desc" },
+    include: { asset: true, buyer: true },
+  });
+}
+
+/** A buyer's own offers, most recent first — for the Portfolio "Offers" tab. */
+export async function getOffersMade(buyerId: string) {
+  return prisma.offer.findMany({
+    where: { buyerId },
+    orderBy: { createdAt: "desc" },
+    include: { asset: true, seller: true },
+  });
+}
+
+/** Whether the current viewer has a still-actionable accepted offer on this asset — drives the "complete your purchase" banner on the item page. */
+export async function getAcceptedOfferForViewer(assetId: string, buyerId: string) {
+  return prisma.offer.findFirst({
+    where: { assetId, buyerId, status: "ACCEPTED" },
+  });
+}

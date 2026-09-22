@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import type { AssetCategory, GradingCompany, NotificationType } from "@prisma/client";
+import type { AssetCategory, GradingCompany, NotificationType, Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, requireAdmin } from "@/lib/session";
@@ -332,27 +332,25 @@ export async function confirmListingApproval(assetId: string, approveTxSignature
 }
 
 /**
- * Buyer purchases a listing with escrow protection. If the item is already
- * in the vault, ownership transfers instantly (no physical movement). If
- * it's still with the seller, it enters the AWAITING_SELLER_SHIPMENT
- * pipeline; this mock immediately simulates the seller's shipment arriving
- * so the warehouse dashboard has something to inspect.
+ * Shared purchase-completion core for every path that ends with a buyer
+ * actually owning the asset at an already-agreed price — the original
+ * fixed-price buyListing below, plus the newer claimAuctionWin and
+ * completeOfferPurchase, which only differ in how that price was agreed
+ * (asking price vs. winning bid vs. accepted offer). Locks escrow, then
+ * either transfers instantly (vaulted) or kicks off the ship/inspection
+ * pipeline — identical either way regardless of how the sale came about.
  */
-export async function buyListing(
-  assetId: string,
-  fulfillmentChoice: "SHIP" | "VAULT",
-  escrowLock?: { tradeId: string; txSignature: string; lamports: string; tradeAccount: string },
-) {
-  const user = await getCurrentUser();
-  if (user.isBanned) throw new Error("Your account is suspended and can't make purchases.");
-  const asset = await prisma.asset.findUniqueOrThrow({ where: { id: assetId }, include: { owner: true } });
-
-  if (!asset.forSale || asset.priceThb == null) {
-    throw new Error("This item is not currently for sale.");
-  }
-  if (asset.ownerId === user.id) {
-    throw new Error("You already own this item.");
-  }
+async function completePurchase(opts: {
+  asset: Prisma.AssetGetPayload<{ include: { owner: true } }>;
+  user: Awaited<ReturnType<typeof getCurrentUser>>;
+  priceThb: number;
+  fulfillmentChoice: "SHIP" | "VAULT";
+  escrowLock?: { tradeId: string; txSignature: string; lamports: string; tradeAccount: string };
+  soldNote: string;
+  purchasedNote: string;
+}) {
+  const { asset, user, priceThb, fulfillmentChoice, escrowLock, soldNote, purchasedNote } = opts;
+  const assetId = asset.id;
 
   // Real on-chain lock when the buyer actually signed one (see
   // components/item/buy-panel.tsx) — falls back to the old simulated
@@ -366,7 +364,7 @@ export async function buyListing(
       assetId,
       buyerId: user.id,
       sellerId: asset.ownerId,
-      amountThb: asset.priceThb,
+      amountThb: priceThb,
       fulfillmentChoice,
       status: "LOCKED",
       onChain,
@@ -379,7 +377,7 @@ export async function buyListing(
     data: {
       assetId,
       type: "ESCROW_LOCKED",
-      note: `Buyer payment of ${asset.priceThb.toLocaleString()} THB locked in escrow.`,
+      note: `Buyer payment of ${priceThb.toLocaleString()} THB locked in escrow.`,
       mockTxSignature: lockSignature,
       onChain,
       actorId: user.id,
@@ -424,13 +422,8 @@ export async function buyListing(
       },
     });
     void release;
-    await notifyUser(
-      asset.ownerId,
-      "ITEM_SOLD",
-      "Item sold",
-      `${asset.name} sold instantly from your vault for ${asset.priceThb.toLocaleString()} THB.`,
-      `/item/${assetId}`,
-    );
+    await notifyUser(asset.ownerId, "ITEM_SOLD", "Item sold", soldNote, `/item/${assetId}`);
+    await notifyUser(user.id, "ITEM_PURCHASED", "Purchase complete", purchasedNote, `/item/${assetId}`);
   } else {
     await prisma.asset.update({
       where: { id: assetId },
@@ -476,12 +469,329 @@ export async function buyListing(
     await notifyAdmins(
       "NEW_SUBMISSION",
       "New inbound package",
-      `${asset.name} sold for ${asset.priceThb.toLocaleString()} THB and is awaiting warehouse inspection.`,
+      `${asset.name} sold for ${priceThb.toLocaleString()} THB and is awaiting warehouse inspection.`,
       `/admin/warehouse`,
     );
+    await notifyUser(user.id, "ITEM_PURCHASED", "Purchase confirmed", purchasedNote, `/item/${assetId}`);
   }
 
   revalidateMarketplace(assetId);
+}
+
+/**
+ * Buyer purchases a listing with escrow protection. If the item is already
+ * in the vault, ownership transfers instantly (no physical movement). If
+ * it's still with the seller, it enters the AWAITING_SELLER_SHIPMENT
+ * pipeline; this mock immediately simulates the seller's shipment arriving
+ * so the warehouse dashboard has something to inspect.
+ */
+export async function buyListing(
+  assetId: string,
+  fulfillmentChoice: "SHIP" | "VAULT",
+  escrowLock?: { tradeId: string; txSignature: string; lamports: string; tradeAccount: string },
+) {
+  const user = await getCurrentUser();
+  if (user.isBanned) throw new Error("Your account is suspended and can't make purchases.");
+  const asset = await prisma.asset.findUniqueOrThrow({ where: { id: assetId }, include: { owner: true } });
+
+  if (!asset.forSale || asset.priceThb == null) {
+    throw new Error("This item is not currently for sale.");
+  }
+  if (asset.ownerId === user.id) {
+    throw new Error("You already own this item.");
+  }
+
+  await completePurchase({
+    asset,
+    user,
+    priceThb: asset.priceThb,
+    fulfillmentChoice,
+    escrowLock,
+    soldNote: `${asset.name} sold instantly from your vault for ${asset.priceThb.toLocaleString()} THB.`,
+    purchasedNote: asset.vaulted
+      ? `${asset.name} is yours — ownership transferred instantly from the vault.`
+      : `${asset.name} — your payment of ${asset.priceThb.toLocaleString()} THB is held safely until warehouse inspection passes.`,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Auctions — a separate sale channel from the fixed-price marketplace above.
+// No cron/background job settles these: expiry is checked lazily wherever an
+// auction is read (see getActiveAuctions/getAuctionById in lib/queries.ts),
+// and a sold auction still needs its winner to actively claim it with a real
+// wallet signature — see claimAuctionWin below.
+// ---------------------------------------------------------------------------
+
+const MIN_BID_INCREMENT_THB = 50;
+
+const startAuctionSchema = z.object({
+  startPriceThb: z.coerce.number().int().min(100),
+  durationDays: z.coerce.number().int().min(1).max(14),
+});
+
+/** Seller puts an item up for auction — supersedes any fixed-price listing (forSale is cleared). */
+export async function startAuction(assetId: string, startPriceThb: number, durationDays: number) {
+  const user = await getCurrentUser();
+  if (user.isBanned) throw new Error("Your account is suspended and can't start an auction.");
+  const parsed = startAuctionSchema.safeParse({ startPriceThb, durationDays });
+  if (!parsed.success) throw new Error(parsed.error.issues[0]?.message ?? "Invalid auction details.");
+
+  const asset = await prisma.asset.findUniqueOrThrow({ where: { id: assetId } });
+  if (asset.ownerId !== user.id) throw new Error("You do not own this item.");
+  if (asset.marketStatus === "IN_ESCROW") throw new Error("This item is locked in an active sale.");
+  if (asset.marketStatus === "IN_AUCTION") throw new Error("This item is already up for auction.");
+
+  const endTime = new Date(Date.now() + parsed.data.durationDays * 86_400_000);
+
+  await prisma.$transaction([
+    prisma.auction.create({
+      data: { assetId, startPriceThb: parsed.data.startPriceThb, endTime },
+    }),
+    prisma.asset.update({
+      where: { id: assetId },
+      data: { forSale: false, marketStatus: "IN_AUCTION", transferApproved: false },
+    }),
+  ]);
+
+  revalidateMarketplace(assetId);
+  revalidatePath("/auctions");
+}
+
+/** Seller cancels an auction — only while it has zero bids, so no bidder is ever pulled out from under after committing to a price. */
+export async function cancelAuction(auctionId: string) {
+  const user = await getCurrentUser();
+  const auction = await prisma.auction.findUniqueOrThrow({
+    where: { id: auctionId },
+    include: { asset: true, _count: { select: { bids: true } } },
+  });
+  if (auction.asset.ownerId !== user.id) throw new Error("You do not own this item.");
+  if (auction.status !== "ACTIVE") throw new Error("This auction has already ended.");
+  if (auction._count.bids > 0) throw new Error("Can't cancel an auction that already has bids.");
+
+  await prisma.$transaction([
+    prisma.auction.update({ where: { id: auctionId }, data: { status: "CANCELLED", settledAt: new Date() } }),
+    prisma.asset.update({
+      where: { id: auction.assetId },
+      // Mirrors delistAsset/vaultRelist's own state split — a vaulted item
+      // just goes back to sitting in the vault unlisted, a non-vaulted one
+      // goes fully DELISTED like any other manual delist.
+      data: { marketStatus: auction.asset.vaulted ? "IN_VAULT" : "DELISTED" },
+    }),
+  ]);
+
+  revalidateMarketplace(auction.assetId);
+  revalidatePath("/auctions");
+}
+
+const placeBidSchema = z.object({ amountThb: z.coerce.number().int().min(1) });
+
+/** Buyer places a bid — must clear the current highest (or the start price, if none yet) by at least MIN_BID_INCREMENT_THB. */
+export async function placeBid(auctionId: string, amountThb: number) {
+  const user = await getCurrentUser();
+  if (user.isBanned) throw new Error("Your account is suspended and can't bid.");
+  const parsed = placeBidSchema.safeParse({ amountThb });
+  if (!parsed.success) throw new Error("Enter a valid bid amount.");
+
+  const auction = await prisma.auction.findUniqueOrThrow({ where: { id: auctionId }, include: { asset: true } });
+  if (auction.asset.ownerId === user.id) throw new Error("You can't bid on your own item.");
+  if (auction.status !== "ACTIVE" || auction.endTime <= new Date()) {
+    throw new Error("This auction has ended.");
+  }
+
+  const minBid = (auction.currentBidThb ?? auction.startPriceThb - MIN_BID_INCREMENT_THB) + MIN_BID_INCREMENT_THB;
+  if (parsed.data.amountThb < minBid) {
+    throw new Error(`Bid at least ${minBid.toLocaleString()} THB.`);
+  }
+
+  // Previous highest bidder, if any — read before the write so there's
+  // something to compare against for the outbid notification below. A real
+  // race between two simultaneous top bids is vanishingly unlikely at this
+  // scale and isn't worth a DB-level lock here.
+  const previousTopBid = await prisma.bid.findFirst({ where: { auctionId }, orderBy: { amountThb: "desc" } });
+
+  await prisma.$transaction([
+    prisma.bid.create({ data: { auctionId, bidderId: user.id, amountThb: parsed.data.amountThb } }),
+    prisma.auction.update({ where: { id: auctionId }, data: { currentBidThb: parsed.data.amountThb } }),
+  ]);
+
+  if (previousTopBid && previousTopBid.bidderId !== user.id) {
+    await notifyUser(
+      previousTopBid.bidderId,
+      "OUTBID",
+      "You've been outbid",
+      `Someone bid ${parsed.data.amountThb.toLocaleString()} THB on ${auction.asset.name}.`,
+      `/auctions/${auctionId}`,
+    );
+  }
+
+  revalidatePath(`/auctions/${auctionId}`);
+  revalidatePath("/auctions");
+}
+
+/**
+ * The winning bidder claims a finished auction — same real wallet-signed
+ * escrow lock as any other purchase (see completePurchase above). Nothing
+ * transfers automatically the instant endTime passes; the winner has to
+ * actively come complete it, since only they can sign for their own payment.
+ */
+export async function claimAuctionWin(
+  auctionId: string,
+  fulfillmentChoice: "SHIP" | "VAULT",
+  escrowLock?: { tradeId: string; txSignature: string; lamports: string; tradeAccount: string },
+) {
+  const user = await getCurrentUser();
+  if (user.isBanned) throw new Error("Your account is suspended and can't complete a purchase.");
+
+  const auction = await prisma.auction.findUniqueOrThrow({
+    where: { id: auctionId },
+    include: { asset: { include: { owner: true } } },
+  });
+  if (auction.status !== "ACTIVE" || auction.endTime > new Date()) {
+    throw new Error("This auction hasn't ended yet.");
+  }
+  const topBid = await prisma.bid.findFirst({ where: { auctionId }, orderBy: { amountThb: "desc" } });
+  if (!topBid) throw new Error("This auction ended with no bids.");
+  if (topBid.bidderId !== user.id) throw new Error("Only the winning bidder can claim this auction.");
+
+  await prisma.auction.update({ where: { id: auctionId }, data: { status: "ENDED_SOLD", settledAt: new Date() } });
+  // completePurchase's vaulted branch only ever touches ownerId/forSale, not
+  // marketStatus — reset it back from IN_AUCTION to IN_VAULT first so a
+  // vaulted win doesn't get stuck reading "Up for Auction" forever.
+  if (auction.asset.vaulted) {
+    await prisma.asset.update({ where: { id: auction.assetId }, data: { marketStatus: "IN_VAULT" } });
+  }
+
+  await completePurchase({
+    asset: auction.asset,
+    user,
+    priceThb: topBid.amountThb,
+    fulfillmentChoice,
+    escrowLock,
+    soldNote: `${auction.asset.name} sold at auction for ${topBid.amountThb.toLocaleString()} THB.`,
+    purchasedNote: `You won the auction for ${auction.asset.name} at ${topBid.amountThb.toLocaleString()} THB.`,
+  });
+
+  revalidatePath(`/auctions/${auctionId}`);
+}
+
+// ---------------------------------------------------------------------------
+// Offers — a buyer-proposed price on a fixed-price listing. Accepting one
+// doesn't transfer anything by itself, it just clears the buyer to complete
+// the purchase at that price (completeOfferPurchase), the same real
+// wallet-signed escrow lock any other purchase needs.
+// ---------------------------------------------------------------------------
+
+const makeOfferSchema = z.object({
+  amountThb: z.coerce.number().int().min(100),
+  message: z.string().max(500).optional(),
+});
+
+export async function makeOffer(assetId: string, amountThb: number, message?: string) {
+  const user = await getCurrentUser();
+  if (user.isBanned) throw new Error("Your account is suspended and can't make offers.");
+  const parsed = makeOfferSchema.safeParse({ amountThb, message });
+  if (!parsed.success) throw new Error(parsed.error.issues[0]?.message ?? "Enter a valid offer.");
+
+  const asset = await prisma.asset.findUniqueOrThrow({ where: { id: assetId } });
+  if (!asset.forSale) throw new Error("This item is not currently for sale.");
+  if (asset.ownerId === user.id) throw new Error("You already own this item.");
+
+  const existing = await prisma.offer.findFirst({ where: { assetId, buyerId: user.id, status: "PENDING" } });
+  if (existing) throw new Error("You already have a pending offer on this item.");
+
+  await prisma.offer.create({
+    data: {
+      assetId,
+      buyerId: user.id,
+      sellerId: asset.ownerId,
+      amountThb: parsed.data.amountThb,
+      message: parsed.data.message || null,
+    },
+  });
+
+  await notifyUser(
+    asset.ownerId,
+    "OFFER_RECEIVED",
+    "New offer received",
+    `${user.name ?? user.handle ?? "A buyer"} offered ${parsed.data.amountThb.toLocaleString()} THB for ${asset.name}.`,
+    `/portfolio`,
+  );
+
+  revalidatePath("/portfolio");
+  revalidatePath(`/item/${assetId}`);
+}
+
+/** Seller accepts or rejects a pending offer. */
+export async function respondToOffer(offerId: string, action: "accept" | "reject") {
+  const user = await getCurrentUser();
+  const offer = await prisma.offer.findUniqueOrThrow({ where: { id: offerId }, include: { asset: true } });
+  if (offer.sellerId !== user.id) throw new Error("You do not own this item.");
+  if (offer.status !== "PENDING") throw new Error("This offer has already been resolved.");
+
+  if (action === "accept") {
+    if (!offer.asset.forSale) throw new Error("This item is no longer for sale.");
+    await prisma.offer.update({ where: { id: offerId }, data: { status: "ACCEPTED", respondedAt: new Date() } });
+    await notifyUser(
+      offer.buyerId,
+      "OFFER_ACCEPTED",
+      "Offer accepted",
+      `Your offer of ${offer.amountThb.toLocaleString()} THB for ${offer.asset.name} was accepted — complete your purchase.`,
+      `/item/${offer.assetId}`,
+    );
+  } else {
+    await prisma.offer.update({ where: { id: offerId }, data: { status: "REJECTED", respondedAt: new Date() } });
+    await notifyUser(
+      offer.buyerId,
+      "OFFER_REJECTED",
+      "Offer declined",
+      `Your offer of ${offer.amountThb.toLocaleString()} THB for ${offer.asset.name} was declined.`,
+      `/item/${offer.assetId}`,
+    );
+  }
+
+  revalidatePath("/portfolio");
+}
+
+/** Buyer withdraws their own still-pending offer. */
+export async function withdrawOffer(offerId: string) {
+  const user = await getCurrentUser();
+  const offer = await prisma.offer.findUniqueOrThrow({ where: { id: offerId } });
+  if (offer.buyerId !== user.id) throw new Error("This is not your offer.");
+  if (offer.status !== "PENDING") throw new Error("This offer has already been resolved.");
+
+  await prisma.offer.update({ where: { id: offerId }, data: { status: "WITHDRAWN", respondedAt: new Date() } });
+  revalidatePath("/portfolio");
+}
+
+/** Buyer completes a purchase at an already-accepted offer price — same real escrow-lock signing as buyListing, just at a negotiated price instead of the asking price. */
+export async function completeOfferPurchase(
+  offerId: string,
+  fulfillmentChoice: "SHIP" | "VAULT",
+  escrowLock?: { tradeId: string; txSignature: string; lamports: string; tradeAccount: string },
+) {
+  const user = await getCurrentUser();
+  if (user.isBanned) throw new Error("Your account is suspended and can't make purchases.");
+
+  const offer = await prisma.offer.findUniqueOrThrow({
+    where: { id: offerId },
+    include: { asset: { include: { owner: true } } },
+  });
+  if (offer.buyerId !== user.id) throw new Error("This is not your offer.");
+  if (offer.status !== "ACCEPTED") throw new Error("This offer hasn't been accepted.");
+  if (!offer.asset.forSale) throw new Error("This item is no longer for sale.");
+  if (offer.asset.ownerId === user.id) throw new Error("You already own this item.");
+
+  await completePurchase({
+    asset: offer.asset,
+    user,
+    priceThb: offer.amountThb,
+    fulfillmentChoice,
+    escrowLock,
+    soldNote: `${offer.asset.name} sold for ${offer.amountThb.toLocaleString()} THB (accepted offer).`,
+    purchasedNote: offer.asset.vaulted
+      ? `${offer.asset.name} is yours — ownership transferred instantly from the vault.`
+      : `${offer.asset.name} — your payment of ${offer.amountThb.toLocaleString()} THB is held safely until warehouse inspection passes.`,
+  });
 }
 
 async function loadInboundPackage(inboundPackageId: string) {

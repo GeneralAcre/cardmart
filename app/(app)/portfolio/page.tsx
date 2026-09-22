@@ -1,12 +1,20 @@
 import Link from "next/link";
 import { Bookmark, PackageOpen, Sparkles } from "lucide-react";
 
-import { getGradingSubmissions, getPortfolioPriceHistory, getVaultAssets, getWatchlist } from "@/lib/queries";
+import {
+  getGradingSubmissions,
+  getOffersMade,
+  getOffersReceived,
+  getPortfolioPriceHistory,
+  getVaultAssets,
+  getWatchlist,
+} from "@/lib/queries";
 import { getCurrentUser } from "@/lib/session";
 import { getDevnetSolBalance } from "@/lib/solana";
 import { getEscrowAuthorityAddress } from "@/lib/web3/escrow-server";
 import { ListingCard } from "@/components/marketplace/listing-card";
 import { PortfolioItemCard } from "@/components/portfolio/portfolio-item-card";
+import { OffersPanel } from "@/components/portfolio/offers-panel";
 import { ProfileHeader } from "@/components/portfolio/profile-header";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -16,15 +24,25 @@ import { formatDate, formatThb } from "@/lib/format";
 export default async function PortfolioPage() {
   const user = await getCurrentUser();
   const walletAddress = user.walletAddress ?? user.walletMock;
-  const [assets, submissions, solBalance, portfolioValueHistory, watchlist, escrowAuthorityAddress] =
-    await Promise.all([
-      getVaultAssets(user.id),
-      getGradingSubmissions(user.id),
-      getDevnetSolBalance(user.walletAddress), // real balance only for real (Privy) wallets, not the mock demo ones
-      getPortfolioPriceHistory(user.id, "7d"), // default range matches PortfolioValueChart's own initial state
-      getWatchlist(user.id),
-      getEscrowAuthorityAddress(),
-    ]);
+  const [
+    assets,
+    submissions,
+    solBalance,
+    portfolioValueHistory,
+    watchlist,
+    escrowAuthorityAddress,
+    offersReceived,
+    offersMade,
+  ] = await Promise.all([
+    getVaultAssets(user.id),
+    getGradingSubmissions(user.id),
+    getDevnetSolBalance(user.walletAddress), // real balance only for real (Privy) wallets, not the mock demo ones
+    getPortfolioPriceHistory(user.id, "7d"), // default range matches PortfolioValueChart's own initial state
+    getWatchlist(user.id),
+    getEscrowAuthorityAddress(),
+    getOffersReceived(user.id),
+    getOffersMade(user.id),
+  ]);
 
   const inHand = assets.filter((a) => !a.vaulted);
   const inVault = assets.filter((a) => a.vaulted);
@@ -72,6 +90,7 @@ export default async function PortfolioPage() {
             <span className="hidden sm:inline">Grading Submissions ({submissions.length})</span>
           </TabsTrigger>
           <TabsTrigger value="watchlist">Watchlist ({watchlist.length})</TabsTrigger>
+          <TabsTrigger value="offers">Offers ({offersReceived.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="all" className="pt-6">
@@ -102,6 +121,9 @@ export default async function PortfolioPage() {
               ))}
             </div>
           )}
+        </TabsContent>
+        <TabsContent value="offers" className="pt-6">
+          <OffersPanel received={offersReceived} made={offersMade} />
         </TabsContent>
       </Tabs>
     </div>

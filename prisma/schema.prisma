@@ -29,6 +29,30 @@ enum MarketStatus {
   IN_VAULT
   IN_ESCROW
   DELISTED
+  // Up for auction — deliberately excluded from the marketplace's own
+  // visible-statuses list (see MARKETPLACE_VISIBLE_STATUSES in
+  // lib/queries.ts), so an auctioned item only shows on /auctions, never
+  // in the fixed-price marketplace grid.
+  IN_AUCTION
+}
+
+enum AuctionStatus {
+  ACTIVE
+  // endTime passed with at least one bid — the highest bidder still has to
+  // actively claim it (sign the escrow lock themselves, same as any other
+  // purchase — see claimAuctionWin in lib/actions.ts) before it's really sold.
+  ENDED_SOLD
+  ENDED_NO_BIDS
+  // Seller-cancelled — only allowed while there are zero bids, so no bidder
+  // is ever pulled out from under after committing to a price.
+  CANCELLED
+}
+
+enum OfferStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
 }
 
 // Internal physical-custody pipeline driven by the warehouse dashboard.
@@ -105,7 +129,7 @@ model User {
 
   // Privy identity — the stable ID from Privy's own user object, independent
   // of which login method (Google, email) the user signed in with.
-  privyUserId String? @unique
+  privyUserId   String? @unique
   // Real embedded wallet address Privy creates for users without one, e.g.
   // signing in with Gmail. Distinct from walletMock, which only seeded demo
   // personas use (they have no real Privy identity).
@@ -139,6 +163,9 @@ model User {
   reviewsGiven       Review[]            @relation("BuyerReviews")
   watchlist          WatchlistItem[]
   notifications      Notification[]
+  bids               Bid[]
+  offersMade         Offer[]             @relation("OfferBuyer")
+  offersReceived     Offer[]             @relation("OfferSeller")
 }
 
 model Asset {
@@ -173,7 +200,7 @@ model Asset {
   // or when ESCROW_AUTHORITY_SECRET_KEY isn't configured — those fall back
   // to the old DB-only simulated mint/transfer, same degrade-gracefully
   // pattern as EscrowTransaction.onChain.
-  mintAddress String?
+  mintAddress      String?
   // Whether the current owner has a live SPL delegate approval (ApproveChecked)
   // authorizing the platform's escrow authority to move this token on their
   // behalf at the next sale. Set true by a real Approve, false again after
@@ -200,6 +227,11 @@ model Asset {
   verificationPhotos VerificationPhoto[]
   priceSnapshots     PriceSnapshot[]
   watchedBy          WatchlistItem[]
+  // Every auction this item has ever had, not just the current one — an
+  // asset can be re-auctioned after a no-bid ending or a no-bids
+  // cancellation, so this is intentionally one-to-many, not one-to-one.
+  auctions           Auction[]
+  offers             Offer[]
 
   @@index([sellerId])
   @@index([ownerId])
@@ -213,14 +245,80 @@ model Asset {
   @@index([forSale, marketStatus])
 }
 
+// A separate sale channel from the fixed-price marketplace (Asset.forSale/
+// priceThb) — an item is either fixed-price-listed or auctioned, never
+// both (enforced in lib/actions.ts::startAuction). No cron/background job
+// settles these: expiry is checked lazily whenever the auction is read
+// (see settleIfExpired in lib/queries.ts), and a sold auction still needs
+// its winner to actively claim it — see AuctionStatus.ENDED_SOLD.
+model Auction {
+  id            String        @id @default(cuid())
+  startPriceThb Int
+  // Highest bid so far, denormalized from Bid for cheap list-page reads —
+  // same "cache the current figure" pattern as PriceSnapshot/Asset.priceThb.
+  // Null until the first bid comes in.
+  currentBidThb Int?
+  endTime       DateTime
+  status        AuctionStatus @default(ACTIVE)
+  createdAt     DateTime      @default(now())
+  settledAt     DateTime?
+
+  assetId String
+  asset   Asset  @relation(fields: [assetId], references: [id])
+
+  bids Bid[]
+
+  @@index([assetId])
+  @@index([status, endTime])
+}
+
+model Bid {
+  id        String   @id @default(cuid())
+  amountThb Int
+  createdAt DateTime @default(now())
+
+  auctionId String
+  auction   Auction @relation(fields: [auctionId], references: [id])
+  bidderId  String
+  bidder    User    @relation(fields: [bidderId], references: [id])
+
+  @@index([auctionId, amountThb])
+  @@index([bidderId])
+}
+
+// A buyer-proposed price on a fixed-price listing. Accepting an offer
+// doesn't transfer anything by itself — it just clears the buyer to
+// complete the purchase at that price (completeOfferPurchase in
+// lib/actions.ts), the same real wallet-signed escrow lock any other
+// purchase needs.
+model Offer {
+  id          String      @id @default(cuid())
+  amountThb   Int
+  message     String?
+  status      OfferStatus @default(PENDING)
+  createdAt   DateTime    @default(now())
+  respondedAt DateTime?
+
+  assetId  String
+  asset    Asset  @relation(fields: [assetId], references: [id])
+  buyerId  String
+  buyer    User   @relation("OfferBuyer", fields: [buyerId], references: [id])
+  sellerId String
+  seller   User   @relation("OfferSeller", fields: [sellerId], references: [id])
+
+  @@index([assetId, status])
+  @@index([sellerId, status])
+  @@index([buyerId, status])
+}
+
 // A buyer saving a listing to keep an eye on — one row per (user, asset),
 // so watching twice is a no-op rather than a duplicate row.
 model WatchlistItem {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
 
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
+  userId  String
+  user    User   @relation(fields: [userId], references: [id])
   assetId String
   asset   Asset  @relation(fields: [assetId], references: [id])
 
@@ -313,10 +411,10 @@ model EscrowTransaction {
   // only when the buyer actually signed a lock_payment transaction, never
   // backfilled. Falls back to the old DB-only simulated flow when false (no
   // wallet available), same pattern as ProvenanceEvent.onChain.
-  onChain         Boolean @default(false)
-  onChainTradeId  BigInt? // u64 seed used to derive the on-chain Trade PDA
-  tradeAccount    String? // base58 address of the Trade PDA, for convenience
-  lamportsLocked  BigInt? // actual lamports locked on-chain (THB -> SOL at lock time)
+  onChain        Boolean @default(false)
+  onChainTradeId BigInt? // u64 seed used to derive the on-chain Trade PDA
+  tradeAccount   String? // base58 address of the Trade PDA, for convenience
+  lamportsLocked BigInt? // actual lamports locked on-chain (THB -> SOL at lock time)
 
   assetId  String
   asset    Asset  @relation(fields: [assetId], references: [id])
@@ -401,11 +499,18 @@ enum NotificationAudience {
 
 enum NotificationType {
   ITEM_SOLD
+  ITEM_PURCHASED
   INSPECTION_PASSED
   GRADING_COMPLETE
   PRICE_DROP_WATCHED
   NEW_SUBMISSION
   DUPLICATE_CERT_ATTEMPT
+  OUTBID
+  AUCTION_WON
+  AUCTION_ENDED_SELLER
+  OFFER_RECEIVED
+  OFFER_ACCEPTED
+  OFFER_REJECTED
 }
 
 model Notification {

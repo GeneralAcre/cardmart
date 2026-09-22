@@ -8,6 +8,8 @@ import type {
   ProvenanceType,
   VerificationPackage,
   GradingSubmissionStatus,
+  AuctionStatus,
+  OfferStatus,
 } from "@prisma/client";
 
 export const CATEGORY_LABELS: Record<AssetCategory, string> = {
@@ -76,6 +78,7 @@ export const MARKET_STATUS_LABELS: Record<MarketStatus, string> = {
   IN_VAULT: "In Vault",
   IN_ESCROW: "Sale Pending",
   DELISTED: "Not Listed",
+  IN_AUCTION: "Up for Auction",
 };
 
 // Status is encoded by weight (solid / outline / muted / faint), not hue —
@@ -85,6 +88,21 @@ export const MARKET_STATUS_BADGE_CLASS: Record<MarketStatus, string> = {
   IN_VAULT: "border border-foreground/50 text-foreground bg-transparent",
   IN_ESCROW: "bg-muted text-foreground/80",
   DELISTED: "border border-dashed border-muted-foreground/30 text-muted-foreground bg-transparent",
+  IN_AUCTION: "bg-foreground text-background",
+};
+
+export const AUCTION_STATUS_LABELS: Record<AuctionStatus, string> = {
+  ACTIVE: "Active",
+  ENDED_SOLD: "Ended — Sold",
+  ENDED_NO_BIDS: "Ended — No Bids",
+  CANCELLED: "Cancelled",
+};
+
+export const OFFER_STATUS_LABELS: Record<OfferStatus, string> = {
+  PENDING: "Pending",
+  ACCEPTED: "Accepted",
+  REJECTED: "Rejected",
+  WITHDRAWN: "Withdrawn",
 };
 
 export const PIPELINE_STAGE_LABELS: Record<PipelineStage, string> = {
