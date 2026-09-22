@@ -1,6 +1,9 @@
 import { VerifyFlow } from "@/components/verify/verify-flow";
+import { getEscrowAuthorityAddress } from "@/lib/web3/escrow-server";
 
-export default function VerifyPage() {
+export default async function VerifyPage() {
+  const escrowAuthorityAddress = await getEscrowAuthorityAddress();
+
   return (
     <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6">
       <div className="mb-8 flex flex-col gap-2">
@@ -10,7 +13,7 @@ export default function VerifyPage() {
           holding right now. You can always add more items later.
         </p>
       </div>
-      <VerifyFlow />
+      <VerifyFlow escrowAuthorityAddress={escrowAuthorityAddress} />
     </div>
   );
 }

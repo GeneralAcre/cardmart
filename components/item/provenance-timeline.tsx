@@ -1,6 +1,7 @@
 import {
   ArrowRightLeft,
   ExternalLink,
+  KeyRound,
   Lock,
   PackageCheck,
   PackageOpen,
@@ -34,6 +35,7 @@ const PROVENANCE_ICONS: Record<ProvenanceType, LucideIcon> = {
   RELISTED: RotateCcw,
   REDEEMED: PackageOpen,
   ESCROW_REFUNDED: Undo2,
+  LISTING_APPROVED: KeyRound,
 };
 
 interface Entry {

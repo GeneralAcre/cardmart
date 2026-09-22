@@ -6,6 +6,7 @@ import { useLogin, usePrivy } from "@privy-io/react-auth";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/components/landing/language-provider";
 
 export function LoginButton({
   className,
@@ -14,6 +15,7 @@ export function LoginButton({
   className?: string;
   size?: "sm" | "default" | "lg";
 }) {
+  const { t } = useLanguage();
   const { ready, authenticated } = usePrivy();
   const { login } = useLogin({
     // Fires after auth AND embedded wallet creation both finish (since
@@ -45,7 +47,7 @@ export function LoginButton({
     return (
       <Button type="button" size={size} className={cn("w-full", className)} disabled>
         <Loader2 className="animate-spin" />
-        Redirecting…
+        {t.login.redirecting}
       </Button>
     );
   }
@@ -53,7 +55,7 @@ export function LoginButton({
   return (
     <Button type="button" size={size} className={cn("w-full", className)} onClick={() => login()} disabled={!ready}>
       {ready ? <Wallet /> : <Loader2 className="animate-spin" />}
-      Continue with Google or Email
+      {t.login.continue}
     </Button>
   );
 }

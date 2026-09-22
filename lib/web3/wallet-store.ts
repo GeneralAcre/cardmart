@@ -7,6 +7,7 @@ import { getBase58Decoder } from "@solana/kit";
 
 import { buildSolTransferTransaction } from "@/lib/web3/solana-transfer";
 import { buildMemoTransaction } from "@/lib/web3/solana-memo";
+import { buildApproveDelegateTransaction, buildRevokeTransaction } from "@/lib/web3/token-program";
 
 // Phase 2 seam, now live: this used to be a zustand store standing in for
 // @solana/wallet-adapter-react's useWallet(). It's now backed by a real
@@ -33,6 +34,10 @@ export interface WalletStore {
   sendMemo: (memo: string) => Promise<string>;
   /** Signs and broadcasts an already-built, unsigned transaction (e.g. from lib/web3/escrow-program.ts). Returns the base58 transaction signature. */
   signAndSendRawTransaction: (transactionBytes: Uint8Array) => Promise<string>;
+  /** Delegates `delegateAddress` as a 1-token spender over this wallet's digital-twin token account for `mintAddress`. Returns the base58 transaction signature. */
+  approveDelegate: (mintAddress: string, delegateAddress: string) => Promise<string>;
+  /** Revokes any standing delegate approval on this wallet's digital-twin token account for `mintAddress`. Returns the base58 transaction signature. */
+  revokeDelegate: (mintAddress: string) => Promise<string>;
 }
 
 function toHex(bytes: Uint8Array): string {
@@ -127,6 +132,30 @@ function usePrivyWalletStore(): WalletStore {
     [wallet, signAndSendTransaction],
   );
 
+  const approveDelegate = useCallback(
+    async (mintAddress: string, delegateAddress: string): Promise<string> => {
+      if (!wallet) throw new Error("Wallet not connected");
+      const transaction = await buildApproveDelegateTransaction({
+        owner: wallet.address,
+        mintAddress,
+        delegate: delegateAddress,
+      });
+      const { signature } = await signAndSendTransaction({ transaction, wallet, chain: "solana:devnet" });
+      return getBase58Decoder().decode(signature);
+    },
+    [wallet, signAndSendTransaction],
+  );
+
+  const revokeDelegate = useCallback(
+    async (mintAddress: string): Promise<string> => {
+      if (!wallet) throw new Error("Wallet not connected");
+      const transaction = await buildRevokeTransaction({ owner: wallet.address, mintAddress });
+      const { signature } = await signAndSendTransaction({ transaction, wallet, chain: "solana:devnet" });
+      return getBase58Decoder().decode(signature);
+    },
+    [wallet, signAndSendTransaction],
+  );
+
   return {
     connected,
     connecting,
@@ -137,6 +166,8 @@ function usePrivyWalletStore(): WalletStore {
     sendSol,
     sendMemo,
     signAndSendRawTransaction,
+    approveDelegate,
+    revokeDelegate,
   };
 }
 
@@ -161,6 +192,12 @@ function useUnconfiguredWalletStore(): WalletStore {
       throw new Error("Wallet sign-in isn't configured yet.");
     },
     signAndSendRawTransaction: async () => {
+      throw new Error("Wallet sign-in isn't configured yet.");
+    },
+    approveDelegate: async () => {
+      throw new Error("Wallet sign-in isn't configured yet.");
+    },
+    revokeDelegate: async () => {
       throw new Error("Wallet sign-in isn't configured yet.");
     },
   };

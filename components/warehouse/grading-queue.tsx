@@ -34,7 +34,6 @@ import {
   bulkMarkAtGradingCompany,
   type BulkActionResult,
 } from "@/lib/actions";
-import { useWalletStore } from "@/lib/web3/wallet-store";
 import { CATEGORY_LABELS, GRADING_COMPANY_LABELS, GRADING_SUBMISSION_STATUS_LABELS } from "@/lib/labels";
 import { formatDate } from "@/lib/format";
 
@@ -56,7 +55,6 @@ function reportBulkResult(result: BulkActionResult, verb: string) {
 
 export function GradingQueue({ submissions }: { submissions: SubmissionWithSeller[] }) {
   const router = useRouter();
-  const { connected, connect, sendMemo } = useWalletStore();
   const [pending, startTransition] = useTransition();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [gradeTarget, setGradeTarget] = useState<SubmissionWithSeller | null>(null);
@@ -118,23 +116,11 @@ export function GradingQueue({ submissions }: { submissions: SubmissionWithSelle
     setBusyId(gradeTarget.id);
     startTransition(async () => {
       try {
-        // Real on-chain transaction (a Memo instruction), signed by the
-        // staff member completing the grading — same mechanism Self-Mint
-        // uses, so this is a genuine devnet transaction, not a simulated one.
-        let mintTxSignature: string | undefined;
-        try {
-          if (!connected) await connect();
-          mintTxSignature = await sendMemo(
-            `Proof grading complete: ${gradeTarget.itemName} | ${gradeTarget.gradingCompany} ${grade}`,
-          );
-        } catch (err) {
-          toast.error(err instanceof Error ? err.message : "Could not sign the on-chain record.");
-          return;
-        }
-
+        // Minting is server-side now (see lib/actions.ts::adminCompleteGrading)
+        // — the admin was never the right signer for the seller's own
+        // token anyway, so there's nothing to sign here.
         const fd = new FormData();
         fd.set("grade", grade);
-        if (mintTxSignature) fd.set("mintTxSignature", mintTxSignature);
 
         const res = await adminCompleteGrading(gradeTarget.id, {}, fd);
         if (res.error) {

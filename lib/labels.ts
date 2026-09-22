@@ -101,4 +101,5 @@ export const PROVENANCE_LABELS: Record<ProvenanceType, string> = {
   RELISTED: "Relisted for Instant Sale",
   REDEEMED: "Physical Item Redeemed",
   ESCROW_REFUNDED: "Payment Refunded",
+  LISTING_APPROVED: "Transfer Approved",
 };

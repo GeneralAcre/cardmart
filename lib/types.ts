@@ -13,6 +13,10 @@ export interface AssetSummary {
   forSale: boolean;
   vaulted: boolean;
   marketStatus: MarketStatus;
+  /** Real SPL mint address for this digital twin, or null for a legacy/simulated-only asset. */
+  mintAddress: string | null;
+  /** Whether the owner has a live delegate approval on file — see confirmListingApproval / lib/actions.ts::transferOwnership. */
+  transferApproved: boolean;
   seller: { id: string; name: string | null };
   owner: { id: string; name: string | null };
   /** Real live-camera captures from verification — shown instead of the generated digital-twin art when available. */

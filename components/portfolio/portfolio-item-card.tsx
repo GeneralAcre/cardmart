@@ -27,24 +27,49 @@ import { formatGrade, formatThb } from "@/lib/format";
 import { CATEGORY_LABELS } from "@/lib/labels";
 import type { AssetSummary } from "@/lib/types";
 
-export function PortfolioItemCard({ asset }: { asset: AssetSummary }) {
+export function PortfolioItemCard({
+  asset,
+  escrowAuthorityAddress,
+}: {
+  asset: AssetSummary;
+  escrowAuthorityAddress: string | null;
+}) {
   const router = useRouter();
-  const { connected, connect, sendMemo } = useWalletStore();
+  const { connected, connect, sendMemo, approveDelegate, revokeDelegate } = useWalletStore();
   const [relistOpen, setRelistOpen] = useState(false);
   const [redeemOpen, setRedeemOpen] = useState(false);
   const [priceEditOpen, setPriceEditOpen] = useState(false);
   const [price, setPrice] = useState(asset.priceThb ? String(asset.priceThb) : "");
   const [pending, startTransition] = useTransition();
 
-  // Real on-chain transaction (Memo instruction) signed by the seller's own
-  // wallet before the price/listing change is recorded — same mechanism
-  // Self-Mint uses. Returns undefined (not a hard failure) when there's no
-  // real wallet to sign with, so the action falls back to a simulated
-  // signature instead of blocking the seller entirely.
-  async function signMemo(memo: string): Promise<string | undefined> {
+  // A real Approve (delegating the escrow authority as a 1-token spender)
+  // whenever this asset has a real digital-twin mint — this is what
+  // actually lets the platform complete a transfer if it sells. Falls back
+  // to a Memo signature for legacy assets minted before this existed.
+  // Returns undefined (not a hard failure) on any signing error, so the
+  // action falls back to a simulated signature instead of blocking the
+  // seller entirely.
+  async function signApprove(memoFallback: string): Promise<string | undefined> {
     try {
       if (!connected) await connect();
-      return await sendMemo(memo);
+      if (asset.mintAddress && escrowAuthorityAddress) {
+        return await approveDelegate(asset.mintAddress, escrowAuthorityAddress);
+      }
+      return await sendMemo(memoFallback);
+    } catch {
+      return undefined;
+    }
+  }
+
+  // Real Revoke on delist, closing the window where a delisted item could
+  // still be moved by the platform. Same legacy fallback as signApprove.
+  async function signRevoke(memoFallback: string): Promise<string | undefined> {
+    try {
+      if (!connected) await connect();
+      if (asset.mintAddress) {
+        return await revokeDelegate(asset.mintAddress);
+      }
+      return await sendMemo(memoFallback);
     } catch {
       return undefined;
     }
@@ -53,7 +78,7 @@ export function PortfolioItemCard({ asset }: { asset: AssetSummary }) {
   function handleRelist() {
     startTransition(async () => {
       try {
-        const tx = await signMemo(`Proof relist: ${asset.name} | ${Number(price)} THB`);
+        const tx = await signApprove(`Proof relist: ${asset.name} | ${Number(price)} THB`);
         await vaultRelist(asset.id, Number(price), tx);
         toast.success("Relisted for instant sale.");
         setRelistOpen(false);
@@ -80,7 +105,7 @@ export function PortfolioItemCard({ asset }: { asset: AssetSummary }) {
   function handleUpdatePrice() {
     startTransition(async () => {
       try {
-        const tx = await signMemo(`Proof ${asset.forSale ? "reprice" : "list"}: ${asset.name} | ${Number(price)} THB`);
+        const tx = await signApprove(`Proof ${asset.forSale ? "reprice" : "list"}: ${asset.name} | ${Number(price)} THB`);
         await updateListingPrice(asset.id, Number(price), tx);
         toast.success(asset.forSale ? "Price updated." : "Listed for sale.");
         setPriceEditOpen(false);
@@ -94,7 +119,7 @@ export function PortfolioItemCard({ asset }: { asset: AssetSummary }) {
   function handleDelist() {
     startTransition(async () => {
       try {
-        const tx = await signMemo(`Proof delist: ${asset.name}`);
+        const tx = await signRevoke(`Proof delist: ${asset.name}`);
         await delistAsset(asset.id, tx);
         toast.success("Delisted from the marketplace.");
         router.refresh();

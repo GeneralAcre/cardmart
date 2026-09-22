@@ -4,6 +4,7 @@ import { Bookmark, PackageOpen, Sparkles } from "lucide-react";
 import { getGradingSubmissions, getPortfolioPriceHistory, getVaultAssets, getWatchlist } from "@/lib/queries";
 import { getCurrentUser } from "@/lib/session";
 import { getDevnetSolBalance } from "@/lib/solana";
+import { getEscrowAuthorityAddress } from "@/lib/web3/escrow-server";
 import { ListingCard } from "@/components/marketplace/listing-card";
 import { PortfolioItemCard } from "@/components/portfolio/portfolio-item-card";
 import { ProfileHeader } from "@/components/portfolio/profile-header";
@@ -15,13 +16,15 @@ import { formatDate, formatThb } from "@/lib/format";
 export default async function PortfolioPage() {
   const user = await getCurrentUser();
   const walletAddress = user.walletAddress ?? user.walletMock;
-  const [assets, submissions, solBalance, portfolioValueHistory, watchlist] = await Promise.all([
-    getVaultAssets(user.id),
-    getGradingSubmissions(user.id),
-    getDevnetSolBalance(user.walletAddress), // real balance only for real (Privy) wallets, not the mock demo ones
-    getPortfolioPriceHistory(user.id, "7d"), // default range matches PortfolioValueChart's own initial state
-    getWatchlist(user.id),
-  ]);
+  const [assets, submissions, solBalance, portfolioValueHistory, watchlist, escrowAuthorityAddress] =
+    await Promise.all([
+      getVaultAssets(user.id),
+      getGradingSubmissions(user.id),
+      getDevnetSolBalance(user.walletAddress), // real balance only for real (Privy) wallets, not the mock demo ones
+      getPortfolioPriceHistory(user.id, "7d"), // default range matches PortfolioValueChart's own initial state
+      getWatchlist(user.id),
+      getEscrowAuthorityAddress(),
+    ]);
 
   const inHand = assets.filter((a) => !a.vaulted);
   const inVault = assets.filter((a) => a.vaulted);
@@ -72,13 +75,13 @@ export default async function PortfolioPage() {
         </TabsList>
 
         <TabsContent value="all" className="pt-6">
-          <PortfolioGrid assets={assets} />
+          <PortfolioGrid assets={assets} escrowAuthorityAddress={escrowAuthorityAddress} />
         </TabsContent>
         <TabsContent value="hand" className="pt-6">
-          <PortfolioGrid assets={inHand} />
+          <PortfolioGrid assets={inHand} escrowAuthorityAddress={escrowAuthorityAddress} />
         </TabsContent>
         <TabsContent value="vault" className="pt-6">
-          <PortfolioGrid assets={inVault} />
+          <PortfolioGrid assets={inVault} escrowAuthorityAddress={escrowAuthorityAddress} />
         </TabsContent>
         <TabsContent value="grading" className="pt-6">
           <GradingSubmissionList submissions={submissions} />
@@ -105,7 +108,13 @@ export default async function PortfolioPage() {
   );
 }
 
-function PortfolioGrid({ assets }: { assets: Awaited<ReturnType<typeof getVaultAssets>> }) {
+function PortfolioGrid({
+  assets,
+  escrowAuthorityAddress,
+}: {
+  assets: Awaited<ReturnType<typeof getVaultAssets>>;
+  escrowAuthorityAddress: string | null;
+}) {
   if (assets.length === 0) {
     return (
       <div className="text-muted-foreground flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed py-24 text-center">
@@ -117,7 +126,7 @@ function PortfolioGrid({ assets }: { assets: Awaited<ReturnType<typeof getVaultA
   return (
     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4">
       {assets.map((asset) => (
-        <PortfolioItemCard key={asset.id} asset={asset} />
+        <PortfolioItemCard key={asset.id} asset={asset} escrowAuthorityAddress={escrowAuthorityAddress} />
       ))}
     </div>
   );

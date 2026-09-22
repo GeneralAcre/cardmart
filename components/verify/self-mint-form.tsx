@@ -30,7 +30,7 @@ import {
 import { CardArt } from "@/components/asset/card-art";
 import { CameraCaptureGrid, type CaptureMap } from "@/components/verify/camera-capture-grid";
 import { StepHeading } from "@/components/verify/step-heading";
-import { createListing, lookupPsaCertForForm, type PsaCertLookupResult } from "@/lib/actions";
+import { confirmListingApproval, createListing, lookupPsaCertForForm, type PsaCertLookupResult } from "@/lib/actions";
 import { useWalletStore } from "@/lib/web3/wallet-store";
 import { CATEGORY_GRADING_COMPANIES, CATEGORY_LABELS, GRADING_COMPANY_LABELS } from "@/lib/labels";
 import { SELF_MINT_FEE_THB } from "@/lib/pricing";
@@ -39,9 +39,9 @@ import { getVerificationChecklist } from "@/lib/verification-checklist";
 
 const CATEGORIES: AssetCategory[] = ["TRADING_CARD", "SPORTS_CARD", "COMIC"];
 
-export function SelfMintForm() {
+export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddress: string | null }) {
   const router = useRouter();
-  const { connected, connecting, connect, sendMemo } = useWalletStore();
+  const { connected, connecting, connect, approveDelegate } = useWalletStore();
 
   const [raw, setRaw] = useState(false);
   const [category, setCategory] = useState<AssetCategory>("TRADING_CARD");
@@ -55,7 +55,6 @@ export function SelfMintForm() {
   const [captures, setCaptures] = useState<CaptureMap>({});
 
   const [signOpen, setSignOpen] = useState(false);
-  const [signing, setSigning] = useState(false);
   const [submitting, startSubmit] = useTransition();
 
   const [psaLookup, setPsaLookup] = useState<PsaCertLookupResult | null>(null);
@@ -118,56 +117,60 @@ export function SelfMintForm() {
     setCaptures({}); // checklist changes per category — start over
   }
 
-  async function handleConfirmAndSign() {
-    setSigning(true);
-    try {
-      if (!connected) await connect();
+  function handleConfirmAndSign() {
+    startSubmit(async () => {
+      try {
+        const photos = checklist.map((v) => ({
+          viewKey: v.key,
+          viewLabel: v.label,
+          url: captures[v.key],
+        }));
 
-      // Real on-chain transaction (a Memo instruction), not just a message
-      // signature — this is what actually makes minting/listing a genuine,
-      // Solana-Explorer-verifiable event instead of a simulated one.
-      const memo = `Proof mint: ${name} | ${raw ? "Raw/Ungraded" : `${gradingCompany} ${serial}`} | ${priceThb} THB`;
-      const mintTxSignature = await sendMemo(memo);
-      toast.success("Confirmed", { description: `${mintTxSignature.slice(0, 8)}…` });
+        const fd = new FormData();
+        fd.set("name", name);
+        fd.set("subtitle", subtitle);
+        fd.set("category", category);
+        fd.set("raw", String(raw));
+        fd.set("gradingCompany", raw ? "RAW" : gradingCompany);
+        if (!raw) {
+          fd.set("grade", grade);
+          fd.set("serial", serial);
+        }
+        fd.set("priceThb", priceThb);
+        fd.set("photos", JSON.stringify(photos));
 
-      const photos = checklist.map((v) => ({
-        viewKey: v.key,
-        viewLabel: v.label,
-        url: captures[v.key],
-      }));
-
-      const fd = new FormData();
-      fd.set("name", name);
-      fd.set("subtitle", subtitle);
-      fd.set("category", category);
-      fd.set("raw", String(raw));
-      fd.set("gradingCompany", raw ? "RAW" : gradingCompany);
-      if (!raw) {
-        fd.set("grade", grade);
-        fd.set("serial", serial);
-      }
-      fd.set("priceThb", priceThb);
-      fd.set("photos", JSON.stringify(photos));
-      fd.set("mintTxSignature", mintTxSignature);
-
-      startSubmit(async () => {
+        // Minting itself is server-side now (see lib/actions.ts::createListing)
+        // — no wallet needed just to create the listing.
         const res = await createListing({}, fd);
         if (res.error) {
           toast.error(res.error);
           setSignOpen(false);
           return;
         }
+
+        // A real digital-twin token now exists. One owner-signed Approve
+        // delegates the platform to actually move it if this sells later —
+        // best-effort: a rejected/failed signature here doesn't block the
+        // listing, it just means a future sale falls back to the simulated
+        // transfer (see lib/actions.ts::transferOwnership).
+        if (res.mintAddress && escrowAuthorityAddress) {
+          try {
+            if (!connected) await connect();
+            const approveTxSignature = await approveDelegate(res.mintAddress, escrowAuthorityAddress);
+            await confirmListingApproval(res.assetId!, approveTxSignature);
+          } catch (err) {
+            toast.warning("Listed — but approving the transfer failed. You can retry this from your Portfolio.", {
+              description: err instanceof Error ? err.message : undefined,
+            });
+          }
+        }
+
         toast.success("Digital certificate created and listed for sale.");
         router.push(`/item/${res.assetId}`);
-      });
-    } catch (err) {
-      // sendMemo/connect now hit the real Privy wallet, which can
-      // genuinely fail (rejected, session hiccup, etc.) — previously this
-      // path only wrapped a synchronous mock and effectively never threw.
-      toast.error(err instanceof Error ? err.message : "Signing failed. Try again.");
-    } finally {
-      setSigning(false);
-    }
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Could not create the listing. Try again.");
+      }
+    });
   }
 
   const canSubmit =
@@ -356,15 +359,14 @@ export function SelfMintForm() {
         </p>
       </div>
 
-      <Dialog open={signOpen} onOpenChange={(open) => !signing && !submitting && setSignOpen(open)}>
+      <Dialog open={signOpen} onOpenChange={(open) => !submitting && setSignOpen(open)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Confirm &amp; Create Your Certificate</DialogTitle>
             <DialogDescription>
-              You&apos;ll approve this with your wallet to create a permanent
-              record for this listing that anyone can check. Ownership
-              itself is still tracked in our database for now — that&apos;s
-              coming in a future update too.
+              A real digital certificate is minted on-chain for this item.
+              You&apos;ll then approve the platform with your wallet so it
+              can complete a real on-chain transfer if this item sells.
             </DialogDescription>
           </DialogHeader>
           <div className="bg-muted/40 rounded-lg border p-3 text-sm">
@@ -386,12 +388,12 @@ export function SelfMintForm() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setSignOpen(false)} disabled={signing || submitting}>
+            <Button variant="outline" onClick={() => setSignOpen(false)} disabled={submitting}>
               Cancel
             </Button>
-            <Button onClick={handleConfirmAndSign} disabled={signing || submitting || connecting}>
-              {signing || submitting ? <Loader2 className="animate-spin" /> : null}
-              {signing ? "Waiting for approval…" : submitting ? "Creating…" : `Confirm & Pay ฿${SELF_MINT_FEE_THB}`}
+            <Button onClick={handleConfirmAndSign} disabled={submitting || connecting}>
+              {submitting ? <Loader2 className="animate-spin" /> : null}
+              {submitting ? "Creating…" : `Confirm & Pay ฿${SELF_MINT_FEE_THB}`}
             </Button>
           </DialogFooter>
         </DialogContent>

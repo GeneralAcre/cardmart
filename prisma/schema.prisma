@@ -74,6 +74,7 @@ enum ProvenanceType {
   RELISTED
   REDEEMED
   ESCROW_REFUNDED
+  LISTING_APPROVED
 }
 
 // The two onboarding/pricing models for getting an item onto the platform.
@@ -159,6 +160,20 @@ model Asset {
   mintFeeThb          Int                 @default(50)
   createdAt           DateTime            @default(now())
   updatedAt           DateTime            @updatedAt
+
+  // Real SPL Token mint address for this digital twin (decimals 0, fixed
+  // supply of 1, mint authority permanently revoked after minting — see
+  // lib/web3/token-server.ts). Null for assets minted before this existed,
+  // or when ESCROW_AUTHORITY_SECRET_KEY isn't configured — those fall back
+  // to the old DB-only simulated mint/transfer, same degrade-gracefully
+  // pattern as EscrowTransaction.onChain.
+  mintAddress String?
+  // Whether the current owner has a live SPL delegate approval (ApproveChecked)
+  // authorizing the platform's escrow authority to move this token on their
+  // behalf at the next sale. Set true by a real Approve, false again after
+  // that approval is consumed by a real transfer or explicitly revoked
+  // (delist). Meaningless when mintAddress is null.
+  transferApproved Boolean @default(false)
 
   // Physical shelf/box location inside the warehouse vault — staff-only data,
   // set when an item is deposited and editable later (item gets moved, or

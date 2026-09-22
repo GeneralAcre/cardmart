@@ -12,6 +12,7 @@ import {
   mockEscrowInstruction,
 } from "@/lib/web3/mock-chain";
 import { releaseTradeToSeller, refundTradeToBuyer, getEscrowAuthorityAddress } from "@/lib/web3/escrow-server";
+import { mintDigitalTwinToken, transferDigitalTwinToken } from "@/lib/web3/token-server";
 import { SELF_MINT_FEE_THB, FULL_SERVICE_PACKAGE_PRICE_THB } from "@/lib/pricing";
 import { themeIndexForSerial } from "@/lib/theme";
 import { getVerificationChecklist } from "@/lib/verification-checklist";
@@ -91,12 +92,6 @@ const createListingSchema = z
         return z.NEVER;
       }
     }),
-    // Real Solana devnet transaction signature from a Memo instruction the
-    // seller actually signed client-side (see self-mint-form.tsx +
-    // lib/web3/solana-memo.ts) — optional because it's only present when
-    // the seller has a real wallet connected (demo/unconfigured Privy mode
-    // has none), in which case this falls back to the simulated signature.
-    mintTxSignature: z.string().optional(),
   })
   .superRefine((data, ctx) => {
     if (!data.raw) {
@@ -112,6 +107,11 @@ function generateRawSerial(): string {
 export interface CreateListingState {
   error?: string;
   assetId?: string;
+  // Set only when a real digital-twin token was actually minted — the
+  // client uses this to immediately follow up with an owner-signed Approve
+  // (see components/verify/self-mint-form.tsx + confirmListingApproval
+  // below), which is what actually makes a future sale's transfer real.
+  mintAddress?: string;
 }
 
 export interface PsaCertLookupResult {
@@ -162,7 +162,6 @@ export async function createListing(
     serial: formData.get("serial") || undefined,
     priceThb: formData.get("priceThb"),
     photos: formData.get("photos"),
-    mintTxSignature: formData.get("mintTxSignature") || undefined,
   });
 
   if (!parsed.success) {
@@ -210,12 +209,27 @@ export async function createListing(
     }
   }
 
-  // A real on-chain signature (from the seller actually signing a Memo
-  // transaction client-side) takes priority over the simulated mint —
-  // only falls back to mockMintDigitalTwin when no real wallet was
-  // available to sign with (demo mode without Privy configured).
-  const mintTxSignature = data.mintTxSignature ?? (await mockMintDigitalTwin(serial)).txSignature;
-  const isOnChain = Boolean(data.mintTxSignature);
+  // Real, server-signed mint (a genuine SPL Token, decimals 0, fixed supply
+  // of 1 — see lib/web3/token-server.ts) whenever the escrow/platform
+  // authority is configured and the seller has a real wallet on file;
+  // otherwise falls back to the old fully-simulated mint, same
+  // degrade-gracefully pattern used everywhere else real signing is
+  // optional. No client wallet interaction needed for minting itself
+  // anymore — the seller signs afterward, once, to approve a future
+  // transfer (see confirmListingApproval + self-mint-form.tsx).
+  const authorityAddress = await getEscrowAuthorityAddress();
+  let mintTxSignature: string;
+  let isOnChain: boolean;
+  let mintAddress: string | null = null;
+  if (authorityAddress && user.walletAddress) {
+    const minted = await mintDigitalTwinToken({ ownerAddress: user.walletAddress });
+    mintTxSignature = minted.txSignature;
+    mintAddress = minted.mintAddress;
+    isOnChain = true;
+  } else {
+    mintTxSignature = (await mockMintDigitalTwin(serial)).txSignature;
+    isOnChain = false;
+  }
 
   const asset = await prisma.asset.create({
     data: {
@@ -232,6 +246,7 @@ export async function createListing(
       marketStatus: "READY_TO_SHIP",
       pipelineStage: "NONE",
       mockMintTx: mintTxSignature,
+      mintAddress,
       verificationPackage: "SELF_MINT",
       mintFeeThb: SELF_MINT_FEE_THB,
       sellerId: user.id,
@@ -273,7 +288,35 @@ export async function createListing(
   });
 
   revalidateMarketplace(asset.id);
-  return { assetId: asset.id };
+  return { assetId: asset.id, mintAddress: mintAddress ?? undefined };
+}
+
+/**
+ * Confirms the seller's post-mint Approve signature (see
+ * components/verify/self-mint-form.tsx) — delegates the escrow authority as
+ * a spender over the freshly minted token, which is what actually lets a
+ * future sale transfer it for real. Best-effort: if this never gets called
+ * (signing failed or was skipped), the listing still stands — a future sale
+ * just falls back to the simulated transfer, same tolerant pattern used
+ * everywhere else real signing is optional.
+ */
+export async function confirmListingApproval(assetId: string, approveTxSignature: string) {
+  const user = await getCurrentUser();
+  const asset = await prisma.asset.findUniqueOrThrow({ where: { id: assetId } });
+  if (asset.ownerId !== user.id) throw new Error("You do not own this item.");
+
+  await prisma.asset.update({ where: { id: assetId }, data: { transferApproved: true } });
+  await prisma.provenanceEvent.create({
+    data: {
+      assetId,
+      type: "LISTING_APPROVED",
+      note: "Seller approved the platform to complete a transfer if this item sells.",
+      mockTxSignature: approveTxSignature,
+      onChain: true,
+      actorId: user.id,
+    },
+  });
+  revalidateMarketplace(assetId);
 }
 
 /**
@@ -338,7 +381,7 @@ export async function buyListing(
     // separate warehouse step. Reuses releaseOrRefundEscrow so a real
     // on-chain failure throws (and the purchase aborts) rather than
     // silently transferring ownership while real funds stay locked.
-    const transfer = await mockTransferOwnership(assetId, user.id);
+    const transfer = await transferOwnership(asset, asset.owner.walletAddress, user.walletAddress, user.id);
     const release = await releaseOrRefundEscrow(
       "release",
       {
@@ -358,17 +401,17 @@ export async function buyListing(
       where: { id: escrowTx.id },
       data: { status: "RELEASED", releasedAt: new Date() },
     });
-    void transfer;
     await prisma.provenanceEvent.create({
       data: {
         assetId,
         type: "OWNERSHIP_TRANSFERRED",
         note: "Instant vault trade: digital ownership transferred and escrow released to seller.",
-        mockTxSignature: release.signature,
-        onChain: release.onChain,
+        mockTxSignature: transfer.signature,
+        onChain: transfer.onChain,
         actorId: user.id,
       },
     });
+    void release;
     await notifyUser(
       asset.ownerId,
       "ITEM_SOLD",
@@ -486,11 +529,45 @@ async function releaseOrRefundEscrow(
   return { signature, onChain: true };
 }
 
+/**
+ * Real on-chain SPL transfer when the asset has a real mint and the current
+ * owner has a live delegate approval on file (see confirmListingApproval /
+ * updateListingPrice / vaultRelist) — the escrow authority spends that
+ * approval to move the token, mirroring releaseOrRefundEscrow's real/mock
+ * branch. Falls back to the old simulated transfer for legacy assets, or
+ * whenever the approval was never granted or already consumed. A genuine
+ * on-chain failure here throws rather than silently downgrading to mock,
+ * same reasoning as releaseOrRefundEscrow.
+ */
+async function transferOwnership(
+  asset: { id: string; mintAddress: string | null; transferApproved: boolean },
+  fromWalletAddress: string | null,
+  toWalletAddress: string | null,
+  toUserId: string,
+): Promise<{ signature: string; onChain: boolean }> {
+  if (asset.mintAddress && asset.transferApproved && fromWalletAddress && toWalletAddress) {
+    const signature = await transferDigitalTwinToken({
+      mintAddress: asset.mintAddress,
+      fromAddress: fromWalletAddress,
+      toAddress: toWalletAddress,
+    });
+    await prisma.asset.update({ where: { id: asset.id }, data: { transferApproved: false } });
+    return { signature, onChain: true };
+  }
+  const mock = await mockTransferOwnership(asset.id, toUserId);
+  return { signature: mock.txSignature, onChain: false };
+}
+
 /** Warehouse verifies the slab, then ships it directly to the buyer's address. */
 export async function warehouseApproveShip(inboundPackageId: string) {
   await requireAdmin();
   const pkg = await loadInboundPackage(inboundPackageId);
-  const transfer = await mockTransferOwnership(pkg.assetId, pkg.escrowTx.buyerId);
+  const transfer = await transferOwnership(
+    pkg.asset,
+    pkg.escrowTx.seller.walletAddress,
+    pkg.escrowTx.buyer.walletAddress,
+    pkg.escrowTx.buyerId,
+  );
   const release = await releaseOrRefundEscrow("release", pkg.escrowTx, pkg.assetId);
 
   await prisma.$transaction([
@@ -518,24 +595,25 @@ export async function warehouseApproveShip(inboundPackageId: string) {
           assetId: pkg.assetId,
           type: "INSPECTION_PASSED",
           note: `Serial and slab authenticity verified against ${pkg.officialGradingCompany} database.`,
-          mockTxSignature: transfer.txSignature,
+          mockTxSignature: transfer.signature,
         },
         {
           assetId: pkg.assetId,
           type: "DELIVERED_TO_BUYER",
           note: "Shipping label generated and package delivered to buyer's address.",
-          mockTxSignature: transfer.txSignature,
+          mockTxSignature: transfer.signature,
         },
         {
           assetId: pkg.assetId,
           type: "OWNERSHIP_TRANSFERRED",
           note: "Digital ownership transferred to buyer; escrow released to seller.",
-          mockTxSignature: release.signature,
-          onChain: release.onChain,
+          mockTxSignature: transfer.signature,
+          onChain: transfer.onChain,
         },
       ],
     }),
   ]);
+  void release;
 
   await notifyUser(
     pkg.escrowTx.sellerId,
@@ -551,7 +629,12 @@ export async function warehouseApproveShip(inboundPackageId: string) {
 export async function warehouseApproveVault(inboundPackageId: string, vaultLocation?: string) {
   await requireAdmin();
   const pkg = await loadInboundPackage(inboundPackageId);
-  const transfer = await mockTransferOwnership(pkg.assetId, pkg.escrowTx.buyerId);
+  const transfer = await transferOwnership(
+    pkg.asset,
+    pkg.escrowTx.seller.walletAddress,
+    pkg.escrowTx.buyer.walletAddress,
+    pkg.escrowTx.buyerId,
+  );
   const release = await releaseOrRefundEscrow("release", pkg.escrowTx, pkg.assetId);
 
   await prisma.$transaction([
@@ -580,24 +663,25 @@ export async function warehouseApproveVault(inboundPackageId: string, vaultLocat
           assetId: pkg.assetId,
           type: "INSPECTION_PASSED",
           note: `Serial and slab authenticity verified against ${pkg.officialGradingCompany} database.`,
-          mockTxSignature: transfer.txSignature,
+          mockTxSignature: transfer.signature,
         },
         {
           assetId: pkg.assetId,
           type: "DEPOSITED_TO_VAULT",
           note: "Physical item deposited into the platform vault.",
-          mockTxSignature: transfer.txSignature,
+          mockTxSignature: transfer.signature,
         },
         {
           assetId: pkg.assetId,
           type: "OWNERSHIP_TRANSFERRED",
           note: "Digital ownership transferred to buyer; escrow released to seller.",
-          mockTxSignature: release.signature,
-          onChain: release.onChain,
+          mockTxSignature: transfer.signature,
+          onChain: transfer.onChain,
         },
       ],
     }),
   ]);
+  void release;
 
   await notifyUser(
     pkg.escrowTx.sellerId,
@@ -725,9 +809,9 @@ export async function bulkRejectInboundPackages(inboundPackageIds: string[]): Pr
 
 /**
  * Real on-chain signature takes priority when the client actually signed
- * one (see components/portfolio/portfolio-item-card.tsx's use of
- * wallet-store's sendMemo); falls back to the simulated escrow instruction
- * only when no real wallet was available to sign with.
+ * one (see components/portfolio/portfolio-item-card.tsx — a real Approve
+ * when the asset has a mint, a Memo otherwise); falls back to the simulated
+ * escrow instruction only when no real wallet was available to sign with.
  */
 async function resolveTxSignature(assetId: string, txSignature?: string) {
   if (txSignature) return { signature: txSignature, onChain: true };
@@ -750,6 +834,9 @@ export async function vaultRelist(assetId: string, priceThb: number, txSignature
       forSale: true,
       marketStatus: "IN_VAULT",
       priceThb,
+      // A real Approve grants a fresh, one-time delegate approval — needs
+      // redoing on every relist (a prior transfer would have consumed it).
+      transferApproved: Boolean(asset.mintAddress) && Boolean(txSignature),
       priceSnapshots: { create: { priceThb } },
     },
   });
@@ -793,6 +880,8 @@ export async function updateListingPrice(assetId: string, priceThb: number, txSi
       priceThb,
       forSale: true,
       marketStatus: "READY_TO_SHIP",
+      // See vaultRelist — a real Approve needs redoing on every (re)listing.
+      transferApproved: Boolean(asset.mintAddress) && Boolean(txSignature),
       priceSnapshots: { create: { priceThb } },
     },
   });
@@ -828,7 +917,10 @@ export async function delistAsset(assetId: string, txSignature?: string) {
 
   await prisma.asset.update({
     where: { id: assetId },
-    data: { forSale: false, marketStatus: "DELISTED" },
+    // Always clears the delegate approval on delist (a real Revoke when the
+    // client signed one, but cleared in our own records either way — a
+    // delisted item should never look transferable to the next sale).
+    data: { forSale: false, marketStatus: "DELISTED", transferApproved: false },
   });
   await prisma.provenanceEvent.create({
     data: {
@@ -899,7 +991,10 @@ export async function submitForGrading(
 }
 
 async function loadGradingSubmission(submissionId: string) {
-  return prisma.gradingSubmission.findUniqueOrThrow({ where: { id: submissionId } });
+  return prisma.gradingSubmission.findUniqueOrThrow({
+    where: { id: submissionId },
+    include: { seller: true },
+  });
 }
 
 /** Staff confirms the raw item has been shipped out to the grading company. */
@@ -940,11 +1035,6 @@ export async function bulkMarkAtGradingCompany(submissionIds: string[]): Promise
 
 const completeGradingSchema = z.object({
   grade: z.coerce.number().min(1).max(10),
-  // Real Solana devnet transaction signature from the admin's own wallet
-  // signing a Memo instruction recording the grading result (see
-  // components/warehouse/grading-queue.tsx) — optional because it's only
-  // present when the admin has a real wallet connected.
-  mintTxSignature: z.string().optional(),
 });
 
 export interface CompleteGradingState {
@@ -968,7 +1058,6 @@ export async function adminCompleteGrading(
   }
   const parsed = completeGradingSchema.safeParse({
     grade: formData.get("grade"),
-    mintTxSignature: formData.get("mintTxSignature") || undefined,
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Enter a valid grade." };
@@ -976,8 +1065,23 @@ export async function adminCompleteGrading(
 
   const serial = `${submission.gradingCompany}-${Math.floor(10_000_000 + Math.random() * 89_999_999)}`;
   const themeIndex = serial.length % 8;
-  const mintTxSignature = parsed.data.mintTxSignature ?? (await mockMintDigitalTwin(serial)).txSignature;
-  const isOnChain = Boolean(parsed.data.mintTxSignature);
+
+  // Real, server-signed mint (see createListing above for the same
+  // pattern) — the admin was never the right signer for someone else's
+  // token anyway, so this needs no client-signature plumbing at all.
+  const authorityAddress = await getEscrowAuthorityAddress();
+  let mintTxSignature: string;
+  let isOnChain: boolean;
+  let mintAddress: string | null = null;
+  if (authorityAddress && submission.seller.walletAddress) {
+    const minted = await mintDigitalTwinToken({ ownerAddress: submission.seller.walletAddress });
+    mintTxSignature = minted.txSignature;
+    mintAddress = minted.mintAddress;
+    isOnChain = true;
+  } else {
+    mintTxSignature = (await mockMintDigitalTwin(serial)).txSignature;
+    isOnChain = false;
+  }
 
   const asset = await prisma.asset.create({
     data: {
@@ -993,6 +1097,7 @@ export async function adminCompleteGrading(
       marketStatus: "DELISTED",
       pipelineStage: "NONE",
       mockMintTx: mintTxSignature,
+      mintAddress,
       verificationPackage: "FULL_SERVICE",
       mintFeeThb: submission.packagePriceThb,
       sellerId: submission.sellerId,
