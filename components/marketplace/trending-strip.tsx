@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { TrendingUp } from "lucide-react";
+import { TrendingDown, TrendingUp } from "lucide-react";
 
 import { CardArt } from "@/components/asset/card-art";
 import { formatThb } from "@/lib/format";
@@ -34,6 +34,7 @@ export function TrendingStrip({ listings }: { listings: TrendingListing[] }) {
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {listings.map(({ asset, previousPriceThb, currentPriceThb, gainPct }) => {
           const photo = asset.verificationPhotos[0];
+          const isGain = gainPct >= 0;
           return (
             <Link
               key={asset.id}
@@ -60,8 +61,14 @@ export function TrendingStrip({ listings }: { listings: TrendingListing[] }) {
                       bordered={false}
                     />
                   )}
-                  <span className="bg-highlight text-highlight-foreground absolute right-2 top-2 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-sm font-bold">
-                    <TrendingUp className="size-3.5" />+{Math.round(gainPct)}%
+                  <span
+                    className={`absolute right-2 top-2 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-sm font-bold ${
+                      isGain ? "bg-emerald-400 text-emerald-950" : "bg-red-500 text-white"
+                    }`}
+                  >
+                    {isGain ? <TrendingUp className="size-3.5" /> : <TrendingDown className="size-3.5" />}
+                    {isGain ? "+" : ""}
+                    {Math.round(gainPct)}%
                   </span>
                 </div>
                 <div className="flex flex-col gap-3 px-3 pb-3">
