@@ -44,7 +44,7 @@ export function PrivyProvider({ children }: { children: React.ReactNode }) {
           // modal's overall layout (inline OTP button, "Social login" icon
           // row) is Privy's own template and already follows automatically
           // from loginMethods having 2+ social providers, as set above.
-          landingHeader: "Log in to Proof",
+          landingHeader: "Log in to CardMart",
         },
         embeddedWallets: {
           solana: { createOnLogin: "users-without-wallets" },

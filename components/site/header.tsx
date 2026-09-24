@@ -1,14 +1,15 @@
 import Link from "next/link";
-import { Gem } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 
 import { getCurrentUser } from "@/lib/session";
-import { getMyNotifications, getUnreadNotificationCount } from "@/lib/queries";
+import { getMyNotifications, getUnreadMessageCount, getUnreadNotificationCount } from "@/lib/queries";
 import { WalletButton } from "@/components/site/wallet-button";
 import { NavLinks } from "@/components/site/nav-links";
 import { MobileBottomNav } from "@/components/site/mobile-bottom-nav";
 import { NotificationBell } from "@/components/site/notification-bell";
 import { SignOutButton } from "@/components/site/sign-out-button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -20,9 +21,10 @@ import {
 
 export async function SiteHeader() {
   const user = await getCurrentUser();
-  const [notifications, unreadCount] = await Promise.all([
+  const [notifications, unreadCount, unreadMessageCount] = await Promise.all([
     getMyNotifications(user.id),
     getUnreadNotificationCount(user.id),
+    getUnreadMessageCount(user.id),
   ]);
   const displayName = user.name ?? user.handle ?? "Collector";
   const initials = displayName
@@ -38,12 +40,22 @@ export async function SiteHeader() {
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-2 px-4 sm:gap-4 sm:px-6">
           <div className="flex min-w-0 items-center gap-2 sm:gap-6">
             <Link href="/" className="flex shrink-0 items-center gap-2 text-lg font-bold tracking-wide uppercase">
-              <Gem className="text-primary size-5 shrink-0" />
-              <span className="hidden sm:inline">Proof</span>
+              <span>CardMart</span>
             </Link>
             <NavLinks isAdmin={user.isAdmin} />
           </div>
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+            <Button asChild variant="ghost" size="icon" className="relative rounded-full">
+              <Link href="/messages">
+                <MessageCircle className="size-4" />
+                {unreadMessageCount > 0 && (
+                  <Badge className="absolute -right-0.5 -top-0.5 size-4 min-w-4 justify-center rounded-full p-0 text-[10px]">
+                    {unreadMessageCount > 9 ? "9+" : unreadMessageCount}
+                  </Badge>
+                )}
+                <span className="sr-only">Messages</span>
+              </Link>
+            </Button>
             <NotificationBell
               initialNotifications={notifications.map((n) => ({
                 id: n.id,

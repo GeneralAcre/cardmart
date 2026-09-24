@@ -13,7 +13,7 @@ import {
 } from "@/lib/web3/mock-chain";
 import { releaseTradeToSeller, refundTradeToBuyer, getEscrowAuthorityAddress } from "@/lib/web3/escrow-server";
 import { mintDigitalTwinToken, transferDigitalTwinToken } from "@/lib/web3/token-server";
-import { SELF_MINT_FEE_THB, FULL_SERVICE_PACKAGE_PRICE_THB } from "@/lib/pricing";
+import { FULL_SERVICE_PACKAGE_PRICE_THB } from "@/lib/pricing";
 import { themeIndexForSerial } from "@/lib/theme";
 import { getVerificationChecklist } from "@/lib/verification-checklist";
 import { BGS_BLACK_LABEL_GRADE, gradeTierLabel } from "@/lib/labels";
@@ -116,7 +116,7 @@ export interface CreateListingState {
   assetId?: string;
   // Set only when a real digital-twin token was actually minted — the
   // client uses this to immediately follow up with an owner-signed Approve
-  // (see components/verify/self-mint-form.tsx + confirmListingApproval
+  // (see components/listing/self-mint-form.tsx + confirmListingApproval
   // below), which is what actually makes a future sale's transfer real.
   mintAddress?: string;
 }
@@ -260,7 +260,7 @@ export async function createListing(
       mockMintTx: mintTxSignature,
       mintAddress,
       verificationPackage: "SELF_MINT",
-      mintFeeThb: SELF_MINT_FEE_THB,
+      mintFeeThb: 0,
       sellerId: user.id,
       ownerId: user.id,
       verificationPhotos: {
@@ -282,8 +282,8 @@ export async function createListing(
         assetId: asset.id,
         type: "MINTED_DIGITAL_TWIN",
         note: data.raw
-          ? `Self-Mint package (${SELF_MINT_FEE_THB} THB): raw/ungraded item verified with ${data.photos.length} live camera captures — no grading company involved.`
-          : `Self-Mint package (${SELF_MINT_FEE_THB} THB): seller-verified with ${data.photos.length} live camera captures, registered as ${data.gradingCompany} certificate ${serial}.`,
+          ? `Seller listing: raw/ungraded item documented with ${data.photos.length} live camera captures — no grading company involved.`
+          : `Seller listing: documented with ${data.photos.length} live camera captures and registered as ${data.gradingCompany} certificate ${serial}.`,
         mockTxSignature: mintTxSignature,
         onChain: isOnChain,
         actorId: user.id,
@@ -305,7 +305,7 @@ export async function createListing(
 
 /**
  * Confirms the seller's post-mint Approve signature (see
- * components/verify/self-mint-form.tsx) — delegates the escrow authority as
+ * components/listing/self-mint-form.tsx) — delegates the escrow authority as
  * a spender over the freshly minted token, which is what actually lets a
  * future sale transfer it for real. Best-effort: if this never gets called
  * (signing failed or was skipped), the listing still stands — a future sale
@@ -1735,4 +1735,65 @@ export async function toggleUserBan(userId: string): Promise<{ isBanned: boolean
   });
   revalidatePath("/admin/warehouse");
   return { isBanned: updated.isBanned };
+}
+
+// ---------------------------------------------------------------------------
+// Direct messages — private buyer/seller threads (see Conversation in
+// prisma/schema.prisma). One thread per pair of users, reused on every
+// "Message Seller" click rather than starting a new one each time.
+// ---------------------------------------------------------------------------
+
+/** Finds or creates the thread between the current user and another user, returning its id. */
+export async function startConversation(otherUserId: string) {
+  const user = await getCurrentUser();
+  if (otherUserId === user.id) throw new Error("You can't message yourself.");
+  const other = await prisma.user.findUnique({ where: { id: otherUserId }, select: { id: true } });
+  if (!other) throw new Error("That user no longer exists.");
+
+  const [userAId, userBId] = [user.id, otherUserId].sort();
+  const conversation = await prisma.conversation.upsert({
+    where: { userAId_userBId: { userAId, userBId } },
+    create: { userAId, userBId },
+    update: {},
+  });
+  return conversation.id;
+}
+
+const sendMessageSchema = z.object({
+  body: z.string().trim().min(1, "Message can't be empty.").max(2000, "Message is too long (2000 characters max)."),
+});
+
+export async function sendMessage(conversationId: string, body: string) {
+  const user = await getCurrentUser();
+  if (user.isBanned) throw new Error("Your account is suspended and can't send messages.");
+  const parsed = sendMessageSchema.safeParse({ body });
+  if (!parsed.success) throw new Error(parsed.error.issues[0]?.message ?? "Enter a message.");
+
+  const conversation = await prisma.conversation.findFirst({
+    where: { id: conversationId, OR: [{ userAId: user.id }, { userBId: user.id }] },
+  });
+  if (!conversation) throw new Error("Conversation not found.");
+
+  const now = new Date();
+  await prisma.$transaction([
+    prisma.message.create({ data: { conversationId, senderId: user.id, body: parsed.data.body, createdAt: now } }),
+    prisma.conversation.update({ where: { id: conversationId }, data: { lastMessageAt: now } }),
+  ]);
+
+  revalidatePath("/messages");
+  revalidatePath(`/messages/${conversationId}`);
+}
+
+/** Marks every message the other person sent in this thread as read. */
+export async function markConversationRead(conversationId: string) {
+  const user = await getCurrentUser();
+  await prisma.message.updateMany({
+    where: {
+      conversationId,
+      senderId: { not: user.id },
+      readAt: null,
+      conversation: { OR: [{ userAId: user.id }, { userBId: user.id }] },
+    },
+    data: { readAt: new Date() },
+  });
 }

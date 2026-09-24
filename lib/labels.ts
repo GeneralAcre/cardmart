@@ -129,7 +129,7 @@ export const ESCROW_STATUS_LABELS: Record<EscrowStatus, string> = {
 };
 
 export const VERIFICATION_PACKAGE_LABELS: Record<VerificationPackage, string> = {
-  SELF_MINT: "Instant Verify",
+  SELF_MINT: "Self Listing",
   FULL_SERVICE: "Full-Service Grading",
 };
 

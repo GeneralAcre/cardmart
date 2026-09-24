@@ -25,7 +25,7 @@ export const LANDING_DICTIONARY = {
       noWalletNote: "No wallet needed to start — one is created for you automatically.",
     },
     features: {
-      badge: "Why Proof",
+      badge: "Why CardMart",
       title: "Built so nobody has to just take your word for it.",
       items: [
         {
@@ -63,8 +63,8 @@ export const LANDING_DICTIONARY = {
           description: "Google, email, or an existing wallet — a real Solana wallet is ready the moment you're in.",
         },
         {
-          title: "Verify or send for grading",
-          description: "Already certified? Verify it live on camera. Raw item? We ship it out for grading for you.",
+          title: "List or send for grading",
+          description: "Already certified? Document it live on camera and list it. Raw item? We ship it out for grading for you.",
         },
         {
           title: "List it for sale",
@@ -102,7 +102,7 @@ export const LANDING_DICTIONARY = {
       noWalletNote: "ไม่ต้องมีกระเป๋าเงินก่อนเริ่มใช้งาน ระบบจะสร้างให้อัตโนมัติ",
     },
     features: {
-      badge: "ทำไมต้อง Proof",
+      badge: "ทำไมต้อง CardMart",
       title: "ออกแบบมาให้ไม่ต้องเชื่อคำพูดใครเปล่าๆ",
       items: [
         {

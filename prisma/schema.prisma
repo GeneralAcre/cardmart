@@ -166,6 +166,9 @@ model User {
   bids               Bid[]
   offersMade         Offer[]             @relation("OfferBuyer")
   offersReceived     Offer[]             @relation("OfferSeller")
+  conversationsA     Conversation[]      @relation("ConversationUserA")
+  conversationsB     Conversation[]      @relation("ConversationUserB")
+  messagesSent       Message[]
 }
 
 model Asset {
@@ -479,6 +482,43 @@ model InboundPackage {
 
 // Footer "Contact & Support" form submissions. Not tied to a User — the
 // site's contact form is open to signed-out visitors too.
+// A private 1:1 thread between two users (typically a buyer and a seller,
+// e.g. negotiating price before making a formal Offer). Exactly one row per
+// pair: userAId is always the lexically smaller of the two ids, so the
+// unique constraint covers both orderings.
+model Conversation {
+  id            String   @id @default(cuid())
+  createdAt     DateTime @default(now())
+  // Bumped on every new message so the inbox sorts most-recent first.
+  lastMessageAt DateTime @default(now())
+
+  userAId  String
+  userA    User      @relation("ConversationUserA", fields: [userAId], references: [id])
+  userBId  String
+  userB    User      @relation("ConversationUserB", fields: [userBId], references: [id])
+  messages Message[]
+
+  @@unique([userAId, userBId])
+  @@index([userAId, lastMessageAt])
+  @@index([userBId, lastMessageAt])
+}
+
+model Message {
+  id        String    @id @default(cuid())
+  body      String
+  createdAt DateTime  @default(now())
+  // Set when the recipient opens the thread — drives the header unread badge.
+  readAt    DateTime?
+
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User         @relation(fields: [senderId], references: [id])
+
+  @@index([conversationId, createdAt])
+  @@index([conversationId, readAt])
+}
+
 model ContactMessage {
   id        String   @id @default(cuid())
   name      String

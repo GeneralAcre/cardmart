@@ -1,10 +1,9 @@
 import Link from "next/link";
-import { Gem } from "lucide-react";
 
 import { SiteFooter } from "@/components/site/footer";
 
 export const metadata = {
-  title: "Terms of Use — Proof",
+  title: "Terms of Use — CardMart",
 };
 
 export default function TermsPage() {
@@ -13,8 +12,7 @@ export default function TermsPage() {
       <header className="border-b">
         <div className="mx-auto flex h-16 max-w-7xl items-center px-4 sm:px-6">
           <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
-            <Gem className="text-primary size-5" />
-            <span>Proof</span>
+            <span>CardMart</span>
           </Link>
         </div>
       </header>
@@ -26,7 +24,7 @@ export default function TermsPage() {
         <div className="mt-8 flex flex-col gap-8 text-sm leading-relaxed">
           <section className="rounded-lg border border-dashed p-4">
             <p className="text-muted-foreground">
-              Proof is currently a Phase 1 academic thesis project. Escrow,
+              CardMart is currently a Phase 1 academic thesis project. Escrow,
               payment, and on-chain settlement are simulated (mock) — no real
               money or blockchain transactions occur. These terms describe how
               the demo platform works and are provided for transparency, not

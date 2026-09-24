@@ -15,9 +15,13 @@ export function ListingCard({ asset }: { asset: AssetSummary }) {
   return (
     <Link
       href={`/item/${asset.id}`}
-      className="group focus-visible:ring-ring rounded-xl outline-none focus-visible:ring-2"
+      className="group focus-visible:ring-ring relative rounded-xl outline-none focus-visible:ring-2"
     >
-      <div className="bg-card flex flex-col gap-3 overflow-hidden rounded-xl border shadow-sm transition-shadow group-hover:shadow-md">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -inset-0.5 rounded-xl bg-[conic-gradient(from_180deg,#8b5cf6,#3b82f6,#22d3ee,#ec4899,#8b5cf6)] opacity-0 blur-md transition-opacity duration-300 group-hover:opacity-70"
+      />
+      <div className="bg-card relative flex flex-col gap-3 overflow-hidden rounded-xl border shadow-sm transition-shadow group-hover:shadow-md">
         <div className="relative aspect-[3/4]">
           {photos.length > 0 ? (
             // Real live-camera capture instead of the generated digital-twin

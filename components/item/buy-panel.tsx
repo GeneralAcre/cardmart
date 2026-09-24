@@ -213,7 +213,7 @@ function OwnerListForSaleForm({ assetId, assetName }: { assetId: string; assetNa
         let tx: string | undefined;
         try {
           if (!connected) await connect();
-          tx = await sendMemo(`Proof list: ${assetName} | ${Number(price)} THB`);
+          tx = await sendMemo(`CardMart list: ${assetName} | ${Number(price)} THB`);
         } catch {
           tx = undefined;
         }

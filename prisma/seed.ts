@@ -28,8 +28,22 @@ async function main() {
     allowOverwrite: true,
   });
 
+  // Deletion order follows the FK graph leaf-to-root — every model below
+  // that references Asset/EscrowTransaction/Auction/User has to clear out
+  // before the row it points at, or Postgres's restrict FKs reject the
+  // delete (as opposed to earlier, smaller versions of this schema that
+  // didn't have these tables yet).
+  await prisma.notification.deleteMany();
+  await prisma.message.deleteMany();
+  await prisma.conversation.deleteMany();
+  await prisma.bid.deleteMany();
+  await prisma.auction.deleteMany();
+  await prisma.offer.deleteMany();
+  await prisma.watchlistItem.deleteMany();
+  await prisma.priceSnapshot.deleteMany();
   await prisma.gradingSubmission.deleteMany();
   await prisma.inboundPackage.deleteMany();
+  await prisma.review.deleteMany();
   await prisma.escrowTransaction.deleteMany();
   await prisma.provenanceEvent.deleteMany();
   await prisma.verificationPhoto.deleteMany();
@@ -117,6 +131,42 @@ async function main() {
       pipelineStage: "NONE",
       sellerId: araya.id,
       ownerId: araya.id,
+    },
+    // Same card (name + grading company + grade) as the Charizard above, from
+    // two other sellers at different prices — demo data for the item page's
+    // "Compare Prices" section, so it has a real cheaper-and-pricier example
+    // to show instead of rendering empty on a freshly seeded database.
+    {
+      name: "Charizard VMAX Rainbow Rare",
+      subtitle: "Sword & Shield — Evolving Skies",
+      category: "TRADING_CARD",
+      gradingCompany: "PSA",
+      grade: 10,
+      serial: "PSA-84920250",
+      themeIndex: 0,
+      priceThb: 172000,
+      forSale: true,
+      vaulted: false,
+      marketStatus: "READY_TO_SHIP",
+      pipelineStage: "NONE",
+      sellerId: araya.id,
+      ownerId: araya.id,
+    },
+    {
+      name: "Charizard VMAX Rainbow Rare",
+      subtitle: "Sword & Shield — Evolving Skies",
+      category: "TRADING_CARD",
+      gradingCompany: "PSA",
+      grade: 10,
+      serial: "PSA-84920271",
+      themeIndex: 0,
+      priceThb: 199000,
+      forSale: true,
+      vaulted: true,
+      marketStatus: "IN_VAULT",
+      pipelineStage: "NONE",
+      sellerId: chalit.id,
+      ownerId: chalit.id,
     },
     {
       name: "Michael Jordan Rookie Card",

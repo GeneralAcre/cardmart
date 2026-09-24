@@ -90,7 +90,7 @@ export function PortfolioItemCard({
   function handleRelist() {
     startTransition(async () => {
       try {
-        const tx = await signApprove(`Proof relist: ${asset.name} | ${Number(price)} THB`);
+        const tx = await signApprove(`CardMart relist: ${asset.name} | ${Number(price)} THB`);
         await vaultRelist(asset.id, Number(price), tx);
         toast.success("Relisted for instant sale.");
         setRelistOpen(false);
@@ -117,7 +117,7 @@ export function PortfolioItemCard({
   function handleUpdatePrice() {
     startTransition(async () => {
       try {
-        const tx = await signApprove(`Proof ${asset.forSale ? "reprice" : "list"}: ${asset.name} | ${Number(price)} THB`);
+        const tx = await signApprove(`CardMart ${asset.forSale ? "reprice" : "list"}: ${asset.name} | ${Number(price)} THB`);
         await updateListingPrice(asset.id, Number(price), tx);
         toast.success(asset.forSale ? "Price updated." : "Listed for sale.");
         setPriceEditOpen(false);
@@ -131,7 +131,7 @@ export function PortfolioItemCard({
   function handleDelist() {
     startTransition(async () => {
       try {
-        const tx = await signRevoke(`Proof delist: ${asset.name}`);
+        const tx = await signRevoke(`CardMart delist: ${asset.name}`);
         await delistAsset(asset.id, tx);
         toast.success("Delisted from the marketplace.");
         router.refresh();

@@ -23,7 +23,7 @@ const siteUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: "Proof — Collectibles Marketplace & Digital Certificate Vault",
+  title: "CardMart — Collectibles Marketplace & Digital Certificate Vault",
   description:
     "Trade real, certified collectibles protected by secure payments and digital certificates.",
 };

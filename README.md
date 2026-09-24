@@ -1,4 +1,4 @@
-# Proof — Collectibles Marketplace & Digital Twin Vault
+# CardMart — Collectibles Marketplace & Digital Twin Vault
 
 Phase 1 (Web2) implementation of a phygital TCG marketplace: a physical
 escrow + digital twin vault for certified trading cards (PSA / BGS / CGC).
@@ -47,7 +47,7 @@ BLOB_READ_WRITE_TOKEN="vercel_blob_rw_..."
 
 PSA listings can be checked against PSA's actual Cert Verification database
 instead of trusting the seller's self-declared data — both when a PSA item
-is listed (`/verify`) and when the warehouse inspects an inbound package
+is listed (`/listing`) and when the warehouse inspects an inbound package
 (`/admin/warehouse`). Register at
 [psacard.com/publicapi](https://www.psacard.com/publicapi), agree to the API
 End User Agreement, and generate a bearer token, then add it to `.env`:
@@ -138,7 +138,7 @@ tables get wiped and recreated).
 
 - `/login`, `/onboarding` — Google sign-in and first-time profile setup (gated by `proxy.ts` for every other route)
 - `/` — marketplace grid with live search/filtering (grading company, grade, price range, vaulted status)
-- `/verify` — get an item onto the platform: **Self-Mint** (you hold the slab; verify it yourself with a live camera capture checklist) or **Full-Service Grading** (ship a raw item out to be graded, platform covers shipping + grading fee + minting)
+- `/listing` — create a marketplace listing for a graded or ungraded collectible, add live camera captures, set a price, and publish it for sale
 - `/item/[id]` — product detail, live verification photo gallery, provenance timeline, buy-with-escrow flow (ship vs. keep-in-vault)
 - `/portfolio` — owned digital twins, split by "physical in my hands" vs. "physical in warehouse vault", plus Full-Service grading submission tracking, with relist/redeem actions
 - `/admin/warehouse` — inbound inspection queue comparing seller-declared vs. official certificate data, plus the Full-Service grading queue, with approve-ship / approve-vault / reject / complete-grading actions

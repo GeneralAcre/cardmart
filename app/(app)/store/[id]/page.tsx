@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { CircleCheck, MessageSquare, PackageOpen } from "lucide-react";
 
 import { getSellerProfile } from "@/lib/queries";
+import { getCurrentUser } from "@/lib/session";
+import { MessageSellerButton } from "@/components/messages/message-seller-button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ListingCard } from "@/components/marketplace/listing-card";
 import { RatingStars } from "@/components/store/rating-stars";
@@ -14,7 +16,7 @@ import { formatDate, formatThb } from "@/lib/format";
 
 export default async function StorePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const profile = await getSellerProfile(id);
+  const [profile, currentUser] = await Promise.all([getSellerProfile(id), getCurrentUser()]);
 
   if (!profile) notFound();
   const { seller, listings, rating, reviews, soldHistory } = profile;
@@ -29,12 +31,12 @@ export default async function StorePage({ params }: { params: Promise<{ id: stri
 
   return (
     <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6">
-      <div className="bg-card mb-8 flex items-center gap-4 rounded-xl border p-5">
+      <div className="bg-card mb-8 flex flex-wrap items-center gap-4 rounded-xl border p-5">
         <Avatar className="ring-border size-14 shrink-0 ring-2 ring-offset-2">
           {seller.image && <AvatarImage src={seller.image} alt={displayName} />}
           <AvatarFallback className="text-base font-medium">{initials}</AvatarFallback>
         </Avatar>
-        <div className="flex min-w-0 flex-col gap-1">
+        <div className="flex min-w-[12rem] flex-1 flex-col gap-1">
           <div className="flex flex-wrap items-baseline gap-x-2">
             <h1 className="truncate text-lg font-semibold">{displayName}</h1>
             {seller.handle && <span className="text-muted-foreground text-sm">@{seller.handle}</span>}
@@ -46,6 +48,9 @@ export default async function StorePage({ params }: { params: Promise<{ id: stri
           </span>
           {seller.walletAddress && <SellerWalletAddress address={seller.walletAddress} />}
         </div>
+        {currentUser.id !== seller.id && (
+          <MessageSellerButton sellerId={seller.id} className="shrink-0" />
+        )}
       </div>
 
       {/* Tabs instead of three always-stacked sections — a brand-new

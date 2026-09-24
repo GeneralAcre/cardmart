@@ -29,8 +29,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { CardArt } from "@/components/asset/card-art";
-import { CameraCaptureGrid, type CaptureMap } from "@/components/verify/camera-capture-grid";
-import { StepHeading } from "@/components/verify/step-heading";
+import { CameraCaptureGrid, type CaptureMap } from "@/components/listing/camera-capture-grid";
+import { StepHeading } from "@/components/listing/step-heading";
 import { confirmListingApproval, createListing, lookupPsaCertForForm, type PsaCertLookupResult } from "@/lib/actions";
 import { useWalletStore } from "@/lib/web3/wallet-store";
 import {
@@ -40,7 +40,6 @@ import {
   GRADING_COMPANY_LABELS,
   gradeTierLabel,
 } from "@/lib/labels";
-import { SELF_MINT_FEE_THB } from "@/lib/pricing";
 import { themeIndexForSerial } from "@/lib/theme";
 import { getVerificationChecklist } from "@/lib/verification-checklist";
 
@@ -180,8 +179,8 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
           }
         }
 
-        toast.success("Digital certificate created and listed for sale.");
-        router.push(`/item/${res.assetId}`);
+        toast.success("Listing published on the marketplace.");
+        router.push("/marketplace");
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Could not create the listing. Try again.");
       }
@@ -204,7 +203,7 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
       <Card>
         <CardHeader>
-          <CardTitle>Instant Verify</CardTitle>
+          <CardTitle>Listing</CardTitle>
           <CardDescription>
             {raw
               ? "Describe the item, then prove you have it with a quick camera check."
@@ -223,7 +222,7 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
             </Tabs>
             <p className="text-muted-foreground text-xs">
               {raw
-                ? "No official grading company is involved — you verify it yourself with a live camera checklist."
+                ? "No official grading company is involved — show the item with a live camera checklist, then set your price."
                 : `You hold an official ${gradingCompanies.map((c) => GRADING_COMPANY_LABELS[c]).join(" / ")} certificate and self-declare its details.`}
             </p>
           </div>
@@ -355,11 +354,6 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
             </p>
           </div>
 
-          <div className="flex items-center justify-between rounded-lg border bg-muted/30 px-3 py-2 text-sm">
-            <span className="text-muted-foreground">Instant Verify fee</span>
-            <span className="font-semibold">฿{SELF_MINT_FEE_THB}</span>
-          </div>
-
           <Button
             type="button"
             size="lg"
@@ -367,7 +361,7 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
             onClick={() => setSignOpen(true)}
           >
             <BadgeCheck />
-            Pay ฿{SELF_MINT_FEE_THB} &amp; Create Listing
+            Create Listing
           </Button>
           {!allCaptured && (
             <p className="text-muted-foreground text-center text-xs">
@@ -397,11 +391,10 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
       <Dialog open={signOpen} onOpenChange={(open) => !submitting && setSignOpen(open)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Confirm &amp; Create Your Certificate</DialogTitle>
+            <DialogTitle>Confirm Your Listing</DialogTitle>
             <DialogDescription>
-              A real digital certificate is minted on-chain for this item.
-              You&apos;ll then approve the platform with your wallet so it
-              can complete a real on-chain transfer if this item sells.
+              Review your item and listing price. Your item will appear on the
+              marketplace after you create the listing.
             </DialogDescription>
           </DialogHeader>
           <div className="bg-muted/40 rounded-lg border p-3 text-sm">
@@ -414,10 +407,6 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
               <span>{priceThb ? `${Number(priceThb).toLocaleString()} THB` : "—"}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Instant Verify Fee</span>
-              <span>฿{SELF_MINT_FEE_THB}</span>
-            </div>
-            <div className="flex justify-between">
               <span className="text-muted-foreground">Live Captures</span>
               <span>{Object.keys(captures).length} / {checklist.length}</span>
             </div>
@@ -428,7 +417,7 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
             </Button>
             <Button onClick={handleConfirmAndSign} disabled={submitting || connecting}>
               {submitting ? <Loader2 className="animate-spin" /> : null}
-              {submitting ? "Creating…" : `Confirm & Pay ฿${SELF_MINT_FEE_THB}`}
+              {submitting ? "Creating…" : "Confirm & Create Listing"}
             </Button>
           </DialogFooter>
         </DialogContent>

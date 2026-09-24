@@ -24,8 +24,12 @@ const MARKETPLACE_VISIBLE_STATUSES: Prisma.AssetWhereInput["marketStatus"] = {
 };
 
 export async function getMarketplaceListings(filters: MarketplaceFilters = {}) {
+  // Marketplace is a storefront: only items actually listed for sale, with
+  // a price — owned-but-unlisted items belong on Portfolio/store pages.
   const where: Prisma.AssetWhereInput = {
     marketStatus: MARKETPLACE_VISIBLE_STATUSES,
+    forSale: true,
+    priceThb: { not: null },
   };
 
   if (filters.q) {
@@ -53,6 +57,7 @@ export async function getMarketplaceListings(filters: MarketplaceFilters = {}) {
   }
   if (filters.priceMin != null || filters.priceMax != null) {
     where.priceThb = {
+      not: null,
       ...(filters.priceMin != null ? { gte: filters.priceMin } : {}),
       ...(filters.priceMax != null ? { lte: filters.priceMax } : {}),
     };
@@ -188,6 +193,38 @@ export async function getAssetById(id: string) {
   });
 }
 
+/**
+ * Other live listings of the *same card* (same name, grading company and
+ * grade) from different sellers, for the item page's "Compare Prices"
+ * section — this is a same-item, different-seller comparison (who's asking
+ * more or less for the identical card), not a "similar items" recommendation
+ * across the category. Sorted cheapest-first so under/over-pricing relative
+ * to this listing reads at a glance.
+ */
+export async function getSimilarAssets(
+  asset: { id: string; name: string; gradingCompany: GradingCompany; grade: number | null; priceThb: number | null },
+  limit = 6,
+) {
+  return prisma.asset.findMany({
+    where: {
+      id: { not: asset.id },
+      name: asset.name,
+      gradingCompany: asset.gradingCompany,
+      grade: asset.grade,
+      marketStatus: MARKETPLACE_VISIBLE_STATUSES,
+      forSale: true,
+      priceThb: { not: null },
+    },
+    orderBy: { priceThb: "asc" },
+    take: limit,
+    include: {
+      seller: true,
+      owner: true,
+      verificationPhotos: { orderBy: { createdAt: "asc" } },
+    },
+  });
+}
+
 export type PriceHistoryRange = "1d" | "7d" | "30d";
 
 const PRICE_HISTORY_DAYS: Record<PriceHistoryRange, number> = { "1d": 1, "7d": 7, "30d": 30 };
@@ -305,14 +342,6 @@ export async function getWarehouseQueue() {
   return packages.map((pkg) => ({ ...pkg, escrowTx: serializeEscrowTx(pkg.escrowTx) }));
 }
 
-export async function getGradingSubmissions(userId: string) {
-  return prisma.gradingSubmission.findMany({
-    where: { sellerId: userId },
-    orderBy: { createdAt: "desc" },
-    include: { resultAsset: true },
-  });
-}
-
 export async function getGradingSubmissionQueue() {
   return prisma.gradingSubmission.findMany({
     where: { status: { in: ["AWAITING_SHIPMENT_TO_GRADER", "AT_GRADING_COMPANY"] } },
@@ -388,6 +417,53 @@ export async function getMyNotifications(userId: string, limit = 20) {
 export async function getUnreadNotificationCount(userId: string): Promise<number> {
   return prisma.notification.count({
     where: { audience: "USER", userId, readAt: null },
+  });
+}
+
+const CONVERSATION_USER_SELECT = { id: true, name: true, handle: true, image: true } as const;
+
+/** The user's inbox — every conversation they're in, most recent first, with the other person and last message. */
+export async function getMyConversations(userId: string) {
+  const conversations = await prisma.conversation.findMany({
+    where: { OR: [{ userAId: userId }, { userBId: userId }] },
+    orderBy: { lastMessageAt: "desc" },
+    include: {
+      userA: { select: CONVERSATION_USER_SELECT },
+      userB: { select: CONVERSATION_USER_SELECT },
+      messages: { orderBy: { createdAt: "desc" }, take: 1 },
+      _count: { select: { messages: { where: { readAt: null, senderId: { not: userId } } } } },
+    },
+  });
+  return conversations.map((c) => ({
+    id: c.id,
+    lastMessageAt: c.lastMessageAt,
+    otherUser: c.userAId === userId ? c.userB : c.userA,
+    lastMessage: c.messages[0] ?? null,
+    unreadCount: c._count.messages,
+  }));
+}
+
+/** One thread, only if the user is a participant — null otherwise, so a guessed id can't read someone else's messages. */
+export async function getConversation(conversationId: string, userId: string) {
+  const c = await prisma.conversation.findFirst({
+    where: { id: conversationId, OR: [{ userAId: userId }, { userBId: userId }] },
+    include: {
+      userA: { select: CONVERSATION_USER_SELECT },
+      userB: { select: CONVERSATION_USER_SELECT },
+      messages: { orderBy: { createdAt: "asc" } },
+    },
+  });
+  if (!c) return null;
+  return { id: c.id, otherUser: c.userAId === userId ? c.userB : c.userA, messages: c.messages };
+}
+
+export async function getUnreadMessageCount(userId: string): Promise<number> {
+  return prisma.message.count({
+    where: {
+      readAt: null,
+      senderId: { not: userId },
+      conversation: { OR: [{ userAId: userId }, { userBId: userId }] },
+    },
   });
 }
 

@@ -1,7 +1,9 @@
 // One-off, ADDITIVE demo-data script — unlike prisma/seed.ts, this never
 // deletes anything. It only adds a few new for-sale listings (owned by the
 // existing seed NPC sellers) with real PriceSnapshot histories, so the
-// Marketplace's "Trending" section has genuine gainers to show. Never part
+// Marketplace's "Trending" section has genuine gainers to show. Re-run it
+// whenever Trending disappears (after a reseed, or once the history is more
+// than 7 days old). Never part
 // of any production code path; run manually with `npx tsx scripts/seed-trending-demo.ts`.
 import { PrismaClient, type AssetCategory, type GradingCompany } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
@@ -108,7 +110,22 @@ async function main() {
   for (const a of DEMO_ASSETS) {
     const existing = await prisma.asset.findUnique({ where: { serial: a.serial } });
     if (existing) {
-      console.log(`Skipping ${a.name} (${a.serial}) — already exists.`);
+      // Trending only counts reprices within the last 7 days, so re-running
+      // this re-dates an existing demo listing's history relative to now
+      // instead of skipping it and letting the section go empty again.
+      await prisma.priceSnapshot.deleteMany({ where: { assetId: existing.id } });
+      await prisma.priceSnapshot.createMany({
+        data: a.priceHistory.map(([offset, priceThb]) => ({
+          assetId: existing.id,
+          priceThb,
+          createdAt: daysAgo(offset),
+        })),
+      });
+      await prisma.asset.update({
+        where: { id: existing.id },
+        data: { priceThb: a.priceHistory[a.priceHistory.length - 1][1], forSale: true, marketStatus: "READY_TO_SHIP" },
+      });
+      console.log(`Refreshed ${a.name} (${a.serial}) price history.`);
       continue;
     }
 

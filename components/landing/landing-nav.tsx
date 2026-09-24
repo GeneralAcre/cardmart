@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { Gem } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { LoginButton } from "@/components/onboarding/login-button";
@@ -18,8 +17,7 @@ export function LandingNav({ authenticated }: { authenticated: boolean }) {
     <header className="bg-background/80 sticky top-0 z-40 border-b backdrop-blur">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6">
         <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
-          <Gem className="text-primary size-5" />
-          <span>Proof</span>
+          <span>CardMart</span>
         </Link>
         <div className="flex items-center gap-2">
           {authenticated ? (

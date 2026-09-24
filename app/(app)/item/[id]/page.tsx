@@ -7,6 +7,7 @@ import {
   getAssetById,
   getPriceHistory,
   getSellerRating,
+  getSimilarAssets,
   isAssetWatched,
 } from "@/lib/queries";
 import { getCurrentUser } from "@/lib/session";
@@ -16,7 +17,9 @@ import { ProvenanceTimeline } from "@/components/item/provenance-timeline";
 import { BuyPanel } from "@/components/item/buy-panel";
 import { WatchButton } from "@/components/item/watch-button";
 import { MakeOfferButton } from "@/components/item/make-offer-button";
+import { MessageSellerButton } from "@/components/messages/message-seller-button";
 import { AcceptedOfferBanner } from "@/components/item/accepted-offer-banner";
+import { SimilarListings } from "@/components/item/similar-listings";
 import { LeaveReviewForm } from "@/components/store/leave-review-form";
 import { RatingStars } from "@/components/store/rating-stars";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -56,7 +59,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
   // page load, which is what was pushing this page to 5-10s and occasionally
   // outrunning the client's patience ("destination stream closed early").
   // Running them concurrently caps the wait at the slowest single call.
-  const [psaCert, priceQuote, ebayQuote, priceHistory, sellerRating] = await Promise.all([
+  const [psaCert, priceQuote, ebayQuote, priceHistory, sellerRating, similarAssets] = await Promise.all([
     // Live PSA cert lookup for display — best-effort, and never blocks the
     // page: it silently returns null whenever PSA isn't configured, the
     // account isn't approved for live access yet, or the request fails.
@@ -77,6 +80,13 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
     // client re-fetches on range change, this is just the initial paint.
     getPriceHistory(asset.id, "7d"),
     getSellerRating(asset.seller.id),
+    getSimilarAssets({
+      id: asset.id,
+      name: asset.name,
+      gradingCompany: asset.gradingCompany,
+      grade: asset.grade,
+      priceThb: asset.priceThb,
+    }),
   ]);
 
   const psaPopulation = psaCert?.specId != null ? await lookupPsaPopulation(psaCert.specId) : null;
@@ -310,6 +320,9 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
               <RatingStars average={sellerRating.average} count={sellerRating.count} />
             </div>
           </Link>
+          {/* Messages go to the current owner — the person who can actually
+              accept an offer or change the price. */}
+          {!isOwner && <MessageSellerButton sellerId={asset.owner.id} className="w-full" />}
           {asset.owner.id !== asset.seller.id && (
             <p className="text-muted-foreground text-xs">
               Currently owned by{" "}
@@ -505,6 +518,13 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
           <ProvenanceTimeline events={asset.provenance} />
         </div>
       </div>
+
+      {similarAssets.length > 0 && (
+        <>
+          <Separator className="my-10" />
+          <SimilarListings currentPriceThb={asset.priceThb} listings={similarAssets} />
+        </>
+      )}
     </div>
   );
 }
