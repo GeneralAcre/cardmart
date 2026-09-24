@@ -24,7 +24,11 @@
   --muted-foreground: oklch(0.65 0 0);
   --accent: oklch(0.24 0 0);
   --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
+  /* Brand status colors: every "good / up / done" green and every
+     "bad / down / error" red on the site comes from these two. */
+  --success: #aacc00;
+  --success-foreground: oklch(0.06 0 0);
+  --destructive: #bf0603;
   --border: oklch(1 0 0 / 20%);
   --input: oklch(1 0 0 / 22%);
   --ring: oklch(0.6 0 0);
@@ -55,6 +59,8 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
   --color-destructive: var(--destructive);
   --color-highlight: var(--highlight);
   --color-highlight-foreground: var(--highlight-foreground);
