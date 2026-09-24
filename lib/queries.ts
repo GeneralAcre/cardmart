@@ -23,6 +23,19 @@ const MARKETPLACE_VISIBLE_STATUSES: Prisma.AssetWhereInput["marketStatus"] = {
   in: ["READY_TO_SHIP", "IN_VAULT"],
 };
 
+function withPriceDirection<T extends { priceThb: number | null; priceSnapshots: { priceThb: number }[] }>(asset: T) {
+  const previousPrice = asset.priceSnapshots[1]?.priceThb;
+  const priceDirection: "up" | "down" | null =
+    asset.priceThb == null || previousPrice == null || asset.priceThb === previousPrice
+      ? null
+      : asset.priceThb > previousPrice
+        ? "up"
+        : "down";
+  const { priceSnapshots: _priceSnapshots, ...summary } = asset;
+  void _priceSnapshots;
+  return { ...summary, priceDirection };
+}
+
 export async function getMarketplaceListings(filters: MarketplaceFilters = {}) {
   // Marketplace is a storefront: only items actually listed for sale, with
   // a price — owned-but-unlisted items belong on Portfolio/store pages.
@@ -65,15 +78,17 @@ export async function getMarketplaceListings(filters: MarketplaceFilters = {}) {
   if (filters.vaultedStatus === "IN_VAULT") where.vaulted = true;
   if (filters.vaultedStatus === "SHIPPING") where.vaulted = false;
 
-  return prisma.asset.findMany({
+  const assets = await prisma.asset.findMany({
     where,
     orderBy: { createdAt: "desc" },
     include: {
       seller: true,
       owner: true,
       verificationPhotos: { orderBy: { createdAt: "asc" } },
+      priceSnapshots: { orderBy: { createdAt: "desc" }, take: 2, select: { priceThb: true } },
     },
   });
+  return assets.map(withPriceDirection);
 }
 
 const TRENDING_LOOKBACK_DAYS = 7;
@@ -120,7 +135,7 @@ export async function getTrendingListings(limit = 8) {
       if (gainPct <= 0) return null;
 
       return {
-        asset,
+        asset: { ...asset, priceDirection: "up" as const }, // only gainers reach this point (gainPct > 0)
         previousPriceThb: baseline.priceThb,
         currentPriceThb: latest.priceThb,
         gainPct,
@@ -146,6 +161,7 @@ export async function getSellerProfile(sellerId: string) {
         seller: true,
         owner: true,
         verificationPhotos: { orderBy: { createdAt: "asc" } },
+        priceSnapshots: { orderBy: { createdAt: "desc" }, take: 2, select: { priceThb: true } },
       },
     }),
     prisma.review.aggregate({ where: { sellerId }, _avg: { rating: true }, _count: true }),
@@ -173,7 +189,7 @@ export async function getSellerProfile(sellerId: string) {
 
   return {
     seller,
-    listings,
+    listings: listings.map(withPriceDirection),
     rating: { average: ratingAgg._avg.rating, count: ratingAgg._count },
     reviews,
     soldHistory,
@@ -205,7 +221,7 @@ export async function getSimilarAssets(
   asset: { id: string; name: string; gradingCompany: GradingCompany; grade: number | null; priceThb: number | null },
   limit = 6,
 ) {
-  return prisma.asset.findMany({
+  const assets = await prisma.asset.findMany({
     where: {
       id: { not: asset.id },
       name: asset.name,
@@ -221,8 +237,10 @@ export async function getSimilarAssets(
       seller: true,
       owner: true,
       verificationPhotos: { orderBy: { createdAt: "asc" } },
+      priceSnapshots: { orderBy: { createdAt: "desc" }, take: 2, select: { priceThb: true } },
     },
   });
+  return assets.map(withPriceDirection);
 }
 
 export type PriceHistoryRange = "1d" | "7d" | "30d";
@@ -301,7 +319,7 @@ export async function getSellerRating(sellerId: string) {
 }
 
 export async function getVaultAssets(userId: string) {
-  return prisma.asset.findMany({
+  const assets = await prisma.asset.findMany({
     where: {
       ownerId: userId,
       marketStatus: { not: "IN_ESCROW" },
@@ -311,8 +329,10 @@ export async function getVaultAssets(userId: string) {
       seller: true,
       owner: true,
       verificationPhotos: { orderBy: { createdAt: "asc" } },
+      priceSnapshots: { orderBy: { createdAt: "desc" }, take: 2, select: { priceThb: true } },
     },
   });
+  return assets.map(withPriceDirection);
 }
 
 // React's Flight serializer (Server Component -> Client Component props)
@@ -389,11 +409,12 @@ export async function getWatchlist(userId: string) {
           seller: true,
           owner: true,
           verificationPhotos: { orderBy: { createdAt: "asc" } },
+          priceSnapshots: { orderBy: { createdAt: "desc" }, take: 2, select: { priceThb: true } },
         },
       },
     },
   });
-  return items.map((i) => i.asset);
+  return items.map((i) => withPriceDirection(i.asset));
 }
 
 // ---------------------------------------------------------------------------

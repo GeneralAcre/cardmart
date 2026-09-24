@@ -115,7 +115,7 @@ function DepositDialog({
         >
           <span className="break-all font-mono text-sm">{walletAddress}</span>
           <span className="text-muted-foreground flex items-center gap-1 text-xs">
-            {copied ? <Check className="size-3.5 text-emerald-600" /> : <Copy className="size-3.5" />}
+            {copied ? <Check className="size-3.5 text-success" /> : <Copy className="size-3.5" />}
             {copied ? "Copied" : "Tap to copy"}
           </span>
         </button>

@@ -17,10 +17,6 @@ interface PricePoint {
 
 const RANGE_LABELS: Record<PriceHistoryRange, string> = { "1d": "24H", "7d": "7D", "30d": "30D" };
 
-const chartConfig = {
-  priceThb: { label: "Price", color: "var(--highlight)" },
-} satisfies ChartConfig;
-
 // Real price points only, recorded from lib/queries.ts's PriceSnapshot table
 // whenever a listing is created or repriced — never a fabricated trend. A
 // brand-new listing legitimately has just one point, in which case this
@@ -50,6 +46,17 @@ export function PriceHistoryChart({
     date: new Date(p.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
     priceThb: p.priceThb,
   }));
+  const firstPrice = chartData[0]?.priceThb;
+  const lastPrice = chartData.at(-1)?.priceThb;
+  const priceColor =
+    firstPrice == null || lastPrice == null || firstPrice === lastPrice
+      ? "var(--muted-foreground)"
+      : lastPrice > firstPrice
+        ? "var(--success)"
+        : "var(--destructive)";
+  const chartConfig = {
+    priceThb: { label: "Price", color: priceColor },
+  } satisfies ChartConfig;
 
   return (
     <div className="bg-card rounded-xl border p-4">

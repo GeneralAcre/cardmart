@@ -83,7 +83,13 @@ export function ListingCard({ asset }: { asset: AssetSummary }) {
             <h3 className="line-clamp-1 text-sm font-semibold">{asset.name}</h3>
             <p className="text-muted-foreground line-clamp-1 text-xs">{asset.subtitle}</p>
           </div>
-          <span className="text-lg font-bold tabular-nums">
+          <span
+            className={cn(
+              "text-lg font-bold tabular-nums",
+              asset.priceDirection === "up" && "text-success",
+              asset.priceDirection === "down" && "text-destructive",
+            )}
+          >
             {asset.priceThb != null ? formatThb(asset.priceThb) : "Not for sale"}
           </span>
         </div>

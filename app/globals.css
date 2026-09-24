@@ -36,7 +36,7 @@
   /* The one deliberate spot of color on an otherwise strict black-and-white
      site — used sparingly, only where a number is genuinely about price
      movement (the price chart line, the trending "gained value" badge). */
-  --highlight: #fbdf6d;
+  --highlight: var(--success);
   --highlight-foreground: oklch(0.145 0 0);
 }
 
@@ -95,11 +95,11 @@
 }
 
 @layer utilities {
-  /* Shared elevated surface for card and auction detail pages. The warm
-     yellow tint separates important information panels from the black canvas
+  /* Shared elevated surface for card and auction detail pages. The brand
+     green tint separates important information panels from the black canvas
      without competing with the collectible image or primary actions. */
   .detail-panel {
-    @apply border-highlight bg-highlight text-highlight-foreground shadow-[0_10px_30px_rgba(251,223,109,0.2)];
+    @apply border-highlight bg-highlight text-highlight-foreground shadow-[0_10px_30px_rgba(170,204,0,0.2)];
   }
 
   .detail-panel .text-muted-foreground {

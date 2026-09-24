@@ -57,7 +57,7 @@ export function CameraCaptureGrid({ category, raw = false, captures, onChange }:
               onClick={() => setActiveView(view)}
               className={cn(
                 "group relative flex aspect-square flex-col items-center justify-center gap-2 overflow-hidden rounded-lg border text-center transition-colors",
-                captured ? "border-emerald-500/50" : "border-dashed hover:bg-accent/40",
+                captured ? "border-success/50" : "border-dashed hover:bg-accent/40",
               )}
             >
               {captured ? (
@@ -75,8 +75,8 @@ export function CameraCaptureGrid({ category, raw = false, captures, onChange }:
                 {view.label}
               </span>
               {captured && (
-                <span className="absolute right-1 top-1 rounded-full bg-emerald-500 p-0.5">
-                  <CheckCircle2 className="size-3.5 text-white" />
+                <span className="absolute right-1 top-1 rounded-full bg-success p-0.5">
+                  <CheckCircle2 className="text-success-foreground size-3.5" />
                 </span>
               )}
               {captured && (

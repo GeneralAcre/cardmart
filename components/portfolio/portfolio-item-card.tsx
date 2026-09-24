@@ -274,7 +274,14 @@ export function PortfolioItemCard({
       </div>
 
       {asset.forSale && (
-        <Badge variant="secondary" className="w-fit">
+        <Badge
+          variant="secondary"
+          className={cn(
+            "w-fit",
+            asset.priceDirection === "up" && "text-success",
+            asset.priceDirection === "down" && "text-destructive",
+          )}
+        >
           Listed at {formatThb(asset.priceThb!)}
         </Badge>
       )}

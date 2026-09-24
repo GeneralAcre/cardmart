@@ -12,6 +12,8 @@ export interface AssetSummary {
   serial: string;
   themeIndex: number;
   priceThb: number | null;
+  /** Direction of the latest listed price compared with the previous snapshot. */
+  priceDirection?: "up" | "down" | null;
   forSale: boolean;
   vaulted: boolean;
   marketStatus: MarketStatus;

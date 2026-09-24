@@ -68,7 +68,7 @@ export function SimilarListings({
                     <span
                       className={cn(
                         "absolute right-2 top-2 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold",
-                        deltaPct < 0 ? "bg-emerald-400 text-emerald-950" : "bg-red-500 text-white",
+                        deltaPct >= 0 ? "bg-success text-success-foreground" : "bg-destructive text-white",
                       )}
                     >
                       {deltaPct < 0 ? "" : "+"}
@@ -81,7 +81,13 @@ export function SimilarListings({
                     <span className="text-muted-foreground text-[11px]">Seller</span>
                     <span className="truncate text-xs font-medium">{asset.seller.name}</span>
                   </div>
-                  <span className="text-sm font-semibold tabular-nums">
+                  <span
+                    className={cn(
+                      "text-sm font-semibold tabular-nums",
+                      asset.priceDirection === "up" && "text-success",
+                      asset.priceDirection === "down" && "text-destructive",
+                    )}
+                  >
                     {asset.priceThb != null ? formatThb(asset.priceThb) : "Not for sale"}
                   </span>
                 </div>

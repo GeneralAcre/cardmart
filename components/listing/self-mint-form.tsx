@@ -462,7 +462,7 @@ function PsaLookupPanel({
   const cert = result.cert!;
   return (
     <div className="bg-muted/40 rounded-lg border p-3">
-      <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
+      <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-success">
         <CheckCircle2 className="size-3.5" />
         Verified live on PSA — details pre-filled below, edit freely
       </div>

@@ -60,7 +60,7 @@ export function WalletButton() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button size="sm" variant="outline">
-          <Wallet className="text-emerald-500" />
+          <Wallet className="text-success" />
           {truncateKey(publicKey!)}
         </Button>
       </DropdownMenuTrigger>
@@ -77,7 +77,7 @@ export function WalletButton() {
           >
             <span className="flex-1 truncate font-mono text-xs">{publicKey}</span>
             {copied ? (
-              <Check className="text-emerald-600 size-3.5 shrink-0" />
+              <Check className="text-success size-3.5 shrink-0" />
             ) : (
               <Copy className="text-muted-foreground size-3.5 shrink-0" />
             )}

@@ -58,7 +58,7 @@ function LandingPageContent({ authenticated }: { authenticated: boolean }) {
               width={343}
               height={583}
               priority
-              className="relative h-auto w-full drop-shadow-[0_20px_35px_rgba(251,223,109,0.22)]"
+              className="relative h-auto w-full drop-shadow-[0_20px_35px_rgba(170,204,0,0.22)]"
             />
           </div>
         </div>

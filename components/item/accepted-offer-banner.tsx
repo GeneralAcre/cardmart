@@ -22,9 +22,9 @@ export function AcceptedOfferBanner({
   sellerWalletAddress: string | null;
 }) {
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4">
+    <div className="flex flex-col gap-3 rounded-xl border border-success/30 bg-success/5 p-4">
       <div className="flex items-center gap-2 text-sm font-medium">
-        <CheckCircle2 className="size-4 text-emerald-600" />
+        <CheckCircle2 className="size-4 text-success" />
         Your offer of {formatThb(amountThb)} was accepted
       </div>
       <p className="text-muted-foreground text-xs">

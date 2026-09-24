@@ -63,7 +63,7 @@ export function TrendingStrip({ listings }: { listings: TrendingListing[] }) {
                   )}
                   <span
                     className={`absolute right-2 top-2 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-sm font-bold ${
-                      isGain ? "bg-emerald-400 text-emerald-950" : "bg-red-500 text-white"
+                      isGain ? "bg-success text-success-foreground" : "bg-destructive text-white"
                     }`}
                   >
                     {isGain ? <TrendingUp className="size-3.5" /> : <TrendingDown className="size-3.5" />}
@@ -78,7 +78,9 @@ export function TrendingStrip({ listings }: { listings: TrendingListing[] }) {
                   </div>
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-muted-foreground text-xs line-through">{formatThb(previousPriceThb)}</span>
-                    <span className="text-sm font-semibold">{formatThb(currentPriceThb)}</span>
+                    <span className={`text-sm font-semibold ${isGain ? "text-success" : "text-destructive"}`}>
+                      {formatThb(currentPriceThb)}
+                    </span>
                   </div>
                 </div>
               </div>

@@ -76,7 +76,7 @@ function MatchRow({
       <span className="font-mono">{declared}</span>
       <span className={cn("flex items-center gap-1.5 font-mono", !match && "text-destructive font-semibold")}>
         {match ? (
-          <CheckCircle2 className="size-3.5 text-emerald-600" />
+          <CheckCircle2 className="size-3.5 text-success" />
         ) : (
           <XCircle className="size-3.5" />
         )}
