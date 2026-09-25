@@ -8,34 +8,6 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/components/landing/language-provider";
 
-// Remembers (per tab, briefly) that we already tried resuming an existing
-// Privy session once, so a server that keeps rejecting the token can't
-// cause a redirect loop. Storage may be unavailable (private mode), so
-// every access is guarded — worst case we just don't retry.
-const RETRY_KEY = "cardmart-login-retry";
-const RETRY_WINDOW_MS = 15_000;
-
-function recentlyRetried() {
-  try {
-    const at = Number(sessionStorage.getItem(RETRY_KEY));
-    return Boolean(at) && Date.now() - at < RETRY_WINDOW_MS;
-  } catch {
-    return true;
-  }
-}
-
-function markRetry() {
-  try {
-    sessionStorage.setItem(RETRY_KEY, String(Date.now()));
-  } catch {}
-}
-
-function clearRetry() {
-  try {
-    sessionStorage.removeItem(RETRY_KEY);
-  } catch {}
-}
-
 export function LoginButton({
   className,
   size = "lg",
@@ -59,24 +31,11 @@ export function LoginButton({
     // land before proxy.ts / getCurrentUser() re-check it.
     //
     // onComplete ALSO fires on mount when Privy's client already considers
-    // the user signed in (wasAlreadyAuthenticated). This button only renders
-    // when the server saw no valid session, so that case means the
-    // privy-token cookie is stale/expired — navigating straight away would
-    // bounce back here and loop forever. Refresh the token first (which
-    // rewrites the cookie), retry once, and if the server still rejects it,
-    // sign out so the user gets a working Login button again.
-    onComplete: async ({ wasAlreadyAuthenticated }) => {
-      const token = await getAccessToken().catch(() => null);
-      if (wasAlreadyAuthenticated) {
-        if (!token || recentlyRetried()) {
-          clearRetry();
-          await logout();
-          return;
-        }
-        markRetry();
-      } else {
-        clearRetry();
-      }
+    // the user signed in (wasAlreadyAuthenticated). Ignore that case: the
+    // landing page must never move anyone into the app on its own — only an
+    // actual click on Login does (see handleClick below).
+    onComplete: ({ wasAlreadyAuthenticated }) => {
+      if (wasAlreadyAuthenticated) return;
       window.location.href = "/marketplace";
     },
     // Surfaces a visible reason instead of silently doing nothing — e.g.
@@ -92,17 +51,27 @@ export function LoginButton({
     },
   });
 
-  if (authenticated) {
-    return (
-      <Button type="button" size={size} className={cn("w-full", className)} disabled>
-        <Loader2 className="animate-spin" />
-        {t.login.redirecting}
-      </Button>
-    );
+  // This button only renders when the server saw no valid session. If
+  // Privy's client still has one anyway, the privy-token cookie is just
+  // stale — refreshing the access token rewrites it, so the click can go
+  // straight through without re-opening the modal. If the refresh fails,
+  // sign out and fall back to a normal login.
+  async function handleClick() {
+    if (!authenticated) {
+      login();
+      return;
+    }
+    const token = await getAccessToken().catch(() => null);
+    if (token) {
+      window.location.href = "/marketplace";
+      return;
+    }
+    await logout();
+    login();
   }
 
   return (
-    <Button type="button" size={size} className={cn("w-full", className)} onClick={() => login()} disabled={!ready}>
+    <Button type="button" size={size} className={cn("w-full", className)} onClick={handleClick} disabled={!ready}>
       {ready ? <Wallet /> : <Loader2 className="animate-spin" />}
       {label ?? t.login.continue}
     </Button>

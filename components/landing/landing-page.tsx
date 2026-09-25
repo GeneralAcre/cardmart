@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { LandingNav } from "@/components/landing/landing-nav";
@@ -21,7 +20,7 @@ function LandingCta({ authenticated, className }: { authenticated: boolean; clas
     return (
       <Button asChild size="lg" className={className}>
         <Link href="/marketplace">
-          {t.nav.goToMarketplace} <ArrowRight />
+          {t.nav.goToMarketplace}
         </Link>
       </Button>
     );
