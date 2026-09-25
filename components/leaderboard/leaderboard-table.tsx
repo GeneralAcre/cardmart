@@ -148,14 +148,20 @@ export function LeaderboardTable({ rows }: { rows: LeaderboardRow[] }) {
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[340px] text-sm">
+        <table className="w-full text-sm">
           <thead>
             <tr className="text-muted-foreground border-b text-left text-xs font-normal">
-              <th className="w-8 py-3 pr-2 font-normal">#</th>
+              <th className="hidden w-8 py-3 pr-2 font-normal sm:table-cell">#</th>
               <th className="py-3 pr-4 font-normal">Name</th>
               <th className="hidden py-3 pr-4 font-normal md:table-cell">Grade</th>
-              <SortHeader label="Price" sortKey="price" sort={sort} onSort={toggleSort} />
-              <SortHeader label={period === "24h" ? "Today" : period} sortKey="change" sort={sort} onSort={toggleSort} />
+              <SortHeader label="Price" sortKey="price" sort={sort} onSort={toggleSort} className="text-right sm:text-left" />
+              <SortHeader
+                label={period === "24h" ? "Today" : period}
+                sortKey="change"
+                sort={sort}
+                onSort={toggleSort}
+                className="hidden sm:table-cell"
+              />
               <SortHeader label="Sales 30d" sortKey="sales" sort={sort} onSort={toggleSort} className="hidden lg:table-cell" />
               <SortHeader label="Watchers" sortKey="watchers" sort={sort} onSort={toggleSort} className="hidden sm:table-cell" />
               <th className="w-10 py-3 font-normal" aria-label="Watch" />
@@ -268,10 +274,12 @@ function LeaderboardRowView({
         </tr>
       )}
       <tr className="hover:bg-accent/50 border-b transition-colors">
-        <td className="text-muted-foreground py-3.5 pr-2 tabular-nums">{rank}</td>
-        <td className="py-3.5 pr-4">
+        <td className="text-muted-foreground hidden py-3.5 pr-2 tabular-nums sm:table-cell">{rank}</td>
+        {/* w-full + max-w-0: the name column takes whatever width is left and
+            truncates, so the row never pushes the table wider than a phone. */}
+        <td className="w-full max-w-0 py-3.5 pr-3 sm:pr-4">
           <Link href={`/item/${row.id}`} className="flex min-w-0 items-center gap-3">
-            <div className="relative aspect-[3/4] w-12 shrink-0 overflow-hidden rounded-md border sm:w-14">
+            <div className="relative aspect-[3/4] w-10 shrink-0 overflow-hidden rounded-md border sm:w-14">
               {row.photoUrl ? (
                 <Image src={row.photoUrl} alt="" fill sizes="56px" className="object-cover" />
               ) : (
@@ -295,8 +303,14 @@ function LeaderboardRowView({
           </Link>
         </td>
         <td className="hidden py-3.5 pr-4 whitespace-nowrap md:table-cell">{gradeSymbol(row)}</td>
-        <td className="py-3.5 pr-4 font-medium whitespace-nowrap tabular-nums">{formatThb(row.priceThb)}</td>
-        <td className="py-3.5 pr-4 whitespace-nowrap">
+        <td className="py-3.5 pr-2 text-right whitespace-nowrap sm:pr-4 sm:text-left">
+          <div className="font-medium tabular-nums">{formatThb(row.priceThb)}</div>
+          {/* Phones: the change sits under the price, like a trading app's watchlist row. */}
+          <div className="text-xs sm:hidden">
+            <Change value={row.change[period]} />
+          </div>
+        </td>
+        <td className="hidden py-3.5 pr-4 whitespace-nowrap sm:table-cell">
           <Change value={row.change[period]} />
         </td>
         <td className="hidden py-3.5 pr-4 tabular-nums lg:table-cell">{row.sales30d}</td>

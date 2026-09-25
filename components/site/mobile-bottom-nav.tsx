@@ -27,12 +27,12 @@ export function MobileBottomNav({ isAdmin = false }: { isAdmin?: boolean }) {
               key={l.href}
               href={l.href}
               className={cn(
-                "flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors",
+                "flex min-w-0 flex-col items-center justify-center gap-0.5 px-0.5 text-[11px] font-medium transition-colors",
                 active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
               )}
             >
               <Icon className={cn("size-5", active && "text-primary")} />
-              {l.label}
+              <span className="max-w-full truncate">{l.shortLabel ?? l.label}</span>
             </Link>
           );
         })}

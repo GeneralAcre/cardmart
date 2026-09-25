@@ -176,7 +176,7 @@ export function PortfolioItemCard({
   const startAuctionButton = (
     <Dialog open={auctionOpen} onOpenChange={setAuctionOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline" className="flex-1">
+        <Button size="sm" variant="outline" className="w-full">
           <Gavel /> Start Auction
         </Button>
       </DialogTrigger>
@@ -311,10 +311,10 @@ export function PortfolioItemCard({
         </div>
       ) : asset.vaulted ? (
         <div className="flex flex-col gap-2 pt-1">
-          <div className="flex gap-2">
+          <div className="grid grid-cols-1 gap-2">
             <Dialog open={relistOpen} onOpenChange={setRelistOpen}>
               <DialogTrigger asChild>
-                <Button size="sm" variant="secondary" className="flex-1">
+                <Button size="sm" variant="secondary" className="w-full">
                   <Repeat /> Relist
                 </Button>
               </DialogTrigger>
@@ -350,7 +350,7 @@ export function PortfolioItemCard({
 
             <Dialog open={redeemOpen} onOpenChange={setRedeemOpen}>
               <DialogTrigger asChild>
-                <Button size="sm" variant="outline" className="flex-1">
+                <Button size="sm" variant="outline" className="w-full">
                   <Truck /> Redeem
                 </Button>
               </DialogTrigger>
@@ -385,10 +385,10 @@ export function PortfolioItemCard({
         <p className="text-muted-foreground pt-1 text-xs">Locked in an active sale.</p>
       ) : (
         <div className="flex flex-col gap-2 pt-1">
-          <div className="flex gap-2">
+          <div className="grid grid-cols-1 gap-2">
             <Dialog open={priceEditOpen} onOpenChange={setPriceEditOpen}>
               <DialogTrigger asChild>
-                <Button size="sm" variant="secondary" className="flex-1">
+                <Button size="sm" variant="secondary" className="w-full">
                   <Tag /> {asset.forSale ? "Edit Price" : "List for Sale"}
                 </Button>
               </DialogTrigger>
@@ -424,7 +424,7 @@ export function PortfolioItemCard({
             </Dialog>
 
             {asset.forSale && (
-              <Button size="sm" variant="outline" className="flex-1" onClick={handleDelist} disabled={pending}>
+              <Button size="sm" variant="outline" className="w-full" onClick={handleDelist} disabled={pending}>
                 {pending ? <Loader2 className="animate-spin" /> : <TagX />}
                 Delist
               </Button>

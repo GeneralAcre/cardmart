@@ -36,7 +36,7 @@ const BUY_STEPS: Step[] = [
   {
     icon: Search,
     title: "Find a card",
-    body: "Browse the Marketplace or the Market rankings. Filter by grading company, grade, Black Label and price. The Compare Prices table puts several cards side by side.",
+    body: "Browse the Marketplace, or check the Leaderboard for the biggest gainers, losers and new drops. Filter by grading company, grade, Black Label and price. The Compare Prices table puts several cards side by side.",
   },
   {
     icon: Sparkles,

@@ -4,12 +4,14 @@ import { ClipboardList, Gavel, Trophy, ShieldCheck, Store, Wallet } from "lucide
 export interface NavLink {
   href: string;
   label: string;
+  /** Shorter label for the phone bottom bar, where up to 6 items share ~390px. */
+  shortLabel?: string;
   icon: LucideIcon;
 }
 
 const BASE_NAV_LINKS: NavLink[] = [
-  { href: "/marketplace", label: "Marketplace", icon: Store },
-  { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
+  { href: "/marketplace", label: "Marketplace", shortLabel: "Market", icon: Store },
+  { href: "/leaderboard", label: "Leaderboard", shortLabel: "Ranking", icon: Trophy },
   { href: "/auctions", label: "Auctions", icon: Gavel },
   { href: "/listing", label: "Listing", icon: ClipboardList },
   { href: "/portfolio", label: "Portfolio", icon: Wallet },

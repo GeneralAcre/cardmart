@@ -145,9 +145,9 @@ export function ProposeSwapButton({
                 <Label>Cash difference</Label>
                 <Tabs value={cashMode} onValueChange={(v) => setCashMode(v as CashMode)}>
                   <TabsList className="w-full">
-                    <TabsTrigger value="none">Card only</TabsTrigger>
-                    <TabsTrigger value="add">I add cash</TabsTrigger>
-                    <TabsTrigger value="ask">I ask for cash</TabsTrigger>
+                    <TabsTrigger value="none" className="px-2 text-xs sm:text-sm">Card only</TabsTrigger>
+                    <TabsTrigger value="add" className="px-2 text-xs sm:text-sm">I add cash</TabsTrigger>
+                    <TabsTrigger value="ask" className="px-2 text-xs sm:text-sm">I ask for cash</TabsTrigger>
                   </TabsList>
                 </Tabs>
                 {cashMode !== "none" && (

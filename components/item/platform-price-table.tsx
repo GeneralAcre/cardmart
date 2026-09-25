@@ -1,7 +1,6 @@
 import { ExternalLink, Scale } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatThb, formatUsd } from "@/lib/format";
 import { ebaySoldListingsUrl, type EbayPriceQuote } from "@/lib/ebay";
 import type { CardPriceQuote } from "@/lib/tcg-price";
@@ -125,50 +124,39 @@ export function PlatformPriceTable({
         </div>
         <h2 className="text-lg font-semibold">Price Comparison</h2>
       </div>
-      <div className="detail-panel overflow-x-auto rounded-xl border">
-        <Table className="min-w-[560px]">
-          <TableHeader>
-            <TableRow>
-              <TableHead>Source</TableHead>
-              <TableHead className="w-24">Type</TableHead>
-              <TableHead className="text-right">Price</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map((row) => (
-              <TableRow key={row.source} className={cn(row.highlight && "bg-muted/40")}>
-                <TableCell className="whitespace-normal">
-                  <div className="flex flex-col gap-0.5">
-                    {row.href ? (
-                      <a
-                        href={row.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex w-fit items-center gap-1 font-medium hover:underline"
-                      >
-                        {row.source} <ExternalLink className="size-3" />
-                      </a>
-                    ) : (
-                      <span className="font-medium">{row.source}</span>
-                    )}
-                    <span className="text-muted-foreground text-xs">{row.note}</span>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline" className="text-[10px]">
-                    {row.kind}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right font-semibold tabular-nums">
-                  {row.price ?? (
-                    <span className="text-muted-foreground text-xs font-normal">{row.href ? "Open search" : "—"}</span>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      {/* A list, not a <table>: each source is one row with the price pinned
+          right, so it fits a phone screen without any sideways scrolling. */}
+      <ul className="detail-panel divide-y rounded-xl border">
+        {rows.map((row) => (
+          <li key={row.source} className={cn("flex items-center justify-between gap-3 p-3 sm:p-4", row.highlight && "bg-muted/40")}>
+            <div className="flex min-w-0 flex-col gap-0.5">
+              {row.href ? (
+                <a
+                  href={row.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex w-fit items-center gap-1 text-sm font-medium hover:underline"
+                >
+                  {row.source} <ExternalLink className="size-3 shrink-0" />
+                </a>
+              ) : (
+                <span className="text-sm font-medium">{row.source}</span>
+              )}
+              <span className="text-muted-foreground text-xs">{row.note}</span>
+            </div>
+            <div className="flex shrink-0 flex-col items-end gap-1">
+              <span className="text-sm font-semibold tabular-nums sm:text-base">
+                {row.price ?? (
+                  <span className="text-muted-foreground text-xs font-normal">{row.href ? "Open search" : "—"}</span>
+                )}
+              </span>
+              <Badge variant="outline" className="text-[10px]">
+                {row.kind}
+              </Badge>
+            </div>
+          </li>
+        ))}
+      </ul>
       <p className="text-muted-foreground text-[11px]">
         CardMart figures are in THB from real listings and completed sales. Outside prices stay in their own
         currency (USD) and aren&apos;t converted. eBay figures are asking prices, not sold prices.

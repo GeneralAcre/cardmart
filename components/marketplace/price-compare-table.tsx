@@ -7,7 +7,6 @@ import type { GradingCompany } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatGrade, formatThb } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { AssetSummary } from "@/lib/types";
@@ -94,112 +93,128 @@ export function PriceCompareTable({ listings }: { listings: AssetSummary[] }) {
         </span>
       </div>
 
+      {/* One grid per comparison instead of a <table>: on phones each row
+          stacks into its own card (pickers side by side, result underneath),
+          so nothing ever needs a sideways scroll; from sm up the same grid
+          lines up into table columns under a shared header. */}
       <div className="bg-card overflow-hidden rounded-xl border">
-        <Table className="min-w-[640px] table-fixed">
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[38%]">Card</TableHead>
-              <TableHead className="w-[22%]">Institute</TableHead>
-              <TableHead>Grades</TableHead>
-              <TableHead className="w-40 text-right">Price</TableHead>
-              <TableHead className="w-20" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map((row, i) => {
-              const result = results[i];
-              const institutes = [
-                ...new Set(priced.filter((l) => l.name === row.name).map((l) => l.gradingCompany)),
-              ];
-              return (
-                <TableRow key={row.key}>
-                  <TableCell>
-                    <Select
-                      value={row.name ?? ""}
-                      onValueChange={(name) => updateRow(row.key, { name, institute: ANY })}
-                    >
-                      <SelectTrigger size="sm" className="w-full [&>span]:truncate" aria-label="Card name">
-                        <SelectValue placeholder="Select a card…" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {cardNames.map((name) => (
-                          <SelectItem key={name} value={name}>
-                            {name}
+        <div className="text-muted-foreground hidden grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_minmax(0,1fr)_9rem_4.5rem] gap-3 border-b px-3 py-2.5 text-xs font-medium sm:grid">
+          <span>Card</span>
+          <span>Institute</span>
+          <span>Grades</span>
+          <span className="text-right">Price</span>
+          <span />
+        </div>
+        <div className="divide-y">
+          {rows.map((row, i) => {
+            const result = results[i];
+            const institutes = [
+              ...new Set(priced.filter((l) => l.name === row.name).map((l) => l.gradingCompany)),
+            ];
+            const isBest = result?.kind === "stats" && bestPrice != null && result.min === bestPrice;
+            return (
+              <div
+                key={row.key}
+                className="grid grid-cols-2 gap-2 p-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_minmax(0,1fr)_9rem_4.5rem] sm:items-center sm:gap-3"
+              >
+                <div className="col-span-2 flex items-center gap-2 sm:col-span-1">
+                  <span className="text-muted-foreground w-4 shrink-0 text-xs tabular-nums sm:hidden">{i + 1}</span>
+                  <Select
+                    value={row.name ?? ""}
+                    onValueChange={(name) => updateRow(row.key, { name, institute: ANY })}
+                  >
+                    <SelectTrigger size="sm" className="w-full min-w-0 [&>span]:truncate" aria-label="Card name">
+                      <SelectValue placeholder="Select a card…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {cardNames.map((name) => (
+                        <SelectItem key={name} value={name}>
+                          {name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-muted-foreground size-8 shrink-0 sm:hidden"
+                    onClick={() => removeRow(row.key)}
+                    aria-label="Remove row"
+                  >
+                    <X />
+                  </Button>
+                </div>
+
+                <div className="col-span-2 pl-6 sm:col-span-1 sm:pl-0">
+                  <Select
+                    value={row.institute}
+                    onValueChange={(v) => updateRow(row.key, { institute: v as CompareRow["institute"] })}
+                    disabled={!row.name}
+                  >
+                    <SelectTrigger size="sm" className="w-full min-w-0 [&>span]:truncate" aria-label="Grading institute">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={ANY}>All institutes</SelectItem>
+                      {(Object.keys(INSTITUTE_LABELS) as GradingCompany[])
+                        .filter((g) => institutes.includes(g))
+                        .map((g) => (
+                          <SelectItem key={g} value={g}>
+                            {INSTITUTE_LABELS[g]}
                           </SelectItem>
                         ))}
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                  <TableCell>
-                    <Select
-                      value={row.institute}
-                      onValueChange={(v) => updateRow(row.key, { institute: v as CompareRow["institute"] })}
-                      disabled={!row.name}
-                    >
-                      <SelectTrigger size="sm" className="w-full [&>span]:truncate" aria-label="Grading institute">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={ANY}>All institutes</SelectItem>
-                        {(Object.keys(INSTITUTE_LABELS) as GradingCompany[])
-                          .filter((g) => institutes.includes(g))
-                          .map((g) => (
-                            <SelectItem key={g} value={g}>
-                              {INSTITUTE_LABELS[g]}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                  {result?.kind === "stats" ? (
-                    <>
-                      <TableCell className="truncate text-xs">{result.grades.join(", ")}</TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        <div
-                          className={cn(
-                            "font-semibold",
-                            bestPrice != null && result.min === bestPrice && "text-success",
-                          )}
-                        >
-                          {formatThb(result.min)}
-                        </div>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {result?.kind === "stats" ? (
+                  <>
+                    <span className="text-muted-foreground col-span-2 truncate pl-6 text-xs sm:col-span-1 sm:pl-0">
+                      <span className="sm:hidden">Grades: </span>
+                      {result.grades.join(", ")}
+                    </span>
+                    <div className="col-span-2 flex items-center justify-between gap-2 pl-6 sm:col-span-1 sm:block sm:pl-0 sm:text-right">
+                      <div className="tabular-nums">
+                        <div className={cn("font-semibold", isBest && "text-success")}>{formatThb(result.min)}</div>
                         <div className="text-muted-foreground text-[11px]">
-                          {result.count > 1
-                            ? `up to ${formatThb(result.max)} · ${result.count} listings`
-                            : "1 listing"}
+                          {result.count > 1 ? `up to ${formatThb(result.max)} · ${result.count} listings` : "1 listing"}
                         </div>
-                      </TableCell>
-                    </>
-                  ) : (
-                    <TableCell colSpan={2} className="text-muted-foreground truncate text-xs">
-                      {result ? "No listings for this combination." : "Pick a card to compare."}
-                    </TableCell>
-                  )}
-                  <TableCell>
-                    <div className="flex items-center justify-end">
-                      {result?.kind === "stats" && (
-                        <Button asChild variant="ghost" size="icon" className="size-8">
-                          <Link href={`/item/${result.cheapestId}`} aria-label="View cheapest listing">
-                            <ArrowRight />
-                          </Link>
-                        </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-muted-foreground size-8"
-                        onClick={() => removeRow(row.key)}
-                        aria-label="Remove row"
-                      >
-                        <X />
+                      </div>
+                      <Button asChild variant="outline" size="sm" className="sm:hidden">
+                        <Link href={`/item/${result.cheapestId}`}>
+                          Cheapest <ArrowRight />
+                        </Link>
                       </Button>
                     </div>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+                  </>
+                ) : (
+                  <span className="text-muted-foreground col-span-2 pl-6 text-xs sm:pl-0">
+                    {result ? "No listings for this combination." : "Pick a card to compare."}
+                  </span>
+                )}
+
+                <div className="hidden items-center justify-end sm:flex">
+                  {result?.kind === "stats" && (
+                    <Button asChild variant="ghost" size="icon" className="size-8">
+                      <Link href={`/item/${result.cheapestId}`} aria-label="View cheapest listing">
+                        <ArrowRight />
+                      </Link>
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-muted-foreground size-8"
+                    onClick={() => removeRow(row.key)}
+                    aria-label="Remove row"
+                  >
+                    <X />
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
         <div className="flex flex-wrap items-center justify-between gap-2 border-t px-3 py-2">
           <Button variant="ghost" size="sm" onClick={addRow} disabled={rows.length >= MAX_ROWS}>
             <Plus /> Add card ({rows.length}/{MAX_ROWS})

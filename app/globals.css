@@ -97,6 +97,8 @@
   }
   html {
     @apply font-sans;
+    /* Dark-only theme: draw native scrollbars, date pickers and form controls dark too. */
+    color-scheme: dark;
   }
 }
 
@@ -110,6 +112,18 @@
 
   .detail-panel .text-muted-foreground {
     color: color-mix(in oklab, var(--highlight-foreground) 68%, transparent);
+  }
+
+  /* On the lime panel, outline badges (white by default) and the lime "price
+     up" text would both vanish into the background — draw them in the
+     panel's own dark foreground instead. Red (price down) stays readable. */
+  .detail-panel [data-slot="badge"] {
+    color: var(--highlight-foreground);
+    border-color: color-mix(in oklab, var(--highlight-foreground) 45%, transparent);
+  }
+
+  .detail-panel .text-success {
+    color: var(--highlight-foreground);
   }
 
   /* Keeps horizontal touch/swipe scrolling (e.g. an overflowing TabsList on

@@ -221,10 +221,10 @@ export function MarketHeatmap({ rows }: { rows: LeaderboardRow[] }) {
       </div>
 
       {tiles.length > 0 && (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
           <Stat label={`Top gainer · ${period}`} tile={best && best.change! > 0 ? best : null} />
           <Stat label={`Top loser · ${period}`} tile={worst && worst.change! < 0 ? worst : null} />
-          <Stat label="Largest market cap" tile={biggest ?? null} showMcap />
+          <Stat label="Largest mcap" tile={biggest ?? null} showMcap />
         </div>
       )}
 
@@ -329,18 +329,18 @@ function Segmented({
 
 function Stat({ label, tile, showMcap }: { label: string; tile: Tile | null; showMcap?: boolean }) {
   return (
-    <div className="bg-card flex min-w-0 flex-col gap-1 rounded-xl border p-3">
-      <span className="text-muted-foreground text-xs">{label}</span>
+    <div className="bg-card flex min-w-0 flex-col gap-1 rounded-xl border p-2.5 sm:p-3">
+      <span className="text-muted-foreground truncate text-[10px] sm:text-xs">{label}</span>
       {tile ? (
         <>
-          <span className="truncate text-sm font-semibold">{tile.label}</span>
+          <span className="line-clamp-2 text-xs leading-tight font-semibold sm:truncate sm:text-sm">{tile.label}</span>
           <span
             className={cn(
-              "text-sm font-bold tabular-nums",
+              "text-xs font-bold tabular-nums sm:text-sm",
               showMcap ? "" : tile.change! > 0 ? "text-success" : "text-destructive",
             )}
           >
-            {showMcap ? formatThb(tile.mcapThb) : formatChange(tile.change)}
+            {showMcap ? kThb(tile.mcapThb) : formatChange(tile.change)}
           </span>
         </>
       ) : (

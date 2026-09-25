@@ -39,7 +39,7 @@ export default async function MarketPage({ searchParams }: { searchParams: Promi
         </p>
       </div>
 
-      <div className="mb-10 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="mb-10 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 [&>*:last-child]:col-span-2 sm:[&>*:last-child]:col-span-1">
         {stats.map((s) => (
           <div key={s.label} className="bg-card flex flex-col gap-1 rounded-xl border p-4">
             <span className="text-muted-foreground text-xs">{s.label}</span>

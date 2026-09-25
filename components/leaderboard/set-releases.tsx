@@ -149,15 +149,7 @@ export function SetReleases({
                       rel="noopener noreferrer"
                       className="bg-card hover:bg-accent flex items-center gap-3 rounded-xl border p-3 transition-colors"
                     >
-                      <div className="bg-muted relative flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-lg">
-                        {s.imageUrl ? (
-                          <Image src={s.imageUrl} alt="" fill sizes="56px" className="object-cover" unoptimized />
-                        ) : s.iconUrl ? (
-                          <Image src={s.iconUrl} alt="" width={32} height={32} className="object-contain" unoptimized />
-                        ) : (
-                          <PackageOpen className="text-muted-foreground size-5" />
-                        )}
-                      </div>
+                      <SetArtwork imageUrl={s.imageUrl} iconUrl={s.iconUrl} />
                       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                         <span className="line-clamp-2 text-sm font-semibold">{s.name}</span>
                         <span className="text-muted-foreground text-xs">
@@ -180,6 +172,37 @@ export function SetReleases({
         announced products; their card lists fill in as cards are revealed. Click a set to see its products on
         TCGplayer.
       </p>
+    </div>
+  );
+}
+
+/**
+ * Product artwork, falling back to the set icon, then a placeholder. TCG API
+ * sometimes returns artwork URLs that 404 on TCGplayer's image server, so
+ * each source is tried in turn on load error rather than trusted blindly.
+ */
+function SetArtwork({ imageUrl, iconUrl }: { imageUrl: string | null; iconUrl: string | null }) {
+  const sources = [imageUrl, iconUrl].filter((u): u is string => Boolean(u));
+  const [index, setIndex] = useState(0);
+  const src = sources[index];
+  const isIcon = src != null && src === iconUrl;
+
+  return (
+    <div className="bg-muted relative flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-lg">
+      {src ? (
+        <Image
+          key={src}
+          src={src}
+          alt=""
+          fill
+          sizes="56px"
+          unoptimized
+          onError={() => setIndex((i) => i + 1)}
+          className={isIcon ? "object-contain p-1.5" : "object-cover"}
+        />
+      ) : (
+        <PackageOpen className="text-muted-foreground size-5" />
+      )}
     </div>
   );
 }

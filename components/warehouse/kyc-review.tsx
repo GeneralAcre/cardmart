@@ -64,8 +64,8 @@ export function KycReview({ pending, reviewed }: { pending: KycRow[]; reviewed: 
       {reviewed.length > 0 && (
         <section>
           <h3 className="mb-3 text-sm font-semibold">Recently reviewed</h3>
-          <div className="overflow-x-auto rounded-xl border">
-            <Table className="min-w-[640px]">
+          <div className="rounded-xl border">
+            <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>User</TableHead>
