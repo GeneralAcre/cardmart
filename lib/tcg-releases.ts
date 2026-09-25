@@ -9,7 +9,7 @@ import { unstable_cache } from "next/cache";
 //
 // Quota: the key allows 100 requests a day, shared with the item page's price
 // lookups (lib/tcg-price.ts). Each game is cached for 12 hours and shared by
-// every visitor (~12 calls/day for 6 games). A failed request is never cached
+// every visitor (~4 calls/day for the 2 games). A failed request is never cached
 // (the last good copy keeps being served), and after a failure we stop
 // retrying that game for 30 minutes so an exhausted quota isn't hammered.
 
@@ -19,11 +19,7 @@ const FAILURE_BACKOFF_MS = 30 * 60 * 1000;
 
 export const RELEASE_GAMES = [
   { slug: "pokemon", label: "Pokémon" },
-  { slug: "pokemon-japan", label: "Pokémon (JP)" },
   { slug: "one-piece-card-game", label: "One Piece" },
-  { slug: "magic", label: "Magic" },
-  { slug: "yugioh", label: "Yu-Gi-Oh!" },
-  { slug: "lorcana-tcg", label: "Lorcana" },
 ] as const;
 
 export type ReleaseGameSlug = (typeof RELEASE_GAMES)[number]["slug"];
