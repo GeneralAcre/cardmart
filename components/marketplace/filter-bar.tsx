@@ -1,17 +1,16 @@
 "use client";
 
 import { Award, Layers, Search, Star, Wallet } from "lucide-react";
-import type { AssetCategory, GradingCompany } from "@prisma/client";
+import type { CardGame, GradingCompany } from "@prisma/client";
 
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { CATEGORY_LABELS, GRADING_COMPANY_LABELS } from "@/lib/labels";
+import { CARD_GAMES, CARD_GAME_LABELS, GRADING_COMPANY_LABELS } from "@/lib/labels";
 import { EMPTY_FILTERS, type MarketplaceFilterState } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-const CATEGORIES: AssetCategory[] = ["TRADING_CARD", "SPORTS_CARD", "COMIC"];
 const GRADING_COMPANIES: GradingCompany[] = ["PSA", "BGS", "CGC", "RAW"];
 const GRADES = [10, 9.5, 9, 8.5, 8, 7];
 
@@ -71,13 +70,11 @@ export function FilterBar({
   onChange: (next: MarketplaceFilterState) => void;
   className?: string;
 }) {
-  function toggleCategory(category: AssetCategory) {
-    const has = filters.categories.includes(category);
+  function toggleGame(game: CardGame) {
+    const has = filters.games.includes(game);
     onChange({
       ...filters,
-      categories: has
-        ? filters.categories.filter((c) => c !== category)
-        : [...filters.categories, category],
+      games: has ? filters.games.filter((g) => g !== game) : [...filters.games, game],
     });
   }
 
@@ -128,14 +125,10 @@ export function FilterBar({
 
       <Separator />
 
-      <FilterSection label="Category" icon={Layers}>
-        {CATEGORIES.map((category) => (
-          <FilterPill
-            key={category}
-            active={filters.categories.includes(category)}
-            onClick={() => toggleCategory(category)}
-          >
-            {CATEGORY_LABELS[category]}
+      <FilterSection label="Game" icon={Layers}>
+        {CARD_GAMES.map((game) => (
+          <FilterPill key={game} active={filters.games.includes(game)} onClick={() => toggleGame(game)}>
+            {CARD_GAME_LABELS[game]}
           </FilterPill>
         ))}
       </FilterSection>

@@ -40,7 +40,7 @@ import { ArrowLeft, ChevronDown, ExternalLink, Flame, Gavel, History } from "luc
 
 import { formatDate, formatGrade, formatThb } from "@/lib/format";
 import {
-  CATEGORY_LABELS,
+  CARD_GAME_LABELS,
   MARKET_STATUS_BADGE_CLASS,
   MARKET_STATUS_LABELS,
   VERIFICATION_PACKAGE_BADGE_CLASS,
@@ -193,7 +193,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="outline" className="rounded-full">
-                {CATEGORY_LABELS[asset.category]}
+                {CARD_GAME_LABELS[asset.game]}
               </Badge>
               {asset.vaulted && (
                 <Badge variant="secondary" className="rounded-full">
@@ -419,8 +419,8 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
             </summary>
             <dl className="grid grid-cols-2 gap-x-4 gap-y-3 border-t p-4 text-sm sm:grid-cols-3">
               <div>
-                <dt className="text-muted-foreground text-xs">Category</dt>
-                <dd className="font-medium">{CATEGORY_LABELS[asset.category]}</dd>
+                <dt className="text-muted-foreground text-xs">Game</dt>
+                <dd className="font-medium">{CARD_GAME_LABELS[asset.game]}</dd>
               </div>
               {asset.gradingCompany !== "RAW" && (
                 <>

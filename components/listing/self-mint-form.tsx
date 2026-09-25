@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { BadgeCheck, CheckCircle2, Loader2, SearchX } from "lucide-react";
-import type { AssetCategory, GradingCompany } from "@prisma/client";
+import type { AssetCategory, CardGame, GradingCompany } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -36,21 +36,25 @@ import { useWalletStore } from "@/lib/web3/wallet-store";
 import {
   BGS_BLACK_LABEL_GRADE,
   CATEGORY_GRADING_COMPANIES,
-  CATEGORY_LABELS,
+  CARD_GAMES,
+  CARD_GAME_LABELS,
   GRADING_COMPANY_LABELS,
   gradeTierLabel,
 } from "@/lib/labels";
 import { themeIndexForSerial } from "@/lib/theme";
 import { getVerificationChecklist } from "@/lib/verification-checklist";
 
-const CATEGORIES: AssetCategory[] = ["TRADING_CARD", "SPORTS_CARD", "COMIC"];
+// CardMart only trades Pokémon and One Piece cards — both are trading cards,
+// which drives the grading companies and camera checklist below.
+const CATEGORY: AssetCategory = "TRADING_CARD";
 
 export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddress: string | null }) {
   const router = useRouter();
   const { connected, connecting, connect, approveDelegate } = useWalletStore();
 
   const [raw, setRaw] = useState(false);
-  const [category, setCategory] = useState<AssetCategory>("TRADING_CARD");
+  const category = CATEGORY;
+  const [game, setGame] = useState<CardGame>("POKEMON");
   const [gradingCompany, setGradingCompany] = useState<GradingCompany>("PSA");
   const gradingCompanies = CATEGORY_GRADING_COMPANIES[category];
   const [serial, setSerial] = useState("");
@@ -123,11 +127,10 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
     setCaptures({}); // checklist differs between graded and raw — start over
   }
 
-  function handleCategoryChange(next: AssetCategory) {
-    setCategory(next);
-    setGradingCompany(CATEGORY_GRADING_COMPANIES[next][0]); // institute list is category-specific
-    setIsBlackLabel(false);
-    setCaptures({}); // checklist changes per category — start over
+  // Both games share the trading-card checklist and grading companies, so
+  // switching game keeps whatever the seller has already filled in.
+  function handleGameChange(next: CardGame) {
+    setGame(next);
   }
 
   function handleConfirmAndSign() {
@@ -143,6 +146,7 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
         fd.set("name", name);
         fd.set("subtitle", subtitle);
         fd.set("category", category);
+        fd.set("game", game);
         fd.set("raw", String(raw));
         fd.set("gradingCompany", raw ? "RAW" : gradingCompany);
         if (!raw) {
@@ -229,15 +233,15 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
-              <Label>Category</Label>
-              <Select value={category} onValueChange={(v) => handleCategoryChange(v as AssetCategory)}>
+              <Label>Game</Label>
+              <Select value={game} onValueChange={(v) => handleGameChange(v as CardGame)}>
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {CATEGORIES.map((c) => (
-                    <SelectItem key={c} value={c}>
-                      {CATEGORY_LABELS[c]}
+                  {CARD_GAMES.map((g) => (
+                    <SelectItem key={g} value={g}>
+                      {CARD_GAME_LABELS[g]}
                     </SelectItem>
                   ))}
                 </SelectContent>

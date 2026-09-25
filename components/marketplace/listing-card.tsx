@@ -5,7 +5,7 @@ import { Images } from "lucide-react";
 import { CardArt } from "@/components/asset/card-art";
 import { Badge } from "@/components/ui/badge";
 import { formatGrade, formatThb } from "@/lib/format";
-import { CATEGORY_LABELS, MARKET_STATUS_BADGE_CLASS, MARKET_STATUS_LABELS } from "@/lib/labels";
+import { CARD_GAME_LABELS, MARKET_STATUS_BADGE_CLASS, MARKET_STATUS_LABELS } from "@/lib/labels";
 import type { AssetSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -79,7 +79,7 @@ export function ListingCard({ asset }: { asset: AssetSummary }) {
         </div>
         <div className="flex flex-col gap-3 px-3 pb-3">
           <div className="flex flex-col gap-1">
-            <span className="text-muted-foreground text-xs">{CATEGORY_LABELS[asset.category]}</span>
+            <span className="text-muted-foreground text-xs">{CARD_GAME_LABELS[asset.game]}</span>
             <h3 className="line-clamp-1 text-sm font-semibold">{asset.name}</h3>
             <p className="text-muted-foreground line-clamp-1 text-xs">{asset.subtitle}</p>
           </div>

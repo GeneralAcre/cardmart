@@ -13,7 +13,16 @@ import type {
   KycStatus,
   KycIdType,
   TradeOfferStatus,
+  CardGame,
 } from "@prisma/client";
+
+/** The two games CardMart trades — what buyers see instead of the old category. */
+export const CARD_GAME_LABELS: Record<CardGame, string> = {
+  POKEMON: "Pokémon",
+  ONE_PIECE: "One Piece",
+};
+
+export const CARD_GAMES: CardGame[] = ["POKEMON", "ONE_PIECE"];
 
 export const CATEGORY_LABELS: Record<AssetCategory, string> = {
   TRADING_CARD: "Trading Card",

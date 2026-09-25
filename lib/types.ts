@@ -1,10 +1,11 @@
-import type { AssetCategory, GradingCompany, MarketStatus } from "@prisma/client";
+import type { AssetCategory, CardGame, GradingCompany, MarketStatus } from "@prisma/client";
 
 export interface AssetSummary {
   id: string;
   name: string;
   subtitle: string;
   category: AssetCategory;
+  game: CardGame;
   gradingCompany: GradingCompany;
   grade: number | null;
   /** BGS Black Label only — see prisma/schema.prisma Asset.isBlackLabel. */
@@ -29,7 +30,7 @@ export interface AssetSummary {
 
 export interface MarketplaceFilterState {
   q: string;
-  categories: AssetCategory[];
+  games: CardGame[];
   gradingCompanies: GradingCompany[];
   grades: number[];
   /** BGS Black Label only — a separate toggle since it's not a distinct numeric grade (see Asset.isBlackLabel). */
@@ -41,7 +42,7 @@ export interface MarketplaceFilterState {
 
 export const EMPTY_FILTERS: MarketplaceFilterState = {
   q: "",
-  categories: [],
+  games: [],
   gradingCompanies: [],
   grades: [],
   blackLabelOnly: false,

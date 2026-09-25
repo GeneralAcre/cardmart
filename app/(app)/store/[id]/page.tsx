@@ -12,7 +12,7 @@ import { RatingStars } from "@/components/store/rating-stars";
 import { SellerWalletAddress } from "@/components/store/seller-wallet-address";
 import { VerifiedBadge } from "@/components/store/verified-badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CATEGORY_LABELS } from "@/lib/labels";
+import { CARD_GAME_LABELS } from "@/lib/labels";
 import { formatDate, formatThb } from "@/lib/format";
 
 export default async function StorePage({ params }: { params: Promise<{ id: string }> }) {
@@ -113,7 +113,7 @@ export default async function StorePage({ params }: { params: Promise<{ id: stri
                     <div className="flex min-w-0 flex-1 flex-col">
                       <span className="truncate text-sm font-medium">{tx.asset.name}</span>
                       <span className="text-muted-foreground text-xs">
-                        {CATEGORY_LABELS[tx.asset.category]} &middot; Sold{" "}
+                        {CARD_GAME_LABELS[tx.asset.game]} &middot; Sold{" "}
                         {tx.releasedAt ? formatDate(tx.releasedAt) : formatDate(tx.createdAt)}
                       </span>
                     </div>

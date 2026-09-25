@@ -184,7 +184,9 @@ const createListingSchema = z
   .object({
     name: z.string().min(2),
     subtitle: z.string().min(2),
-    category: z.enum(["TRADING_CARD", "SPORTS_CARD", "COMIC"]),
+    // Pokémon and One Piece only — both are trading cards.
+    category: z.literal("TRADING_CARD"),
+    game: z.enum(["POKEMON", "ONE_PIECE"]),
     raw: z.enum(["true", "false"]).transform((v) => v === "true"),
     gradingCompany: z.enum(["PSA", "BGS", "CGC", "RAW"]),
     grade: z.coerce.number().min(1).max(10).optional(),
@@ -268,6 +270,7 @@ export async function createListing(
     name: formData.get("name"),
     subtitle: formData.get("subtitle"),
     category: formData.get("category"),
+    game: formData.get("game"),
     raw: formData.get("raw"),
     gradingCompany: formData.get("gradingCompany"),
     grade: formData.get("grade") || undefined,
@@ -352,6 +355,7 @@ export async function createListing(
       name: data.name,
       subtitle: data.subtitle,
       category: data.category as AssetCategory,
+      game: data.game,
       gradingCompany: data.gradingCompany as GradingCompany,
       grade: data.raw ? null : data.grade,
       isBlackLabel,

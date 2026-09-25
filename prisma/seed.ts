@@ -1,4 +1,4 @@
-import { PrismaClient, type AssetCategory, type GradingCompany } from "@prisma/client";
+import { PrismaClient, type AssetCategory, type CardGame, type GradingCompany } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { put } from "@vercel/blob";
 import "dotenv/config";
@@ -80,6 +80,8 @@ async function main() {
     name: string;
     subtitle: string;
     category: AssetCategory;
+    /** Pokémon unless set — CardMart only trades Pokémon and One Piece. */
+    game?: CardGame;
     gradingCompany: GradingCompany;
     grade: number | null;
     serial: string;
@@ -171,14 +173,15 @@ async function main() {
       ownerId: chalit.id,
     },
     {
-      name: "Michael Jordan Rookie Card",
-      subtitle: "Fleer Basketball — 1986",
-      category: "SPORTS_CARD",
+      name: "Monkey.D.Luffy Manga Rare",
+      subtitle: "Awakening of the New Era — OP05",
+      category: "TRADING_CARD",
+      game: "ONE_PIECE",
       gradingCompany: "PSA",
       grade: 9,
       serial: "PSA-11238475",
       themeIndex: 2,
-      priceThb: 650000,
+      priceThb: 45000,
       forSale: true,
       vaulted: false,
       marketStatus: "READY_TO_SHIP",
@@ -204,14 +207,15 @@ async function main() {
       ownerId: nattapong.id,
     },
     {
-      name: "Kobe Bryant Chrome Refractor",
-      subtitle: "Topps Chrome — 1996",
-      category: "SPORTS_CARD",
+      name: "Shanks Manga Rare",
+      subtitle: "Romance Dawn — OP01",
+      category: "TRADING_CARD",
+      game: "ONE_PIECE",
       gradingCompany: "PSA",
       grade: 9.5,
       serial: "PSA-66271940",
       themeIndex: 7,
-      priceThb: 210000,
+      priceThb: 62000,
       forSale: false,
       vaulted: false,
       marketStatus: "IN_ESCROW",
@@ -236,9 +240,10 @@ async function main() {
       ownerId: araya.id,
     },
     {
-      name: "Michael Jordan Rookie Card",
-      subtitle: "Fleer Basketball — 1986",
-      category: "SPORTS_CARD",
+      name: "Roronoa Zoro Alternate Art",
+      subtitle: "Romance Dawn — OP01",
+      category: "TRADING_CARD",
+      game: "ONE_PIECE",
       gradingCompany: "PSA",
       grade: 10,
       serial: "PSA-11238599",
@@ -295,6 +300,7 @@ async function main() {
         name: a.name,
         subtitle: a.subtitle,
         category: a.category,
+        game: a.game ?? "POKEMON",
         gradingCompany: a.gradingCompany,
         grade: a.grade,
         serial: a.serial,
@@ -381,21 +387,21 @@ async function main() {
     },
   });
 
-  // Escrow #2: Kobe — buyer "you", clean match, pending inspection, VAULT choice.
+  // Escrow #2: Shanks — buyer "you", clean match, pending inspection, VAULT choice.
   const kobeId = created.get("PSA-66271940")!;
-  const escrowKobe = await prisma.escrowTransaction.create({
+  const escrowShanks = await prisma.escrowTransaction.create({
     data: {
       assetId: kobeId,
       buyerId: you.id,
       sellerId: chalit.id,
-      amountThb: 210000,
+      amountThb: 62000,
       fulfillmentChoice: "VAULT",
       status: "LOCKED",
       createdAt: daysAgo(4),
     },
   });
   for (const [type, note, offset] of [
-    ["ESCROW_LOCKED", "Buyer payment of 210,000 THB locked in escrow.", 4],
+    ["ESCROW_LOCKED", "Buyer payment of 62,000 THB locked in escrow.", 4],
     ["SHIPPED_TO_WAREHOUSE", "Seller shipped package to platform warehouse.", 3],
   ] as const) {
     await prisma.provenanceEvent.create({
@@ -412,14 +418,14 @@ async function main() {
   await prisma.inboundPackage.create({
     data: {
       assetId: kobeId,
-      escrowTxId: escrowKobe.id,
+      escrowTxId: escrowShanks.id,
       declaredSerial: "PSA-66271940",
       declaredGradingCompany: "PSA",
       declaredGrade: 9.5,
       officialSerial: "PSA-66271940",
       officialGradingCompany: "PSA",
       officialGrade: 9.5,
-      officialName: "Kobe Bryant Chrome Refractor",
+      officialName: "Shanks Manga Rare",
       status: "PENDING_INSPECTION",
       arrivedAt: daysAgo(1),
     },
@@ -470,7 +476,7 @@ async function main() {
     },
   });
 
-  // Historical resolved escrow for the vaulted Jordan card (instant vault
+  // Historical resolved escrow for the vaulted Zoro card (instant vault
   // deposit path) now owned by "you".
   const jordanVaultId = created.get("PSA-11238599")!;
   await prisma.escrowTransaction.create({
@@ -478,7 +484,7 @@ async function main() {
       assetId: jordanVaultId,
       buyerId: you.id,
       sellerId: araya.id,
-      amountThb: 720000,
+      amountThb: 14000,
       fulfillmentChoice: "VAULT",
       status: "RELEASED",
       createdAt: daysAgo(45),
@@ -486,7 +492,7 @@ async function main() {
     },
   });
   for (const [type, note, offset, actorId] of [
-    ["ESCROW_LOCKED", "Buyer payment of 720,000 THB locked in escrow.", 45, you.id],
+    ["ESCROW_LOCKED", "Buyer payment of 14,000 THB locked in escrow.", 45, you.id],
     ["SHIPPED_TO_WAREHOUSE", "Seller shipped package to platform warehouse.", 43, araya.id],
     ["INSPECTION_PASSED", "Serial and slab authenticity verified against PSA database.", 41, undefined],
     ["DEPOSITED_TO_VAULT", "Physical item deposited into the platform vault.", 40, undefined],

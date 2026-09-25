@@ -1,9 +1,11 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, LayoutGrid } from "lucide-react";
 
+import { CardArt } from "@/components/asset/card-art";
 import { Button } from "@/components/ui/button";
 import { formatGrade, formatThb } from "@/lib/format";
 import type { LeaderboardPeriod, LeaderboardRow } from "@/lib/queries";
@@ -24,6 +26,8 @@ interface Tile {
   count: number;
   href?: string;
   series?: string;
+  /** The card whose picture represents this tile: itself, or a series' most valuable card. */
+  cover: LeaderboardRow;
 }
 
 interface Rect {
@@ -36,6 +40,12 @@ interface Rect {
 const PERIODS: LeaderboardPeriod[] = ["24h", "7d", "30d"];
 /** Change at which a tile reaches full colour; anything bigger is capped. */
 const FULL_COLOR_PCT = 20;
+/**
+ * Smallest share of the map any tile gets. A series worth 1% of the market
+ * would otherwise be a sliver too thin to label or tap; the floor keeps it
+ * readable, and its label still shows the real value.
+ */
+const MIN_TILE_SHARE = 0.035;
 
 function kThb(v: number) {
   if (v >= 1_000_000) return `THB ${(v / 1_000_000).toFixed(v >= 10_000_000 ? 0 : 1)}M`;
@@ -157,6 +167,7 @@ export function MarketHeatmap({ rows }: { rows: LeaderboardRow[] }) {
         mcapThb: r.priceThb,
         count: 1,
         href: `/item/${r.id}`,
+        cover: r,
       }));
 
     if (series != null) return cardTiles(rows.filter((r) => r.subtitle === series));
@@ -175,12 +186,17 @@ export function MarketHeatmap({ rows }: { rows: LeaderboardRow[] }) {
         mcapThb: mcap,
         count: list.length,
         series: name,
+        cover: list.reduce((a, b) => (b.priceThb > a.priceThb ? b : a)),
       };
     });
   }, [rows, period, group, sizeBy, series]);
 
   const sorted = useMemo(() => [...tiles].filter((t) => t.size > 0).sort((a, b) => b.size - a.size), [tiles]);
-  const rects = useMemo(() => squarify(sorted.map((t) => t.size), { x: 0, y: 0, w: width, h: height }), [sorted, width, height]);
+  const rects = useMemo(() => {
+    const total = sorted.reduce((a, t) => a + t.size, 0);
+    const layoutSizes = sorted.map((t) => Math.max(t.size, total * MIN_TILE_SHARE));
+    return squarify(layoutSizes, { x: 0, y: 0, w: width, h: height });
+  }, [sorted, width, height]);
 
   const ranked = [...tiles].filter((t) => t.change != null).sort((a, b) => b.change! - a.change!);
   const best = ranked[0];
@@ -240,6 +256,7 @@ export function MarketHeatmap({ rows }: { rows: LeaderboardRow[] }) {
             const r = rects[i];
             const { background, dark } = tileStyle(t.change);
             const big = r.w > 110 && r.h > 64;
+            const showCover = r.w > 150 && r.h > 150;
             const medium = r.w > 64 && r.h > 36;
             const clickable = Boolean(t.href || t.series);
             return (
@@ -255,6 +272,7 @@ export function MarketHeatmap({ rows }: { rows: LeaderboardRow[] }) {
                 )}
                 style={{ left: r.x, top: r.y, width: r.w, height: r.h, background }}
               >
+                {showCover && <CoverThumb card={t.cover} className="mb-2 w-12 shadow-md sm:w-14" />}
                 {medium && (
                   <span className={cn("line-clamp-2 leading-tight font-semibold", big ? "text-sm" : "text-[11px]")}>
                     {t.label}
@@ -327,25 +345,48 @@ function Segmented({
   );
 }
 
+/** A card's real verification photo, or its generated artwork when it has none. */
+function CoverThumb({ card, className }: { card: LeaderboardRow; className?: string }) {
+  return (
+    <span className={cn("relative block aspect-[3/4] shrink-0 overflow-hidden rounded-md border border-black/30", className)}>
+      {card.photoUrl ? (
+        <Image src={card.photoUrl} alt="" fill sizes="64px" className="object-cover" />
+      ) : (
+        <CardArt
+          themeIndex={card.themeIndex}
+          category={card.category}
+          gradingCompany={card.gradingCompany}
+          grade={card.grade}
+          isBlackLabel={card.isBlackLabel}
+          bordered={false}
+        />
+      )}
+    </span>
+  );
+}
+
 function Stat({ label, tile, showMcap }: { label: string; tile: Tile | null; showMcap?: boolean }) {
   return (
-    <div className="bg-card flex min-w-0 flex-col gap-1 rounded-xl border p-2.5 sm:p-3">
-      <span className="text-muted-foreground truncate text-[10px] sm:text-xs">{label}</span>
-      {tile ? (
-        <>
-          <span className="line-clamp-2 text-xs leading-tight font-semibold sm:truncate sm:text-sm">{tile.label}</span>
-          <span
-            className={cn(
-              "text-xs font-bold tabular-nums sm:text-sm",
-              showMcap ? "" : tile.change! > 0 ? "text-success" : "text-destructive",
-            )}
-          >
-            {showMcap ? kThb(tile.mcapThb) : formatChange(tile.change)}
-          </span>
-        </>
-      ) : (
-        <span className="text-muted-foreground text-sm">—</span>
-      )}
+    <div className="bg-card flex min-w-0 flex-col gap-2 rounded-xl border p-2.5 sm:flex-row sm:items-center sm:gap-3 sm:p-3">
+      {tile && <CoverThumb card={tile.cover} className="w-10 sm:w-12" />}
+      <div className="flex min-w-0 flex-col gap-1">
+        <span className="text-muted-foreground truncate text-[10px] sm:text-xs">{label}</span>
+        {tile ? (
+          <>
+            <span className="line-clamp-2 text-xs leading-tight font-semibold sm:truncate sm:text-sm">{tile.label}</span>
+            <span
+              className={cn(
+                "text-xs font-bold tabular-nums sm:text-sm",
+                showMcap ? "" : tile.change! > 0 ? "text-success" : "text-destructive",
+              )}
+            >
+              {showMcap ? kThb(tile.mcapThb) : formatChange(tile.change)}
+            </span>
+          </>
+        ) : (
+          <span className="text-muted-foreground text-sm">—</span>
+        )}
+      </div>
     </div>
   );
 }

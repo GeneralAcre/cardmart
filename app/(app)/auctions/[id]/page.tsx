@@ -13,7 +13,7 @@ import { CountdownTimer } from "@/components/auction/countdown-timer";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { CATEGORY_LABELS, gradeTierLabel } from "@/lib/labels";
+import { CARD_GAME_LABELS, gradeTierLabel } from "@/lib/labels";
 import { formatGrade, formatThb } from "@/lib/format";
 
 const MIN_BID_INCREMENT_THB = 50;
@@ -64,7 +64,7 @@ export default async function AuctionDetailPage({ params }: { params: Promise<{ 
           <div className="flex items-start justify-between gap-3">
             <div className="flex min-w-0 flex-col gap-1">
               <Badge variant="outline" className="w-fit rounded-full">
-                {CATEGORY_LABELS[asset.category]}
+                {CARD_GAME_LABELS[asset.game]}
               </Badge>
               <span className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
                 {asset.gradingCompany === "RAW"

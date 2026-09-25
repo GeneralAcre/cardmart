@@ -17,6 +17,13 @@ enum GradingCompany {
   RAW
 }
 
+// The only two games CardMart trades. Existing rows default to POKEMON —
+// every non-sports card on the platform when this was added was Pokémon.
+enum CardGame {
+  POKEMON
+  ONE_PIECE
+}
+
 enum AssetCategory {
   TRADING_CARD
   SPORTS_CARD
@@ -200,6 +207,7 @@ model Asset {
   name                String
   subtitle            String
   category            AssetCategory
+  game                CardGame            @default(POKEMON)
   gradingCompany      GradingCompany
   grade               Float?
   // True only for a BGS "Black Label" 10 — a distinct top tier (every

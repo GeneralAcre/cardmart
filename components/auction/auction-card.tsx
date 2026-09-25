@@ -4,7 +4,7 @@ import { Gavel } from "lucide-react";
 
 import { CardArt } from "@/components/asset/card-art";
 import { CountdownTimer } from "@/components/auction/countdown-timer";
-import { CATEGORY_LABELS } from "@/lib/labels";
+import { CARD_GAME_LABELS } from "@/lib/labels";
 import { formatThb } from "@/lib/format";
 import type { getActiveAuctions } from "@/lib/queries";
 
@@ -44,7 +44,7 @@ export function AuctionCard({ auction }: { auction: Awaited<ReturnType<typeof ge
         </div>
         <div className="flex flex-col gap-3 px-3 pb-3">
           <div className="flex flex-col gap-1">
-            <span className="text-muted-foreground text-xs">{CATEGORY_LABELS[asset.category]}</span>
+            <span className="text-muted-foreground text-xs">{CARD_GAME_LABELS[asset.game]}</span>
             <h3 className="line-clamp-1 text-sm font-semibold">{asset.name}</h3>
             <p className="text-muted-foreground line-clamp-1 text-xs">{asset.subtitle}</p>
           </div>

@@ -1,12 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
-import type { AssetCategory, GradingCompany } from "@prisma/client";
+import type { CardGame, GradingCompany } from "@prisma/client";
 
 import { getMarketplaceListings } from "@/lib/queries";
 
 export async function GET(request: NextRequest) {
   const sp = request.nextUrl.searchParams;
 
-  const categories = sp.getAll("category") as AssetCategory[];
+  const games = sp.getAll("game").filter((g): g is CardGame => g === "POKEMON" || g === "ONE_PIECE");
   const gradingCompanies = sp.getAll("gradingCompany") as GradingCompany[];
   const grades = sp
     .getAll("grade")
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
 
   const listings = await getMarketplaceListings({
     q,
-    categories: categories.length ? categories : undefined,
+    games: games.length ? games : undefined,
     gradingCompanies: gradingCompanies.length ? gradingCompanies : undefined,
     grades: grades.length ? grades : undefined,
     blackLabelOnly,

@@ -1,10 +1,10 @@
 import "server-only";
-import type { AssetCategory, GradingCompany, Prisma } from "@prisma/client";
+import type { AssetCategory, CardGame, GradingCompany, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 export interface MarketplaceFilters {
   q?: string;
-  categories?: AssetCategory[];
+  games?: CardGame[];
   gradingCompanies?: GradingCompany[];
   grades?: number[];
   blackLabelOnly?: boolean;
@@ -56,8 +56,8 @@ export async function getMarketplaceListings(filters: MarketplaceFilters = {}) {
       { owner: { handle: { contains: filters.q, mode: "insensitive" } } },
     ];
   }
-  if (filters.categories?.length) {
-    where.category = { in: filters.categories };
+  if (filters.games?.length) {
+    where.game = { in: filters.games };
   }
   if (filters.gradingCompanies?.length) {
     where.gradingCompany = { in: filters.gradingCompanies };
@@ -181,7 +181,7 @@ export async function getSellerProfile(sellerId: string) {
       take: 20,
       include: {
         asset: {
-          select: { id: true, name: true, category: true, verificationPhotos: { take: 1, orderBy: { createdAt: "asc" } } },
+          select: { id: true, name: true, category: true, game: true, verificationPhotos: { take: 1, orderBy: { createdAt: "asc" } } },
         },
       },
     }),
@@ -985,6 +985,7 @@ export interface LeaderboardRow {
   name: string;
   subtitle: string;
   category: AssetCategory;
+  game: CardGame;
   gradingCompany: GradingCompany;
   grade: number | null;
   isBlackLabel: boolean;
@@ -1050,6 +1051,7 @@ export async function getLeaderboard(viewerId: string): Promise<LeaderboardRow[]
       name: a.name,
       subtitle: a.subtitle,
       category: a.category,
+      game: a.game,
       gradingCompany: a.gradingCompany,
       grade: a.grade,
       isBlackLabel: a.isBlackLabel,

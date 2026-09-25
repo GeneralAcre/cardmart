@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { BookOpen, LayoutGrid, PackageSearch, Sparkles, SlidersHorizontal, Trophy, Vault as VaultIcon } from "lucide-react";
-import type { AssetCategory } from "@prisma/client";
+import { Anchor, LayoutGrid, PackageSearch, Sparkles, SlidersHorizontal, Vault as VaultIcon } from "lucide-react";
+import type { CardGame } from "@prisma/client";
 
 import { FilterBar } from "@/components/marketplace/filter-bar";
 import { ListingCard } from "@/components/marketplace/listing-card";
@@ -12,22 +12,21 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { CATEGORY_LABELS } from "@/lib/labels";
+import { CARD_GAME_LABELS } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 import { EMPTY_FILTERS, type AssetSummary, type MarketplaceFilterState } from "@/lib/types";
 
-const CATEGORY_TILES: { category: AssetCategory | "ALL" | "VAULT"; label: string; icon: typeof LayoutGrid }[] = [
+const CATEGORY_TILES: { category: CardGame | "ALL" | "VAULT"; label: string; icon: typeof LayoutGrid }[] = [
   { category: "ALL", label: "All", icon: LayoutGrid },
-  { category: "TRADING_CARD", label: CATEGORY_LABELS.TRADING_CARD, icon: Sparkles },
-  { category: "SPORTS_CARD", label: CATEGORY_LABELS.SPORTS_CARD, icon: Trophy },
-  { category: "COMIC", label: CATEGORY_LABELS.COMIC, icon: BookOpen },
+  { category: "POKEMON", label: CARD_GAME_LABELS.POKEMON, icon: Sparkles },
+  { category: "ONE_PIECE", label: CARD_GAME_LABELS.ONE_PIECE, icon: Anchor },
   { category: "VAULT", label: "In Vault", icon: VaultIcon },
 ];
 
 function buildQuery(filters: MarketplaceFilterState) {
   const sp = new URLSearchParams();
   if (filters.q) sp.set("q", filters.q);
-  filters.categories.forEach((c) => sp.append("category", c));
+  filters.games.forEach((g) => sp.append("game", g));
   filters.gradingCompanies.forEach((c) => sp.append("gradingCompany", c));
   filters.grades.forEach((g) => sp.append("grade", String(g)));
   if (filters.blackLabelOnly) sp.set("blackLabel", "true");
@@ -40,7 +39,7 @@ function buildQuery(filters: MarketplaceFilterState) {
 function countActiveFilters(filters: MarketplaceFilterState): number {
   return (
     (filters.q ? 1 : 0) +
-    filters.categories.length +
+    filters.games.length +
     filters.gradingCompanies.length +
     filters.grades.length +
     (filters.blackLabelOnly ? 1 : 0) +
@@ -98,19 +97,19 @@ export function MarketplaceExplorer({
 
   function selectCategoryTile(tile: (typeof CATEGORY_TILES)[number]["category"]) {
     if (tile === "ALL") {
-      setFilters({ ...filters, categories: [] });
+      setFilters({ ...filters, games: [] });
     } else if (tile === "VAULT") {
       setFilters({ ...filters, vaultedStatus: filters.vaultedStatus === "IN_VAULT" ? "ALL" : "IN_VAULT" });
     } else {
-      const isActive = filters.categories.includes(tile);
-      setFilters({ ...filters, categories: isActive ? [] : [tile] });
+      const isActive = filters.games.includes(tile);
+      setFilters({ ...filters, games: isActive ? [] : [tile] });
     }
   }
 
   function isCategoryTileActive(tile: (typeof CATEGORY_TILES)[number]["category"]) {
-    if (tile === "ALL") return filters.categories.length === 0 && filters.vaultedStatus !== "IN_VAULT";
+    if (tile === "ALL") return filters.games.length === 0 && filters.vaultedStatus !== "IN_VAULT";
     if (tile === "VAULT") return filters.vaultedStatus === "IN_VAULT";
-    return filters.categories.includes(tile);
+    return filters.games.includes(tile);
   }
 
   return (

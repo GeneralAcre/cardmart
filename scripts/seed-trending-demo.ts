@@ -5,7 +5,7 @@
 // whenever Trending disappears (after a reseed, or once the history is more
 // than 7 days old). Never part
 // of any production code path; run manually with `npx tsx scripts/seed-trending-demo.ts`.
-import { PrismaClient, type AssetCategory, type GradingCompany } from "@prisma/client";
+import { PrismaClient, type AssetCategory, type CardGame, type GradingCompany } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import "dotenv/config";
 import { mockTxSignature } from "../lib/web3/mock-chain";
@@ -22,6 +22,7 @@ interface DemoAsset {
   name: string;
   subtitle: string;
   category: AssetCategory;
+  game?: CardGame;
   gradingCompany: GradingCompany;
   grade: number;
   serial: string;
@@ -49,18 +50,19 @@ const DEMO_ASSETS: DemoAsset[] = [
     ],
   },
   {
-    name: "Michael Jordan Rookie Card",
-    subtitle: "Fleer Basketball — 1986",
-    category: "SPORTS_CARD",
+    name: "Monkey.D.Luffy Manga Rare",
+    subtitle: "Awakening of the New Era — OP05",
+    category: "TRADING_CARD",
+    game: "ONE_PIECE",
     gradingCompany: "PSA",
     grade: 9,
     serial: "PSA-58831402",
     themeIndex: 2,
     sellerHandle: "nattapong",
     priceHistory: [
-      [6, 580000],
-      [3, 610000],
-      [0, 650000],
+      [6, 38000],
+      [3, 41000],
+      [0, 45000],
     ],
   },
   {
@@ -138,6 +140,7 @@ async function main() {
         name: a.name,
         subtitle: a.subtitle,
         category: a.category,
+        game: a.game ?? "POKEMON",
         gradingCompany: a.gradingCompany,
         grade: a.grade,
         serial: a.serial,
