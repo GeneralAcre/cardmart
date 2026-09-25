@@ -8,7 +8,12 @@ const nextConfig: NextConfig = {
     // fixed hostname would silently break next/image the moment the blob
     // store changes; the wildcard pattern is what actually makes this work
     // automatically across every environment without hand-editing this file.
-    remotePatterns: [{ protocol: "https", hostname: "*.public.blob.vercel-storage.com" }],
+    remotePatterns: [
+      { protocol: "https", hostname: "*.public.blob.vercel-storage.com" },
+      // Set artwork and icons for the release calendar (lib/tcg-releases.ts).
+      { protocol: "https", hostname: "product-images.tcgplayer.com" },
+      { protocol: "https", hostname: "tcgplayer-cdn.tcgplayer.com" },
+    ],
   },
 };
 
