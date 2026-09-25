@@ -61,7 +61,7 @@ export function ListingCard({ asset }: { asset: AssetSummary }) {
               collectible — it needs to survive in the grid view even when a
               real verification photo, not the grade-labeled generated art,
               is what's shown (the generated art already renders it inline). */}
-          {photos.length > 0 && (
+          {image && (
             <span
               className={cn(
                 "absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-semibold backdrop-blur-sm",
@@ -70,6 +70,12 @@ export function ListingCard({ asset }: { asset: AssetSummary }) {
             >
               {asset.gradingCompany === "RAW" ? "RAW" : `${asset.gradingCompany} ${formatGrade(asset.grade)}`}
               {asset.isBlackLabel && " · Black Label"}
+            </span>
+          )}
+          {/* An official catalogue image is the card, not this copy — say so. */}
+          {image?.kind === "reference" && (
+            <span className="absolute bottom-2 left-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
+              Reference image
             </span>
           )}
           {photos.length > 1 && (
