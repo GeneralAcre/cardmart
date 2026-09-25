@@ -965,3 +965,102 @@ export async function getKycQueue() {
   ]);
   return { pending, reviewed };
 }
+
+// ---------------------------------------------------------------------------
+// Leaderboard — every live listing with its real price change over 24h / 7d
+// / 30d, computed from PriceSnapshots exactly like the item page's insights:
+// the baseline is the last snapshot at or before the window start (or the
+// first one inside it for a younger listing). A listing with no earlier
+// price in the window has no change (null), never a made-up 0%.
+// ---------------------------------------------------------------------------
+
+export type LeaderboardPeriod = "24h" | "7d" | "30d";
+
+const LEADERBOARD_PERIOD_DAYS: Record<LeaderboardPeriod, number> = { "24h": 1, "7d": 7, "30d": 30 };
+
+export interface LeaderboardRow {
+  id: string;
+  name: string;
+  subtitle: string;
+  category: AssetCategory;
+  gradingCompany: GradingCompany;
+  grade: number | null;
+  isBlackLabel: boolean;
+  themeIndex: number;
+  photoUrl: string | null;
+  vaulted: boolean;
+  priceThb: number;
+  listedAt: string;
+  /** First listed within the last 30 days — the "New drops" tab. */
+  isNewDrop: boolean;
+  change: Record<LeaderboardPeriod, number | null>;
+  sales30d: number;
+  watchers: number;
+  watchedByViewer: boolean;
+}
+
+export async function getLeaderboard(viewerId: string): Promise<LeaderboardRow[]> {
+  const since30 = new Date(Date.now() - 30 * 86_400_000);
+  const assets = await prisma.asset.findMany({
+    where: {
+      forSale: true,
+      priceThb: { not: null },
+      marketStatus: MARKETPLACE_VISIBLE_STATUSES,
+      redeemedAt: null,
+    },
+    include: {
+      verificationPhotos: { orderBy: { createdAt: "asc" }, take: 1, select: { url: true } },
+      priceSnapshots: { orderBy: { createdAt: "asc" }, select: { priceThb: true, createdAt: true } },
+      watchedBy: { where: { userId: viewerId }, select: { id: true } },
+      _count: { select: { watchedBy: true } },
+    },
+  });
+
+  // Completed sales of the same card (name + company + grade) in the last 30
+  // days — the "volume" column, keyed the same way as getCardMarketStats.
+  const sales = await prisma.escrowTransaction.findMany({
+    where: { status: "RELEASED", releasedAt: { gte: since30 } },
+    select: { asset: { select: { name: true, gradingCompany: true, grade: true } } },
+  });
+  const cardKey = (a: { name: string; gradingCompany: GradingCompany; grade: number | null }) =>
+    `${a.name}|${a.gradingCompany}|${a.grade ?? ""}`;
+  const salesByCard = new Map<string, number>();
+  for (const s of sales) salesByCard.set(cardKey(s.asset), (salesByCard.get(cardKey(s.asset)) ?? 0) + 1);
+
+  const now = Date.now();
+  return assets.map((a) => {
+    const price = a.priceThb!;
+    const change = {} as Record<LeaderboardPeriod, number | null>;
+    for (const period of Object.keys(LEADERBOARD_PERIOD_DAYS) as LeaderboardPeriod[]) {
+      const since = new Date(now - LEADERBOARD_PERIOD_DAYS[period] * 86_400_000);
+      let baseline: number | null = null;
+      for (const s of a.priceSnapshots) {
+        if (s.createdAt <= since) baseline = s.priceThb;
+        else {
+          baseline = baseline ?? s.priceThb;
+          break;
+        }
+      }
+      change[period] = baseline && baseline !== price ? ((price - baseline) / baseline) * 100 : baseline ? 0 : null;
+    }
+    return {
+      id: a.id,
+      name: a.name,
+      subtitle: a.subtitle,
+      category: a.category,
+      gradingCompany: a.gradingCompany,
+      grade: a.grade,
+      isBlackLabel: a.isBlackLabel,
+      themeIndex: a.themeIndex,
+      photoUrl: a.verificationPhotos[0]?.url ?? null,
+      vaulted: a.vaulted,
+      priceThb: price,
+      listedAt: (a.priceSnapshots[0]?.createdAt ?? a.createdAt).toISOString(),
+      isNewDrop: (a.priceSnapshots[0]?.createdAt ?? a.createdAt) >= since30,
+      change,
+      sales30d: salesByCard.get(cardKey(a)) ?? 0,
+      watchers: a._count.watchedBy,
+      watchedByViewer: a.watchedBy.length > 0,
+    };
+  });
+}

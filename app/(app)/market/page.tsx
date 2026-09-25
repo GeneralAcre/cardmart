@@ -157,8 +157,8 @@ export default async function MarketPage({ searchParams }: { searchParams: Promi
               ))}
             </ul>
           )}
-          <Link href="/marketplace" className="text-muted-foreground hover:text-foreground text-xs underline underline-offset-2">
-            See 7- and 30-day trending cards on the Marketplace
+          <Link href="/leaderboard" className="text-muted-foreground hover:text-foreground text-xs underline underline-offset-2">
+            See every card&apos;s gains and losses on the Leaderboard
           </Link>
         </section>
       </div>
