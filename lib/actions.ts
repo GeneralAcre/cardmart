@@ -19,6 +19,7 @@ import { getVerificationChecklist } from "@/lib/verification-checklist";
 import { BGS_BLACK_LABEL_GRADE, gradeTierLabel } from "@/lib/labels";
 import { requestDevnetAirdrop } from "@/lib/solana";
 import { checkAllIntegrations } from "@/lib/integrations";
+import { findCatalogImage } from "@/lib/card-catalog";
 import { checkKycPhoto, deleteKycPhotos, isKycPhotoStorageConfigured, saveKycPhoto } from "@/lib/kyc-storage";
 import { getPortfolioPriceHistory, getPriceHistory, type PriceHistoryRange } from "@/lib/queries";
 import {
@@ -407,6 +408,13 @@ export async function createListing(
       },
     ],
   });
+
+  // Official reference image so buyers recognise the card at a glance —
+  // best-effort, one API call per listing; a miss just leaves the artwork.
+  const catalogImageUrl = await findCatalogImage({ name: data.name, subtitle: data.subtitle, game: data.game });
+  if (catalogImageUrl) {
+    await prisma.asset.update({ where: { id: asset.id }, data: { catalogImageUrl } });
+  }
 
   await notifyWantedCardMatches(asset.id);
 

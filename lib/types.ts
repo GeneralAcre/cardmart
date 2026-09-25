@@ -24,6 +24,8 @@ export interface AssetSummary {
   transferApproved: boolean;
   seller: { id: string; name: string | null };
   owner: { id: string; name: string | null };
+  /** Official catalogue image of the card (reference only) — see lib/card-image.ts. */
+  catalogImageUrl: string | null;
   /** Real live-camera captures from verification — shown instead of the generated digital-twin art when available. */
   verificationPhotos: { id: string; viewLabel: string; url: string }[];
 }

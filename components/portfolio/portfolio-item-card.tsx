@@ -34,6 +34,7 @@ import { formatGrade, formatThb } from "@/lib/format";
 import { CARD_GAME_LABELS } from "@/lib/labels";
 import type { AssetSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { displayImage } from "@/lib/card-image";
 
 export function PortfolioItemCard({
   asset,
@@ -240,7 +241,7 @@ export function PortfolioItemCard({
     </Dialog>
   );
 
-  const thumbnail = asset.verificationPhotos[0];
+  const thumbnail = displayImage(asset);
 
   return (
     <div className="bg-card flex flex-col gap-3 rounded-xl border p-3 shadow-sm">

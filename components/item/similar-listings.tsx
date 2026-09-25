@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Scale } from "lucide-react";
 
 import { CardArt } from "@/components/asset/card-art";
+import { displayImage } from "@/lib/card-image";
 import { formatThb } from "@/lib/format";
 import type { AssetSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -32,7 +33,7 @@ export function SimilarListings({
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {listings.map((asset) => {
-          const photo = asset.verificationPhotos[0];
+          const photo = displayImage(asset);
           const deltaPct =
             currentPriceThb != null && currentPriceThb > 0 && asset.priceThb != null
               ? ((asset.priceThb - currentPriceThb) / currentPriceThb) * 100

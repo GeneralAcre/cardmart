@@ -14,6 +14,8 @@ interface Photo {
   id: string;
   viewLabel: string;
   url: string;
+  /** Official catalogue image of the card, not a photo of this copy. */
+  reference?: boolean;
 }
 
 interface Props {
@@ -23,6 +25,8 @@ interface Props {
   grade: number | null;
   isBlackLabel?: boolean;
   photos: Photo[];
+  /** Official catalogue image (Asset.catalogImageUrl), shown as its own labelled slide. */
+  referenceImageUrl?: string | null;
 }
 
 // Combines the generated digital-twin art with the real live-camera
@@ -30,9 +34,23 @@ interface Props {
 // checklist required) into one selectable gallery — previously only the
 // generated art showed up front, with the real photos tucked into a
 // separate section far below the fold.
-export function ItemGallery({ themeIndex, category, gradingCompany, grade, isBlackLabel, photos }: Props) {
+export function ItemGallery({
+  themeIndex,
+  category,
+  gradingCompany,
+  grade,
+  isBlackLabel,
+  photos: capturePhotos,
+  referenceImageUrl,
+}: Props) {
+  // Real captures first, then the official reference image of the card.
+  const photos: Photo[] = [
+    ...capturePhotos,
+    ...(referenceImageUrl ? [{ id: "reference", viewLabel: "Reference image", url: referenceImageUrl, reference: true }] : []),
+  ];
   // Default to the first real photo when one exists — that's what the item
-  // actually looks like; the generated art is a stylized fallback/twin.
+  // actually looks like — then the reference image; the generated art is a
+  // stylized fallback/twin.
   const [selectedId, setSelectedId] = useState<string>(photos[0]?.id ?? "twin");
   const [zoomOpen, setZoomOpen] = useState(false);
   const selectedPhoto = photos.find((p) => p.id === selectedId);
@@ -53,7 +71,7 @@ export function ItemGallery({ themeIndex, category, gradingCompany, grade, isBla
             fill
             sizes="(max-width: 1024px) 100vw, 50vw"
             priority
-            className="rounded-lg border object-cover"
+            className={cn("rounded-lg border", selectedPhoto.reference ? "bg-muted object-contain p-3" : "object-cover")}
           />
         ) : (
           <CardArt
@@ -64,6 +82,11 @@ export function ItemGallery({ themeIndex, category, gradingCompany, grade, isBla
             isBlackLabel={isBlackLabel}
             size="lg"
           />
+        )}
+        {selectedPhoto?.reference && (
+          <span className="absolute top-2 left-2 rounded-full bg-black/70 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur-sm">
+            Reference image
+          </span>
         )}
         <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/0 opacity-0 transition-all group-hover:bg-black/20 group-hover:opacity-100">
           <ZoomIn className="size-8 text-white drop-shadow" />
@@ -102,16 +125,24 @@ export function ItemGallery({ themeIndex, category, gradingCompany, grade, isBla
                   : "border-transparent hover:border-muted-foreground/30",
               )}
             >
-              <Image src={photo.url} alt={photo.viewLabel} fill sizes="20vw" className="object-cover" />
+              <Image
+                src={photo.url}
+                alt={photo.viewLabel}
+                fill
+                sizes="20vw"
+                className={photo.reference ? "bg-muted object-contain p-1" : "object-cover"}
+              />
             </button>
           ))}
         </div>
       )}
 
       <p className="text-muted-foreground text-center text-xs">
-        {selectedPhoto
-          ? `${selectedPhoto.viewLabel} — live camera capture, click to zoom`
-          : "Generated certificate artwork — click to zoom"}
+        {selectedPhoto?.reference
+          ? "Official image of this card from TCGplayer's catalogue, for reference — not a photo of this copy."
+          : selectedPhoto
+            ? `${selectedPhoto.viewLabel} — live camera capture, click to zoom`
+            : "Generated certificate artwork — click to zoom"}
       </p>
 
       <Dialog open={zoomOpen} onOpenChange={setZoomOpen}>
@@ -126,7 +157,7 @@ export function ItemGallery({ themeIndex, category, gradingCompany, grade, isBla
                 alt={selectedPhoto.viewLabel}
                 fill
                 sizes="(max-width: 448px) 100vw, 448px"
-                className="rounded-lg object-cover"
+                className={selectedPhoto.reference ? "rounded-lg object-contain" : "rounded-lg object-cover"}
               />
             </div>
           ) : (

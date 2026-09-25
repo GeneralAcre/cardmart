@@ -51,6 +51,7 @@ import { extractPsaCertNumber, lookupPsaCert, lookupPsaPopulation, psaCertUrl } 
 import { lookupCardPrice } from "@/lib/tcg-price";
 import { buildMarketQuery, lookupEbayPrice } from "@/lib/ebay";
 import { cn } from "@/lib/utils";
+import { realPhotos } from "@/lib/card-image";
 
 export default async function ItemDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -184,7 +185,8 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
             gradingCompany={asset.gradingCompany}
             grade={asset.grade}
             isBlackLabel={asset.isBlackLabel}
-            photos={asset.verificationPhotos}
+            photos={realPhotos(asset.verificationPhotos)}
+            referenceImageUrl={asset.catalogImageUrl}
           />
         </div>
 

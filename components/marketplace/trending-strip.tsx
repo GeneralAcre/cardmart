@@ -7,6 +7,7 @@ import { TrendingDown, TrendingUp } from "lucide-react";
 
 import { CardArt } from "@/components/asset/card-art";
 import { formatThb } from "@/lib/format";
+import { displayImage } from "@/lib/card-image";
 import type { AssetSummary } from "@/lib/types";
 
 export interface TrendingListing {
@@ -61,7 +62,7 @@ export function TrendingStrip({ week, month }: { week: TrendingListing[]; month:
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {listings.map(({ asset, previousPriceThb, currentPriceThb, gainPct }) => {
-          const photo = asset.verificationPhotos[0];
+          const photo = displayImage(asset);
           const isGain = gainPct >= 0;
           return (
             <Link

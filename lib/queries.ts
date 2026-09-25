@@ -1,6 +1,7 @@
 import "server-only";
 import type { AssetCategory, CardGame, GradingCompany, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { displayImage } from "@/lib/card-image";
 
 export interface MarketplaceFilters {
   q?: string;
@@ -181,7 +182,14 @@ export async function getSellerProfile(sellerId: string) {
       take: 20,
       include: {
         asset: {
-          select: { id: true, name: true, category: true, game: true, verificationPhotos: { take: 1, orderBy: { createdAt: "asc" } } },
+          select: {
+            id: true,
+            name: true,
+            category: true,
+            game: true,
+            catalogImageUrl: true,
+            verificationPhotos: { orderBy: { createdAt: "asc" } },
+          },
         },
       },
     }),
@@ -749,7 +757,7 @@ export async function getRankings(tier: RankingTier, limit = 25) {
     where: { ...rankingWhere(tier), redeemedAt: null },
     include: {
       owner: { select: { id: true, name: true, handle: true, kycStatus: true } },
-      verificationPhotos: { orderBy: { createdAt: "asc" }, take: 1 },
+      verificationPhotos: { orderBy: { createdAt: "asc" } },
       escrowTxs: { where: { status: "RELEASED" }, orderBy: { releasedAt: "desc" }, take: 1, select: { amountThb: true } },
       priceSnapshots: {
         where: { createdAt: { gte: since30 } },
@@ -777,7 +785,7 @@ export async function getRankings(tier: RankingTier, limit = 25) {
         grade: a.grade,
         isBlackLabel: a.isBlackLabel,
         themeIndex: a.themeIndex,
-        photoUrl: a.verificationPhotos[0]?.url ?? null,
+        photoUrl: displayImage(a)?.url ?? null,
         owner: a.owner,
         valueThb,
         valueSource: listed ? ("ask" as const) : ("last-sale" as const),
@@ -888,7 +896,8 @@ const TRADE_ASSET_SELECT = {
   themeIndex: true,
   category: true,
   mintAddress: true,
-  verificationPhotos: { orderBy: { createdAt: "asc" as const }, take: 1, select: { url: true } },
+  catalogImageUrl: true,
+  verificationPhotos: { orderBy: { createdAt: "asc" as const }, select: { url: true } },
 } as const;
 
 const TRADE_USER_SELECT = { id: true, name: true, handle: true, walletAddress: true } as const;
@@ -1012,7 +1021,7 @@ export async function getLeaderboard(viewerId: string): Promise<LeaderboardRow[]
       redeemedAt: null,
     },
     include: {
-      verificationPhotos: { orderBy: { createdAt: "asc" }, take: 1, select: { url: true } },
+      verificationPhotos: { orderBy: { createdAt: "asc" }, select: { url: true } },
       priceSnapshots: { orderBy: { createdAt: "asc" }, select: { priceThb: true, createdAt: true } },
       watchedBy: { where: { userId: viewerId }, select: { id: true } },
       _count: { select: { watchedBy: true } },
@@ -1056,7 +1065,7 @@ export async function getLeaderboard(viewerId: string): Promise<LeaderboardRow[]
       grade: a.grade,
       isBlackLabel: a.isBlackLabel,
       themeIndex: a.themeIndex,
-      photoUrl: a.verificationPhotos[0]?.url ?? null,
+      photoUrl: displayImage(a)?.url ?? null,
       vaulted: a.vaulted,
       priceThb: price,
       listedAt: (a.priceSnapshots[0]?.createdAt ?? a.createdAt).toISOString(),

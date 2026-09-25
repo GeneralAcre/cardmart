@@ -5,12 +5,13 @@ import { Gavel } from "lucide-react";
 import { CardArt } from "@/components/asset/card-art";
 import { CountdownTimer } from "@/components/auction/countdown-timer";
 import { CARD_GAME_LABELS } from "@/lib/labels";
+import { displayImage } from "@/lib/card-image";
 import { formatThb } from "@/lib/format";
 import type { getActiveAuctions } from "@/lib/queries";
 
 export function AuctionCard({ auction }: { auction: Awaited<ReturnType<typeof getActiveAuctions>>[number] }) {
   const { asset } = auction;
-  const photo = asset.verificationPhotos[0];
+  const photo = displayImage(asset);
 
   return (
     <Link

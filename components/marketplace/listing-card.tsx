@@ -8,9 +8,11 @@ import { formatGrade, formatThb } from "@/lib/format";
 import { CARD_GAME_LABELS, MARKET_STATUS_BADGE_CLASS, MARKET_STATUS_LABELS } from "@/lib/labels";
 import type { AssetSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { displayImage, realPhotos } from "@/lib/card-image";
 
 export function ListingCard({ asset }: { asset: AssetSummary }) {
-  const photos = asset.verificationPhotos;
+  const photos = realPhotos(asset.verificationPhotos);
+  const image = displayImage(asset);
 
   return (
     <Link
@@ -23,7 +25,7 @@ export function ListingCard({ asset }: { asset: AssetSummary }) {
       />
       <div className="bg-card relative flex flex-col gap-3 overflow-hidden rounded-xl border shadow-sm transition-shadow group-hover:shadow-md">
         <div className="relative aspect-[3/4]">
-          {photos.length > 0 ? (
+          {image ? (
             // Real live-camera capture instead of the generated digital-twin
             // art whenever one exists — this is what the item actually
             // looks like, not a placeholder. next/image handles resizing,
@@ -31,7 +33,7 @@ export function ListingCard({ asset }: { asset: AssetSummary }) {
             // step needed per upload, it optimizes on request from the
             // original Blob URL every time this card renders.
             <Image
-              src={photos[0].url}
+              src={image.url}
               alt={asset.name}
               fill
               sizes="(max-width: 640px) 50vw, (max-width: 1280px) 33vw, 25vw"

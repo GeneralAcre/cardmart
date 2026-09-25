@@ -14,6 +14,7 @@ import { VerifiedBadge } from "@/components/store/verified-badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CARD_GAME_LABELS } from "@/lib/labels";
 import { formatDate, formatThb } from "@/lib/format";
+import { displayImage } from "@/lib/card-image";
 
 export default async function StorePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -90,7 +91,7 @@ export default async function StorePage({ params }: { params: Promise<{ id: stri
           ) : (
             <div className="flex max-w-2xl flex-col gap-2">
               {soldHistory.map((tx) => {
-                const photo = tx.asset.verificationPhotos[0];
+                const photo = displayImage(tx.asset);
                 return (
                   <Link
                     key={tx.id}

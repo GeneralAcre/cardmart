@@ -257,6 +257,11 @@ model Asset {
   redeemedAt      DateTime?
   burnTxSignature String?
 
+  // Official catalogue image of this card (TCGplayer, via TCG API) — a
+  // reference picture shown when there's no real verification photo, never
+  // presented as a photo of this physical copy. See lib/card-catalog.ts.
+  catalogImageUrl String?
+
   sellerId String
   seller   User   @relation("AssetSeller", fields: [sellerId], references: [id])
   ownerId  String

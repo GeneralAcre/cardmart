@@ -15,6 +15,7 @@ import { useTradeSigning } from "@/components/trade/use-trade-signing";
 import { respondToTrade, withdrawTrade } from "@/lib/actions";
 import { formatDateTime, formatGrade, formatThb } from "@/lib/format";
 import { TRADE_OFFER_STATUS_LABELS } from "@/lib/labels";
+import { displayImage } from "@/lib/card-image";
 
 interface TradeCard {
   id: string;
@@ -25,6 +26,7 @@ interface TradeCard {
   themeIndex: number;
   category: AssetCategory;
   mintAddress: string | null;
+  catalogImageUrl: string | null;
   verificationPhotos: { url: string }[];
 }
 
@@ -111,7 +113,7 @@ export function TradesPanel({
 }
 
 function CardThumb({ card, caption }: { card: TradeCard; caption: string }) {
-  const photo = card.verificationPhotos[0];
+  const photo = displayImage(card);
   return (
     <Link href={`/item/${card.id}`} className="flex min-w-0 flex-1 items-center gap-3 hover:underline">
       <div className="relative aspect-[3/4] w-12 shrink-0 overflow-hidden rounded-md border">
