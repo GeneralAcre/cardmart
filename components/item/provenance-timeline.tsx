@@ -1,10 +1,12 @@
 import {
   ArrowRightLeft,
   ExternalLink,
+  Flame,
   KeyRound,
   Lock,
   PackageCheck,
   PackageOpen,
+  Repeat,
   RotateCcw,
   ShieldCheck,
   ShieldX,
@@ -36,6 +38,8 @@ const PROVENANCE_ICONS: Record<ProvenanceType, LucideIcon> = {
   REDEEMED: PackageOpen,
   ESCROW_REFUNDED: Undo2,
   LISTING_APPROVED: KeyRound,
+  TOKEN_BURNED: Flame,
+  SWAPPED: Repeat,
 };
 
 interface Entry {

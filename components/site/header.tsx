@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MessageCircle } from "lucide-react";
+import { BookOpen, MessageCircle } from "lucide-react";
 
 import { getCurrentUser } from "@/lib/session";
 import { getMyNotifications, getUnreadMessageCount, getUnreadNotificationCount } from "@/lib/queries";
@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -82,6 +83,12 @@ export async function SiteHeader() {
                   <span className="font-medium">{displayName}</span>
                   {user.email && <span className="text-muted-foreground text-xs">{user.email}</span>}
                 </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/guide">
+                    <BookOpen /> Getting started guide
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <SignOutButton />
               </DropdownMenuContent>

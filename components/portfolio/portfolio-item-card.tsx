@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Gavel, Loader2, PackageCheck, Repeat, Tag, TagX, Truck } from "lucide-react";
+import { Flame, Gavel, Loader2, Repeat, Tag, TagX, Truck } from "lucide-react";
 
 import { CardArt } from "@/components/asset/card-art";
 import { Badge } from "@/components/ui/badge";
@@ -43,7 +43,7 @@ export function PortfolioItemCard({
   escrowAuthorityAddress: string | null;
 }) {
   const router = useRouter();
-  const { connected, connect, sendMemo, approveDelegate, revokeDelegate } = useWalletStore();
+  const { connected, connect, sendMemo, approveDelegate, revokeDelegate, burnDigitalTwin } = useWalletStore();
   const [relistOpen, setRelistOpen] = useState(false);
   const [redeemOpen, setRedeemOpen] = useState(false);
   const [priceEditOpen, setPriceEditOpen] = useState(false);
@@ -101,11 +101,25 @@ export function PortfolioItemCard({
     });
   }
 
+  // Redeeming burns the digital twin, since the physical card is leaving the
+  // vault. For a real mint the owner signs the burn themselves; if signing
+  // fails, the server still refuses the redeem when the token is really in
+  // their wallet (see vaultRedeem), so a card can never leave with its twin
+  // still tradeable.
   function handleRedeem() {
     startTransition(async () => {
       try {
-        await vaultRedeem(asset.id);
-        toast.success("Redemption requested. Dispatching from the warehouse.");
+        let burnTx: string | undefined;
+        if (asset.mintAddress) {
+          try {
+            if (!connected) await connect();
+            burnTx = await burnDigitalTwin(asset.mintAddress);
+          } catch {
+            burnTx = undefined;
+          }
+        }
+        await vaultRedeem(asset.id, burnTx);
+        toast.success("Redeemed — digital twin burned and the card is on its way to you.");
         setRedeemOpen(false);
         router.refresh();
       } catch (err) {
@@ -344,18 +358,22 @@ export function PortfolioItemCard({
                 <DialogHeader>
                   <DialogTitle>Redeem Physical Item</DialogTitle>
                   <DialogDescription>
-                    The warehouse will dispatch the physical item to your home
-                    address on file. It will be removed from the vault and can
-                    no longer be traded instantly.
+                    The warehouse ships the physical card to your address on
+                    file, and its digital twin is burned for good.
                   </DialogDescription>
                 </DialogHeader>
+                <ul className="text-muted-foreground flex list-disc flex-col gap-1 pl-5 text-sm">
+                  <li>You&apos;ll sign one wallet transaction that burns the token.</li>
+                  <li>The card can&apos;t be listed, auctioned or swapped on CardMart afterwards.</li>
+                  <li>Any open swap proposals for it are closed and refunded.</li>
+                </ul>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setRedeemOpen(false)} disabled={pending}>
                     Cancel
                   </Button>
                   <Button onClick={handleRedeem} disabled={pending}>
-                    {pending ? <Loader2 className="animate-spin" /> : <PackageCheck />}
-                    Confirm Redemption
+                    {pending ? <Loader2 className="animate-spin" /> : <Flame />}
+                    Burn &amp; Redeem
                   </Button>
                 </DialogFooter>
               </DialogContent>

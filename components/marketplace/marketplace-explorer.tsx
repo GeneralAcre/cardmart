@@ -7,6 +7,7 @@ import type { AssetCategory } from "@prisma/client";
 import { FilterBar } from "@/components/marketplace/filter-bar";
 import { ListingCard } from "@/components/marketplace/listing-card";
 import { TrendingStrip, type TrendingListing } from "@/components/marketplace/trending-strip";
+import { PriceCompareTable } from "@/components/marketplace/price-compare-table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -51,10 +52,12 @@ function countActiveFilters(filters: MarketplaceFilterState): number {
 
 export function MarketplaceExplorer({
   initialListings,
-  trending,
+  trendingWeek,
+  trendingMonth,
 }: {
   initialListings: AssetSummary[];
-  trending: TrendingListing[];
+  trendingWeek: TrendingListing[];
+  trendingMonth: TrendingListing[];
 }) {
   const [filters, setFilters] = useState<MarketplaceFilterState>(EMPTY_FILTERS);
   const [listings, setListings] = useState<AssetSummary[]>(initialListings);
@@ -140,7 +143,7 @@ export function MarketplaceExplorer({
       </Sheet>
 
       <div className="flex flex-col gap-6">
-        <TrendingStrip listings={trending} />
+        <TrendingStrip week={trendingWeek} month={trendingMonth} />
 
         {/* A storefront-style "pick what you're into" row — the sidebar/sheet
             filters above still cover everything in depth, but this gives the
@@ -205,6 +208,12 @@ export function MarketplaceExplorer({
               ))}
             </div>
           )}
+        </div>
+
+        {/* Compares across everything listed, not just the filtered results —
+            filters narrow what you browse, not which cards you can compare. */}
+        <div className="border-t pt-6">
+          <PriceCompareTable listings={initialListings} />
         </div>
       </div>
     </div>

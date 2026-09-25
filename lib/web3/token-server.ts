@@ -134,3 +134,24 @@ export async function transferDigitalTwinToken(opts: {
 
   return signAndSend(instructions, authorityAddress);
 }
+
+/**
+ * Whether `ownerAddress` currently holds this 1-of-1 digital twin on-chain.
+ * Redeem uses it to tell apart "the owner must sign a real burn" (the token
+ * is in their wallet) from legacy assets whose earlier transfer was only
+ * simulated, so the real token never reached this owner and there is
+ * nothing in their wallet to burn. Returns null when the RPC can't answer.
+ */
+export async function isDigitalTwinHeldBy(opts: { mintAddress: string; ownerAddress: string }): Promise<boolean | null> {
+  try {
+    const { value } = await rpc
+      .getTokenAccountsByOwner(address(opts.ownerAddress), { mint: address(opts.mintAddress) }, { encoding: "jsonParsed" })
+      .send();
+    return value.some((account) => {
+      const data = account.account.data as { parsed?: { info?: { tokenAmount?: { amount?: string } } } };
+      return data.parsed?.info?.tokenAmount?.amount === SUPPLY.toString();
+    });
+  } catch {
+    return null;
+  }
+}

@@ -6,6 +6,8 @@ import { ContactForm } from "@/components/site/contact-form";
 const NAV_LINKS = [
   { href: "/", label: "Home" },
   { href: "/marketplace", label: "Marketplace" },
+  { href: "/market", label: "Market" },
+  { href: "/guide", label: "Getting Started" },
   { href: "/listing", label: "Listing" },
   { href: "/portfolio", label: "Portfolio" },
   { href: "/admin/warehouse", label: "Warehouse Admin" },

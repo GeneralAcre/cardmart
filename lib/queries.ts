@@ -91,7 +91,7 @@ export async function getMarketplaceListings(filters: MarketplaceFilters = {}) {
   return assets.map(withPriceDirection);
 }
 
-const TRENDING_LOOKBACK_DAYS = 7;
+export type TrendingWindow = 7 | 30;
 
 /**
  * Real "biggest gainers" — compares each for-sale asset's current price
@@ -103,8 +103,8 @@ const TRENDING_LOOKBACK_DAYS = 7;
  * if none exist right now, the caller gets an empty array and should just
  * not render the section, rather than show a padded-out or fake list.
  */
-export async function getTrendingListings(limit = 8) {
-  const since = new Date(Date.now() - TRENDING_LOOKBACK_DAYS * 86_400_000);
+export async function getTrendingListings(limit = 8, lookbackDays: TrendingWindow = 7) {
+  const since = new Date(Date.now() - lookbackDays * 86_400_000);
 
   const assets = await prisma.asset.findMany({
     where: { forSale: true, marketStatus: { in: ["READY_TO_SHIP", "IN_VAULT"] } },
@@ -149,11 +149,11 @@ export async function getTrendingListings(limit = 8) {
 export async function getSellerProfile(sellerId: string) {
   const seller = await prisma.user.findUnique({
     where: { id: sellerId },
-    select: { id: true, name: true, handle: true, image: true, createdAt: true, walletAddress: true },
+    select: { id: true, name: true, handle: true, image: true, createdAt: true, walletAddress: true, kycStatus: true },
   });
   if (!seller) return null;
 
-  const [listings, ratingAgg, reviews, soldHistory] = await Promise.all([
+  const [listings, ratingAgg, reviews, soldHistory, saleCount] = await Promise.all([
     prisma.asset.findMany({
       where: { sellerId, marketStatus: MARKETPLACE_VISIBLE_STATUSES },
       orderBy: { createdAt: "desc" },
@@ -185,6 +185,7 @@ export async function getSellerProfile(sellerId: string) {
         },
       },
     }),
+    prisma.escrowTransaction.count({ where: { sellerId, status: "RELEASED" } }),
   ]);
 
   return {
@@ -193,6 +194,7 @@ export async function getSellerProfile(sellerId: string) {
     rating: { average: ratingAgg._avg.rating, count: ratingAgg._count },
     reviews,
     soldHistory,
+    saleCount,
   };
 }
 
@@ -273,7 +275,9 @@ export async function getPriceHistory(assetId: string, range: PriceHistoryRange)
 export async function getPortfolioPriceHistory(userId: string, range: PriceHistoryRange) {
   const since = new Date(Date.now() - PRICE_HISTORY_DAYS[range] * 86_400_000);
 
-  const ownedAssetIds = (await prisma.asset.findMany({ where: { ownerId: userId }, select: { id: true } })).map(
+  const ownedAssetIds = (
+    await prisma.asset.findMany({ where: { ownerId: userId, redeemedAt: null }, select: { id: true } })
+  ).map(
     (a) => a.id,
   );
   if (ownedAssetIds.length === 0) return [];
@@ -323,6 +327,9 @@ export async function getVaultAssets(userId: string) {
     where: {
       ownerId: userId,
       marketStatus: { not: "IN_ESCROW" },
+      // Redeemed items left the vault and their digital twin was burned —
+      // they're listed separately, not as tradeable holdings.
+      redeemedAt: null,
     },
     orderBy: { updatedAt: "desc" },
     include: {
@@ -647,4 +654,314 @@ export async function getAcceptedOfferForViewer(assetId: string, buyerId: string
   return prisma.offer.findFirst({
     where: { assetId, buyerId, status: "ACCEPTED" },
   });
+}
+
+// ---------------------------------------------------------------------------
+// Market intelligence — every figure below comes from real rows (completed
+// escrows, PriceSnapshots, live listings). Nothing is estimated or padded.
+// ---------------------------------------------------------------------------
+
+export function median(values: number[]): number | null {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+}
+
+const SALE_LOOKBACK_DAYS = 90;
+
+/**
+ * Real CardMart price stats for one exact card (same name + grading company +
+ * grade): the median of completed sale prices over the last 90 days — the
+ * median, not the mean, so one outlier or wash sale can't drag it — plus the
+ * live asking range across every current listing of the same card.
+ */
+export async function getCardMarketStats(card: { name: string; gradingCompany: GradingCompany; grade: number | null }) {
+  const since = new Date(Date.now() - SALE_LOOKBACK_DAYS * 86_400_000);
+  const sameCard = { name: card.name, gradingCompany: card.gradingCompany, grade: card.grade };
+  const [sales, listings] = await Promise.all([
+    prisma.escrowTransaction.findMany({
+      where: { status: "RELEASED", releasedAt: { gte: since }, asset: sameCard },
+      orderBy: { releasedAt: "desc" },
+      select: { amountThb: true, releasedAt: true },
+    }),
+    prisma.asset.findMany({
+      where: { ...sameCard, forSale: true, priceThb: { not: null }, marketStatus: MARKETPLACE_VISIBLE_STATUSES },
+      select: { priceThb: true },
+    }),
+  ]);
+  const salePrices = sales.map((s) => s.amountThb);
+  const askPrices = listings.map((l) => l.priceThb!);
+  return {
+    saleCount: sales.length,
+    medianSaleThb: median(salePrices),
+    lastSaleThb: sales[0]?.amountThb ?? null,
+    lastSaleAt: sales[0]?.releasedAt ?? null,
+    listingCount: askPrices.length,
+    lowestAskThb: askPrices.length ? Math.min(...askPrices) : null,
+    highestAskThb: askPrices.length ? Math.max(...askPrices) : null,
+    medianAskThb: median(askPrices),
+    saleLookbackDays: SALE_LOOKBACK_DAYS,
+  };
+}
+
+/** Raw inputs for an item's price insights (see lib/insights.ts). */
+export async function getAssetInsightData(assetId: string) {
+  const [snapshots, watcherCount, pendingOffers] = await Promise.all([
+    prisma.priceSnapshot.findMany({
+      where: { assetId },
+      orderBy: { createdAt: "asc" },
+      select: { priceThb: true, createdAt: true },
+    }),
+    prisma.watchlistItem.count({ where: { assetId } }),
+    prisma.offer.count({ where: { assetId, status: "PENDING" } }),
+  ]);
+  return { snapshots, watcherCount, pendingOffers };
+}
+
+export type RankingTier = "black-label" | "grade-10" | "grade-9";
+
+export const RANKING_TIERS: { key: RankingTier; label: string; description: string }[] = [
+  { key: "black-label", label: "Black Label", description: "BGS Pristine 10 Black Label — every sub-grade a perfect 10." },
+  { key: "grade-10", label: "Grade 10", description: "PSA Gem Mint 10, BGS Pristine / Gem Mint 10 and CGC 10." },
+  { key: "grade-9", label: "Grade 9", description: "Mint 9 and Gem Mint 9.5 slabs." },
+];
+
+function rankingWhere(tier: RankingTier): Prisma.AssetWhereInput {
+  switch (tier) {
+    case "black-label":
+      return { isBlackLabel: true };
+    case "grade-10":
+      return { grade: 10, isBlackLabel: false, gradingCompany: { not: "RAW" } };
+    case "grade-9":
+      return { grade: { gte: 9, lt: 10 }, gradingCompany: { not: "RAW" } };
+  }
+}
+
+/**
+ * Cards in a grade tier ranked by value. Value is the live asking price when
+ * listed, otherwise the card's most recent real sale price — cards with
+ * neither have no real value to rank by and are left out.
+ */
+export async function getRankings(tier: RankingTier, limit = 25) {
+  const since30 = new Date(Date.now() - 30 * 86_400_000);
+  const assets = await prisma.asset.findMany({
+    where: { ...rankingWhere(tier), redeemedAt: null },
+    include: {
+      owner: { select: { id: true, name: true, handle: true, kycStatus: true } },
+      verificationPhotos: { orderBy: { createdAt: "asc" }, take: 1 },
+      escrowTxs: { where: { status: "RELEASED" }, orderBy: { releasedAt: "desc" }, take: 1, select: { amountThb: true } },
+      priceSnapshots: {
+        where: { createdAt: { gte: since30 } },
+        orderBy: { createdAt: "asc" },
+        take: 1,
+        select: { priceThb: true },
+      },
+      _count: { select: { watchedBy: true } },
+    },
+  });
+  return assets
+    .map((a) => {
+      const listed = a.forSale && a.priceThb != null && a.marketStatus !== "IN_ESCROW";
+      const valueThb = listed ? a.priceThb! : (a.escrowTxs[0]?.amountThb ?? null);
+      if (valueThb == null) return null;
+      const baseline = a.priceSnapshots[0]?.priceThb ?? null;
+      const change30dPct =
+        listed && baseline && baseline !== a.priceThb ? ((a.priceThb! - baseline) / baseline) * 100 : null;
+      return {
+        id: a.id,
+        name: a.name,
+        subtitle: a.subtitle,
+        category: a.category,
+        gradingCompany: a.gradingCompany,
+        grade: a.grade,
+        isBlackLabel: a.isBlackLabel,
+        themeIndex: a.themeIndex,
+        photoUrl: a.verificationPhotos[0]?.url ?? null,
+        owner: a.owner,
+        valueThb,
+        valueSource: listed ? ("ask" as const) : ("last-sale" as const),
+        change30dPct,
+        watchers: a._count.watchedBy,
+      };
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null)
+    .sort((a, b) => b.valueThb - a.valueThb)
+    .slice(0, limit);
+}
+
+const UPDATE_ASSET_SELECT = {
+  id: true,
+  name: true,
+  gradingCompany: true,
+  grade: true,
+  isBlackLabel: true,
+  redeemedAt: true,
+} as const;
+
+export type MarketUpdate = {
+  kind: "listed" | "price-up" | "price-down" | "sold";
+  at: Date;
+  asset: { id: string; name: string; gradingCompany: GradingCompany; grade: number | null; isBlackLabel: boolean };
+  priceThb: number;
+  previousThb: number | null;
+};
+
+/** Market-wide figures plus a feed of the latest real price changes and sales. */
+export async function getMarketOverview() {
+  const since30 = new Date(Date.now() - 30 * 86_400_000);
+  const [listings, sales30d, recentSnapshots, recentSales] = await Promise.all([
+    prisma.asset.findMany({
+      where: { forSale: true, priceThb: { not: null }, marketStatus: MARKETPLACE_VISIBLE_STATUSES },
+      select: { priceThb: true },
+    }),
+    prisma.escrowTransaction.findMany({
+      where: { status: "RELEASED", releasedAt: { gte: since30 } },
+      select: { amountThb: true },
+    }),
+    prisma.priceSnapshot.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 40,
+      include: { asset: { select: UPDATE_ASSET_SELECT } },
+    }),
+    prisma.escrowTransaction.findMany({
+      where: { status: "RELEASED", releasedAt: { not: null } },
+      orderBy: { releasedAt: "desc" },
+      take: 10,
+      include: { asset: { select: UPDATE_ASSET_SELECT } },
+    }),
+  ]);
+
+  // Pair each snapshot with the one before it for the same asset, so the feed
+  // can say "up/down from X"; an asset's first-ever snapshot is a new listing.
+  const assetIds = [...new Set(recentSnapshots.map((s) => s.assetId))];
+  const allSnapshots = await prisma.priceSnapshot.findMany({
+    where: { assetId: { in: assetIds } },
+    orderBy: { createdAt: "asc" },
+    select: { id: true, assetId: true, priceThb: true },
+  });
+  const lastPriceByAsset = new Map<string, number>();
+  const previousBySnapshot = new Map<string, number | null>();
+  for (const snap of allSnapshots) {
+    previousBySnapshot.set(snap.id, lastPriceByAsset.get(snap.assetId) ?? null);
+    lastPriceByAsset.set(snap.assetId, snap.priceThb);
+  }
+
+  const updates: MarketUpdate[] = [
+    ...recentSnapshots
+      .filter((s) => !s.asset.redeemedAt)
+      .map((s): MarketUpdate => {
+        const prev = previousBySnapshot.get(s.id) ?? null;
+        const kind = prev == null || prev === s.priceThb ? "listed" : s.priceThb > prev ? "price-up" : "price-down";
+        return { kind, at: s.createdAt, asset: s.asset, priceThb: s.priceThb, previousThb: prev };
+      }),
+    ...recentSales.map(
+      (s): MarketUpdate => ({ kind: "sold", at: s.releasedAt!, asset: s.asset, priceThb: s.amountThb, previousThb: null }),
+    ),
+  ]
+    .sort((a, b) => b.at.getTime() - a.at.getTime())
+    .slice(0, 15);
+
+  const askPrices = listings.map((l) => l.priceThb!);
+  const salePrices = sales30d.map((s) => s.amountThb);
+  return {
+    activeListings: askPrices.length,
+    medianAskThb: median(askPrices),
+    sales30d: salePrices.length,
+    volume30dThb: salePrices.reduce((a, b) => a + b, 0),
+    medianSale30dThb: median(salePrices),
+    updates,
+  };
+}
+
+export async function getMyWantedCards(userId: string) {
+  return prisma.wantedCard.findMany({ where: { userId }, orderBy: { createdAt: "desc" } });
+}
+
+const TRADE_ASSET_SELECT = {
+  id: true,
+  name: true,
+  subtitle: true,
+  gradingCompany: true,
+  grade: true,
+  isBlackLabel: true,
+  themeIndex: true,
+  category: true,
+  mintAddress: true,
+  verificationPhotos: { orderBy: { createdAt: "asc" as const }, take: 1, select: { url: true } },
+} as const;
+
+const TRADE_USER_SELECT = { id: true, name: true, handle: true, walletAddress: true } as const;
+
+/** Swaps sent to and by a user, most recent first — BigInt escrow fields left out so this can cross into client components. */
+export async function getMyTradeOffers(userId: string) {
+  const trades = await prisma.tradeOffer.findMany({
+    where: { OR: [{ proposerId: userId }, { recipientId: userId }] },
+    orderBy: { createdAt: "desc" },
+    take: 50,
+    select: {
+      id: true,
+      cashThb: true,
+      message: true,
+      status: true,
+      createdAt: true,
+      proposerId: true,
+      recipientId: true,
+      proposer: { select: TRADE_USER_SELECT },
+      recipient: { select: TRADE_USER_SELECT },
+      requestedAsset: { select: TRADE_ASSET_SELECT },
+      offeredAsset: { select: TRADE_ASSET_SELECT },
+    },
+  });
+  return {
+    received: trades.filter((t) => t.recipientId === userId),
+    sent: trades.filter((t) => t.proposerId === userId),
+  };
+}
+
+/** The viewer's own vaulted cards that could be offered in a swap right now. */
+export async function getMySwappableAssets(userId: string) {
+  return prisma.asset.findMany({
+    where: { ownerId: userId, vaulted: true, redeemedAt: null, marketStatus: { notIn: ["IN_ESCROW", "IN_AUCTION"] } },
+    orderBy: { updatedAt: "desc" },
+    select: { ...TRADE_ASSET_SELECT, priceThb: true },
+  });
+}
+
+export async function getMyRedeemedAssets(userId: string) {
+  return prisma.asset.findMany({
+    where: { ownerId: userId, redeemedAt: { not: null } },
+    orderBy: { redeemedAt: "desc" },
+    select: { id: true, name: true, gradingCompany: true, grade: true, redeemedAt: true },
+  });
+}
+
+/** Staff-only: identity submissions awaiting review, plus recently reviewed ones. */
+export async function getKycQueue() {
+  const select = {
+    id: true,
+    name: true,
+    handle: true,
+    email: true,
+    phone: true,
+    createdAt: true,
+    kycStatus: true,
+    kycLegalName: true,
+    kycDateOfBirth: true,
+    kycIdType: true,
+    kycIdLast4: true,
+    kycSubmittedAt: true,
+    kycReviewedAt: true,
+    kycRejectReason: true,
+  } as const;
+  const [pending, reviewed] = await Promise.all([
+    prisma.user.findMany({ where: { kycStatus: "PENDING" }, orderBy: { kycSubmittedAt: "asc" }, select }),
+    prisma.user.findMany({
+      where: { kycStatus: { in: ["VERIFIED", "REJECTED"] } },
+      orderBy: { kycReviewedAt: "desc" },
+      take: 20,
+      select,
+    }),
+  ]);
+  return { pending, reviewed };
 }

@@ -5,11 +5,21 @@ import {
   getAcceptedOfferForViewer,
   getActiveAuctionForAsset,
   getAssetById,
+  getAssetInsightData,
+  getCardMarketStats,
+  getMySwappableAssets,
   getPriceHistory,
   getSellerRating,
   getSimilarAssets,
   isAssetWatched,
 } from "@/lib/queries";
+import { getEscrowAuthorityAddress } from "@/lib/web3/escrow-server";
+import { buildPriceInsights } from "@/lib/insights";
+import { PlatformPriceTable } from "@/components/item/platform-price-table";
+import { PriceInsights } from "@/components/item/price-insights";
+import { WantedCardButton } from "@/components/wanted/wanted-card-form";
+import { ProposeSwapButton } from "@/components/trade/propose-swap-button";
+import { VerifiedBadge } from "@/components/store/verified-badge";
 import { getCurrentUser } from "@/lib/session";
 import { ItemGallery } from "@/components/item/item-gallery";
 import { PriceHistoryChart } from "@/components/item/price-history-chart";
@@ -24,10 +34,11 @@ import { LeaveReviewForm } from "@/components/store/leave-review-form";
 import { RatingStars } from "@/components/store/rating-stars";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, ChevronDown, ExternalLink, Gavel, History, TrendingUp } from "lucide-react";
+import { ArrowLeft, ChevronDown, ExternalLink, Flame, Gavel, History } from "lucide-react";
 
-import { formatGrade, formatThb, formatUsd } from "@/lib/format";
+import { formatDate, formatGrade, formatThb } from "@/lib/format";
 import {
   CATEGORY_LABELS,
   MARKET_STATUS_BADGE_CLASS,
@@ -38,7 +49,7 @@ import {
 } from "@/lib/labels";
 import { extractPsaCertNumber, lookupPsaCert, lookupPsaPopulation, psaCertUrl } from "@/lib/psa";
 import { lookupCardPrice } from "@/lib/tcg-price";
-import { buildMarketQuery, ebaySoldListingsUrl, lookupEbayPrice } from "@/lib/ebay";
+import { buildMarketQuery, lookupEbayPrice } from "@/lib/ebay";
 import { cn } from "@/lib/utils";
 
 export default async function ItemDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -59,7 +70,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
   // page load, which is what was pushing this page to 5-10s and occasionally
   // outrunning the client's patience ("destination stream closed early").
   // Running them concurrently caps the wait at the slowest single call.
-  const [psaCert, priceQuote, ebayQuote, priceHistory, sellerRating, similarAssets] = await Promise.all([
+  const [psaCert, priceQuote, ebayQuote, priceHistory, sellerRating, similarAssets, cardMarket, insightData] = await Promise.all([
     // Live PSA cert lookup for display — best-effort, and never blocks the
     // page: it silently returns null whenever PSA isn't configured, the
     // account isn't approved for live access yet, or the request fails.
@@ -87,6 +98,8 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
       grade: asset.grade,
       priceThb: asset.priceThb,
     }),
+    getCardMarketStats({ name: asset.name, gradingCompany: asset.gradingCompany, grade: asset.grade }),
+    getAssetInsightData(asset.id),
   ]);
 
   const psaPopulation = psaCert?.specId != null ? await lookupPsaPopulation(psaCert.specId) : null;
@@ -107,10 +120,43 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
   const isOwner = asset.ownerId === user.id;
   const isWatching = !isOwner && (await isAssetWatched(user.id, asset.id));
 
-  const [activeAuction, acceptedOffer] = await Promise.all([
+  // Card swaps are vault-to-vault only — see proposeTrade in lib/actions.ts.
+  const swappable =
+    !isOwner &&
+    asset.vaulted &&
+    !asset.redeemedAt &&
+    asset.marketStatus !== "IN_ESCROW" &&
+    asset.marketStatus !== "IN_AUCTION";
+
+  const [activeAuction, acceptedOffer, mySwappableCards, escrowAuthorityAddress] = await Promise.all([
     asset.marketStatus === "IN_AUCTION" ? getActiveAuctionForAsset(asset.id) : Promise.resolve(null),
     !isOwner ? getAcceptedOfferForViewer(asset.id, user.id) : Promise.resolve(null),
+    swappable ? getMySwappableAssets(user.id) : Promise.resolve([]),
+    swappable ? getEscrowAuthorityAddress() : Promise.resolve(null),
   ]);
+
+  const insights = buildPriceInsights({
+    priceThb: asset.priceThb,
+    forSale: asset.forSale,
+    gradingCompany: asset.gradingCompany,
+    grade: asset.grade,
+    isBlackLabel: asset.isBlackLabel,
+    snapshots: insightData.snapshots,
+    watcherCount: insightData.watcherCount,
+    pendingOffers: insightData.pendingOffers,
+    market: cardMarket,
+    psa: psaCert ? { totalPopulation: psaCert.totalPopulation, populationHigher: psaCert.populationHigher } : null,
+  });
+  const gradeLabel =
+    asset.gradingCompany === "RAW"
+      ? "Raw / ungraded"
+      : `${asset.gradingCompany} ${formatGrade(asset.grade)}${asset.isBlackLabel ? " Black Label" : ""}`;
+  const wantedDefaults = {
+    query: asset.name,
+    gradingCompany: asset.gradingCompany,
+    minGrade: asset.gradingCompany === "RAW" ? null : asset.grade,
+    blackLabelOnly: asset.isBlackLabel,
+  };
 
   // The price snapshot immediately before the current one, from the same
   // real PriceSnapshot rows the chart below uses — null for a brand-new
@@ -120,13 +166,12 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
 
   return (
     <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6">
-      <Link
-        href="/marketplace"
-        className="text-muted-foreground hover:text-foreground mb-6 inline-flex items-center gap-1.5 text-sm transition-colors"
-      >
-        <ArrowLeft className="size-4" />
-        Back to Marketplace
-      </Link>
+      <Button asChild variant="outline" className="mb-6">
+        <Link href="/marketplace">
+          <ArrowLeft />
+          Back to Marketplace
+        </Link>
+      </Button>
 
       {/* items-start — without it, CSS Grid stretches the shorter info
           column to match the (usually much taller) image column's height,
@@ -251,7 +296,18 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
             </div>
           </div>
 
-          {activeAuction ? (
+          {asset.redeemedAt ? (
+            <div className="flex items-start gap-3 rounded-xl border border-dashed p-4 text-sm">
+              <Flame className="text-muted-foreground mt-0.5 size-4 shrink-0" />
+              <p>
+                <span className="font-semibold">Redeemed on {formatDate(asset.redeemedAt)}.</span>{" "}
+                <span className="text-muted-foreground">
+                  The physical card was shipped to its owner and its digital twin was burned, so it can no longer be
+                  bought, auctioned or swapped here.
+                </span>
+              </p>
+            </div>
+          ) : activeAuction ? (
             <Link
               href={`/auctions/${activeAuction.id}`}
               className="bg-foreground text-background flex items-center gap-3 rounded-xl p-4 transition-opacity hover:opacity-90"
@@ -297,7 +353,23 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
                   className="w-full"
                 />
               )}
+              {swappable && (
+                <ProposeSwapButton
+                  requestedAsset={{ id: asset.id, name: asset.name, priceThb: asset.forSale ? asset.priceThb : null }}
+                  recipientWalletAddress={asset.owner.walletAddress}
+                  myCards={mySwappableCards}
+                  escrowAuthorityAddress={escrowAuthorityAddress}
+                />
+              )}
             </>
+          )}
+          {!isOwner && (
+            <WantedCardButton
+              defaults={wantedDefaults}
+              label={asset.forSale ? "Notify me about other copies" : "Notify me when listed"}
+              className="w-full"
+              variant="outline"
+            />
           )}
 
           <PriceHistoryChart
@@ -316,7 +388,10 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
             </Avatar>
             <div className="flex min-w-0 flex-col gap-0.5">
               <span className="text-muted-foreground text-xs">Listed by</span>
-              <span className="truncate text-sm font-semibold">{asset.seller.name}</span>
+              <span className="flex min-w-0 items-center gap-2">
+                <span className="truncate text-sm font-semibold">{asset.seller.name}</span>
+                <VerifiedBadge status={asset.seller.kycStatus} />
+              </span>
               <RatingStars average={sellerRating.average} count={sellerRating.count} />
             </div>
           </Link>
@@ -420,7 +495,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
               <p className="text-muted-foreground border-t px-4 py-3 text-[11px]">
                 Grader detail sourced live from PSA&apos;s public Cert Verification API
                 {psaCert.itemStatus ? ` — status: ${psaCert.itemStatus}.` : "."} PSA does not publish a price
-                guide through this API, so no market value is shown here — see Market Reference below.
+                guide through this API, so no market value is shown here — see Price Comparison below.
               </p>
             )}
           </details>
@@ -432,80 +507,19 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
           into, not required reading before they can act. */}
       <Separator className="my-10" />
 
-      <div className="grid grid-cols-1 items-start gap-10 md:grid-cols-2">
+      <PlatformPriceTable
+        priceThb={asset.priceThb}
+        forSale={asset.forSale}
+        gradeLabel={gradeLabel}
+        marketQuery={ebayQuery}
+        cardMart={cardMarket}
+        tcg={priceQuote}
+        ebay={ebayQuote}
+      />
+
+      <div className="mt-10 grid grid-cols-1 items-start gap-10 md:grid-cols-2">
         <div className="flex flex-col gap-5">
-          <h2 className="text-lg font-semibold">Market Reference</h2>
-
-          {priceQuote && (
-            <div className="detail-panel rounded-xl border p-4">
-              <div className="mb-3 flex items-start justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <div className="bg-foreground text-background flex size-7 items-center justify-center rounded-lg">
-                    <TrendingUp className="size-3.5" />
-                  </div>
-                  <span className="text-sm font-semibold">Reference Market Price</span>
-                  <Badge variant="outline" className="text-[10px]">
-                    Ungraded
-                  </Badge>
-                </div>
-                {priceQuote.marketPriceUsd != null && (
-                  <span className="text-2xl leading-none font-bold tabular-nums">
-                    {formatUsd(priceQuote.marketPriceUsd)}
-                  </span>
-                )}
-              </div>
-              <p className="text-muted-foreground text-xs">
-                Matched to &quot;{priceQuote.matchedName}&quot;
-                {priceQuote.setName && ` — ${priceQuote.setName}`}
-                {priceQuote.cardNumber && ` #${priceQuote.cardNumber}`}
-                {priceQuote.printing && ` (${priceQuote.printing})`}
-              </p>
-            </div>
-          )}
-
-          {/* Always shown, even with no EBAY_APP_ID/EBAY_CERT_ID configured
-              — the sold-listings link alone is a real, verifiable price
-              reference with zero API dependency. The median/range figures
-              on top of it are a bonus once eBay's Browse API is wired up. */}
-          <div className="detail-panel rounded-xl border p-4">
-            <div className="mb-3 flex items-start justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <div className="bg-foreground text-background flex size-7 items-center justify-center rounded-lg">
-                  <TrendingUp className="size-3.5" />
-                </div>
-                <span className="text-sm font-semibold">eBay Market Reference</span>
-                {ebayQuote && (
-                  <Badge variant="outline" className="text-[10px]">
-                    {asset.gradingCompany === "RAW" ? "Ungraded" : `${asset.gradingCompany} ${formatGrade(asset.grade)}`}
-                  </Badge>
-                )}
-              </div>
-              {ebayQuote && (
-                <span className="text-2xl leading-none font-bold tabular-nums">
-                  {formatUsd(ebayQuote.medianPriceUsd)}
-                </span>
-              )}
-            </div>
-            {ebayQuote ? (
-              <p className="text-muted-foreground text-xs">
-                Median asking price across {ebayQuote.itemCount} active listing
-                {ebayQuote.itemCount === 1 ? "" : "s"} for &quot;{ebayQuote.query}&quot; — range{" "}
-                {formatUsd(ebayQuote.lowPriceUsd)}–{formatUsd(ebayQuote.highPriceUsd)}.
-              </p>
-            ) : (
-              <p className="text-muted-foreground text-xs">
-                Live pricing isn&apos;t connected yet — compare manually against real sold listings on eBay.
-              </p>
-            )}
-            <a
-              href={ebaySoldListingsUrl(ebayQuery)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-foreground mt-3 inline-flex items-center gap-1 border-t pt-3 text-xs font-medium hover:underline"
-            >
-              View sold listings on eBay <ExternalLink className="size-3" />
-            </a>
-          </div>
+          <PriceInsights insights={insights} />
         </div>
 
         <div>

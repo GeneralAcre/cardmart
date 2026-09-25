@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ListingCard } from "@/components/marketplace/listing-card";
 import { RatingStars } from "@/components/store/rating-stars";
 import { SellerWalletAddress } from "@/components/store/seller-wallet-address";
+import { VerifiedBadge } from "@/components/store/verified-badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CATEGORY_LABELS } from "@/lib/labels";
 import { formatDate, formatThb } from "@/lib/format";
@@ -19,7 +20,7 @@ export default async function StorePage({ params }: { params: Promise<{ id: stri
   const [profile, currentUser] = await Promise.all([getSellerProfile(id), getCurrentUser()]);
 
   if (!profile) notFound();
-  const { seller, listings, rating, reviews, soldHistory } = profile;
+  const { seller, listings, rating, reviews, soldHistory, saleCount } = profile;
 
   const displayName = seller.name ?? seller.handle ?? "Collector";
   const initials = displayName
@@ -40,11 +41,13 @@ export default async function StorePage({ params }: { params: Promise<{ id: stri
           <div className="flex flex-wrap items-baseline gap-x-2">
             <h1 className="truncate text-lg font-semibold">{displayName}</h1>
             {seller.handle && <span className="text-muted-foreground text-sm">@{seller.handle}</span>}
+            <VerifiedBadge status={seller.kycStatus} className="self-center" />
           </div>
           <RatingStars average={rating.average} count={rating.count} size="md" />
           <span className="text-muted-foreground text-xs">
             Member since {formatDate(seller.createdAt)} &middot; {listings.length} listed item
-            {listings.length === 1 ? "" : "s"}
+            {listings.length === 1 ? "" : "s"} &middot; {saleCount} completed sale
+            {saleCount === 1 ? "" : "s"}
           </span>
           {seller.walletAddress && <SellerWalletAddress address={seller.walletAddress} />}
         </div>

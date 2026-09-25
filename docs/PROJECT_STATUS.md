@@ -26,6 +26,13 @@ This report covers everything built so far (49 commits, 2 Sep → 25 Sep 2026), 
 | Digital twin SPL token + on-chain ownership transfer | ✅ Done (devnet) |
 | Market price references (PSA, TCG API, eBay) | ✅ Done; some need API keys |
 | Landing page EN/TH | ✅ Done (landing page only) |
+| Price comparison table (CardMart, eBay, TCGplayer, Beckett, PriceCharting) + price insights | ✅ Done |
+| Median sale price, 7/30-day trending, Market page (rankings, stats, latest updates) | ✅ Done |
+| Getting-started guide for new buyers and sellers | ✅ Done |
+| Identity verification (KYC, reviewed by staff) + ID-verified badge | ✅ Done (no document upload; see §6) |
+| "Notify me when listed" card alerts | ✅ Done |
+| Card-for-card swaps with cash difference (vaulted cards) | ✅ Done |
+| Redeem burns the digital twin token | ✅ Done |
 | Full-Service grading for sellers | ⚠️ Backend and admin queue exist, but sellers can no longer start one |
 | Automated tests | ❌ None |
 | Production readiness (mainnet, real payments, audit) | ❌ Out of scope for the thesis; see §6 |
@@ -233,9 +240,7 @@ The app falls back to a simulated version whenever the real service isn't config
 2. **Unclaimed auction wins never close.** If the winning bidder never claims, the auction stays "ended but unsettled" and the item is stuck.
    - Needs a claim deadline, then either an offer to the second-highest bidder or a return to the seller.
    - Bids are also not backed by locked funds until the claim.
-3. **Unfinished work on the main developer's machine (not committed):**
-   - A new `components/marketplace/price-compare-table.tsx` that isn't used by any page yet.
-   - A restyled "Back to Marketplace" button on the item page.
+3. ~~Unfinished compare table and item-page button~~: both now shipped (the compare table is on the Marketplace page).
 4. **No admin view for contact-form messages.** They are saved to the `ContactMessage` table, but staff can only read them in the database.
 5. **Messaging is polling-based.** Realtime (websocket / Pusher / Supabase Realtime) would be an upgrade.
 6. **Notifications are in-app only.** No email or push notifications yet.
@@ -262,6 +267,8 @@ The app falls back to a simulated version whenever the real service isn't config
   - eBay's self-serve API returns **asking** prices, not sold prices. Sold-price data needs eBay's restricted Marketplace Insights API.
   - Our own price history is real, but only covers price changes made on CardMart.
 - **Physical side is status-only:** warehouse inspection, vault storage and shipping are manual processes recorded in the app, with no courier or tracking integration.
+- **KYC is manual and document-free:** users submit legal name, date of birth, ID type and the last 4 characters of their ID number; staff approve or decline by hand. Photos of ID documents are deliberately not collected, because the current Blob store serves public URLs. Production would use a KYC provider (document + liveness checks).
+- **Swaps are vault-to-vault only:** both cards must already be inspected and in the warehouse, so a swap is an instant ownership change with no shipping.
 - **Categories:** the platform was scoped down to TCG. The Amulet category was removed; sports cards and comics exist in the data model.
 
 ---

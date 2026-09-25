@@ -1,13 +1,18 @@
 import Link from "next/link";
-import { Bookmark, PackageOpen } from "lucide-react";
+import { Bookmark, Flame, PackageOpen } from "lucide-react";
 
 import {
+  getMyRedeemedAssets,
+  getMyTradeOffers,
+  getMyWantedCards,
   getOffersMade,
   getOffersReceived,
   getPortfolioPriceHistory,
+  getSellerRating,
   getVaultAssets,
   getWatchlist,
 } from "@/lib/queries";
+import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
 import { getDevnetSolBalance } from "@/lib/solana";
 import { getEscrowAuthorityAddress } from "@/lib/web3/escrow-server";
@@ -15,9 +20,17 @@ import { ListingCard } from "@/components/marketplace/listing-card";
 import { PortfolioItemCard } from "@/components/portfolio/portfolio-item-card";
 import { OffersPanel } from "@/components/portfolio/offers-panel";
 import { ProfileHeader } from "@/components/portfolio/profile-header";
+import { IdentityCard } from "@/components/portfolio/identity-card";
+import { WantedCardsPanel } from "@/components/wanted/wanted-cards-panel";
+import { TradesPanel } from "@/components/trade/trades-panel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { formatDate, formatGrade } from "@/lib/format";
 
-export default async function PortfolioPage() {
+const TABS = ["all", "hand", "vault", "watchlist", "offers", "trades", "alerts"] as const;
+
+export default async function PortfolioPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
+  const { tab } = await searchParams;
+  const defaultTab = TABS.find((t) => t === tab) ?? "all";
   const user = await getCurrentUser();
   const walletAddress = user.walletAddress ?? user.walletMock;
   const [
@@ -28,6 +41,11 @@ export default async function PortfolioPage() {
     escrowAuthorityAddress,
     offersReceived,
     offersMade,
+    trades,
+    wantedCards,
+    redeemed,
+    rating,
+    completedSales,
   ] = await Promise.all([
     getVaultAssets(user.id),
     getDevnetSolBalance(user.walletAddress), // real balance only for real (Privy) wallets, not the mock demo ones
@@ -36,7 +54,13 @@ export default async function PortfolioPage() {
     getEscrowAuthorityAddress(),
     getOffersReceived(user.id),
     getOffersMade(user.id),
+    getMyTradeOffers(user.id),
+    getMyWantedCards(user.id),
+    getMyRedeemedAssets(user.id),
+    getSellerRating(user.id),
+    prisma.escrowTransaction.count({ where: { sellerId: user.id, status: "RELEASED" } }),
   ]);
+  const pendingTradesForMe = trades.received.filter((t) => t.status === "PENDING").length;
 
   const inHand = assets.filter((a) => !a.vaulted);
   const inVault = assets.filter((a) => a.vaulted);
@@ -60,7 +84,17 @@ export default async function PortfolioPage() {
         />
       </div>
 
-      <Tabs defaultValue="all">
+      <div className="mb-8">
+        <IdentityCard
+          status={user.kycStatus}
+          rejectReason={user.kycRejectReason}
+          rating={rating.average}
+          reviewCount={rating.count}
+          completedSales={completedSales}
+        />
+      </div>
+
+      <Tabs defaultValue={defaultTab}>
         <TabsList>
           <TabsTrigger value="all">All ({assets.length})</TabsTrigger>
           <TabsTrigger value="hand">
@@ -73,6 +107,8 @@ export default async function PortfolioPage() {
           </TabsTrigger>
           <TabsTrigger value="watchlist">Watchlist ({watchlist.length})</TabsTrigger>
           <TabsTrigger value="offers">Offers ({offersReceived.length})</TabsTrigger>
+          <TabsTrigger value="trades">Trades ({pendingTradesForMe})</TabsTrigger>
+          <TabsTrigger value="alerts">Alerts ({wantedCards.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="all" className="pt-6">
@@ -83,6 +119,32 @@ export default async function PortfolioPage() {
         </TabsContent>
         <TabsContent value="vault" className="pt-6">
           <PortfolioGrid assets={inVault} escrowAuthorityAddress={escrowAuthorityAddress} />
+          {redeemed.length > 0 && (
+            <div className="mt-10">
+              <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
+                <Flame className="size-4" /> Redeemed ({redeemed.length})
+              </h3>
+              <div className="flex flex-col gap-2">
+                {redeemed.map((a) => (
+                  <Link
+                    key={a.id}
+                    href={`/item/${a.id}`}
+                    className="bg-card hover:bg-accent flex flex-wrap items-center justify-between gap-2 rounded-xl border p-3 text-sm transition-colors"
+                  >
+                    <span className="font-medium">
+                      {a.name}{" "}
+                      <span className="text-muted-foreground font-normal">
+                        · {a.gradingCompany === "RAW" ? "Raw" : `${a.gradingCompany} ${formatGrade(a.grade)}`}
+                      </span>
+                    </span>
+                    <span className="text-muted-foreground text-xs">
+                      Shipped to you {a.redeemedAt ? formatDate(a.redeemedAt) : ""} · digital twin burned
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
         </TabsContent>
         <TabsContent value="watchlist" className="pt-6">
           {watchlist.length === 0 ? (
@@ -103,6 +165,12 @@ export default async function PortfolioPage() {
         </TabsContent>
         <TabsContent value="offers" className="pt-6">
           <OffersPanel received={offersReceived} made={offersMade} />
+        </TabsContent>
+        <TabsContent value="trades" className="pt-6">
+          <TradesPanel received={trades.received} sent={trades.sent} escrowAuthorityAddress={escrowAuthorityAddress} />
+        </TabsContent>
+        <TabsContent value="alerts" className="pt-6">
+          <WantedCardsPanel cards={wantedCards} />
         </TabsContent>
       </Tabs>
     </div>

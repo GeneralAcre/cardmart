@@ -59,7 +59,8 @@ export async function completeProfile(
     },
   });
 
-  redirect("/");
+  // First-time users land on the starter guide rather than the landing page.
+  redirect("/guide?welcome=1");
 }
 
 const updateShippingInfoSchema = z.object({

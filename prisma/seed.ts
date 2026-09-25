@@ -39,6 +39,8 @@ async function main() {
   await prisma.bid.deleteMany();
   await prisma.auction.deleteMany();
   await prisma.offer.deleteMany();
+  await prisma.tradeOffer.deleteMany();
+  await prisma.wantedCard.deleteMany();
   await prisma.watchlistItem.deleteMany();
   await prisma.priceSnapshot.deleteMany();
   await prisma.gradingSubmission.deleteMany();

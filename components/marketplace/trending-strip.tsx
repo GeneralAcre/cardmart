@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { TrendingDown, TrendingUp } from "lucide-react";
@@ -16,10 +19,12 @@ export interface TrendingListing {
 // Real "rising stars" — every entry here actually gained value between two
 // real PriceSnapshot rows (see getTrendingListings in lib/queries.ts), never
 // a fabricated trend. That's also why this only ever renders when there's
-// at least one real gainer: an empty or padded-out "Trending" row would be
-// worse than no section at all.
-export function TrendingStrip({ listings }: { listings: TrendingListing[] }) {
-  if (listings.length === 0) return null;
+// at least one real gainer in either range: an empty or padded-out
+// "Trending" row would be worse than no section at all.
+export function TrendingStrip({ week, month }: { week: TrendingListing[]; month: TrendingListing[] }) {
+  const [range, setRange] = useState<7 | 30>(week.length > 0 ? 7 : 30);
+  if (week.length === 0 && month.length === 0) return null;
+  const listings = range === 7 ? week : month;
 
   return (
     <div className="flex flex-col gap-4">
@@ -28,8 +33,31 @@ export function TrendingStrip({ listings }: { listings: TrendingListing[] }) {
           <TrendingUp className="size-3.5" />
         </div>
         <h2 className="text-lg font-semibold">Trending</h2>
-        <span className="text-muted-foreground text-xs">Biggest price gains this week</span>
+        <span className="text-muted-foreground hidden text-xs sm:inline">
+          Biggest price gains in the last {range} days
+        </span>
+        <div className="bg-muted ml-auto flex rounded-lg p-0.5 text-xs font-medium">
+          {([7, 30] as const).map((days) => (
+            <button
+              key={days}
+              type="button"
+              onClick={() => setRange(days)}
+              aria-pressed={range === days}
+              className={`rounded-md px-2.5 py-1 transition-colors ${
+                range === days ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {days} days
+            </button>
+          ))}
+        </div>
       </div>
+
+      {listings.length === 0 && (
+        <p className="text-muted-foreground rounded-xl border border-dashed p-6 text-center text-sm">
+          No price gains in the last {range} days.
+        </p>
+      )}
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {listings.map(({ asset, previousPriceThb, currentPriceThb, gainPct }) => {

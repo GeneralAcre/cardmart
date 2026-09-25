@@ -22,6 +22,8 @@ import {
   TOKEN_PROGRAM_ADDRESS,
   findAssociatedTokenPda,
   getApproveCheckedInstruction,
+  getBurnCheckedInstruction,
+  getCloseAccountInstruction,
   getCreateAssociatedTokenIdempotentInstructionAsync,
   getRevokeInstruction,
 } from "@solana-program/token";
@@ -90,6 +92,42 @@ export async function buildRevokeTransaction(opts: { owner: string; mintAddress:
     (m) => setTransactionMessageFeePayer(owner, m),
     (m) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, m),
     (m) => appendTransactionMessageInstruction(revoke, m),
+  );
+  return new Uint8Array(getTransactionEncoder().encode(compileTransaction(message)));
+}
+
+/**
+ * Owner-signed: burns the owner's 1-of-1 digital twin and closes the now-empty
+ * token account (its rent goes back to the owner). Used when a vaulted item
+ * is redeemed — the physical card leaves the vault, so its on-chain twin must
+ * stop existing rather than stay tradeable without anything behind it. The
+ * mint's supply ends at 0, and since mint authority was revoked at mint time
+ * it can never be re-minted.
+ */
+export async function buildBurnTransaction(opts: { owner: string; mintAddress: string }): Promise<Uint8Array> {
+  const owner = address(opts.owner);
+  const mint = address(opts.mintAddress);
+  const [ownerAta] = await findAssociatedTokenPda({ owner, mint, tokenProgram: TOKEN_PROGRAM_ADDRESS });
+
+  const burn = getBurnCheckedInstruction({
+    account: ownerAta,
+    mint,
+    authority: createNoopSigner(owner),
+    amount: APPROVE_AMOUNT,
+    decimals: DECIMALS,
+  });
+  const close = getCloseAccountInstruction({
+    account: ownerAta,
+    destination: owner,
+    owner: createNoopSigner(owner),
+  });
+
+  const { value: latestBlockhash } = await rpc.getLatestBlockhash({ commitment: "confirmed" }).send();
+  const message = pipe(
+    createTransactionMessage({ version: 0 }),
+    (m) => setTransactionMessageFeePayer(owner, m),
+    (m) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, m),
+    (m) => appendTransactionMessageInstructions([burn, close], m),
   );
   return new Uint8Array(getTransactionEncoder().encode(compileTransaction(message)));
 }

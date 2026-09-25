@@ -10,6 +10,9 @@ import type {
   GradingSubmissionStatus,
   AuctionStatus,
   OfferStatus,
+  KycStatus,
+  KycIdType,
+  TradeOfferStatus,
 } from "@prisma/client";
 
 export const CATEGORY_LABELS: Record<AssetCategory, string> = {
@@ -160,4 +163,27 @@ export const PROVENANCE_LABELS: Record<ProvenanceType, string> = {
   REDEEMED: "Physical Item Redeemed",
   ESCROW_REFUNDED: "Payment Refunded",
   LISTING_APPROVED: "Transfer Approved",
+  TOKEN_BURNED: "Digital Twin Burned",
+  SWAPPED: "Swapped in a Card Trade",
+};
+
+export const KYC_STATUS_LABELS: Record<KycStatus, string> = {
+  NONE: "Not verified",
+  PENDING: "Under review",
+  VERIFIED: "ID verified",
+  REJECTED: "Verification declined",
+};
+
+export const KYC_ID_TYPE_LABELS: Record<KycIdType, string> = {
+  NATIONAL_ID: "National ID card",
+  PASSPORT: "Passport",
+  DRIVING_LICENSE: "Driving licence",
+};
+
+export const TRADE_OFFER_STATUS_LABELS: Record<TradeOfferStatus, string> = {
+  PENDING: "Pending",
+  ACCEPTED: "Swapped",
+  REJECTED: "Declined",
+  WITHDRAWN: "Withdrawn",
+  CANCELLED: "Cancelled",
 };

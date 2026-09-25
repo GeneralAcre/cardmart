@@ -1,6 +1,7 @@
 import {
   getAdminAlerts,
   getGradingSubmissionQueue,
+  getKycQueue,
   getSellerManagementList,
   getVaultInventory,
   getWarehouseHistory,
@@ -12,6 +13,7 @@ import { GradingQueue } from "@/components/warehouse/grading-queue";
 import { AdminAlerts } from "@/components/warehouse/admin-alerts";
 import { VaultInventory } from "@/components/warehouse/vault-inventory";
 import { SellerManagement } from "@/components/warehouse/seller-management";
+import { KycReview, type KycRow } from "@/components/warehouse/kyc-review";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -25,16 +27,31 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatDateTime, formatThb } from "@/lib/format";
 import { INBOUND_STATUS_LABELS } from "@/lib/labels";
 
-export default async function WarehouseAdminPage() {
-  await requireAdmin();
+const TABS = ["queue", "grading", "vault", "kyc", "alerts", "sellers", "history"] as const;
 
-  const [queue, history, gradingQueue, alerts, vaultItems, sellers] = await Promise.all([
+function toKycRow(u: Awaited<ReturnType<typeof getKycQueue>>["pending"][number]): KycRow {
+  return {
+    ...u,
+    createdAt: u.createdAt.toISOString(),
+    kycDateOfBirth: u.kycDateOfBirth?.toISOString() ?? null,
+    kycSubmittedAt: u.kycSubmittedAt?.toISOString() ?? null,
+    kycReviewedAt: u.kycReviewedAt?.toISOString() ?? null,
+  };
+}
+
+export default async function WarehouseAdminPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
+  await requireAdmin();
+  const { tab } = await searchParams;
+  const defaultTab = TABS.find((t) => t === tab) ?? "queue";
+
+  const [queue, history, gradingQueue, alerts, vaultItems, sellers, kyc] = await Promise.all([
     getWarehouseQueue(),
     getWarehouseHistory(),
     getGradingSubmissionQueue(),
     getAdminAlerts(),
     getVaultInventory(),
     getSellerManagementList(),
+    getKycQueue(),
   ]);
   const unreadAlertCount = alerts.filter((a) => !a.readAt).length;
 
@@ -48,11 +65,12 @@ export default async function WarehouseAdminPage() {
         </p>
       </div>
 
-      <Tabs defaultValue="queue">
+      <Tabs defaultValue={defaultTab}>
         <TabsList>
           <TabsTrigger value="queue">Inbound Queue ({queue.length})</TabsTrigger>
           <TabsTrigger value="grading">Grading Submissions ({gradingQueue.length})</TabsTrigger>
           <TabsTrigger value="vault">Vault Inventory ({vaultItems.length})</TabsTrigger>
+          <TabsTrigger value="kyc">Identity ({kyc.pending.length})</TabsTrigger>
           <TabsTrigger value="alerts">
             Alerts {unreadAlertCount > 0 ? `(${unreadAlertCount})` : ""}
           </TabsTrigger>
@@ -80,6 +98,10 @@ export default async function WarehouseAdminPage() {
               owner: { name: a.owner.name, handle: a.owner.handle },
             }))}
           />
+        </TabsContent>
+
+        <TabsContent value="kyc" className="pt-6">
+          <KycReview pending={kyc.pending.map(toKycRow)} reviewed={kyc.reviewed.map(toKycRow)} />
         </TabsContent>
 
         <TabsContent value="alerts" className="pt-6">

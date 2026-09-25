@@ -97,6 +97,8 @@ enum ProvenanceType {
   OWNERSHIP_TRANSFERRED
   RELISTED
   REDEEMED
+  TOKEN_BURNED
+  SWAPPED
   ESCROW_REFUNDED
   LISTING_APPROVED
 }
@@ -153,22 +155,40 @@ model User {
   // anywhere on the buyer/seller side beyond a plain rejection message.
   isBanned Boolean @default(false)
 
-  listedAssets       Asset[]             @relation("AssetSeller")
-  ownedAssets        Asset[]             @relation("AssetOwner")
-  provenanceEvents   ProvenanceEvent[]
-  purchases          EscrowTransaction[] @relation("EscrowBuyer")
-  sales              EscrowTransaction[] @relation("EscrowSeller")
-  gradingSubmissions GradingSubmission[] @relation("GradingSubmissionSeller")
-  reviewsReceived    Review[]            @relation("SellerReviews")
-  reviewsGiven       Review[]            @relation("BuyerReviews")
-  watchlist          WatchlistItem[]
-  notifications      Notification[]
-  bids               Bid[]
-  offersMade         Offer[]             @relation("OfferBuyer")
-  offersReceived     Offer[]             @relation("OfferSeller")
-  conversationsA     Conversation[]      @relation("ConversationUserA")
-  conversationsB     Conversation[]      @relation("ConversationUserB")
-  messagesSent       Message[]
+  // Identity verification (KYC). Deliberately stores no ID document image —
+  // only what staff need to review a submission (legal name, date of birth,
+  // ID type, last 4 digits of the ID number). A production launch would hand
+  // document + liveness checks to a dedicated KYC provider instead.
+  kycStatus       KycStatus  @default(NONE)
+  kycLegalName    String?
+  kycDateOfBirth  DateTime?
+  kycIdType       KycIdType?
+  kycIdLast4      String?
+  kycSubmittedAt  DateTime?
+  kycReviewedAt   DateTime?
+  kycRejectReason String?
+
+  listedAssets        Asset[]             @relation("AssetSeller")
+  ownedAssets         Asset[]             @relation("AssetOwner")
+  provenanceEvents    ProvenanceEvent[]
+  purchases           EscrowTransaction[] @relation("EscrowBuyer")
+  sales               EscrowTransaction[] @relation("EscrowSeller")
+  gradingSubmissions  GradingSubmission[] @relation("GradingSubmissionSeller")
+  reviewsReceived     Review[]            @relation("SellerReviews")
+  reviewsGiven        Review[]            @relation("BuyerReviews")
+  watchlist           WatchlistItem[]
+  notifications       Notification[]
+  bids                Bid[]
+  offersMade          Offer[]             @relation("OfferBuyer")
+  offersReceived      Offer[]             @relation("OfferSeller")
+  conversationsA      Conversation[]      @relation("ConversationUserA")
+  conversationsB      Conversation[]      @relation("ConversationUserB")
+  messagesSent        Message[]
+  wantedCards         WantedCard[]
+  tradeOffersMade     TradeOffer[]        @relation("TradeOfferProposer")
+  tradeOffersReceived TradeOffer[]        @relation("TradeOfferRecipient")
+
+  @@index([kycStatus])
 }
 
 model Asset {
@@ -218,6 +238,13 @@ model Asset {
   // components/warehouse/.
   vaultLocation String?
 
+  // Set when the owner redeemed the physical item out of the vault. The
+  // digital twin is burned at that moment (burnTxSignature — a real SPL
+  // BurnChecked when the asset has a real mint), so a redeemed asset can
+  // never be listed, auctioned or traded again.
+  redeemedAt      DateTime?
+  burnTxSignature String?
+
   sellerId String
   seller   User   @relation("AssetSeller", fields: [sellerId], references: [id])
   ownerId  String
@@ -235,6 +262,8 @@ model Asset {
   // cancellation, so this is intentionally one-to-many, not one-to-one.
   auctions           Auction[]
   offers             Offer[]
+  tradeOffersFor     TradeOffer[]        @relation("TradeOfferRequested")
+  tradeOffersWith    TradeOffer[]        @relation("TradeOfferOffered")
 
   @@index([sellerId])
   @@index([ownerId])
@@ -338,6 +367,89 @@ model WatchlistItem {
 // price chart reads straight from this table, so a brand-new listing shows
 // a flat/short line rather than a fake trend; it only fills in as real
 // pricing events actually happen.
+enum KycStatus {
+  NONE
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum KycIdType {
+  NATIONAL_ID
+  PASSPORT
+  DRIVING_LICENSE
+}
+
+enum TradeOfferStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+  // Auto-closed because one of the two cards stopped being tradeable (sold,
+  // redeemed, auctioned, or swapped in another trade) before a response.
+  CANCELLED
+}
+
+// A card-for-card swap proposal between two vaulted items, optionally with
+// a cash difference. cashThb > 0: the proposer adds cash on top of their
+// card; cashThb < 0: the proposer asks the recipient to add cash. Whoever
+// pays locks it in the same escrow program as a normal purchase (the
+// proposer at proposal time, the recipient at acceptance), and it is
+// released to the other side only when the swap completes.
+model TradeOffer {
+  id          String           @id @default(cuid())
+  cashThb     Int              @default(0)
+  message     String?
+  status      TradeOfferStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  respondedAt DateTime?
+
+  // Real on-chain lock of the proposer's cash (cashThb > 0 only) — same
+  // fields and fallback rules as EscrowTransaction.
+  cashOnChain      Boolean @default(false)
+  cashTradeId      BigInt?
+  cashTradeAccount String?
+  cashLamports     BigInt?
+
+  proposerId       String
+  proposer         User   @relation("TradeOfferProposer", fields: [proposerId], references: [id])
+  recipientId      String
+  recipient        User   @relation("TradeOfferRecipient", fields: [recipientId], references: [id])
+  // The recipient's card the proposer wants.
+  requestedAssetId String
+  requestedAsset   Asset  @relation("TradeOfferRequested", fields: [requestedAssetId], references: [id])
+  // The proposer's card offered in exchange.
+  offeredAssetId   String
+  offeredAsset     Asset  @relation("TradeOfferOffered", fields: [offeredAssetId], references: [id])
+
+  @@index([recipientId, status])
+  @@index([proposerId, status])
+  @@index([requestedAssetId, status])
+  @@index([offeredAssetId, status])
+}
+
+// A "notify me when this card is listed" alert, matched against every new
+// listing and relist (see notifyWantedCardMatches in lib/actions.ts): a
+// case-insensitive substring match on the card name plus the optional
+// grade / price / seller-trust constraints below.
+model WantedCard {
+  id             String          @id @default(cuid())
+  query          String
+  gradingCompany GradingCompany?
+  minGrade       Float?
+  blackLabelOnly Boolean         @default(false)
+  maxPriceThb    Int?
+  // Only alert for sellers with a verified identity or at least a 4-star rating.
+  trustedOnly    Boolean         @default(false)
+  createdAt      DateTime        @default(now())
+  lastMatchedAt  DateTime?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
 model PriceSnapshot {
   id        String   @id @default(cuid())
   priceThb  Int
@@ -556,6 +668,13 @@ enum NotificationType {
   OFFER_RECEIVED
   OFFER_ACCEPTED
   OFFER_REJECTED
+  WANTED_CARD_LISTED
+  TRADE_OFFER_RECEIVED
+  TRADE_OFFER_ACCEPTED
+  TRADE_OFFER_REJECTED
+  KYC_SUBMITTED
+  KYC_APPROVED
+  KYC_REJECTED
 }
 
 model Notification {

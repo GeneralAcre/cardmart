@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import type { AssetCategory, GradingCompany, NotificationType, Prisma } from "@prisma/client";
+import type { AssetCategory, GradingCompany, KycIdType, NotificationType, Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, requireAdmin } from "@/lib/session";
@@ -12,7 +12,7 @@ import {
   mockEscrowInstruction,
 } from "@/lib/web3/mock-chain";
 import { releaseTradeToSeller, refundTradeToBuyer, getEscrowAuthorityAddress } from "@/lib/web3/escrow-server";
-import { mintDigitalTwinToken, transferDigitalTwinToken } from "@/lib/web3/token-server";
+import { isDigitalTwinHeldBy, mintDigitalTwinToken, transferDigitalTwinToken } from "@/lib/web3/token-server";
 import { FULL_SERVICE_PACKAGE_PRICE_THB } from "@/lib/pricing";
 import { themeIndexForSerial } from "@/lib/theme";
 import { getVerificationChecklist } from "@/lib/verification-checklist";
@@ -66,6 +66,109 @@ async function notifyWatchersOfPriceDrop(assetId: string, assetName: string, old
         `/item/${assetId}`,
       ),
     ),
+  );
+}
+
+/**
+ * "Where to buy" alerts: tells everyone with a matching WantedCard that a card
+ * they're looking for was just listed. Runs on every new listing and relist,
+ * never on a plain reprice upward. trustedOnly alerts only fire for sellers
+ * with a verified identity or at least a 4-star average from real reviews.
+ * One notification per user per listing, even if several of their alerts match.
+ */
+async function notifyWantedCardMatches(assetId: string) {
+  const asset = await prisma.asset.findUnique({
+    where: { id: assetId },
+    include: { owner: { select: { id: true, name: true, handle: true, kycStatus: true } } },
+  });
+  if (!asset || !asset.forSale || asset.priceThb == null || asset.redeemedAt) return;
+  const priceThb = asset.priceThb;
+
+  const alerts = await prisma.wantedCard.findMany({ where: { userId: { not: asset.ownerId } } });
+  const name = asset.name.toLowerCase();
+  const matches = alerts.filter(
+    (w) =>
+      name.includes(w.query.toLowerCase()) &&
+      (w.gradingCompany == null || w.gradingCompany === asset.gradingCompany) &&
+      (w.minGrade == null || (asset.grade != null && asset.grade >= w.minGrade)) &&
+      (!w.blackLabelOnly || asset.isBlackLabel) &&
+      (w.maxPriceThb == null || priceThb <= w.maxPriceThb),
+  );
+  if (matches.length === 0) return;
+
+  let sellerTrusted = asset.owner.kycStatus === "VERIFIED";
+  if (!sellerTrusted && matches.some((w) => w.trustedOnly)) {
+    const rating = await prisma.review.aggregate({ where: { sellerId: asset.ownerId }, _avg: { rating: true } });
+    sellerTrusted = (rating._avg.rating ?? 0) >= 4;
+  }
+
+  const notified = new Set<string>();
+  const matchedIds: string[] = [];
+  for (const w of matches) {
+    if (w.trustedOnly && !sellerTrusted) continue;
+    matchedIds.push(w.id);
+    if (notified.has(w.userId)) continue;
+    notified.add(w.userId);
+    await notifyUser(
+      w.userId,
+      "WANTED_CARD_LISTED",
+      "A card you want was just listed",
+      `${asset.name} is now for sale at ${priceThb.toLocaleString()} THB from ${asset.owner.name ?? asset.owner.handle ?? "a seller"}${sellerTrusted ? " (trusted seller)" : ""}.`,
+      `/item/${asset.id}`,
+    );
+  }
+  if (matchedIds.length > 0) {
+    await prisma.wantedCard.updateMany({ where: { id: { in: matchedIds } }, data: { lastMatchedAt: new Date() } });
+  }
+}
+
+/**
+ * Closes every still-pending card swap that involves this asset, refunding any
+ * cash the proposer locked. Called whenever the asset stops being swappable
+ * (sold, auctioned, redeemed, or swapped in a different trade), so a stale
+ * proposal can never be accepted and locked cash never gets stranded.
+ */
+async function cancelTradesInvolving(assetId: string, exceptTradeId?: string) {
+  const trades = await prisma.tradeOffer.findMany({
+    where: {
+      status: "PENDING",
+      OR: [{ requestedAssetId: assetId }, { offeredAssetId: assetId }],
+      ...(exceptTradeId ? { id: { not: exceptTradeId } } : {}),
+    },
+    include: { proposer: true, recipient: true, requestedAsset: true },
+  });
+  for (const trade of trades) {
+    await refundTradeCash(trade);
+    await prisma.tradeOffer.update({ where: { id: trade.id }, data: { status: "CANCELLED", respondedAt: new Date() } });
+    await notifyUser(
+      trade.proposerId,
+      "TRADE_OFFER_REJECTED",
+      "Swap proposal closed",
+      `Your swap for ${trade.requestedAsset.name} was closed because one of the cards is no longer available${trade.cashThb > 0 ? " — your cash was refunded" : ""}.`,
+      "/portfolio?tab=trades",
+    );
+  }
+}
+
+/** Refunds a proposer's locked swap cash (cashThb > 0 only; a no-op otherwise). */
+async function refundTradeCash(trade: {
+  cashThb: number;
+  cashOnChain: boolean;
+  cashTradeId: bigint | null;
+  requestedAssetId: string;
+  proposer: { walletAddress: string | null };
+  recipient: { walletAddress: string | null };
+}) {
+  if (trade.cashThb <= 0) return;
+  await releaseOrRefundEscrow(
+    "refund",
+    {
+      onChain: trade.cashOnChain,
+      onChainTradeId: trade.cashTradeId,
+      buyer: { walletAddress: trade.proposer.walletAddress },
+      seller: { walletAddress: trade.recipient.walletAddress },
+    },
+    trade.requestedAssetId,
   );
 }
 
@@ -299,6 +402,8 @@ export async function createListing(
     ],
   });
 
+  await notifyWantedCardMatches(asset.id);
+
   revalidateMarketplace(asset.id);
   return { assetId: asset.id, mintAddress: mintAddress ?? undefined };
 }
@@ -356,6 +461,7 @@ async function completePurchase(opts: {
   // components/item/buy-panel.tsx) — falls back to the old simulated
   // signature otherwise, same pattern as everywhere else real signing was
   // added this session.
+  if (asset.redeemedAt) throw new Error("This item was redeemed and is no longer tradeable.");
   const onChain = Boolean(escrowLock);
   const lockSignature = escrowLock?.txSignature ?? (await mockEscrowInstruction("lock", assetId)).txSignature;
 
@@ -475,6 +581,7 @@ async function completePurchase(opts: {
     await notifyUser(user.id, "ITEM_PURCHASED", "Purchase confirmed", purchasedNote, `/item/${assetId}`);
   }
 
+  await cancelTradesInvolving(assetId);
   revalidateMarketplace(assetId);
 }
 
@@ -543,6 +650,7 @@ export async function startAuction(assetId: string, startPriceThb: number, durat
   if (asset.ownerId !== user.id) throw new Error("You do not own this item.");
   if (asset.marketStatus === "IN_ESCROW") throw new Error("This item is locked in an active sale.");
   if (asset.marketStatus === "IN_AUCTION") throw new Error("This item is already up for auction.");
+  if (asset.redeemedAt) throw new Error("This item was redeemed and can't be auctioned.");
 
   const auctionStartTime = parsed.data.startTime ? new Date(parsed.data.startTime) : new Date();
   if (auctionStartTime.getTime() < Date.now() - 60_000) throw new Error("Choose a future auction start time.");
@@ -558,6 +666,7 @@ export async function startAuction(assetId: string, startPriceThb: number, durat
       data: { forSale: false, marketStatus: "IN_AUCTION", transferApproved: false },
     }),
   ]);
+  await cancelTradesInvolving(assetId);
 
   if (auctionStartTime > new Date()) {
     const watchers = await prisma.watchlistItem.findMany({ where: { assetId }, select: { userId: true } });
@@ -1185,7 +1294,10 @@ export async function vaultRelist(assetId: string, priceThb: number, txSignature
   const asset = await prisma.asset.findUniqueOrThrow({ where: { id: assetId } });
   if (asset.ownerId !== user.id) throw new Error("You do not own this item.");
   if (!asset.vaulted) throw new Error("Only vaulted items can be relisted instantly.");
+  if (asset.marketStatus === "IN_AUCTION") throw new Error("This item is up for auction.");
+  if (!Number.isInteger(priceThb) || priceThb < 100) throw new Error("Enter a valid price.");
 
+  const wasForSale = asset.forSale;
   const tx = await resolveTxSignature(assetId, txSignature);
 
   await prisma.asset.update({
@@ -1213,6 +1325,7 @@ export async function vaultRelist(assetId: string, priceThb: number, txSignature
   if (asset.priceThb != null) {
     await notifyWatchersOfPriceDrop(assetId, asset.name, asset.priceThb, priceThb);
   }
+  if (!wasForSale) await notifyWantedCardMatches(assetId);
 
   revalidateMarketplace(assetId);
 }
@@ -1228,7 +1341,9 @@ export async function updateListingPrice(assetId: string, priceThb: number, txSi
   const asset = await prisma.asset.findUniqueOrThrow({ where: { id: assetId } });
   if (asset.ownerId !== user.id) throw new Error("You do not own this item.");
   if (asset.vaulted) throw new Error("Vaulted items are repriced via Relist instead.");
+  if (asset.redeemedAt) throw new Error("This item was redeemed — its digital twin was burned, so it can't be listed again.");
   if (asset.marketStatus === "IN_ESCROW") throw new Error("This item is locked in an active sale.");
+  if (asset.marketStatus === "IN_AUCTION") throw new Error("This item is up for auction.");
   if (!Number.isInteger(priceThb) || priceThb < 100) throw new Error("Enter a valid price.");
 
   const wasForSale = asset.forSale;
@@ -1260,6 +1375,7 @@ export async function updateListingPrice(assetId: string, priceThb: number, txSi
   if (asset.priceThb != null) {
     await notifyWatchersOfPriceDrop(assetId, asset.name, asset.priceThb, priceThb);
   }
+  if (!wasForSale) await notifyWantedCardMatches(assetId);
 
   revalidateMarketplace(assetId);
 }
@@ -1517,12 +1633,39 @@ export async function adminRejectGradingSubmission(submissionId: string) {
   revalidatePath("/portfolio");
 }
 
-/** Dispatches a vaulted item from the warehouse to the owner's home address. */
-export async function vaultRedeem(assetId: string) {
+/**
+ * Redeems a vaulted item: the warehouse dispatches the physical card to the
+ * owner's address, and its digital twin is burned so no token is left
+ * trading without the card behind it.
+ *
+ * When the asset has a real SPL mint that is actually in the owner's wallet,
+ * the owner must sign a real BurnChecked (burnTxSignature, built client-side
+ * by lib/web3/token-program.ts::buildBurnTransaction) — redeem is refused
+ * without it. Legacy/simulated assets, or ones whose token never reached this
+ * owner because an earlier transfer was simulated, get a simulated burn
+ * recorded instead. Either way the asset is marked redeemed and can never be
+ * listed, auctioned or swapped again.
+ */
+export async function vaultRedeem(assetId: string, burnTxSignature?: string) {
   const user = await getCurrentUser();
   const asset = await prisma.asset.findUniqueOrThrow({ where: { id: assetId } });
   if (asset.ownerId !== user.id) throw new Error("You do not own this item.");
   if (!asset.vaulted) throw new Error("This item is not in the vault.");
+  if (asset.redeemedAt) throw new Error("This item was already redeemed.");
+  if (asset.marketStatus === "IN_AUCTION") throw new Error("End the auction before redeeming this item.");
+  if (asset.marketStatus === "IN_ESCROW") throw new Error("This item is locked in an active sale.");
+  if (!user.shippingAddress) throw new Error("Add a shipping address in Portfolio before redeeming.");
+
+  let burn: { signature: string; onChain: boolean };
+  if (burnTxSignature) {
+    burn = { signature: burnTxSignature, onChain: true };
+  } else {
+    if (asset.mintAddress && user.walletAddress) {
+      const held = await isDigitalTwinHeldBy({ mintAddress: asset.mintAddress, ownerAddress: user.walletAddress });
+      if (held) throw new Error("Sign the burn transaction in your wallet to redeem this item.");
+    }
+    burn = { signature: (await mockEscrowInstruction("release", assetId)).txSignature, onChain: false };
+  }
 
   const dispatch = await mockEscrowInstruction("release", assetId);
   await prisma.asset.update({
@@ -1532,18 +1675,35 @@ export async function vaultRedeem(assetId: string) {
       forSale: false,
       marketStatus: "DELISTED",
       pipelineStage: "DELIVERED",
+      transferApproved: false,
+      vaultLocation: null,
+      redeemedAt: new Date(),
+      burnTxSignature: burn.signature,
     },
   });
-  await prisma.provenanceEvent.create({
-    data: {
-      assetId,
-      type: "REDEEMED",
-      note: "Physical item dispatched from the warehouse vault to the owner's home address.",
-      mockTxSignature: dispatch.txSignature,
-      actorId: user.id,
-    },
+  await prisma.provenanceEvent.createMany({
+    data: [
+      {
+        assetId,
+        type: "TOKEN_BURNED",
+        note: burn.onChain
+          ? "Owner burned the digital twin token on-chain — the certificate is retired with the physical card leaving the vault."
+          : "Digital twin retired (simulated burn) — the certificate is retired with the physical card leaving the vault.",
+        mockTxSignature: burn.signature,
+        onChain: burn.onChain,
+        actorId: user.id,
+      },
+      {
+        assetId,
+        type: "REDEEMED",
+        note: "Physical item dispatched from the warehouse vault to the owner's home address.",
+        mockTxSignature: dispatch.txSignature,
+        actorId: user.id,
+      },
+    ],
   });
 
+  await cancelTradesInvolving(assetId);
   revalidateMarketplace(assetId);
 }
 
@@ -1796,4 +1956,477 @@ export async function markConversationRead(conversationId: string) {
     },
     data: { readAt: new Date() },
   });
+}
+
+// ---------------------------------------------------------------------------
+// Wanted cards ("notify me when this card is listed") — matched in
+// notifyWantedCardMatches above.
+// ---------------------------------------------------------------------------
+
+const wantedCardSchema = z.object({
+  query: z.string().trim().min(2, "Enter at least 2 characters of the card name.").max(100),
+  gradingCompany: z.enum(["PSA", "BGS", "CGC", "RAW"]).nullable(),
+  minGrade: z.number().min(1).max(10).nullable(),
+  blackLabelOnly: z.boolean(),
+  maxPriceThb: z.number().int().min(100).nullable(),
+  trustedOnly: z.boolean(),
+});
+
+const MAX_WANTED_CARDS = 20;
+
+export async function addWantedCard(input: z.input<typeof wantedCardSchema>) {
+  const user = await getCurrentUser();
+  const parsed = wantedCardSchema.safeParse(input);
+  if (!parsed.success) throw new Error(parsed.error.issues[0]?.message ?? "Invalid alert.");
+  const count = await prisma.wantedCard.count({ where: { userId: user.id } });
+  if (count >= MAX_WANTED_CARDS) throw new Error(`You can keep up to ${MAX_WANTED_CARDS} card alerts.`);
+
+  const data = parsed.data;
+  await prisma.wantedCard.create({
+    data: {
+      userId: user.id,
+      query: data.query,
+      gradingCompany: data.gradingCompany,
+      minGrade: data.gradingCompany === "RAW" ? null : data.minGrade,
+      blackLabelOnly: data.gradingCompany === "BGS" && data.blackLabelOnly,
+      maxPriceThb: data.maxPriceThb,
+      trustedOnly: data.trustedOnly,
+    },
+  });
+  revalidatePath("/portfolio");
+}
+
+export async function deleteWantedCard(wantedCardId: string) {
+  const user = await getCurrentUser();
+  await prisma.wantedCard.deleteMany({ where: { id: wantedCardId, userId: user.id } });
+  revalidatePath("/portfolio");
+}
+
+// ---------------------------------------------------------------------------
+// Card-for-card swaps. Only between two vaulted cards: both are already
+// inspected and sitting in our warehouse, so a swap is an instant ownership
+// change with no shipping or inspection round-trip. The optional cash
+// difference goes through the same escrow program as a purchase.
+// ---------------------------------------------------------------------------
+
+type EscrowLockInput = { tradeId: string; txSignature: string; lamports: string; tradeAccount: string };
+
+function assertSwappable(
+  asset: { vaulted: boolean; redeemedAt: Date | null; marketStatus: string; name: string },
+) {
+  if (!asset.vaulted) throw new Error(`${asset.name} isn't in the vault — only vaulted cards can be swapped.`);
+  if (asset.redeemedAt) throw new Error(`${asset.name} was redeemed and can't be swapped.`);
+  if (asset.marketStatus === "IN_ESCROW" || asset.marketStatus === "IN_AUCTION") {
+    throw new Error(`${asset.name} is in an active sale or auction.`);
+  }
+}
+
+/**
+ * Refunds a cash lock the client signed but that never got attached to a
+ * trade (the server refused the swap after the wallet already locked it), so
+ * a rejected request can't strand real funds on-chain.
+ */
+async function refundUnrecordedLock(lock: EscrowLockInput | undefined, payerWallet: string | null, assetId: string) {
+  if (!lock) return;
+  await releaseOrRefundEscrow(
+    "refund",
+    {
+      onChain: true,
+      onChainTradeId: BigInt(lock.tradeId),
+      buyer: { walletAddress: payerWallet },
+      seller: { walletAddress: null },
+    },
+    assetId,
+  ).catch(() => {
+    // Best-effort: the original error is what the user needs to see.
+  });
+}
+
+/**
+ * transferOwnership, but only attempts the real token move when the token is
+ * verifiably in the sender's wallet. A card whose earlier transfer was
+ * simulated has an approval on file but no token in that wallet, so a real
+ * transfer could never succeed and would block the swap forever.
+ */
+async function transferForSwap(
+  asset: { id: string; mintAddress: string | null; transferApproved: boolean },
+  fromWallet: string | null,
+  toWallet: string | null,
+  toUserId: string,
+) {
+  let approved = asset.transferApproved;
+  if (approved && asset.mintAddress && fromWallet) {
+    const held = await isDigitalTwinHeldBy({ mintAddress: asset.mintAddress, ownerAddress: fromWallet });
+    approved = held === true;
+  }
+  return transferOwnership({ ...asset, transferApproved: approved }, fromWallet, toWallet, toUserId);
+}
+
+const proposeTradeSchema = z.object({
+  cashThb: z.number().int().min(-1_000_000).max(1_000_000),
+  message: z.string().max(500).optional(),
+});
+
+/**
+ * Proposes swapping one of your vaulted cards (plus optional cash either way)
+ * for someone else's vaulted card. approveTxSignature is your real SPL
+ * delegate approval over the offered card (so the platform can move it if the
+ * swap is accepted); cashLock is your real escrow lock when you add cash.
+ */
+export async function proposeTrade(opts: {
+  requestedAssetId: string;
+  offeredAssetId: string;
+  cashThb: number;
+  message?: string;
+  approveTxSignature?: string;
+  cashLock?: EscrowLockInput;
+}) {
+  const user = await getCurrentUser();
+  try {
+    await createTradeProposal(user, opts);
+  } catch (err) {
+    await refundUnrecordedLock(opts.cashLock, user.walletAddress, opts.requestedAssetId);
+    throw err;
+  }
+  revalidatePath("/portfolio");
+}
+
+async function createTradeProposal(
+  user: Awaited<ReturnType<typeof getCurrentUser>>,
+  opts: Parameters<typeof proposeTrade>[0],
+) {
+  if (user.isBanned) throw new Error("Your account is suspended and can't propose trades.");
+  const parsed = proposeTradeSchema.safeParse({ cashThb: opts.cashThb, message: opts.message });
+  if (!parsed.success) throw new Error(parsed.error.issues[0]?.message ?? "Invalid trade.");
+  const { cashThb, message } = parsed.data;
+
+  const [requested, offered] = await Promise.all([
+    prisma.asset.findUniqueOrThrow({ where: { id: opts.requestedAssetId } }),
+    prisma.asset.findUniqueOrThrow({ where: { id: opts.offeredAssetId } }),
+  ]);
+  if (requested.ownerId === user.id) throw new Error("You already own this card.");
+  if (offered.ownerId !== user.id) throw new Error("You can only offer a card you own.");
+  assertSwappable(requested);
+  assertSwappable(offered);
+
+  const duplicate = await prisma.tradeOffer.findFirst({
+    where: { proposerId: user.id, requestedAssetId: requested.id, offeredAssetId: offered.id, status: "PENDING" },
+  });
+  if (duplicate) throw new Error("You already proposed this exact swap.");
+
+  if (offered.mintAddress && opts.approveTxSignature) {
+    await prisma.asset.update({ where: { id: offered.id }, data: { transferApproved: true } });
+  }
+
+  const trade = await prisma.tradeOffer.create({
+    data: {
+      proposerId: user.id,
+      recipientId: requested.ownerId,
+      requestedAssetId: requested.id,
+      offeredAssetId: offered.id,
+      cashThb,
+      message: message || null,
+      cashOnChain: cashThb > 0 && Boolean(opts.cashLock),
+      cashTradeId: cashThb > 0 && opts.cashLock ? BigInt(opts.cashLock.tradeId) : null,
+      cashTradeAccount: cashThb > 0 ? (opts.cashLock?.tradeAccount ?? null) : null,
+      cashLamports: cashThb > 0 && opts.cashLock ? BigInt(opts.cashLock.lamports) : null,
+    },
+  });
+
+  const cashNote =
+    cashThb > 0
+      ? ` + ${cashThb.toLocaleString()} THB from them`
+      : cashThb < 0
+        ? ` if you add ${(-cashThb).toLocaleString()} THB`
+        : "";
+  await notifyUser(
+    requested.ownerId,
+    "TRADE_OFFER_RECEIVED",
+    "New swap proposal",
+    `${user.name ?? user.handle ?? "A collector"} offers ${offered.name}${cashNote} for your ${requested.name}.`,
+    "/portfolio?tab=trades",
+  );
+  void trade;
+}
+
+async function loadTrade(tradeId: string) {
+  return prisma.tradeOffer.findUniqueOrThrow({
+    where: { id: tradeId },
+    include: { proposer: true, recipient: true, requestedAsset: true, offeredAsset: true },
+  });
+}
+
+/**
+ * Recipient accepts or declines a swap. Accepting moves both digital twins,
+ * settles the cash difference and swaps ownership of the two vaulted cards in
+ * one step. approveTxSignature is the recipient's delegate approval over
+ * their own card; cashLock is the recipient's escrow lock when the proposer
+ * asked them to add cash (cashThb < 0).
+ */
+export async function respondToTrade(
+  tradeId: string,
+  action: "accept" | "reject",
+  opts: { approveTxSignature?: string; cashLock?: EscrowLockInput } = {},
+) {
+  const user = await getCurrentUser();
+  try {
+    await resolveTrade(user, tradeId, action, opts);
+  } catch (err) {
+    // Only an accept ever carries a lock (the recipient paying cash); if the
+    // swap didn't go through, give it straight back.
+    await refundUnrecordedLock(opts.cashLock, user.walletAddress, tradeId);
+    throw err;
+  }
+}
+
+async function resolveTrade(
+  user: Awaited<ReturnType<typeof getCurrentUser>>,
+  tradeId: string,
+  action: "accept" | "reject",
+  opts: { approveTxSignature?: string; cashLock?: EscrowLockInput },
+) {
+  const trade = await loadTrade(tradeId);
+  if (trade.recipientId !== user.id) throw new Error("This swap wasn't sent to you.");
+  if (trade.status !== "PENDING") throw new Error("This swap has already been resolved.");
+
+  if (action === "reject") {
+    await refundTradeCash(trade);
+    await prisma.tradeOffer.update({ where: { id: tradeId }, data: { status: "REJECTED", respondedAt: new Date() } });
+    await notifyUser(
+      trade.proposerId,
+      "TRADE_OFFER_REJECTED",
+      "Swap declined",
+      `${user.name ?? user.handle ?? "The owner"} declined your swap for ${trade.requestedAsset.name}${trade.cashThb > 0 ? " — your cash was refunded" : ""}.`,
+      "/portfolio?tab=trades",
+    );
+    revalidatePath("/portfolio");
+    return;
+  }
+
+  await acceptTrade(user, trade, opts);
+}
+
+async function acceptTrade(
+  user: Awaited<ReturnType<typeof getCurrentUser>>,
+  trade: Awaited<ReturnType<typeof loadTrade>>,
+  opts: { approveTxSignature?: string; cashLock?: EscrowLockInput },
+) {
+  const tradeId = trade.id;
+  if (user.isBanned) throw new Error("Your account is suspended and can't trade.");
+  const { requestedAsset, offeredAsset, proposer } = trade;
+  const stillValid =
+    requestedAsset.ownerId === user.id &&
+    offeredAsset.ownerId === proposer.id &&
+    [requestedAsset, offeredAsset].every(
+      (a) => a.vaulted && !a.redeemedAt && a.marketStatus !== "IN_ESCROW" && a.marketStatus !== "IN_AUCTION",
+    );
+  if (!stillValid) {
+    await refundTradeCash(trade);
+    await prisma.tradeOffer.update({ where: { id: tradeId }, data: { status: "CANCELLED", respondedAt: new Date() } });
+    revalidatePath("/portfolio");
+    throw new Error("One of the cards is no longer available, so this swap was closed.");
+  }
+
+  // Both cards move first; cash is only released once they have.
+  const requestedApproved = requestedAsset.transferApproved || Boolean(requestedAsset.mintAddress && opts.approveTxSignature);
+  const toProposer = await transferForSwap(
+    { ...requestedAsset, transferApproved: requestedApproved },
+    user.walletAddress,
+    proposer.walletAddress,
+    proposer.id,
+  );
+  const toRecipient = await transferForSwap(offeredAsset, proposer.walletAddress, user.walletAddress, user.id);
+
+  // Cash the recipient owes (the proposer asked for cash) was locked by the
+  // recipient's wallet just before this call; the swap is instant, so it's
+  // released straight away.
+  let recipientCash: { signature: string; onChain: boolean } | null = null;
+  if (trade.cashThb < 0) {
+    recipientCash = await releaseOrRefundEscrow(
+      "release",
+      {
+        onChain: Boolean(opts.cashLock),
+        onChainTradeId: opts.cashLock ? BigInt(opts.cashLock.tradeId) : null,
+        buyer: { walletAddress: user.walletAddress },
+        seller: { walletAddress: proposer.walletAddress },
+      },
+      requestedAsset.id,
+    );
+  }
+
+  let proposerCash: { signature: string; onChain: boolean } | null = null;
+  if (trade.cashThb > 0) {
+    proposerCash = await releaseOrRefundEscrow(
+      "release",
+      {
+        onChain: trade.cashOnChain,
+        onChainTradeId: trade.cashTradeId,
+        buyer: { walletAddress: proposer.walletAddress },
+        seller: { walletAddress: user.walletAddress },
+      },
+      requestedAsset.id,
+    );
+  }
+
+  const swappedData = { forSale: false, marketStatus: "IN_VAULT" as const, transferApproved: false };
+  await prisma.$transaction([
+    prisma.asset.update({ where: { id: requestedAsset.id }, data: { ...swappedData, ownerId: proposer.id } }),
+    prisma.asset.update({ where: { id: offeredAsset.id }, data: { ...swappedData, ownerId: user.id } }),
+    prisma.tradeOffer.update({ where: { id: tradeId }, data: { status: "ACCEPTED", respondedAt: new Date() } }),
+  ]);
+
+  const cashText =
+    trade.cashThb > 0
+      ? ` plus ${trade.cashThb.toLocaleString()} THB paid by ${proposer.name ?? "the proposer"}`
+      : trade.cashThb < 0
+        ? ` plus ${(-trade.cashThb).toLocaleString()} THB paid by ${user.name ?? "the owner"}`
+        : "";
+  await prisma.provenanceEvent.createMany({
+    data: [
+      {
+        assetId: requestedAsset.id,
+        type: "SWAPPED",
+        note: `Swapped for ${offeredAsset.name}${cashText}. Ownership moved to ${proposer.name ?? "the proposer"}.`,
+        mockTxSignature: toProposer.signature,
+        onChain: toProposer.onChain,
+        actorId: user.id,
+      },
+      {
+        assetId: offeredAsset.id,
+        type: "SWAPPED",
+        note: `Swapped for ${requestedAsset.name}${cashText}. Ownership moved to ${user.name ?? "the owner"}.`,
+        mockTxSignature: toRecipient.signature,
+        onChain: toRecipient.onChain,
+        actorId: user.id,
+      },
+    ],
+  });
+  void recipientCash;
+  void proposerCash;
+
+  await cancelTradesInvolving(requestedAsset.id, tradeId);
+  await cancelTradesInvolving(offeredAsset.id, tradeId);
+  await notifyUser(
+    proposer.id,
+    "TRADE_OFFER_ACCEPTED",
+    "Swap complete",
+    `${user.name ?? user.handle ?? "The owner"} accepted — ${requestedAsset.name} is now yours.`,
+    `/item/${requestedAsset.id}`,
+  );
+
+  revalidateMarketplace(requestedAsset.id);
+  revalidateMarketplace(offeredAsset.id);
+}
+
+/** Proposer withdraws their own pending swap; any cash they locked is refunded. */
+export async function withdrawTrade(tradeId: string) {
+  const user = await getCurrentUser();
+  const trade = await loadTrade(tradeId);
+  if (trade.proposerId !== user.id) throw new Error("This isn't your swap proposal.");
+  if (trade.status !== "PENDING") throw new Error("This swap has already been resolved.");
+
+  await refundTradeCash(trade);
+  await prisma.tradeOffer.update({ where: { id: tradeId }, data: { status: "WITHDRAWN", respondedAt: new Date() } });
+  revalidatePath("/portfolio");
+}
+
+// ---------------------------------------------------------------------------
+// Identity verification (KYC). Users submit their details; staff review them
+// by hand from the back office. No ID document image is stored — see the
+// comment on User.kycStatus in schema.prisma.
+// ---------------------------------------------------------------------------
+
+const kycSchema = z.object({
+  legalName: z.string().trim().min(3, "Enter your full legal name.").max(120),
+  dateOfBirth: z
+    .string()
+    .refine((v) => !Number.isNaN(Date.parse(v)), "Enter your date of birth.")
+    .refine((v) => {
+      const dob = new Date(v);
+      const eighteen = new Date(dob.getFullYear() + 18, dob.getMonth(), dob.getDate());
+      return eighteen <= new Date();
+    }, "You must be at least 18 to verify your identity."),
+  idType: z.enum(["NATIONAL_ID", "PASSPORT", "DRIVING_LICENSE"]),
+  idNumber: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z0-9 -]{5,20}$/, "Enter a valid ID number."),
+  consent: z.literal("on", { message: "Confirm the details are yours and accurate." }),
+});
+
+export interface KycState {
+  error?: string;
+  ok?: boolean;
+}
+
+export async function submitKyc(_prev: KycState, formData: FormData): Promise<KycState> {
+  const user = await getCurrentUser();
+  if (user.kycStatus === "VERIFIED") return { error: "Your identity is already verified." };
+  if (user.kycStatus === "PENDING") return { error: "Your verification is already under review." };
+
+  const parsed = kycSchema.safeParse({
+    legalName: formData.get("legalName"),
+    dateOfBirth: formData.get("dateOfBirth"),
+    idType: formData.get("idType"),
+    idNumber: formData.get("idNumber"),
+    consent: formData.get("consent"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check your details." };
+  const data = parsed.data;
+  const idDigits = data.idNumber.replace(/[\s-]/g, "");
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      kycStatus: "PENDING",
+      kycLegalName: data.legalName,
+      kycDateOfBirth: new Date(data.dateOfBirth),
+      kycIdType: data.idType as KycIdType,
+      // Only the last 4 characters are ever stored.
+      kycIdLast4: idDigits.slice(-4),
+      kycSubmittedAt: new Date(),
+      kycReviewedAt: null,
+      kycRejectReason: null,
+    },
+  });
+  await notifyAdmins(
+    "KYC_SUBMITTED",
+    "Identity verification submitted",
+    `${user.name ?? user.handle ?? "A user"} submitted their identity for review.`,
+    "/admin/warehouse?tab=kyc",
+  );
+
+  revalidatePath("/portfolio");
+  revalidatePath("/admin/warehouse");
+  return { ok: true };
+}
+
+export async function reviewKyc(userId: string, action: "approve" | "reject", reason?: string) {
+  await requireAdmin();
+  const target = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+  if (target.kycStatus !== "PENDING") throw new Error("This verification isn't awaiting review.");
+
+  if (action === "approve") {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { kycStatus: "VERIFIED", kycReviewedAt: new Date(), kycRejectReason: null },
+    });
+    await notifyUser(
+      userId,
+      "KYC_APPROVED",
+      "Identity verified",
+      "Your identity is verified. Buyers now see an ID-verified badge on your store and listings.",
+      "/portfolio",
+    );
+  } else {
+    const trimmed = reason?.trim().slice(0, 300) || "The details couldn't be confirmed.";
+    await prisma.user.update({
+      where: { id: userId },
+      data: { kycStatus: "REJECTED", kycReviewedAt: new Date(), kycRejectReason: trimmed },
+    });
+    await notifyUser(userId, "KYC_REJECTED", "Identity verification declined", `${trimmed} You can submit again.`, "/portfolio");
+  }
+
+  revalidatePath("/admin/warehouse");
+  revalidatePath(`/store/${userId}`);
 }
