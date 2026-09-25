@@ -1,11 +1,13 @@
 import Link from "next/link";
 
 import { LeaderboardTable } from "@/components/leaderboard/leaderboard-table";
+import { MarketHeatmap } from "@/components/leaderboard/market-heatmap";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getLeaderboard } from "@/lib/queries";
 import { getCurrentUser } from "@/lib/session";
 
-export default async function LeaderboardPage() {
-  const user = await getCurrentUser();
+export default async function LeaderboardPage({ searchParams }: { searchParams: Promise<{ view?: string }> }) {
+  const [{ view }, user] = await Promise.all([searchParams, getCurrentUser()]);
   const rows = await getLeaderboard(user.id);
 
   return (
@@ -21,7 +23,19 @@ export default async function LeaderboardPage() {
           Rankings by grade &amp; market stats
         </Link>
       </div>
-      <LeaderboardTable rows={rows} />
+
+      <Tabs defaultValue={view === "heatmap" ? "heatmap" : "table"}>
+        <TabsList className="mb-4">
+          <TabsTrigger value="table">Table</TabsTrigger>
+          <TabsTrigger value="heatmap">Heatmap</TabsTrigger>
+        </TabsList>
+        <TabsContent value="table">
+          <LeaderboardTable rows={rows} />
+        </TabsContent>
+        <TabsContent value="heatmap">
+          <MarketHeatmap rows={rows} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
