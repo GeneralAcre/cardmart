@@ -18,6 +18,7 @@ import { themeIndexForSerial } from "@/lib/theme";
 import { getVerificationChecklist } from "@/lib/verification-checklist";
 import { BGS_BLACK_LABEL_GRADE, gradeTierLabel } from "@/lib/labels";
 import { requestDevnetAirdrop } from "@/lib/solana";
+import { checkAllIntegrations } from "@/lib/integrations";
 import { getPortfolioPriceHistory, getPriceHistory, type PriceHistoryRange } from "@/lib/queries";
 import {
   extractPsaCertNumber,
@@ -2429,4 +2430,10 @@ export async function reviewKyc(userId: string, action: "approve" | "reject", re
 
   revalidatePath("/admin/warehouse");
   revalidatePath(`/store/${userId}`);
+}
+
+/** Admin-only live check of the PSA, eBay and TCG APIs (see lib/integrations.ts). */
+export async function runIntegrationCheck() {
+  await requireAdmin();
+  return checkAllIntegrations();
 }

@@ -70,7 +70,10 @@ async function getAccessToken(): Promise<string | null> {
       body: "grant_type=client_credentials&scope=https://api.ebay.com/oauth/api_scope",
       cache: "no-store",
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.warn(`[ebay] token request failed: HTTP ${res.status} ${(await res.text()).slice(0, 200)}`);
+      return null;
+    }
 
     const data = await res.json();
     if (typeof data?.access_token !== "string") return null;
@@ -105,7 +108,10 @@ async function searchOnce(query: string, token: string): Promise<EbayPriceQuote 
       // this well within eBay's rate limits, same rationale as TCG API.
       next: { revalidate: 21600 },
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.warn(`[ebay] search failed: HTTP ${res.status} ${(await res.text()).slice(0, 200)}`);
+      return null;
+    }
 
     const data = await res.json();
     const items = Array.isArray(data?.itemSummaries) ? (data.itemSummaries as unknown[]) : [];

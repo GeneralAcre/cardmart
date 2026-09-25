@@ -104,14 +104,18 @@ async function fetchPsaCert(certNumber: string): Promise<PsaLookupResult> {
     });
 
     if (res.status === 404) return { ok: false, reason: "not_found" };
-    if (!res.ok) return { ok: false, reason: "unavailable" };
+    if (!res.ok) {
+      console.warn(`[psa] cert lookup failed: HTTP ${res.status} ${(await res.text()).slice(0, 200)}`);
+      return { ok: false, reason: "unavailable" };
+    }
 
     const data = await res.json();
     const psaCert = data?.PSACert;
     if (!psaCert?.CertNumber) return { ok: false, reason: "not_found" };
 
     return { ok: true, cert: toPsaCertData(psaCert, certNumber) };
-  } catch {
+  } catch (err) {
+    console.warn("[psa] cert lookup network error:", err);
     return { ok: false, reason: "unavailable" };
   }
 }

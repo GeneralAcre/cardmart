@@ -14,6 +14,7 @@ import { AdminAlerts } from "@/components/warehouse/admin-alerts";
 import { VaultInventory } from "@/components/warehouse/vault-inventory";
 import { SellerManagement } from "@/components/warehouse/seller-management";
 import { KycReview, type KycRow } from "@/components/warehouse/kyc-review";
+import { IntegrationsPanel } from "@/components/warehouse/integrations-panel";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -27,7 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatDateTime, formatThb } from "@/lib/format";
 import { INBOUND_STATUS_LABELS } from "@/lib/labels";
 
-const TABS = ["queue", "grading", "vault", "kyc", "alerts", "sellers", "history"] as const;
+const TABS = ["queue", "grading", "vault", "kyc", "alerts", "sellers", "history", "integrations"] as const;
 
 function toKycRow(u: Awaited<ReturnType<typeof getKycQueue>>["pending"][number]): KycRow {
   return {
@@ -76,6 +77,7 @@ export default async function WarehouseAdminPage({ searchParams }: { searchParam
           </TabsTrigger>
           <TabsTrigger value="sellers">Sellers ({sellers.length})</TabsTrigger>
           <TabsTrigger value="history">Recently Resolved</TabsTrigger>
+          <TabsTrigger value="integrations">Integrations</TabsTrigger>
         </TabsList>
 
         <TabsContent value="queue" className="pt-6">
@@ -133,6 +135,10 @@ export default async function WarehouseAdminPage({ searchParams }: { searchParam
               reviewCount: u.reviewCount,
             }))}
           />
+        </TabsContent>
+
+        <TabsContent value="integrations" className="pt-6">
+          <IntegrationsPanel />
         </TabsContent>
 
         <TabsContent value="history" className="pt-6">
