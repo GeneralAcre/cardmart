@@ -4,6 +4,7 @@ import "./globals.css";
 
 import { Toaster } from "@/components/ui/sonner";
 import { PrivyProvider } from "@/components/providers/privy-provider";
+import { Analytics } from "@vercel/analytics/next";
 
 const epilogue = Epilogue({
   variable: "--font-epilogue",
@@ -48,6 +49,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           {children}
           <Toaster position="bottom-right" />
         </PrivyProvider>
+        <Analytics />
       </body>
     </html>
   );
