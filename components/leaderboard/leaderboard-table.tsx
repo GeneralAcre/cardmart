@@ -26,6 +26,7 @@ const TABS: { key: Tab; label: string }[] = [
 ];
 const PERIODS: LeaderboardPeriod[] = ["24h", "7d", "30d"];
 const NEW_DROP_DAYS = 30;
+const MAX_ROWS = 50;
 
 function gradeSymbol(r: LeaderboardRow) {
   if (r.gradingCompany === "RAW") return "RAW";
@@ -84,7 +85,7 @@ export function LeaderboardTable({ rows }: { rows: LeaderboardRow[] }) {
         sort.key === "price" ? r.priceThb : sort.key === "change" ? (ch(r) ?? -Infinity) : sort.key === "sales" ? r.sales30d : r.watchers;
       list.sort((a, b) => (sort.dir === "asc" ? value(a) - value(b) : value(b) - value(a)));
     }
-    return list;
+    return list.slice(0, MAX_ROWS);
   }, [rows, tab, period, query, sort]);
 
   function toggleSort(key: SortKey) {
@@ -194,7 +195,8 @@ export function LeaderboardTable({ rows }: { rows: LeaderboardRow[] }) {
       </div>
       <p className="text-muted-foreground text-[11px]">
         Change compares each card&apos;s asking price with its price at the start of the period. &ldquo;—&rdquo; means
-        the card wasn&apos;t listed yet. Sales count completed escrow sales of the same card and grade.
+        the card wasn&apos;t listed yet. Sales count completed escrow sales of the same card and grade. Shows the
+        top {MAX_ROWS} cards for each tab.
       </p>
     </div>
   );
@@ -269,9 +271,9 @@ function LeaderboardRowView({
         <td className="text-muted-foreground py-3.5 pr-2 tabular-nums">{rank}</td>
         <td className="py-3.5 pr-4">
           <Link href={`/item/${row.id}`} className="flex min-w-0 items-center gap-3">
-            <div className="relative aspect-[3/4] w-8 shrink-0 overflow-hidden rounded border">
+            <div className="relative aspect-[3/4] w-12 shrink-0 overflow-hidden rounded-md border sm:w-14">
               {row.photoUrl ? (
-                <Image src={row.photoUrl} alt="" fill sizes="32px" className="object-cover" />
+                <Image src={row.photoUrl} alt="" fill sizes="56px" className="object-cover" />
               ) : (
                 <CardArt
                   themeIndex={row.themeIndex}
