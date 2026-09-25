@@ -29,7 +29,7 @@ This report covers everything built so far (49 commits, 2 Sep → 25 Sep 2026), 
 | Price comparison table (CardMart, eBay, TCGplayer, Beckett, PriceCharting) + price insights | ✅ Done |
 | Median sale price, 7/30-day trending, Market page (rankings, stats, latest updates) | ✅ Done |
 | Getting-started guide for new buyers and sellers | ✅ Done |
-| Identity verification (KYC, reviewed by staff) + ID-verified badge | ✅ Done (no document upload; see §6) |
+| Identity verification (KYC): details + live ID photo + selfie, reviewed by staff; ID-verified badge | ✅ Done (needs the private KYC Blob store; see §5.1) |
 | "Notify me when listed" card alerts | ✅ Done |
 | Card-for-card swaps with cash difference (vaulted cards) | ✅ Done |
 | Redeem burns the digital twin token | ✅ Done |
@@ -220,6 +220,7 @@ The app falls back to a simulated version whenever the real service isn't config
 ## 5. What's left to do
 
 ### 5.1 Config / accounts (no code needed; can be done now)
+0. **Private Blob store for ID photos (required for identity verification):** Vercel → Storage → Create → Blob, choose **Private** access, connect it to this project with the env-var prefix `KYC_BLOB` (creates `KYC_BLOB_READ_WRITE_TOKEN`), then redeploy. The existing store is public-only and Vercel refuses private files in it.
 1. **Privy dashboard, login methods:**
    - The login popup shows **Twitter, Discord and Wallet**, but these are **disabled** in Privy. Solana wallet login is also off; only Ethereum is enabled.
    - Either enable them (User management → Authentication), or we remove them from `components/providers/privy-provider.tsx` so users don't see buttons that fail.
@@ -267,7 +268,7 @@ The app falls back to a simulated version whenever the real service isn't config
   - eBay's self-serve API returns **asking** prices, not sold prices. Sold-price data needs eBay's restricted Marketplace Insights API.
   - Our own price history is real, but only covers price changes made on CardMart.
 - **Physical side is status-only:** warehouse inspection, vault storage and shipping are manual processes recorded in the app, with no courier or tracking integration.
-- **KYC is manual and document-free:** users submit legal name, date of birth, ID type and the last 4 characters of their ID number; staff approve or decline by hand. Photos of ID documents are deliberately not collected, because the current Blob store serves public URLs. Production would use a KYC provider (document + liveness checks).
+- **KYC is reviewed by hand:** users submit legal name, date of birth, ID type and ID number (Thai national IDs are checksum-validated; only the last 4 characters are stored) plus two live camera photos: the ID card and a selfie holding it. The photos go to a separate private Blob store and only staff can view them. There is no automatic document-authenticity or face-match check; production would add a KYC provider for that.
 - **Swaps are vault-to-vault only:** both cards must already be inspected and in the warehouse, so a swap is an instant ownership change with no shipping.
 - **Categories:** the platform was scoped down to TCG. The Amulet category was removed; sports cards and comics exist in the data model.
 

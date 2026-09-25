@@ -26,6 +26,8 @@ export interface KycRow {
   kycDateOfBirth: string | null;
   kycIdType: KycIdType | null;
   kycIdLast4: string | null;
+  hasIdPhoto: boolean;
+  hasSelfie: boolean;
   kycSubmittedAt: string | null;
   kycReviewedAt: string | null;
   kycRejectReason: string | null;
@@ -144,6 +146,41 @@ function PendingRow({ row }: { row: KycRow }) {
           Submitted {row.kycSubmittedAt ? formatDateTime(row.kycSubmittedAt) : "—"} · member since {formatDate(row.createdAt)}
         </span>
       </div>
+      <div className="grid grid-cols-2 gap-3">
+        {(
+          [
+            { kind: "id", label: "ID card", has: row.hasIdPhoto },
+            { kind: "selfie", label: "Selfie holding ID", has: row.hasSelfie },
+          ] as const
+        ).map((p) => (
+          <figure key={p.kind} className="flex flex-col gap-1">
+            {p.has ? (
+              <a
+                href={`/api/admin/kyc-photo?userId=${row.id}&kind=${p.kind}`}
+                target="_blank"
+                rel="noreferrer"
+                title="Open full size"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={`/api/admin/kyc-photo?userId=${row.id}&kind=${p.kind}`}
+                  alt={p.label}
+                  className="bg-muted aspect-[4/3] w-full rounded-lg border object-cover"
+                />
+              </a>
+            ) : (
+              <div className="bg-muted text-muted-foreground flex aspect-[4/3] items-center justify-center rounded-lg border text-xs">
+                No photo
+              </div>
+            )}
+            <figcaption className="text-muted-foreground text-xs">{p.label} · tap to enlarge</figcaption>
+          </figure>
+        ))}
+      </div>
+      <p className="text-muted-foreground text-xs">
+        Check the name and date of birth match the ID, the ID looks genuine and unaltered, and the face in the selfie
+        matches the ID photo.
+      </p>
       <dl className="grid grid-cols-1 gap-x-4 gap-y-2 text-sm sm:grid-cols-3">
         {facts.map(([label, value]) => (
           <div key={label} className="min-w-0">

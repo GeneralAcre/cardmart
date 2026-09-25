@@ -13,6 +13,7 @@ import {
   getWatchlist,
 } from "@/lib/queries";
 import { prisma } from "@/lib/prisma";
+import { isKycPhotoStorageConfigured } from "@/lib/kyc-storage";
 import { getCurrentUser } from "@/lib/session";
 import { getDevnetSolBalance } from "@/lib/solana";
 import { getEscrowAuthorityAddress } from "@/lib/web3/escrow-server";
@@ -91,6 +92,7 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
           rating={rating.average}
           reviewCount={rating.count}
           completedSales={completedSales}
+          photoStorageReady={isKycPhotoStorageConfigured()}
         />
       </div>
 

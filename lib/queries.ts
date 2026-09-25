@@ -950,6 +950,8 @@ export async function getKycQueue() {
     kycDateOfBirth: true,
     kycIdType: true,
     kycIdLast4: true,
+    kycIdPhotoUrl: true,
+    kycSelfieUrl: true,
     kycSubmittedAt: true,
     kycReviewedAt: true,
     kycRejectReason: true,

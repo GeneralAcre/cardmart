@@ -19,6 +19,7 @@ import { getVerificationChecklist } from "@/lib/verification-checklist";
 import { BGS_BLACK_LABEL_GRADE, gradeTierLabel } from "@/lib/labels";
 import { requestDevnetAirdrop } from "@/lib/solana";
 import { checkAllIntegrations } from "@/lib/integrations";
+import { checkKycPhoto, deleteKycPhotos, isKycPhotoStorageConfigured, saveKycPhoto } from "@/lib/kyc-storage";
 import { getPortfolioPriceHistory, getPriceHistory, type PriceHistoryRange } from "@/lib/queries";
 import {
   extractPsaCertNumber,
@@ -2333,9 +2334,20 @@ export async function withdrawTrade(tradeId: string) {
 
 // ---------------------------------------------------------------------------
 // Identity verification (KYC). Users submit their details; staff review them
-// by hand from the back office. No ID document image is stored — see the
-// comment on User.kycStatus in schema.prisma.
+// by hand from the back office, with two live camera photos (the ID, and a
+// selfie holding it) kept in a private Blob store — see lib/kyc-storage.ts.
 // ---------------------------------------------------------------------------
+
+/**
+ * Thai national ID: 13 digits whose last digit is a mod-11 checksum of the
+ * first 12 (weights 13 down to 2) — catches typos and made-up numbers.
+ */
+function isValidThaiNationalId(raw: string): boolean {
+  const digits = raw.replace(/[\s-]/g, "");
+  if (!/^\d{13}$/.test(digits)) return false;
+  const sum = [...digits.slice(0, 12)].reduce((acc, d, i) => acc + Number(d) * (13 - i), 0);
+  return (11 - (sum % 11)) % 10 === Number(digits[12]);
+}
 
 const kycSchema = z.object({
   legalName: z.string().trim().min(3, "Enter your full legal name.").max(120),
@@ -2353,6 +2365,13 @@ const kycSchema = z.object({
     .trim()
     .regex(/^[A-Za-z0-9 -]{5,20}$/, "Enter a valid ID number."),
   consent: z.literal("on", { message: "Confirm the details are yours and accurate." }),
+}).superRefine((data, ctx) => {
+  if (data.idType === "NATIONAL_ID" && !isValidThaiNationalId(data.idNumber)) {
+    ctx.addIssue({ code: "custom", message: "That isn't a valid 13-digit Thai national ID number — check it and try again." });
+  }
+  if (data.idType === "PASSPORT" && !/^[A-Za-z0-9]{6,9}$/.test(data.idNumber.replace(/[\s-]/g, ""))) {
+    ctx.addIssue({ code: "custom", message: "Passport numbers are 6–9 letters and digits." });
+  }
 });
 
 export interface KycState {
@@ -2376,10 +2395,37 @@ export async function submitKyc(_prev: KycState, formData: FormData): Promise<Ky
   const data = parsed.data;
   const idDigits = data.idNumber.replace(/[\s-]/g, "");
 
+  // Two live camera photos: the ID itself, and a selfie holding it.
+  if (!isKycPhotoStorageConfigured()) {
+    return {
+      error: "ID photo storage isn't set up on this deployment yet, so verification can't be submitted. Please try again later.",
+    };
+  }
+  const idPhoto = formData.get("idPhoto");
+  const selfie = formData.get("selfie");
+  const photoError = checkKycPhoto(idPhoto, "ID card") ?? checkKycPhoto(selfie, "selfie");
+  if (photoError) return { error: photoError };
+
+  let idPhotoUrl: string;
+  let selfieUrl: string;
+  try {
+    [idPhotoUrl, selfieUrl] = await Promise.all([
+      saveKycPhoto(user.id, "id", idPhoto as File),
+      saveKycPhoto(user.id, "selfie", selfie as File),
+    ]);
+  } catch (err) {
+    console.error("[kyc] photo upload failed:", err);
+    return { error: "Couldn't save your photos. Check your connection and try again." };
+  }
+  // A resubmission replaces the previous photos — old ID images aren't kept.
+  await deleteKycPhotos([user.kycIdPhotoUrl, user.kycSelfieUrl]);
+
   await prisma.user.update({
     where: { id: user.id },
     data: {
       kycStatus: "PENDING",
+      kycIdPhotoUrl: idPhotoUrl,
+      kycSelfieUrl: selfieUrl,
       kycLegalName: data.legalName,
       kycDateOfBirth: new Date(data.dateOfBirth),
       kycIdType: data.idType as KycIdType,

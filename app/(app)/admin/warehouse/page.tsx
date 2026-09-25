@@ -30,9 +30,13 @@ import { INBOUND_STATUS_LABELS } from "@/lib/labels";
 
 const TABS = ["queue", "grading", "vault", "kyc", "alerts", "sellers", "history", "integrations"] as const;
 
-function toKycRow(u: Awaited<ReturnType<typeof getKycQueue>>["pending"][number]): KycRow {
+// The private photo URLs never reach the browser — staff load the photos
+// through /api/admin/kyc-photo, which checks isAdmin first.
+function toKycRow({ kycIdPhotoUrl, kycSelfieUrl, ...u }: Awaited<ReturnType<typeof getKycQueue>>["pending"][number]): KycRow {
   return {
     ...u,
+    hasIdPhoto: Boolean(kycIdPhotoUrl),
+    hasSelfie: Boolean(kycSelfieUrl),
     createdAt: u.createdAt.toISOString(),
     kycDateOfBirth: u.kycDateOfBirth?.toISOString() ?? null,
     kycSubmittedAt: u.kycSubmittedAt?.toISOString() ?? null,

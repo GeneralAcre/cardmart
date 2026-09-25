@@ -155,15 +155,19 @@ model User {
   // anywhere on the buyer/seller side beyond a plain rejection message.
   isBanned Boolean @default(false)
 
-  // Identity verification (KYC). Deliberately stores no ID document image —
-  // only what staff need to review a submission (legal name, date of birth,
-  // ID type, last 4 digits of the ID number). A production launch would hand
-  // document + liveness checks to a dedicated KYC provider instead.
+  // Identity verification (KYC): the details below plus two live camera
+  // photos — the ID card itself and a selfie holding it. The photos live in a
+  // separate PRIVATE Vercel Blob store (KYC_BLOB_READ_WRITE_TOKEN) and are
+  // only ever served to staff through /api/admin/kyc-photo; these columns
+  // hold their private blob URLs, which are useless without the store token.
+  // Only the last 4 characters of the ID number are stored.
   kycStatus       KycStatus  @default(NONE)
   kycLegalName    String?
   kycDateOfBirth  DateTime?
   kycIdType       KycIdType?
   kycIdLast4      String?
+  kycIdPhotoUrl   String?
+  kycSelfieUrl    String?
   kycSubmittedAt  DateTime?
   kycReviewedAt   DateTime?
   kycRejectReason String?
