@@ -126,9 +126,9 @@ export function PlatformPriceTable({
       </div>
       {/* A list, not a <table>: each source is one row with the price pinned
           right, so it fits a phone screen without any sideways scrolling. */}
-      <ul className="detail-panel divide-y rounded-xl border">
+      <ul className="bg-card divide-y overflow-hidden rounded-xl border border-success/60">
         {rows.map((row) => (
-          <li key={row.source} className={cn("flex items-center justify-between gap-3 p-3 sm:p-4", row.highlight && "bg-muted/40")}>
+          <li key={row.source} className={cn("flex items-center justify-between gap-3 p-3 sm:p-4", row.highlight && "bg-success/10")}>
             <div className="flex min-w-0 flex-col gap-0.5">
               {row.href ? (
                 <a

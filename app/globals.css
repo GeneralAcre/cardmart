@@ -84,10 +84,6 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-* {
-  border-color: var(--border);
-}
-
 @layer base {
   * {
     @apply border-border outline-ring/50;

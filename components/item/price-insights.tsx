@@ -9,7 +9,7 @@ export function PriceInsights({ insights }: { insights: PriceInsight[] }) {
   if (insights.length === 0) return null;
 
   return (
-    <div className="detail-panel rounded-xl border">
+    <div className="bg-card overflow-hidden rounded-xl border border-success/60">
       <div className="flex items-center gap-2 border-b p-4">
         <div className="bg-foreground text-background flex size-7 items-center justify-center rounded-lg">
           <Lightbulb className="size-3.5" />
