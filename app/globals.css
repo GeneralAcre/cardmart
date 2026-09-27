@@ -71,9 +71,9 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --font-sans: var(--font-epilogue);
+  --font-sans: var(--font-epilogue), var(--font-noto-sans-thai), sans-serif;
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-epilogue);
+  --font-heading: var(--font-epilogue), var(--font-noto-sans-thai), sans-serif;
   --color-chart-5: var(--chart-5);
   --color-chart-4: var(--chart-4);
   --color-chart-3: var(--chart-3);

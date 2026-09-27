@@ -12,16 +12,16 @@ import {
 import { LOCALES } from "@/lib/i18n/landing";
 import { useLanguage } from "@/components/landing/language-provider";
 
-export function LanguageSwitcher() {
+export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
   const { locale, setLocale } = useLanguage();
   const current = LOCALES.find((l) => l.value === locale);
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button type="button" variant="outline" size="sm" className="gap-1.5">
+        <Button type="button" variant="outline" size="sm" className="gap-1.5" aria-label={`Language: ${current?.label}`}>
           <Languages className="size-4" />
-          {current?.label}
+          {compact ? (locale === "th" ? "ไทย" : "EN") : current?.label}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">

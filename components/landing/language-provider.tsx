@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useMemo, useSyncExternalStore } from "react";
+import { createContext, useContext, useEffect, useMemo, useSyncExternalStore } from "react";
 
 import { DEFAULT_LOCALE, LANDING_DICTIONARY, type LandingDictionary, type Locale } from "@/lib/i18n/landing";
 
@@ -32,7 +32,7 @@ type LanguageContextValue = {
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
-// Client-only preference, scoped to the landing page — no route segments or
+// Client-only preference shared across routes, with no server-side negotiation.
 // server-side negotiation, just a toggle that defaults to English and
 // remembers the visitor's choice for next time. Reads through
 // useSyncExternalStore (server snapshot = default locale) rather than
@@ -40,6 +40,10 @@ const LanguageContext = createContext<LanguageContextValue | null>(null);
 // mismatch once the real (possibly stored) locale is picked up client-side.
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const locale = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+
+  useEffect(() => {
+    document.documentElement.lang = locale;
+  }, [locale]);
 
   const setLocale = (next: Locale) => {
     window.localStorage.setItem(STORAGE_KEY, next);

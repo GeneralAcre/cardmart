@@ -8,6 +8,7 @@ import { NavLinks } from "@/components/site/nav-links";
 import { MobileBottomNav } from "@/components/site/mobile-bottom-nav";
 import { NotificationBell } from "@/components/site/notification-bell";
 import { SignOutButton } from "@/components/site/sign-out-button";
+import { LanguageSwitcher } from "@/components/landing/language-switcher";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -68,6 +69,7 @@ export async function SiteHeader() {
               }))}
               initialUnreadCount={unreadCount}
             />
+            <LanguageSwitcher compact />
             <WalletButton />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
