@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Anchor, LayoutGrid, PackageSearch, Sparkles, SlidersHorizontal, Vault as VaultIcon } from "lucide-react";
+import { Anchor, LayoutGrid, PackageSearch, Scale, Sparkles, SlidersHorizontal, Vault as VaultIcon } from "lucide-react";
 import type { CardGame } from "@prisma/client";
 
 import { FilterBar } from "@/components/marketplace/filter-bar";
@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { CARD_GAME_LABELS } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 import { EMPTY_FILTERS, type AssetSummary, type MarketplaceFilterState } from "@/lib/types";
@@ -176,12 +177,28 @@ export function MarketplaceExplorer({
             <p className="text-muted-foreground text-sm">
               {loading ? "Searching…" : `${listings.length} item${listings.length === 1 ? "" : "s"}`}
             </p>
-            <Button variant="outline" size="sm" className="lg:hidden" onClick={() => setFilterSheetOpen(true)}>
-              <SlidersHorizontal /> Filters
-              {activeFilterCount > 0 && (
-                <Badge className="ml-1 size-4 rounded-full p-0 text-[10px]">{activeFilterCount}</Badge>
+            <div className="flex items-center gap-2">
+              {initialListings.some((listing) => listing.priceThb != null) && (
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm"><Scale /> Compare prices</Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-5xl">
+                    <DialogHeader>
+                      <DialogTitle>Compare prices</DialogTitle>
+                      <DialogDescription>Compare asking prices across cards and grading institutes.</DialogDescription>
+                    </DialogHeader>
+                    <PriceCompareTable listings={initialListings} />
+                  </DialogContent>
+                </Dialog>
               )}
-            </Button>
+              <Button variant="outline" size="sm" className="lg:hidden" onClick={() => setFilterSheetOpen(true)}>
+                <SlidersHorizontal /> Filters
+                {activeFilterCount > 0 && (
+                  <Badge className="ml-1 size-4 rounded-full p-0 text-[10px]">{activeFilterCount}</Badge>
+                )}
+              </Button>
+            </div>
           </div>
 
           {loading ? (
@@ -211,9 +228,6 @@ export function MarketplaceExplorer({
 
         {/* Compares across everything listed, not just the filtered results —
             filters narrow what you browse, not which cards you can compare. */}
-        <div className="border-t pt-6">
-          <PriceCompareTable listings={initialListings} />
-        </div>
       </div>
     </div>
   );

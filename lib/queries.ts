@@ -41,7 +41,10 @@ export async function getMarketplaceListings(filters: MarketplaceFilters = {}) {
   // Marketplace is a storefront: only items actually listed for sale, with
   // a price — owned-but-unlisted items belong on Portfolio/store pages.
   const where: Prisma.AssetWhereInput = {
-    marketStatus: MARKETPLACE_VISIBLE_STATUSES,
+    // `forSale` is the source of truth for active fixed-price listings. Keep
+    // all such listings discoverable even if a status value is stale; items
+    // in an active checkout or auction still cannot be bought here.
+    marketStatus: { notIn: ["IN_ESCROW", "IN_AUCTION"] },
     forSale: true,
     priceThb: { not: null },
   };

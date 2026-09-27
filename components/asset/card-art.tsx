@@ -19,6 +19,8 @@ interface CardArtProps {
   // the visible frame (e.g. a listing card) — otherwise the two rounded
   // borders stack into a "frame within a frame" look.
   bordered?: boolean;
+  /** Hide the grading badge when grading details are shown alongside the artwork. */
+  showGrade?: boolean;
 }
 
 export function CardArt({
@@ -30,6 +32,7 @@ export function CardArt({
   className,
   size = "sm",
   bordered = true,
+  showGrade = true,
 }: CardArtProps) {
   const [from, to] = gradientFor(themeIndex);
   const Icon = CATEGORY_ICONS[category];
@@ -60,7 +63,7 @@ export function CardArt({
         )}
         strokeWidth={1.5}
       />
-      <div
+      {showGrade && <div
         className={cn(
           "absolute left-2 top-2 flex items-center gap-1 rounded border px-1.5 py-0.5 shadow-sm backdrop-blur-sm",
           isBlackLabel ? "border-neutral-700 bg-neutral-900/90" : "bg-white/85",
@@ -76,7 +79,7 @@ export function CardArt({
           {gradingCompany === "RAW" ? "RAW" : `${gradingCompany} ${formatGrade(grade)}`}
           {isBlackLabel && " · Black Label"}
         </span>
-      </div>
+      </div>}
     </div>
   );
 }

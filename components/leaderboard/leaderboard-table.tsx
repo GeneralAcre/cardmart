@@ -148,23 +148,23 @@ export function LeaderboardTable({ rows }: { rows: LeaderboardRow[] }) {
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full table-fixed text-sm">
           <thead>
             <tr className="text-muted-foreground border-b text-left text-xs font-normal">
-              <th className="hidden w-8 py-3 pr-2 font-normal sm:table-cell">#</th>
-              <th className="py-3 pr-4 font-normal">Name</th>
-              <th className="hidden py-3 pr-4 font-normal md:table-cell">Grade</th>
-              <SortHeader label="Price" sortKey="price" sort={sort} onSort={toggleSort} className="text-right sm:text-left" />
+              <th className="hidden w-[4%] py-3 pr-2 text-right font-normal sm:table-cell">#</th>
+              <th className="w-[60%] py-3 pr-3 font-normal sm:w-[50%] md:w-[42%] lg:w-[34%]">Name</th>
+              <th className="hidden w-[10%] py-3 pr-3 text-right font-normal md:table-cell lg:w-[10%]">Grade</th>
+              <SortHeader label="Price" sortKey="price" sort={sort} onSort={toggleSort} className="w-[26%] text-right sm:w-[18%] md:w-[17%] lg:w-[15%]" />
               <SortHeader
                 label={period === "24h" ? "Today" : period}
                 sortKey="change"
                 sort={sort}
                 onSort={toggleSort}
-                className="hidden sm:table-cell"
+                className="hidden w-[14%] text-right sm:table-cell md:w-[13%] lg:w-[12%]"
               />
-              <SortHeader label="Sales 30d" sortKey="sales" sort={sort} onSort={toggleSort} className="hidden lg:table-cell" />
-              <SortHeader label="Watchers" sortKey="watchers" sort={sort} onSort={toggleSort} className="hidden sm:table-cell" />
-              <th className="w-10 py-3 font-normal" aria-label="Watch" />
+              <SortHeader label="Sales 30d" sortKey="sales" sort={sort} onSort={toggleSort} className="hidden w-[8%] text-right lg:table-cell" />
+              <SortHeader label="Watchers" sortKey="watchers" sort={sort} onSort={toggleSort} className="hidden w-[9%] text-right sm:table-cell lg:w-[10%]" />
+              <th className="w-[14%] py-3 text-right font-normal sm:w-[5%] lg:w-[7%]" aria-label="Watch" />
             </tr>
           </thead>
           <tbody>
@@ -227,7 +227,7 @@ function SortHeader({
       <button
         type="button"
         onClick={() => onSort(sortKey)}
-        className={cn("inline-flex items-center gap-1 hover:text-foreground", active && "text-foreground")}
+        className={cn("inline-flex w-full items-center gap-1 hover:text-foreground", className?.includes("text-right") && "justify-end", active && "text-foreground")}
       >
         {label}
         {active && (sort!.dir === "desc" ? <ArrowDown className="size-3" /> : <ArrowUp className="size-3" />)}
@@ -274,10 +274,8 @@ function LeaderboardRowView({
         </tr>
       )}
       <tr className="hover:bg-accent/50 border-b transition-colors">
-        <td className="text-muted-foreground hidden py-3.5 pr-2 tabular-nums sm:table-cell">{rank}</td>
-        {/* w-full + max-w-0: the name column takes whatever width is left and
-            truncates, so the row never pushes the table wider than a phone. */}
-        <td className="w-full max-w-0 py-3.5 pr-3 sm:pr-4">
+        <td className="text-muted-foreground hidden w-[4%] py-3.5 pr-2 text-right tabular-nums sm:table-cell">{rank}</td>
+        <td className="w-[60%] py-3.5 pr-3 sm:w-[50%] sm:pr-4 md:w-[42%] lg:w-[34%]">
           <Link href={`/item/${row.id}`} className="flex min-w-0 items-center gap-3">
             <div className="relative aspect-[3/4] w-10 shrink-0 overflow-hidden rounded-md border sm:w-14">
               {row.photoUrl ? (
@@ -302,20 +300,20 @@ function LeaderboardRowView({
             </div>
           </Link>
         </td>
-        <td className="hidden py-3.5 pr-4 whitespace-nowrap md:table-cell">{gradeSymbol(row)}</td>
-        <td className="py-3.5 pr-2 text-right whitespace-nowrap sm:pr-4 sm:text-left">
+        <td className="hidden w-[10%] py-3.5 pr-3 text-right whitespace-nowrap md:table-cell lg:w-[10%]">{gradeSymbol(row)}</td>
+        <td className="w-[26%] py-3.5 pr-2 text-right whitespace-nowrap sm:w-[18%] sm:pr-4 md:w-[17%] lg:w-[15%]">
           <div className="font-medium tabular-nums">{formatThb(row.priceThb)}</div>
           {/* Phones: the change sits under the price, like a trading app's watchlist row. */}
           <div className="text-xs sm:hidden">
             <Change value={row.change[period]} />
           </div>
         </td>
-        <td className="hidden py-3.5 pr-4 whitespace-nowrap sm:table-cell">
+        <td className="hidden w-[14%] py-3.5 pr-3 text-right whitespace-nowrap sm:table-cell md:w-[13%] lg:w-[12%]">
           <Change value={row.change[period]} />
         </td>
-        <td className="hidden py-3.5 pr-4 tabular-nums lg:table-cell">{row.sales30d}</td>
-        <td className="hidden py-3.5 pr-4 tabular-nums sm:table-cell">{row.watchers}</td>
-        <td className="py-3.5 text-right">
+        <td className="hidden w-[8%] py-3.5 pr-3 text-right tabular-nums lg:table-cell">{row.sales30d}</td>
+        <td className="hidden w-[9%] py-3.5 pr-3 text-right tabular-nums sm:table-cell lg:w-[10%]">{row.watchers}</td>
+        <td className="w-[14%] py-3.5 text-right sm:w-[5%] lg:w-[7%]">
           <button
             type="button"
             onClick={toggleWatch}

@@ -7,7 +7,6 @@ import { ChevronLeft, LayoutGrid } from "lucide-react";
 
 import { CardArt } from "@/components/asset/card-art";
 import { Button } from "@/components/ui/button";
-import { formatGrade, formatThb } from "@/lib/format";
 import type { LeaderboardPeriod, LeaderboardRow } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 
@@ -17,12 +16,10 @@ type SizeBy = "mcap" | "avg";
 interface Tile {
   key: string;
   label: string;
-  sublabel: string;
   /** Tile area. */
   size: number;
   /** Value-weighted % change over the period, or null with no earlier price to compare. */
   change: number | null;
-  mcapThb: number;
   count: number;
   href?: string;
   series?: string;
@@ -46,12 +43,6 @@ const FULL_COLOR_PCT = 20;
  * readable, and its label still shows the real value.
  */
 const MIN_TILE_SHARE = 0.035;
-
-function kThb(v: number) {
-  if (v >= 1_000_000) return `THB ${(v / 1_000_000).toFixed(v >= 10_000_000 ? 0 : 1)}M`;
-  if (v >= 1_000) return `THB ${(v / 1_000).toFixed(0)}K`;
-  return formatThb(v);
-}
 
 /**
  * Value-weighted change for a set of cards: (today's total − the total at the
@@ -161,10 +152,8 @@ export function MarketHeatmap({ rows }: { rows: LeaderboardRow[] }) {
       list.map((r) => ({
         key: r.id,
         label: r.name,
-        sublabel: r.gradingCompany === "RAW" ? "Raw" : `${r.gradingCompany} ${formatGrade(r.grade)}${r.isBlackLabel ? " BL" : ""}`,
         size: r.priceThb,
         change: r.change[period],
-        mcapThb: r.priceThb,
         count: 1,
         href: `/item/${r.id}`,
         cover: r,
@@ -180,10 +169,8 @@ export function MarketHeatmap({ rows }: { rows: LeaderboardRow[] }) {
       return {
         key: name,
         label: name,
-        sublabel: `${list.length} card${list.length === 1 ? "" : "s"}`,
         size: sizeBy === "mcap" ? mcap : mcap / list.length,
         change: weightedChange(list, period),
-        mcapThb: mcap,
         count: list.length,
         series: name,
         cover: list.reduce((a, b) => (b.priceThb > a.priceThb ? b : a)),
@@ -240,7 +227,7 @@ export function MarketHeatmap({ rows }: { rows: LeaderboardRow[] }) {
         <div className="grid grid-cols-3 gap-2 sm:gap-3">
           <Stat label={`Top gainer · ${period}`} tile={best && best.change! > 0 ? best : null} />
           <Stat label={`Top loser · ${period}`} tile={worst && worst.change! < 0 ? worst : null} />
-          <Stat label="Largest mcap" tile={biggest ?? null} showMcap />
+          <Stat label="Largest mcap" tile={biggest ?? null} />
         </div>
       )}
 
@@ -257,6 +244,7 @@ export function MarketHeatmap({ rows }: { rows: LeaderboardRow[] }) {
             const { background, dark } = tileStyle(t.change);
             const big = r.w > 110 && r.h > 64;
             const showCover = r.w > 150 && r.h > 150;
+            const coverWidth = Math.min(112, Math.max(48, Math.floor(Math.min(r.w * 0.24, r.h * 0.24))));
             const medium = r.w > 64 && r.h > 36;
             const clickable = Boolean(t.href || t.series);
             return (
@@ -265,14 +253,14 @@ export function MarketHeatmap({ rows }: { rows: LeaderboardRow[] }) {
                 type="button"
                 disabled={!clickable}
                 onClick={() => (t.series ? setSeries(t.series) : t.href && router.push(t.href))}
-                title={`${t.label} · ${t.sublabel}\n${formatChange(t.change)} (${period}) · market cap ${formatThb(t.mcapThb)}`}
+                title={`${t.label}\n${formatChange(t.change)} (${period})`}
                 className={cn(
                   "absolute flex flex-col items-center justify-center overflow-hidden border border-black/40 p-1 text-center transition-[filter] hover:brightness-110",
                   dark ? "text-neutral-950" : "text-white",
                 )}
                 style={{ left: r.x, top: r.y, width: r.w, height: r.h, background }}
               >
-                {showCover && <CoverThumb card={t.cover} className="mb-2 w-12 shadow-md sm:w-14" />}
+                {showCover && <CoverThumb card={t.cover} className="mb-2 shadow-md" style={{ width: coverWidth }} />}
                 {medium && (
                   <span className={cn("line-clamp-2 leading-tight font-semibold", big ? "text-sm" : "text-[11px]")}>
                     {t.label}
@@ -281,11 +269,6 @@ export function MarketHeatmap({ rows }: { rows: LeaderboardRow[] }) {
                 {medium && (
                   <span className={cn("font-bold tabular-nums", big ? "text-base" : "text-[11px]")}>
                     {formatChange(t.change)}
-                  </span>
-                )}
-                {big && (
-                  <span className="text-[11px] opacity-80">
-                    {t.sublabel} · {kThb(t.mcapThb)}
                   </span>
                 )}
               </button>
@@ -346,9 +329,9 @@ function Segmented({
 }
 
 /** A card's real verification photo, or its generated artwork when it has none. */
-function CoverThumb({ card, className }: { card: LeaderboardRow; className?: string }) {
+function CoverThumb({ card, className, style }: { card: LeaderboardRow; className?: string; style?: import("react").CSSProperties }) {
   return (
-    <span className={cn("relative block aspect-[3/4] shrink-0 overflow-hidden rounded-md border border-black/30", className)}>
+    <span style={style} className={cn("relative block aspect-[3/4] shrink-0 overflow-hidden rounded-md border border-black/30", className)}>
       {card.photoUrl ? (
         <Image src={card.photoUrl} alt="" fill sizes="64px" className="object-cover" />
       ) : (
@@ -365,7 +348,7 @@ function CoverThumb({ card, className }: { card: LeaderboardRow; className?: str
   );
 }
 
-function Stat({ label, tile, showMcap }: { label: string; tile: Tile | null; showMcap?: boolean }) {
+function Stat({ label, tile }: { label: string; tile: Tile | null }) {
   return (
     <div className="bg-card flex min-w-0 flex-col gap-2 rounded-xl border p-2.5 sm:flex-row sm:items-center sm:gap-3 sm:p-3">
       {tile && <CoverThumb card={tile.cover} className="w-10 sm:w-12" />}
@@ -377,10 +360,10 @@ function Stat({ label, tile, showMcap }: { label: string; tile: Tile | null; sho
             <span
               className={cn(
                 "text-xs font-bold tabular-nums sm:text-sm",
-                showMcap ? "" : tile.change! > 0 ? "text-success" : "text-destructive",
+                tile.change! > 0 ? "text-success" : "text-destructive",
               )}
             >
-              {showMcap ? kThb(tile.mcapThb) : formatChange(tile.change)}
+            {formatChange(tile.change)}
             </span>
           </>
         ) : (

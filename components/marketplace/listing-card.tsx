@@ -3,9 +3,8 @@ import Link from "next/link";
 import { Images } from "lucide-react";
 
 import { CardArt } from "@/components/asset/card-art";
-import { Badge } from "@/components/ui/badge";
 import { formatGrade, formatThb } from "@/lib/format";
-import { CARD_GAME_LABELS, MARKET_STATUS_BADGE_CLASS, MARKET_STATUS_LABELS } from "@/lib/labels";
+import { CARD_GAME_LABELS } from "@/lib/labels";
 import type { AssetSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { displayImage, realPhotos } from "@/lib/card-image";
@@ -47,30 +46,8 @@ export function ListingCard({ asset }: { asset: AssetSummary }) {
               grade={asset.grade}
               isBlackLabel={asset.isBlackLabel}
               bordered={false}
+              showGrade={false}
             />
-          )}
-          <Badge
-            className={cn(
-              "absolute right-2 top-2 border-0",
-              MARKET_STATUS_BADGE_CLASS[asset.marketStatus],
-            )}
-          >
-            {MARKET_STATUS_LABELS[asset.marketStatus]}
-          </Badge>
-          {/* Grade is the single most decision-relevant fact for a graded
-              collectible — it needs to survive in the grid view even when a
-              real verification photo, not the grade-labeled generated art,
-              is what's shown (the generated art already renders it inline). */}
-          {image && (
-            <span
-              className={cn(
-                "absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-semibold backdrop-blur-sm",
-                asset.isBlackLabel ? "bg-neutral-900/90 text-amber-400" : "bg-foreground/90 text-background",
-              )}
-            >
-              {asset.gradingCompany === "RAW" ? "RAW" : `${asset.gradingCompany} ${formatGrade(asset.grade)}`}
-              {asset.isBlackLabel && " · Black Label"}
-            </span>
           )}
           {/* An official catalogue image is the card, not this copy — say so. */}
           {image?.kind === "reference" && (
@@ -90,6 +67,11 @@ export function ListingCard({ asset }: { asset: AssetSummary }) {
             <span className="text-muted-foreground text-xs">{CARD_GAME_LABELS[asset.game]}</span>
             <h3 className="line-clamp-1 text-sm font-semibold">{asset.name}</h3>
             <p className="text-muted-foreground line-clamp-1 text-xs">{asset.subtitle}</p>
+            <p className="text-foreground line-clamp-1 text-xs font-medium">
+              <span className="text-muted-foreground">Grade: </span>
+              {asset.gradingCompany === "RAW" ? "Raw / Ungraded" : `${asset.gradingCompany} ${formatGrade(asset.grade)}`}
+              {asset.isBlackLabel && <span className="text-amber-500"> · Black Label</span>}
+            </p>
           </div>
           <span
             className={cn(
@@ -98,7 +80,7 @@ export function ListingCard({ asset }: { asset: AssetSummary }) {
               asset.priceDirection === "down" && "text-destructive",
             )}
           >
-            {asset.priceThb != null ? formatThb(asset.priceThb) : "Not for sale"}
+            {asset.priceThb != null ? formatThb(asset.priceThb) : "Price unavailable"}
           </span>
         </div>
       </div>

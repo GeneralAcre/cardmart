@@ -1,16 +1,17 @@
-import Link from "next/link";
-
 import { LeaderboardTable } from "@/components/leaderboard/leaderboard-table";
 import { MarketHeatmap } from "@/components/leaderboard/market-heatmap";
 import { SetReleases } from "@/components/leaderboard/set-releases";
 import { RELEASE_GAMES, getSetReleases } from "@/lib/tcg-releases";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getLeaderboard } from "@/lib/queries";
+import { getLeaderboard, getMarketOverview } from "@/lib/queries";
 import { getCurrentUser } from "@/lib/session";
+import { LeaderboardMarket } from "@/components/leaderboard/leaderboard-market";
 
 export default async function LeaderboardPage({ searchParams }: { searchParams: Promise<{ view?: string }> }) {
   const [{ view }, user] = await Promise.all([searchParams, getCurrentUser()]);
-  const [rows, releases] = await Promise.all([getLeaderboard(user.id), getSetReleases()]);
+  const [rows, releases, overview] = await Promise.all([
+    getLeaderboard(user.id), getSetReleases(), getMarketOverview(),
+  ]);
   const defaultView = view === "heatmap" || view === "releases" ? view : "table";
 
   return (
@@ -22,9 +23,6 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
             Every card for sale right now, with its real price moves. Tap + to add one to your watchlist.
           </p>
         </div>
-        <Link href="/market" className="text-muted-foreground hover:text-foreground text-sm underline underline-offset-2">
-          Rankings by grade &amp; market stats
-        </Link>
       </div>
 
       <Tabs defaultValue={defaultView}>
@@ -34,7 +32,10 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
           <TabsTrigger value="releases">New set releases</TabsTrigger>
         </TabsList>
         <TabsContent value="table">
-          <LeaderboardTable rows={rows} />
+          <div className="flex flex-col gap-8">
+            <LeaderboardMarket overview={overview} />
+            <LeaderboardTable rows={rows} />
+          </div>
         </TabsContent>
         <TabsContent value="heatmap">
           <MarketHeatmap rows={rows} />

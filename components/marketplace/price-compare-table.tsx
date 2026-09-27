@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Plus, Scale, X } from "lucide-react";
+import { ArrowRight, Plus, X } from "lucide-react";
 import type { GradingCompany } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
@@ -83,16 +83,6 @@ export function PriceCompareTable({ listings }: { listings: AssetSummary[] }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-2">
-        <div className="bg-foreground text-background flex size-7 items-center justify-center rounded-lg">
-          <Scale className="size-3.5" />
-        </div>
-        <h2 className="text-lg font-semibold">Compare Prices</h2>
-        <span className="text-muted-foreground hidden text-xs sm:inline">
-          Up to {MAX_ROWS} cards &middot; by grading institute
-        </span>
-      </div>
-
       {/* One grid per comparison instead of a <table>: on phones each row
           stacks into its own card (pickers side by side, result underneath),
           so nothing ever needs a sideways scroll; from sm up the same grid
