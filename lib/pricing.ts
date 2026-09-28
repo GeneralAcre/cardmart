@@ -19,6 +19,11 @@ export const SELLER_SHIPPING_COST_THB = 150;
 // one. This just makes the locked SOL amount scale with the item's THB
 // price instead of being a flat, price-blind nominal amount.
 export const THB_PER_SOL = 5000;
+
+// Fixed approximate USD→THB rate, used only to place outside (USD) prices on
+// the same baht scale in the item page's price comparison. Always shown with
+// "≈" next to the original USD figure — never used for any payment.
+export const THB_PER_USD = 33;
 const LAMPORTS_PER_SOL = 1_000_000_000;
 
 export function thbToLamports(amountThb: number): bigint {

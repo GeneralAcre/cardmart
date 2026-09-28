@@ -160,6 +160,23 @@ export const ITEM: Record<string, string> = {
   "CardMart figures are in THB from real listings and completed sales. Outside prices stay in their own currency (USD) and aren't converted. eBay figures are asking prices, not sold prices.":
     "ตัวเลขของ CardMart เป็นเงินบาทจากรายการขายและการขายสำเร็จจริง ราคาภายนอกแสดงเป็นสกุลเงินเดิม (USD) โดยไม่แปลงค่า ตัวเลขของ eBay เป็นราคาตั้ง ไม่ใช่ราคาที่ขายได้",
 
+  "This listing": "รายการนี้",
+  "{count} live listing": "ลงขายอยู่ {count} รายการ",
+  "{count} live listings": "ลงขายอยู่ {count} รายการ",
+  "{count} sale in {days} days": "ขาย {count} ครั้งใน {days} วัน",
+  "{count} sales in {days} days": "ขาย {count} ครั้งใน {days} วัน",
+  "No live eBay data": "ไม่มีข้อมูลสดจาก eBay",
+  "Ungraded (raw) card": "การ์ดดิบ (ยังไม่เกรด)",
+  "eBay median asking price": "ราคาตั้งมัธยฐานบน eBay",
+  "CardMart median sale": "ราคาขายมัธยฐานบน CardMart",
+  "About the same as": "ใกล้เคียงกับ",
+  "{pct}% below": "ต่ำกว่า {pct}%",
+  "{pct}% above": "สูงกว่า {pct}%",
+  "eBay sold listings": "รายการที่ขายแล้วบน eBay",
+  "Check sold prices elsewhere:": "เช็กราคาขายจริงที่อื่น:",
+  "Dots show each source's price and bars its low–high range, all on one baht scale; the dashed line is this listing. USD prices are converted at an approximate {rate} THB per USD. eBay figures are asking prices, not sold prices; TCGplayer prices are for ungraded cards.":
+    "จุดคือราคาของแต่ละแหล่ง แถบคือช่วงราคาต่ำสุด–สูงสุด ทั้งหมดอยู่บนสเกลเงินบาทเดียวกัน เส้นประคือรายการนี้ ราคา USD แปลงที่อัตราประมาณ {rate} บาทต่อดอลลาร์ ตัวเลขของ eBay เป็นราคาตั้ง ไม่ใช่ราคาที่ขายได้ ส่วนราคา TCGplayer เป็นของการ์ดที่ยังไม่เกรด",
+
   // Price history chart
   "Price History": "ประวัติราคา",
   "Not enough price history yet in this window — check back after a reprice or sale.":
