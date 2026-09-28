@@ -99,27 +99,12 @@
 }
 
 @layer utilities {
-  /* Shared elevated surface for card and auction detail pages. The brand
-     green tint separates important information panels from the black canvas
-     without competing with the collectible image or primary actions. */
+  /* Shared surface for the info panels on card and auction detail pages:
+     the same dark card as the other panels, with a thin brand-green edge as
+     the accent, so they read as a set without a solid fill competing with
+     the card image and the buy buttons. */
   .detail-panel {
-    @apply border-highlight bg-highlight text-highlight-foreground shadow-[0_10px_30px_rgba(170,204,0,0.2)];
-  }
-
-  .detail-panel .text-muted-foreground {
-    color: color-mix(in oklab, var(--highlight-foreground) 68%, transparent);
-  }
-
-  /* On the lime panel, outline badges (white by default) and the lime "price
-     up" text would both vanish into the background — draw them in the
-     panel's own dark foreground instead. Red (price down) stays readable. */
-  .detail-panel [data-slot="badge"] {
-    color: var(--highlight-foreground);
-    border-color: color-mix(in oklab, var(--highlight-foreground) 45%, transparent);
-  }
-
-  .detail-panel .text-success {
-    color: var(--highlight-foreground);
+    @apply bg-card text-card-foreground border-highlight/40;
   }
 
   /* Keeps horizontal touch/swipe scrolling (e.g. an overflowing TabsList on

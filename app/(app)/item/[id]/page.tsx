@@ -380,26 +380,32 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
             currentPriceThb={asset.priceThb}
           />
 
-          <Link
-            href={`/store/${asset.seller.id}`}
-            className="detail-panel hover:bg-highlight/15 flex items-center gap-3 rounded-xl border p-3 transition-colors"
-          >
-            <Avatar className="size-10 shrink-0">
-              {asset.seller.image && <AvatarImage src={asset.seller.image} alt={asset.seller.name ?? ""} />}
-              <AvatarFallback className="text-sm font-medium">{sellerInitials}</AvatarFallback>
-            </Avatar>
-            <div className="flex min-w-0 flex-col gap-0.5">
-              <span className="text-muted-foreground text-xs">{t("Listed by")}</span>
-              <span className="flex min-w-0 items-center gap-2">
-                <span className="truncate text-sm font-semibold">{asset.seller.name}</span>
-                <VerifiedBadge status={asset.seller.kycStatus} />
-              </span>
-              <RatingStars average={sellerRating.average} count={sellerRating.count} />
-            </div>
-          </Link>
-          {/* Messages go to the current owner — the person who can actually
-              accept an offer or change the price. */}
-          {!isOwner && <MessageSellerButton sellerId={asset.owner.id} className="w-full" />}
+          {/* Seller card: the name links to their store, and messaging sits
+              right on the card. Messages go to the current owner — the person
+              who can actually accept an offer or change the price. */}
+          <div className="detail-panel flex items-center gap-3 rounded-xl border p-3">
+            <Link href={`/store/${asset.seller.id}`} className="group flex min-w-0 flex-1 items-center gap-3">
+              <Avatar className="size-10 shrink-0">
+                {asset.seller.image && <AvatarImage src={asset.seller.image} alt={asset.seller.name ?? ""} />}
+                <AvatarFallback className="text-sm font-medium">{sellerInitials}</AvatarFallback>
+              </Avatar>
+              <div className="flex min-w-0 flex-col gap-0.5">
+                <span className="text-muted-foreground text-xs">{t("Listed by")}</span>
+                <span className="flex min-w-0 items-center gap-2">
+                  <span className="truncate text-sm font-semibold group-hover:underline">{asset.seller.name}</span>
+                  <VerifiedBadge status={asset.seller.kycStatus} />
+                </span>
+                <RatingStars average={sellerRating.average} count={sellerRating.count} />
+              </div>
+            </Link>
+            {!isOwner && (
+              <MessageSellerButton
+                sellerId={asset.owner.id}
+                variant="default"
+                className="bg-highlight text-highlight-foreground hover:bg-highlight/85 shrink-0"
+              />
+            )}
+          </div>
           {asset.owner.id !== asset.seller.id && (
             <p className="text-muted-foreground text-xs">
               {t("Currently owned by")}{" "}

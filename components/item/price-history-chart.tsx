@@ -109,8 +109,8 @@ export function PriceHistoryChart({
           </AreaChart>
         </ChartContainer>
       ) : (
-        <div className="flex flex-col items-center justify-center gap-1 py-10 text-center">
-          <span className="text-2xl font-bold tabular-nums">
+        <div className="flex flex-col items-center justify-center gap-0.5 py-3 text-center">
+          <span className="text-xl font-bold tabular-nums">
             {currentPriceThb != null ? formatThb(currentPriceThb) : "—"}
           </span>
           <p className="text-muted-foreground text-xs">
