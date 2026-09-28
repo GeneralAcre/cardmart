@@ -15,12 +15,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useWalletStore } from "@/lib/web3/wallet-store";
-import { buildLockPaymentTransaction, randomTradeId } from "@/lib/web3/escrow-program";
-import { thbToLamports } from "@/lib/pricing";
+import { useEscrowLock, type EscrowLock } from "@/lib/web3/use-escrow-lock";
 import { formatThb } from "@/lib/format";
+import { useT } from "@/components/landing/language-provider";
 
-export type EscrowLock = { tradeId: string; txSignature: string; lamports: string; tradeAccount: string };
+export type { EscrowLock };
 
 // Shared real wallet-signed escrow-lock flow behind buyListing (BuyPanel),
 // claimAuctionWin, and completeOfferPurchase — all three end with a buyer
@@ -48,7 +47,8 @@ export function CompletePurchaseButton({
   size?: "sm" | "default" | "lg";
 }) {
   const router = useRouter();
-  const { connected, connecting, connect, publicKey, signMessage, signAndSendRawTransaction } = useWalletStore();
+  const { lock, connecting } = useEscrowLock();
+  const t = useT();
   const [fulfillment, setFulfillment] = useState<"SHIP" | "VAULT">("SHIP");
   const [open, setOpen] = useState(false);
   const [signing, setSigning] = useState(false);
@@ -56,27 +56,12 @@ export function CompletePurchaseButton({
   async function handleConfirm() {
     setSigning(true);
     try {
-      if (!connected) await connect();
-
       let escrowLock: EscrowLock | undefined;
-      if (sellerWalletAddress && publicKey) {
-        try {
-          const tradeId = randomTradeId();
-          const lamports = thbToLamports(priceThb);
-          const { transactionBytes, tradeAccount } = await buildLockPaymentTransaction({
-            buyer: publicKey,
-            seller: sellerWalletAddress,
-            tradeId,
-            lamports,
-          });
-          const txSignature = await signAndSendRawTransaction(transactionBytes);
-          escrowLock = { tradeId: tradeId.toString(), txSignature, lamports: lamports.toString(), tradeAccount };
-        } catch (err) {
-          toast.error(err instanceof Error ? err.message : "Could not lock in your payment. Try again.");
-          return;
-        }
-      } else {
-        await signMessage(`Confirm payment of ${priceThb} THB for this item`);
+      try {
+        escrowLock = await lock(priceThb, sellerWalletAddress, `Confirm payment of ${priceThb} THB for this item`);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : t("Could not lock in your payment. Try again."));
+        return;
       }
 
       try {
@@ -85,7 +70,7 @@ export function CompletePurchaseButton({
         setOpen(false);
         router.refresh();
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Purchase failed.");
+        toast.error(err instanceof Error ? err.message : t("Purchase failed."));
       }
     } finally {
       setSigning(false);
@@ -107,14 +92,14 @@ export function CompletePurchaseButton({
 
           {!vaulted && (
             <div className="flex flex-col gap-2">
-              <span className="text-sm font-medium">How do you want to receive it?</span>
+              <span className="text-sm font-medium">{t("How do you want to receive it?")}</span>
               <Tabs value={fulfillment} onValueChange={(v) => setFulfillment(v as "SHIP" | "VAULT")}>
                 <TabsList className="w-full">
                   <TabsTrigger value="SHIP">
-                    <Truck className="size-4" /> Ship to My Address
+                    <Truck className="size-4" /> {t("Ship to My Address")}
                   </TabsTrigger>
                   <TabsTrigger value="VAULT">
-                    <Vault className="size-4" /> Keep in Vault
+                    <Vault className="size-4" /> {t("Keep in Vault")}
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
@@ -123,21 +108,21 @@ export function CompletePurchaseButton({
 
           <div className="bg-muted/40 flex flex-col gap-2 rounded-lg border p-3 text-sm">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Amount</span>
+              <span className="text-muted-foreground">{t("Amount")}</span>
               <span className="font-semibold">{formatThb(priceThb)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Delivery</span>
-              <span>{vaulted ? "Instant Vault Transfer" : fulfillment === "SHIP" ? "Ship to Address" : "Deposit to Vault"}</span>
+              <span className="text-muted-foreground">{t("Delivery")}</span>
+              <span>{t(vaulted ? "Instant Vault Transfer" : fulfillment === "SHIP" ? "Ship to Address" : "Deposit to Vault")}</span>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)} disabled={signing}>
-              Cancel
+              {t("Cancel")}
             </Button>
             <Button onClick={handleConfirm} disabled={signing || connecting}>
               {signing ? <Loader2 className="animate-spin" /> : <ShieldCheck />}
-              {signing ? "Waiting for approval…" : "Confirm & Pay"}
+              {signing ? t("Waiting for approval…") : t("Confirm & Pay")}
             </Button>
           </DialogFooter>
         </DialogContent>

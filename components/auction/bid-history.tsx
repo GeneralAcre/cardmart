@@ -1,4 +1,7 @@
+"use client";
+
 import { formatDateTime, formatThb } from "@/lib/format";
+import { useT } from "@/components/landing/language-provider";
 
 interface BidRow {
   id: string;
@@ -8,16 +11,17 @@ interface BidRow {
 }
 
 export function BidHistory({ bids }: { bids: BidRow[] }) {
+  const t = useT();
   if (bids.length === 0) {
-    return <p className="text-muted-foreground text-sm">No bids yet — be the first.</p>;
+    return <p className="text-muted-foreground text-sm">{t("No bids yet — be the first.")}</p>;
   }
   return (
     <div className="flex flex-col gap-2">
       {bids.map((bid, i) => (
         <div key={bid.id} className="bg-card flex items-center justify-between rounded-lg border p-3 text-sm">
           <span className={i === 0 ? "font-semibold" : ""}>
-            {bid.bidder.name ?? bid.bidder.handle ?? "A bidder"}
-            {i === 0 && <span className="text-muted-foreground ml-1.5 text-xs font-normal">(highest)</span>}
+            {bid.bidder.name ?? bid.bidder.handle ?? t("A bidder")}
+            {i === 0 && <span className="text-muted-foreground ml-1.5 text-xs font-normal">({t("highest")})</span>}
           </span>
           <div className="flex items-center gap-3">
             <span className="font-mono font-semibold tabular-nums">{formatThb(bid.amountThb)}</span>

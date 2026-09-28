@@ -16,16 +16,17 @@ This report covers everything built so far (49 commits, 2 Sep → 25 Sep 2026), 
 | Listing a card (Instant Verify with live camera + PSA lookup) | ✅ Done |
 | Marketplace (browse, search, filters, trending, price direction) | ✅ Done |
 | Buying with escrow (ship or keep in vault) | ✅ Done, real on-chain escrow on devnet |
-| Auctions (scheduled, anti-sniping, claim win) | ✅ Done |
+| Auctions (scheduled, anti-sniping, bids locked in escrow, 48h claim window) | ✅ Done |
 | Offers (make / accept / reject / withdraw / complete) | ✅ Done |
 | Portfolio (holdings, value chart, SOL wallet, offers, watchlist) | ✅ Done |
 | Seller stores, ratings and reviews | ✅ Done |
 | Buyer ↔ seller messaging | ✅ Done (polling, not realtime) |
-| Notifications (in-app) | ✅ Done |
+| Notifications (in-app + email via Resend) | ✅ Done; email needs `RESEND_API_KEY` |
 | Back office (warehouse inspection, vault, grading queue, sellers, alerts) | ✅ Done |
 | Digital twin SPL token + on-chain ownership transfer | ✅ Done (devnet) |
 | Market price references (PSA, TCG API, eBay) | ✅ Done; some need API keys |
-| Landing page EN/TH | ✅ Done (landing page only) |
+| Thai / English across the whole app (cookie-based, server-rendered) | ✅ Done |
+| Leaderboard "Top traders" (realized + unrealized gain per account, per-card breakdown) | ✅ Done |
 | Price comparison table (CardMart, eBay, TCGplayer, Beckett, PriceCharting) + price insights | ✅ Done |
 | Median sale price, 7/30-day trending, Market page (rankings, stats, latest updates) | ✅ Done |
 | Getting-started guide for new buyers and sellers | ✅ Done |
@@ -33,7 +34,7 @@ This report covers everything built so far (49 commits, 2 Sep → 25 Sep 2026), 
 | "Notify me when listed" card alerts | ✅ Done |
 | Card-for-card swaps with cash difference (vaulted cards) | ✅ Done |
 | Redeem burns the digital twin token | ✅ Done |
-| Full-Service grading for sellers | ⚠️ Backend and admin queue exist, but sellers can no longer start one |
+| Full-Service grading for sellers (`/listing` → "Get it graded first", Portfolio → Grading tab) | ✅ Done |
 | Automated tests | ❌ None |
 | Production readiness (mainnet, real payments, audit) | ❌ Out of scope for the thesis; see §6 |
 
@@ -130,9 +131,12 @@ This report covers everything built so far (49 commits, 2 Sep → 25 Sep 2026), 
 - Live countdown and bid history.
 - Outbid, auction-starting (sent to watchers) and auction-won notifications.
 - A seller can cancel only while there are **no bids**.
-- **Settlement:**
+- **Every bid locks its full amount** in the escrow program (`lock_payment`, signed by the bidder). When someone outbids you, the escrow authority refunds your lock straight away (`refund_to_buyer`). A failed refund is retried at settlement.
+- **Settlement** (no cron: `settleAuction` runs from the auction pages via `AutoSettle`, and is safe to call repeatedly):
   - An expired auction with no bids closes itself automatically the next time anyone views it.
-  - The winner **claims** the item by signing the same escrow payment as a normal purchase.
+  - A vaulted item's sale completes as soon as bidding closes — the winning lock becomes the sale's escrow, no second payment.
+  - A non-vaulted item gives the winner **48 hours** to choose ship or vault; after that it defaults to the vault.
+  - Bids placed before locking existed have no lock: the winner must pay within 48 hours, otherwise the auction ends **Unclaimed** and the card goes back to the seller.
 
 ### 3.7 Offers
 - A buyer offers a price (≥ 100 THB, optional message) on a fixed-price listing. One pending offer per buyer per item.
@@ -166,7 +170,7 @@ This report covers everything built so far (49 commits, 2 Sep → 25 Sep 2026), 
 - An in-app notification bell for users and a separate staff alert feed for admins.
 - Types: item sold, item purchased, inspection passed, grading complete, price drop on a watched item, outbid, auction starting, auction won, auction ended, offer received / accepted / rejected.
 - Staff alerts: new submission, duplicate cert attempt (fraud flag).
-- In-app only; no email or push notifications.
+- The important ones (sold, purchased, inspection passed, grading done, outbid, auction won/ended, offers, trades, KYC result) are also **emailed via Resend**, plus the first unread chat message in a conversation. Without `RESEND_API_KEY` they stay in-app only. No browser push.
 
 ### 3.12 Back office (`/admin/warehouse`, staff only)
 - **Inbound queue:** compare what the seller declared with the official certificate data (serial, company, grade).
@@ -208,6 +212,7 @@ The app falls back to a simulated version whenever the real service isn't config
 | PSA verification | `PSA_API_TOKEN` is set | Seller's declared data is trusted |
 | TCG reference price | `TCG_API_KEY` is set | Not shown |
 | eBay reference price | `EBAY_APP_ID` + `EBAY_CERT_ID` are set | Only the eBay sold-listings link is shown |
+| Email notifications | `RESEND_API_KEY` is set (and `EMAIL_FROM` on a verified domain to reach real users) | In-app notifications only |
 
 **Always simulated / demo only:**
 - The THB↔SOL rate is fixed.
@@ -230,22 +235,19 @@ The app falls back to a simulated version whenever the real service isn't config
    - Also consider turning on **HttpOnly cookies** (currently off).
 3. **Vercel environment variables:**
    - `DATABASE_URL`, `NEON_AUTH…_URL` and `POSTGRES_URL_NO_SSL` show **"Needs Attention"**. Check what the badge says; most likely they should be marked Sensitive and the Neon password rotated.
-   - Confirm every optional key is set on Vercel: `ESCROW_*`, `PSA_API_TOKEN`, `TCG_API_KEY`, `EBAY_APP_ID`/`EBAY_CERT_ID`, `QA_VERIFY_API_KEY`, `BLOB_READ_WRITE_TOKEN`. **eBay keys are not in the local `.env` either**, so eBay pricing is currently off.
+   - Confirm every optional key is set on Vercel: `ESCROW_*`, `PSA_API_TOKEN`, `TCG_API_KEY`, `EBAY_APP_ID`/`EBAY_CERT_ID`, `QA_VERIFY_API_KEY`, `BLOB_READ_WRITE_TOKEN`, `RESEND_API_KEY`/`EMAIL_FROM`. **eBay keys are not in the local `.env` either**, so eBay pricing is currently off.
+6. **Resend (email):** create an API key at resend.com and set `RESEND_API_KEY`. Until a domain is verified and `EMAIL_FROM` is set, Resend only delivers to the account owner's own address.
 4. **Admin accounts:** only the seeded demo user is an admin. To give a real teammate staff access, set `isAdmin = true` on their `User` row in the database. There is no UI for this.
 5. **GitHub:** the repo was renamed to `GeneralAcre/cardmart`. Update local remotes with `git remote set-url origin https://github.com/GeneralAcre/cardmart.git`.
 
 ### 5.2 Product gaps (code)
-1. **Full-Service grading has no way in.**
-   - The seller form was removed when the verify flow moved to `/listing`. The server action (`submitForGrading`, 1,500 THB package: 300 shipping + 1,000 grading + 200 minting) and the admin grading queue still exist, but nothing calls the action.
-   - Decide: restore the seller option, or remove the backend and admin tab.
-2. **Unclaimed auction wins never close.** If the winning bidder never claims, the auction stays "ended but unsettled" and the item is stuck.
-   - Needs a claim deadline, then either an offer to the second-highest bidder or a return to the seller.
-   - Bids are also not backed by locked funds until the claim.
+1. ~~Full-Service grading has no way in~~: restored as "Get it graded first" on `/listing`, with a Grading tab on Portfolio.
+2. ~~Unclaimed auction wins never close~~: bids now lock funds, and a 48-hour claim window settles every auction (see §3.6).
 3. ~~Unfinished compare table and item-page button~~: both now shipped (the compare table is on the Marketplace page).
 4. **No admin view for contact-form messages.** They are saved to the `ContactMessage` table, but staff can only read them in the database.
 5. **Messaging is polling-based.** Realtime (websocket / Pusher / Supabase Realtime) would be an upgrade.
-6. **Notifications are in-app only.** No email or push notifications yet.
-7. **Thai translation covers the landing page only.** The rest of the app is English.
+6. **No browser push notifications.** Email is done (Resend); push is not.
+7. ~~Thai translation covers the landing page only~~: the whole app is translated. Text the server writes into the database (notification bodies, item-history notes, server error messages) stays English.
 8. **README is out of date.** It still describes Auth.js, Google OAuth env vars and a `/login` page. It should be rewritten for Privy, escrow and the current page list; this report can be the basis.
 
 ### 5.3 Quality
@@ -255,7 +257,7 @@ The app falls back to a simulated version whenever the real service isn't config
    - Offer state transitions
    - Anchor program tests for `lock_payment` / `release_to_seller` / `refund_to_buyer`
 2. **No CI** beyond Vercel's build. Add lint + typecheck + tests on pull requests.
-3. **Bid race condition:** two simultaneous top bids aren't guarded by a database lock. This is acceptable at demo scale but should be noted in the thesis.
+3. ~~Bid race condition~~: a bid is only written if the current top bid hasn't changed since it was read; the loser's lock is refunded.
 
 ---
 

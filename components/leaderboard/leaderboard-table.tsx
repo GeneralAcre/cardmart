@@ -13,6 +13,8 @@ import { toggleWatchlist } from "@/lib/actions";
 import { formatDate, formatGrade, formatThb } from "@/lib/format";
 import type { LeaderboardPeriod, LeaderboardRow } from "@/lib/queries";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/landing/language-provider";
+import type { Translate } from "@/lib/i18n/translate";
 
 type Tab = "all" | "gainers" | "losers" | "new" | "watched";
 type SortKey = "price" | "change" | "sales" | "watchers";
@@ -33,13 +35,13 @@ function gradeSymbol(r: LeaderboardRow) {
   return `${r.gradingCompany} ${formatGrade(r.grade)}${r.isBlackLabel ? " BL" : ""}`;
 }
 
-function dayLabel(iso: string) {
+function dayLabel(iso: string, t: Translate) {
   const d = new Date(iso);
   const today = new Date();
   const startOf = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
   const diff = Math.round((startOf(today) - startOf(d)) / 86_400_000);
-  if (diff === 0) return "Today";
-  if (diff === 1) return "Yesterday";
+  if (diff === 0) return t("Today");
+  if (diff === 1) return t("Yesterday");
   return formatDate(d);
 }
 
@@ -65,6 +67,7 @@ export function LeaderboardTable({ rows }: { rows: LeaderboardRow[] }) {
   const [period, setPeriod] = useState<LeaderboardPeriod>("7d");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" } | null>(null);
+  const t = useT();
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -100,20 +103,20 @@ export function LeaderboardTable({ rows }: { rows: LeaderboardRow[] }) {
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="scrollbar-none -mx-4 flex gap-1.5 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-          {TABS.map((t) => (
+          {TABS.map((item) => (
             <button
-              key={t.key}
+              key={item.key}
               type="button"
               onClick={() => {
-                setTab(t.key);
+                setTab(item.key);
                 setSort(null);
               }}
               className={cn(
                 "shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors",
-                tab === t.key ? "bg-foreground text-background" : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                tab === item.key ? "bg-foreground text-background" : "text-muted-foreground hover:bg-accent hover:text-foreground",
               )}
             >
-              {t.label}
+              {t(item.label)}
             </button>
           ))}
         </div>
@@ -123,9 +126,9 @@ export function LeaderboardTable({ rows }: { rows: LeaderboardRow[] }) {
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search cards"
+              placeholder={t("Search cards")}
               className="h-9 pl-8"
-              aria-label="Search cards"
+              aria-label={t("Search cards")}
             />
           </div>
           <div className="bg-muted flex shrink-0 rounded-lg p-0.5 text-xs font-medium">
@@ -152,19 +155,19 @@ export function LeaderboardTable({ rows }: { rows: LeaderboardRow[] }) {
           <thead>
             <tr className="text-muted-foreground border-b text-left text-xs font-normal">
               <th className="hidden w-[4%] py-3 pr-2 text-right font-normal sm:table-cell">#</th>
-              <th className="w-[60%] py-3 pr-3 font-normal sm:w-[50%] md:w-[42%] lg:w-[34%]">Name</th>
-              <th className="hidden w-[10%] py-3 pr-3 text-right font-normal md:table-cell lg:w-[10%]">Grade</th>
-              <SortHeader label="Price" sortKey="price" sort={sort} onSort={toggleSort} className="w-[26%] text-right sm:w-[18%] md:w-[17%] lg:w-[15%]" />
+              <th className="w-[60%] py-3 pr-3 font-normal sm:w-[50%] md:w-[42%] lg:w-[34%]">{t("Name")}</th>
+              <th className="hidden w-[10%] py-3 pr-3 text-right font-normal md:table-cell lg:w-[10%]">{t("Grade")}</th>
+              <SortHeader label={t("Price")} sortKey="price" sort={sort} onSort={toggleSort} className="w-[26%] text-right sm:w-[18%] md:w-[17%] lg:w-[15%]" />
               <SortHeader
-                label={period === "24h" ? "Today" : period}
+                label={period === "24h" ? t("Today") : period}
                 sortKey="change"
                 sort={sort}
                 onSort={toggleSort}
                 className="hidden w-[14%] text-right sm:table-cell md:w-[13%] lg:w-[12%]"
               />
-              <SortHeader label="Sales 30d" sortKey="sales" sort={sort} onSort={toggleSort} className="hidden w-[8%] text-right lg:table-cell" />
-              <SortHeader label="Watchers" sortKey="watchers" sort={sort} onSort={toggleSort} className="hidden w-[9%] text-right sm:table-cell lg:w-[10%]" />
-              <th className="w-[14%] py-3 text-right font-normal sm:w-[5%] lg:w-[7%]" aria-label="Watch" />
+              <SortHeader label={t("Sales 30d")} sortKey="sales" sort={sort} onSort={toggleSort} className="hidden w-[8%] text-right lg:table-cell" />
+              <SortHeader label={t("Watchers")} sortKey="watchers" sort={sort} onSort={toggleSort} className="hidden w-[9%] text-right sm:table-cell lg:w-[10%]" />
+              <th className="w-[14%] py-3 text-right font-normal sm:w-[5%] lg:w-[7%]" aria-label={t("Watch")} />
             </tr>
           </thead>
           <tbody>
@@ -172,26 +175,26 @@ export function LeaderboardTable({ rows }: { rows: LeaderboardRow[] }) {
               <tr>
                 <td colSpan={8} className="text-muted-foreground py-16 text-center">
                   {tab === "gainers"
-                    ? `No price gains in the last ${period}.`
+                    ? t("No price gains in the last {period}.", { period })
                     : tab === "losers"
-                      ? `No price drops in the last ${period}.`
+                      ? t("No price drops in the last {period}.", { period })
                       : tab === "new"
-                        ? `Nothing new listed in the last ${NEW_DROP_DAYS} days.`
+                        ? t("Nothing new listed in the last {days} days.", { days: NEW_DROP_DAYS })
                         : tab === "watched"
-                          ? "No cards are on anyone's watchlist yet."
-                          : "No cards match your search."}
+                          ? t("No cards are on anyone's watchlist yet.")
+                          : t("No cards match your search.")}
                 </td>
               </tr>
             ) : (
               visible.map((r, i) => {
-                const heading = groupByDay && (i === 0 || dayLabel(visible[i - 1].listedAt) !== dayLabel(r.listedAt));
+                const heading = groupByDay && (i === 0 || dayLabel(visible[i - 1].listedAt, t) !== dayLabel(r.listedAt, t));
                 return (
                   <LeaderboardRowView
                     key={r.id}
                     row={r}
                     rank={i + 1}
                     period={period}
-                    dayHeading={heading ? dayLabel(r.listedAt) : null}
+                    dayHeading={heading ? dayLabel(r.listedAt, t) : null}
                   />
                 );
               })
@@ -200,9 +203,7 @@ export function LeaderboardTable({ rows }: { rows: LeaderboardRow[] }) {
         </table>
       </div>
       <p className="text-muted-foreground text-[11px]">
-        Change compares each card&apos;s asking price with its price at the start of the period. &ldquo;—&rdquo; means
-        the card wasn&apos;t listed yet. Sales count completed escrow sales of the same card and grade. Shows the
-        top {MAX_ROWS} cards for each tab.
+        {t("Change compares each card's asking price with its price at the start of the period. “—” means the card wasn't listed yet. Sales count completed escrow sales of the same card and grade. Shows the top {count} cards for each tab.", { count: MAX_ROWS })}
       </p>
     </div>
   );
@@ -250,16 +251,17 @@ function LeaderboardRowView({
   const router = useRouter();
   const [watching, setWatching] = useState(row.watchedByViewer);
   const [pending, startTransition] = useTransition();
+  const t = useT();
 
   function toggleWatch() {
     startTransition(async () => {
       try {
         const res = await toggleWatchlist(row.id);
         setWatching(res.watching);
-        toast.success(res.watching ? `${row.name} added to your watchlist` : "Removed from watchlist");
+        toast.success(res.watching ? t("{name} added to your watchlist", { name: row.name }) : t("Removed from watchlist"));
         router.refresh();
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Could not update watchlist.");
+        toast.error(err instanceof Error ? err.message : t("Could not update watchlist."));
       }
     });
   }
@@ -318,8 +320,8 @@ function LeaderboardRowView({
             type="button"
             onClick={toggleWatch}
             disabled={pending}
-            aria-label={watching ? `Remove ${row.name} from watchlist` : `Add ${row.name} to watchlist`}
-            title={watching ? "On your watchlist" : "Add to watchlist"}
+            aria-label={watching ? t("Remove {name} from watchlist", { name: row.name }) : t("Add {name} to watchlist", { name: row.name })}
+            title={watching ? t("On your watchlist") : t("Add to watchlist")}
             className={cn(
               "inline-flex size-8 items-center justify-center rounded-full transition-colors disabled:opacity-50",
               watching ? "text-success" : "hover:bg-accent",

@@ -9,6 +9,7 @@ import { CardArt } from "@/components/asset/card-art";
 import { Button } from "@/components/ui/button";
 import type { LeaderboardPeriod, LeaderboardRow } from "@/lib/queries";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/landing/language-provider";
 
 type Group = "series" | "cards";
 type SizeBy = "mcap" | "avg";
@@ -135,6 +136,7 @@ export function MarketHeatmap({ rows }: { rows: LeaderboardRow[] }) {
   const [group, setGroup] = useState<Group>("series");
   const [sizeBy, setSizeBy] = useState<SizeBy>("mcap");
   const [series, setSeries] = useState<string | null>(null);
+  const tr = useT();
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
@@ -196,15 +198,15 @@ export function MarketHeatmap({ rows }: { rows: LeaderboardRow[] }) {
         <div className="flex flex-wrap items-center gap-2">
           {series != null ? (
             <Button variant="outline" size="sm" onClick={() => setSeries(null)}>
-              <ChevronLeft /> All series
+              <ChevronLeft /> {tr("All series")}
             </Button>
           ) : (
             <Segmented
               value={group}
               onChange={(v) => setGroup(v as Group)}
               options={[
-                { value: "series", label: "By series" },
-                { value: "cards", label: "By card" },
+                { value: "series", label: tr("By series") },
+                { value: "cards", label: tr("By card") },
               ]}
             />
           )}
@@ -213,8 +215,8 @@ export function MarketHeatmap({ rows }: { rows: LeaderboardRow[] }) {
               value={sizeBy}
               onChange={(v) => setSizeBy(v as SizeBy)}
               options={[
-                { value: "mcap", label: "Market cap" },
-                { value: "avg", label: "Avg price" },
+                { value: "mcap", label: tr("Market cap") },
+                { value: "avg", label: tr("Avg price") },
               ]}
             />
           )}
@@ -225,9 +227,9 @@ export function MarketHeatmap({ rows }: { rows: LeaderboardRow[] }) {
 
       {tiles.length > 0 && (
         <div className="grid grid-cols-3 gap-2 sm:gap-3">
-          <Stat label={`Top gainer · ${period}`} tile={best && best.change! > 0 ? best : null} />
-          <Stat label={`Top loser · ${period}`} tile={worst && worst.change! < 0 ? worst : null} />
-          <Stat label="Largest mcap" tile={biggest ?? null} />
+          <Stat label={`${tr("Top gainer")} · ${period}`} tile={best && best.change! > 0 ? best : null} />
+          <Stat label={`${tr("Top loser")} · ${period}`} tile={worst && worst.change! < 0 ? worst : null} />
+          <Stat label={tr("Largest mcap")} tile={biggest ?? null} />
         </div>
       )}
 
@@ -235,7 +237,7 @@ export function MarketHeatmap({ rows }: { rows: LeaderboardRow[] }) {
         {sorted.length === 0 ? (
           <div className="text-muted-foreground flex h-full flex-col items-center justify-center gap-2 text-sm">
             <LayoutGrid className="size-6" />
-            No cards for sale yet.
+            {tr("No cards for sale yet.")}
           </div>
         ) : (
           width > 0 &&
@@ -291,8 +293,8 @@ export function MarketHeatmap({ rows }: { rows: LeaderboardRow[] }) {
         </div>
         <p className="max-w-xl">
           {series == null && group === "series"
-            ? "Each tile is a card series (set). Size = total value listed (market cap) or average price; colour = value-weighted price change. Click a series to see its cards."
-            : "Each tile is a card for sale. Size = asking price; colour = price change. Click a card to open it."}
+            ? tr("Each tile is a card series (set). Size = total value listed (market cap) or average price; colour = value-weighted price change. Click a series to see its cards.")
+            : tr("Each tile is a card for sale. Size = asking price; colour = price change. Click a card to open it.")}
         </p>
       </div>
     </div>

@@ -8,6 +8,7 @@ import {
   getWarehouseQueue,
 } from "@/lib/queries";
 import { requireAdmin } from "@/lib/session";
+import { getT } from "@/lib/i18n/server";
 import { InboundTable } from "@/components/warehouse/inbound-table";
 import { GradingQueue } from "@/components/warehouse/grading-queue";
 import { AdminAlerts } from "@/components/warehouse/admin-alerts";
@@ -45,9 +46,8 @@ function toKycRow({ kycIdPhotoUrl, kycSelfieUrl, ...u }: Awaited<ReturnType<type
 }
 
 export default async function WarehouseAdminPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
-  await requireAdmin();
-  const { tab } = await searchParams;
-  const defaultTab = TABS.find((t) => t === tab) ?? "queue";
+  const [, { tab }, t] = await Promise.all([requireAdmin(), searchParams, getT()]);
+  const defaultTab = TABS.find((key) => key === tab) ?? "queue";
 
   const [queue, history, gradingQueue, alerts, vaultItems, sellers, kyc] = await Promise.all([
     getWarehouseQueue(),
@@ -63,25 +63,24 @@ export default async function WarehouseAdminPage({ searchParams }: { searchParam
   return (
     <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6">
       <div className="mb-8 flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold">Physical Warehouse Inspection</h1>
+        <h1 className="text-2xl font-semibold">{t("Physical Warehouse Inspection")}</h1>
         <p className="text-muted-foreground text-sm">
-          Verify each inbound package against the official grading database
-          before paying the seller.
+          {t("Verify each inbound package against the official grading database before paying the seller.")}
         </p>
       </div>
 
       <Tabs defaultValue={defaultTab}>
         <TabsList>
-          <TabsTrigger value="queue">Inbound Queue ({queue.length})</TabsTrigger>
-          <TabsTrigger value="grading">Grading Submissions ({gradingQueue.length})</TabsTrigger>
-          <TabsTrigger value="vault">Vault Inventory ({vaultItems.length})</TabsTrigger>
-          <TabsTrigger value="kyc">Identity ({kyc.pending.length})</TabsTrigger>
+          <TabsTrigger value="queue">{t("Inbound Queue")} ({queue.length})</TabsTrigger>
+          <TabsTrigger value="grading">{t("Grading Submissions")} ({gradingQueue.length})</TabsTrigger>
+          <TabsTrigger value="vault">{t("Vault Inventory")} ({vaultItems.length})</TabsTrigger>
+          <TabsTrigger value="kyc">{t("Identity")} ({kyc.pending.length})</TabsTrigger>
           <TabsTrigger value="alerts">
-            Alerts {unreadAlertCount > 0 ? `(${unreadAlertCount})` : ""}
+            {t("Alerts")} {unreadAlertCount > 0 ? `(${unreadAlertCount})` : ""}
           </TabsTrigger>
-          <TabsTrigger value="sellers">Sellers ({sellers.length})</TabsTrigger>
-          <TabsTrigger value="history">Recently Resolved</TabsTrigger>
-          <TabsTrigger value="integrations">Integrations</TabsTrigger>
+          <TabsTrigger value="sellers">{t("Sellers")} ({sellers.length})</TabsTrigger>
+          <TabsTrigger value="history">{t("Recently Resolved")}</TabsTrigger>
+          <TabsTrigger value="integrations">{t("Integrations")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="queue" className="pt-6">
@@ -150,11 +149,11 @@ export default async function WarehouseAdminPage({ searchParams }: { searchParam
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Item</TableHead>
-                  <TableHead>Buyer / Seller</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Resolved</TableHead>
-                  <TableHead>Outcome</TableHead>
+                  <TableHead>{t("Item")}</TableHead>
+                  <TableHead>{t("Buyer / Seller")}</TableHead>
+                  <TableHead>{t("Amount")}</TableHead>
+                  <TableHead>{t("Resolved")}</TableHead>
+                  <TableHead>{t("Outcome")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -168,8 +167,8 @@ export default async function WarehouseAdminPage({ searchParams }: { searchParam
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col text-xs">
-                        <span>Buyer: {pkg.escrowTx.buyer.name}</span>
-                        <span className="text-muted-foreground">Seller: {pkg.escrowTx.seller.name}</span>
+                        <span>{t("Buyer:")} {pkg.escrowTx.buyer.name}</span>
+                        <span className="text-muted-foreground">{t("Seller:")} {pkg.escrowTx.seller.name}</span>
                       </div>
                     </TableCell>
                     <TableCell>{formatThb(pkg.escrowTx.amountThb)}</TableCell>
@@ -178,7 +177,7 @@ export default async function WarehouseAdminPage({ searchParams }: { searchParam
                     </TableCell>
                     <TableCell>
                       <Badge variant={pkg.status === "REJECTED" ? "destructive" : "secondary"}>
-                        {INBOUND_STATUS_LABELS[pkg.status]}
+                        {t(INBOUND_STATUS_LABELS[pkg.status])}
                       </Badge>
                     </TableCell>
                   </TableRow>

@@ -5,6 +5,7 @@ import { Camera, ImageUp, Loader2, RotateCcw, XCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/landing/language-provider";
 
 export type KycShotKind = "id" | "selfie";
 
@@ -68,6 +69,7 @@ export function KycCamera({
   const [frameReady, setFrameReady] = useState(false);
   const facing = kind === "id" ? "environment" : "user";
   const mirror = kind === "selfie";
+  const t = useT();
 
   const stop = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -144,7 +146,7 @@ export function KycCamera({
 
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-muted-foreground text-sm">{COPY[kind].hint}</p>
+      <p className="text-muted-foreground text-sm">{t(COPY[kind].hint)}</p>
 
       <div className="bg-muted relative flex aspect-[4/3] items-center justify-center overflow-hidden rounded-xl border">
         <video
@@ -157,7 +159,7 @@ export function KycCamera({
         />
         {shot ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={shot.previewUrl} alt={kind === "id" ? "Your ID card" : "Your selfie with ID"} className="size-full object-contain" />
+          <img src={shot.previewUrl} alt={kind === "id" ? t("Your ID card") : t("Your selfie with ID")} className="size-full object-contain" />
         ) : live ? (
           <>
             {/* Framing guide: a card shape for the ID, an oval for the face. */}
@@ -182,12 +184,12 @@ export function KycCamera({
         ) : status === "unavailable" ? (
           <div className="text-muted-foreground flex flex-col items-center gap-2 p-6 text-center text-sm">
             <XCircle className="size-7" />
-            Couldn&apos;t open the camera here. Allow camera access, or use your phone&apos;s camera app below.
+            {t("Couldn't open the camera here. Allow camera access, or use your phone's camera app below.")}
           </div>
         ) : (
           <div className="text-muted-foreground flex flex-col items-center gap-2 p-6 text-center text-sm">
             <Camera className="size-7" />
-            {kind === "id" ? "Photo of your ID card" : "Selfie holding your ID card"}
+            {kind === "id" ? t("Photo of your ID card") : t("Selfie holding your ID card")}
           </div>
         )}
       </div>
@@ -209,12 +211,12 @@ export function KycCamera({
       <div className="flex flex-wrap gap-2">
         {shot ? (
           <Button type="button" variant="outline" onClick={start} className="flex-1">
-            <RotateCcw /> Retake
+            <RotateCcw /> {t("Retake")}
           </Button>
         ) : status === "live" ? (
           <>
             <Button type="button" variant="outline" onClick={() => { stop(); setStatus("idle"); }}>
-              Cancel
+              {t("Cancel")}
             </Button>
             <Button
               type="button"
@@ -229,25 +231,25 @@ export function KycCamera({
                 }
               }}
             >
-              <Camera /> {kind === "selfie" ? "Start 3s timer" : "Take photo"}
+              <Camera /> {kind === "selfie" ? t("Start 3s timer") : t("Take photo")}
             </Button>
           </>
         ) : status === "unavailable" ? (
           <>
             <Button type="button" variant="outline" onClick={start}>
-              Try again
+              {t("Try again")}
             </Button>
             <Button type="button" className="flex-1" onClick={() => fileRef.current?.click()}>
-              <ImageUp /> Use camera app
+              <ImageUp /> {t("Use camera app")}
             </Button>
           </>
         ) : (
           <Button type="button" className="flex-1" onClick={start} disabled={status === "starting" || status === "counting"}>
-            <Camera /> Open camera
+            <Camera /> {t("Open camera")}
           </Button>
         )}
       </div>
-      {status === "live" && <p className="text-muted-foreground text-center text-xs">{COPY[kind].ready}</p>}
+      {status === "live" && <p className="text-muted-foreground text-center text-xs">{t(COPY[kind].ready)}</p>}
     </div>
   );
 }

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { markAdminAlertRead } from "@/lib/actions";
 import { formatDateTime } from "@/lib/format";
+import { useT } from "@/components/landing/language-provider";
 
 export interface AdminAlertSummary {
   id: string;
@@ -24,6 +25,7 @@ export interface AdminAlertSummary {
 export function AdminAlerts({ alerts: initialAlerts }: { alerts: AdminAlertSummary[] }) {
   const [alerts, setAlerts] = useState(initialAlerts);
   const [, startTransition] = useTransition();
+  const t = useT();
 
   function dismiss(id: string) {
     setAlerts((prev) => prev.map((a) => (a.id === id ? { ...a, readAt: new Date().toISOString() } : a)));
@@ -36,7 +38,7 @@ export function AdminAlerts({ alerts: initialAlerts }: { alerts: AdminAlertSumma
     return (
       <div className="text-muted-foreground flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed py-24 text-center">
         <Bell className="size-8" />
-        <p className="text-sm">No alerts. New high-value submissions and fraud signals show up here.</p>
+        <p className="text-sm">{t("No alerts. New high-value submissions and fraud signals show up here.")}</p>
       </div>
     );
   }
@@ -57,21 +59,21 @@ export function AdminAlerts({ alerts: initialAlerts }: { alerts: AdminAlertSumma
             <div className="flex min-w-0 flex-1 flex-col gap-1">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-sm font-semibold">{a.title}</span>
-                {unread && <Badge className="text-[10px]">New</Badge>}
+                {unread && <Badge className="text-[10px]">{t("New")}</Badge>}
               </div>
               <p className="text-muted-foreground text-sm">{a.body}</p>
               <div className="flex items-center gap-3 pt-1">
                 <span className="text-muted-foreground text-xs">{formatDateTime(a.createdAt)}</span>
                 {a.href && (
                   <Link href={a.href} className="text-xs underline underline-offset-2">
-                    View
+                    {t("View")}
                   </Link>
                 )}
               </div>
             </div>
             {unread && (
               <Button variant="ghost" size="sm" onClick={() => dismiss(a.id)}>
-                <CheckCircle2 /> Dismiss
+                <CheckCircle2 /> {t("Dismiss")}
               </Button>
             )}
           </div>

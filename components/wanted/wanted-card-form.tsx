@@ -20,6 +20,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { addWantedCard } from "@/lib/actions";
+import { useT } from "@/components/landing/language-provider";
 
 const ANY = "ANY";
 const GRADES = ["10", "9.5", "9", "8", "7"];
@@ -49,6 +50,7 @@ export function WantedCardDialog({
   const [maxPrice, setMaxPrice] = useState("");
   const [trustedOnly, setTrustedOnly] = useState(false);
   const [pending, startTransition] = useTransition();
+  const t = useT();
 
   const isRaw = company === "RAW";
   const gradeOptions = minGrade !== ANY && !GRADES.includes(minGrade) ? [minGrade, ...GRADES] : GRADES;
@@ -64,11 +66,11 @@ export function WantedCardDialog({
           maxPriceThb: maxPrice ? Number(maxPrice) : null,
           trustedOnly,
         });
-        toast.success("Alert saved — we'll notify you when a match is listed.");
+        toast.success(t("Alert saved — we'll notify you when a match is listed."));
         onOpenChange(false);
         router.refresh();
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Could not save alert.");
+        toast.error(err instanceof Error ? err.message : t("Could not save alert."));
       }
     });
   }
@@ -77,24 +79,24 @@ export function WantedCardDialog({
     <Dialog open={open} onOpenChange={(o) => !pending && onOpenChange(o)}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Notify me when listed</DialogTitle>
+          <DialogTitle>{t("Notify me when listed")}</DialogTitle>
           <DialogDescription>
-            Get a notification the moment a matching card goes on sale, whether it&apos;s a new listing or a relist.
+            {t("Get a notification the moment a matching card goes on sale, whether it's a new listing or a relist.")}
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="wanted-query">Card name contains</Label>
+            <Label htmlFor="wanted-query">{t("Card name contains")}</Label>
             <Input
               id="wanted-query"
-              placeholder="e.g. Charizard"
+              placeholder={t("e.g. Charizard")}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-2">
-              <Label>Grading company</Label>
+              <Label>{t("Grading company")}</Label>
               <Select
                 value={company}
                 onValueChange={(v) => {
@@ -106,22 +108,22 @@ export function WantedCardDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={ANY}>Any</SelectItem>
+                  <SelectItem value={ANY}>{t("Any")}</SelectItem>
                   <SelectItem value="PSA">PSA</SelectItem>
                   <SelectItem value="BGS">BGS (Beckett)</SelectItem>
                   <SelectItem value="CGC">CGC</SelectItem>
-                  <SelectItem value="RAW">Raw / Ungraded</SelectItem>
+                  <SelectItem value="RAW">{t("Raw / Ungraded")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="flex flex-col gap-2">
-              <Label>Minimum grade</Label>
+              <Label>{t("Minimum grade")}</Label>
               <Select value={isRaw ? ANY : minGrade} onValueChange={setMinGrade} disabled={isRaw}>
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={ANY}>Any</SelectItem>
+                  <SelectItem value={ANY}>{t("Any")}</SelectItem>
                   {gradeOptions.map((g) => (
                     <SelectItem key={g} value={g}>
                       {g}+
@@ -132,12 +134,12 @@ export function WantedCardDialog({
             </div>
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="wanted-max">Maximum price (THB, optional)</Label>
+            <Label htmlFor="wanted-max">{t("Maximum price (THB, optional)")}</Label>
             <Input
               id="wanted-max"
               type="number"
               inputMode="numeric"
-              placeholder="No limit"
+              placeholder={t("No limit")}
               value={maxPrice}
               onChange={(e) => setMaxPrice(e.target.value)}
             />
@@ -145,27 +147,27 @@ export function WantedCardDialog({
           {company === "BGS" && (
             <label className="flex items-center gap-2 text-sm">
               <Checkbox checked={blackLabelOnly} onCheckedChange={(v) => setBlackLabelOnly(v === true)} />
-              Black Label only
+              {t("Black Label only")}
             </label>
           )}
           <label className="flex items-start gap-2 text-sm">
             <Checkbox className="mt-0.5" checked={trustedOnly} onCheckedChange={(v) => setTrustedOnly(v === true)} />
             <span>
-              Trusted sellers only
-              <span className="text-muted-foreground block text-xs">ID-verified sellers, or 4+ star average rating</span>
+              {t("Trusted sellers only")}
+              <span className="text-muted-foreground block text-xs">{t("ID-verified sellers, or 4+ star average rating")}</span>
             </span>
           </label>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>
-            Cancel
+            {t("Cancel")}
           </Button>
           <Button
             onClick={submit}
             disabled={pending || query.trim().length < 2 || (maxPrice !== "" && Number(maxPrice) < 100)}
           >
             {pending ? <Loader2 className="animate-spin" /> : <BellPlus />}
-            Save Alert
+            {t("Save Alert")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -176,7 +178,7 @@ export function WantedCardDialog({
 /** A button that opens WantedCardDialog, pre-filled from the card being viewed. */
 export function WantedCardButton({
   defaults,
-  label = "Notify me when listed",
+  label,
   className,
   variant = "outline",
 }: {
@@ -186,10 +188,11 @@ export function WantedCardButton({
   variant?: "outline" | "secondary" | "default";
 }) {
   const [open, setOpen] = useState(false);
+  const t = useT();
   return (
     <>
       <Button variant={variant} className={className} onClick={() => setOpen(true)}>
-        <BellPlus /> {label}
+        <BellPlus /> {label ?? t("Notify me when listed")}
       </Button>
       {open && <WantedCardDialog open={open} onOpenChange={setOpen} defaults={defaults} />}
     </>

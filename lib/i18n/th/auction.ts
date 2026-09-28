@@ -1,0 +1,85 @@
+// Auctions: list, detail, bidding, claiming, creating.
+export const AUCTION: Record<string, string> = {
+  "Back to Auctions": "กลับไปที่การประมูล",
+  Ended: "จบแล้ว",
+  Scheduled: "ตั้งเวลาไว้",
+  Live: "กำลังประมูล",
+  "Starts in": "เริ่มในอีก",
+  "Ends in": "จบในอีก",
+  "Current Bid": "ราคาประมูลปัจจุบัน",
+  "Starting Bid": "ราคาเริ่มต้น",
+  Bids: "จำนวนการเสนอราคา",
+  "This is your auction — manage it from": "นี่คือการประมูลของคุณ — จัดการได้ที่",
+  "Bidding opens": "เปิดให้เสนอราคา",
+  "This auction ended, but the winner didn't claim it in time. The card went back to the seller.":
+    "การประมูลนี้จบแล้ว แต่ผู้ชนะไม่มารับภายในเวลาที่กำหนด การ์ดจึงกลับไปเป็นของผู้ขาย",
+  "Bidding closed at {amount} — waiting on the winner's delivery choice.": "ปิดการประมูลที่ {amount} — กำลังรอผู้ชนะเลือกวิธีรับสินค้า",
+  "This auction ended — sold to the highest bidder for {amount}.": "การประมูลนี้จบแล้ว — ขายให้ผู้เสนอราคาสูงสุดที่ {amount}",
+  "This auction ended with no bids.": "การประมูลนี้จบลงโดยไม่มีผู้เสนอราคา",
+  "Bid History": "ประวัติการเสนอราคา",
+  "Time-limited bidding on real, verified certificates — a separate sale channel from the fixed-price marketplace.":
+    "ประมูลแบบจำกัดเวลาสำหรับการ์ดที่ผ่านการยืนยันจริง — แยกจากตลาดราคาคงที่",
+  "No live auctions right now.": "ยังไม่มีการประมูลในขณะนี้",
+  "No bids yet — be the first.": "ยังไม่มีผู้เสนอราคา — มาเป็นคนแรก",
+  "A bidder": "ผู้เสนอราคา",
+  highest: "สูงสุด",
+  "Auction cancelled.": "ยกเลิกการประมูลแล้ว",
+  "Could not cancel auction.": "ยกเลิกการประมูลไม่สำเร็จ",
+  "Cancel Auction": "ยกเลิกการประมูล",
+  "{d}d {h}h": "{d} วัน {h} ชม.",
+  "{h}h {m}m": "{h} ชม. {m} นาที",
+  "{m}m {s}s": "{m} นาที {s} วิ",
+  "{s}s": "{s} วิ",
+  "Auction scheduled.": "ตั้งเวลาการประมูลแล้ว",
+  "Auction started.": "เริ่มการประมูลแล้ว",
+  "Could not start auction.": "เริ่มการประมูลไม่สำเร็จ",
+  "Create Auction": "สร้างการประมูล",
+  "Start an Auction": "เริ่มการประมูล",
+  "Replaces any fixed-price listing on the item you pick. Bidding is separate from the marketplace.":
+    "จะแทนที่การลงขายราคาคงที่ของสินค้าที่คุณเลือก การประมูลแยกจากตลาด",
+  "Nothing in your Portfolio is eligible right now — an item can't already be up for auction or locked in an active sale.":
+    "ยังไม่มีสินค้าในพอร์ตที่ประมูลได้ — สินค้าต้องไม่อยู่ระหว่างประมูลหรือถูกล็อกในการขายที่กำลังดำเนินอยู่",
+  Item: "สินค้า",
+  "Starting Price (THB)": "ราคาเริ่มต้น (บาท)",
+  Duration: "ระยะเวลา",
+  "1 day": "1 วัน",
+  "Start time": "เวลาเริ่ม",
+  "Leave blank to start immediately. You can schedule up to 30 days ahead.": "เว้นว่างไว้เพื่อเริ่มทันที ตั้งเวลาล่วงหน้าได้สูงสุด 30 วัน",
+  "Current listing price:": "ราคาขายปัจจุบัน:",
+  "Start Auction": "เริ่มการประมูล",
+
+  // Bidding
+  "Could not lock your bid. Try again.": "ล็อกเงินประมูลไม่สำเร็จ ลองอีกครั้ง",
+  "Bid placed — auction extended by 5 minutes.": "เสนอราคาแล้ว — ขยายเวลาประมูลอีก 5 นาที",
+  "Bid placed and locked in escrow.": "เสนอราคาแล้ว และล็อกเงินไว้ในเอสโครว์",
+  "Could not place bid.": "เสนอราคาไม่สำเร็จ",
+  "You're the highest bidder — {amount} is locked in escrow.": "คุณเสนอราคาสูงสุด — ล็อกเงิน {amount} ไว้ในเอสโครว์แล้ว",
+  "Bid amount in THB": "ราคาที่เสนอเป็นบาท",
+  "Locking…": "กำลังล็อกเงิน…",
+  "Place Bid": "เสนอราคา",
+  "Minimum bid: {amount}": "เสนอราคาขั้นต่ำ: {amount}",
+  "Your bid amount is locked in escrow when you bid, and returned automatically if someone outbids you. If you win, it pays for the card — no second payment.":
+    "เงินที่เสนอจะถูกล็อกในเอสโครว์ทันทีที่เสนอราคา และคืนให้อัตโนมัติหากมีคนเสนอสูงกว่า ถ้าคุณชนะ เงินนี้จะใช้ชำระค่าการ์ดเลย — ไม่ต้องจ่ายซ้ำ",
+  "Anti-sniping: bids in the final 5 minutes extend the auction by 5 minutes.": "กันการฉวยจังหวะ: เสนอราคาใน 5 นาทีสุดท้ายจะขยายเวลาอีก 5 นาที",
+
+  // Claiming
+  "You won this auction at {amount}": "คุณชนะการประมูลนี้ที่ {amount}",
+  "Your locked bid is paying for it now — ownership moves to you in the vault.": "เงินที่ล็อกไว้กำลังชำระค่าสินค้า — กรรมสิทธิ์จะโอนให้คุณในห้องนิรภัย",
+  "This bid was placed before bids locked funds, so complete payment to claim it by {deadline} — otherwise the win lapses.":
+    "การเสนอราคานี้ทำก่อนที่ระบบจะล็อกเงิน กรุณาชำระเงินเพื่อรับสินค้าภายใน {deadline} — มิฉะนั้นสิทธิ์จะหมดไป",
+  "This bid was placed before bids locked funds, so complete payment to claim it — otherwise the win lapses.":
+    "การเสนอราคานี้ทำก่อนที่ระบบจะล็อกเงิน กรุณาชำระเงินเพื่อรับสินค้า — มิฉะนั้นสิทธิ์จะหมดไป",
+  "Claim & Pay — {amount}": "รับสินค้าและชำระ — {amount}",
+  "Claim Your Win": "รับสินค้าที่ชนะประมูล",
+  "Purchase complete — congratulations!": "ซื้อสำเร็จ — ยินดีด้วย!",
+  "Confirmed — it ships once inspection passes.": "ยืนยันแล้ว — จะจัดส่งเมื่อผ่านการตรวจสอบ",
+  "Confirmed — it goes into the vault for you.": "ยืนยันแล้ว — จะเก็บเข้าห้องนิรภัยให้คุณ",
+  "Could not confirm delivery.": "ยืนยันวิธีรับสินค้าไม่สำเร็จ",
+  "Your payment is already locked in escrow. Choose how to receive it by {deadline} — if you don't, it goes into the vault for you.":
+    "เงินของคุณล็อกอยู่ในเอสโครว์แล้ว เลือกวิธีรับสินค้าภายใน {deadline} — หากไม่เลือก จะเก็บเข้าห้องนิรภัยให้คุณ",
+  "Your payment is already locked in escrow. Choose how to receive it — if you don't, it goes into the vault for you.":
+    "เงินของคุณล็อกอยู่ในเอสโครว์แล้ว เลือกวิธีรับสินค้า — หากไม่เลือก จะเก็บเข้าห้องนิรภัยให้คุณ",
+  "Ship to me": "ส่งให้ฉัน",
+  "Keep in vault": "เก็บไว้ในห้องนิรภัย",
+  "Confirm delivery": "ยืนยันวิธีรับสินค้า",
+};

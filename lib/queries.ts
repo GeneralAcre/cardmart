@@ -388,6 +388,15 @@ export async function getGradingSubmissionQueue() {
   });
 }
 
+/** A seller's own Full-Service submissions, newest first — the Portfolio "Grading" tab. */
+export async function getMyGradingSubmissions(sellerId: string) {
+  return prisma.gradingSubmission.findMany({
+    where: { sellerId },
+    orderBy: { createdAt: "desc" },
+    include: { resultAsset: { select: { id: true, grade: true, isBlackLabel: true } } },
+  });
+}
+
 export async function getGradingSubmissionHistory() {
   return prisma.gradingSubmission.findMany({
     where: { status: { in: ["GRADED", "REJECTED"] } },
@@ -574,14 +583,16 @@ export async function getSellerManagementList() {
 // No cron job settles an expired auction — it's checked lazily, right here,
 // every time an auction is actually read. An expired ACTIVE auction with no
 // bids just closes itself out (ENDED_NO_BIDS, asset goes back to its normal
-// market status); one with a bid needs its winner to actively claim it (see
-// claimAuctionWin in lib/actions.ts), so it's left ACTIVE with endTime in
-// the past — getActiveAuctions/getAuctionById below treat that as "ended,
-// awaiting claim" without a status change of their own.
+// market status); one with a bid is settled by settleAuction in
+// lib/actions.ts (it needs to move escrowed funds and revalidate, which a
+// render can't do), triggered from the auction pages by AutoSettle — until
+// then it's left ACTIVE with endTime in the past, which the pages below
+// treat as "ended, settling".
 async function settleIfExpiredNoBids(auction: { id: string; endTime: Date; status: string; assetId: string }) {
   if (auction.status !== "ACTIVE" || auction.endTime > new Date()) return;
   const bidCount = await prisma.bid.count({ where: { auctionId: auction.id } });
-  if (bidCount > 0) return; // has a bid — leave ACTIVE, awaiting the winner's claim
+  if (bidCount > 0) return; // has a bid — settleAuction's job
+  const asset = await prisma.asset.findUniqueOrThrow({ where: { id: auction.assetId }, select: { vaulted: true } });
   await prisma.$transaction([
     prisma.auction.update({
       where: { id: auction.id },
@@ -589,7 +600,7 @@ async function settleIfExpiredNoBids(auction: { id: string; endTime: Date; statu
     }),
     prisma.asset.update({
       where: { id: auction.assetId },
-      data: { marketStatus: "READY_TO_SHIP" },
+      data: { marketStatus: asset.vaulted ? "IN_VAULT" : "READY_TO_SHIP" },
     }),
   ]);
 }
@@ -1079,4 +1090,176 @@ export async function getLeaderboard(viewerId: string): Promise<LeaderboardRow[]
       watchedByViewer: a.watchedBy.length > 0,
     };
   });
+}
+
+// ---------------------------------------------------------------------------
+// Top traders — who made money on which cards. Every card is unique (one
+// NFT per physical slab), so this is for seeing what worked, not copying it.
+//
+// Built only from completed (RELEASED) escrow sales. Walking each card's
+// sales in order, whoever bought it has a cost basis of what they paid:
+//   - if they later sold it, the gain is realized (sold − paid);
+//   - if they still own it, the gain is unrealized, marked at the card's
+//     current asking price (the same price the card leaderboard uses) — or
+//     left null when it isn't priced, never guessed.
+// A minter's first sale has no known purchase price, so it counts as a
+// sale but not as a gain. Swaps aren't counted (no cash price to compare).
+// ---------------------------------------------------------------------------
+
+export interface TraderPosition {
+  assetId: string;
+  name: string;
+  subtitle: string;
+  category: AssetCategory;
+  gradingCompany: GradingCompany;
+  grade: number | null;
+  isBlackLabel: boolean;
+  themeIndex: number;
+  photoUrl: string | null;
+  boughtThb: number;
+  boughtAt: string;
+  /** Null while the trader still holds the card. */
+  soldThb: number | null;
+  soldAt: string | null;
+  /** Current asking price for a card still held; null if unpriced or sold. */
+  currentThb: number | null;
+  /** Null for a held card with no current price. */
+  gainThb: number | null;
+  gainPct: number | null;
+}
+
+export interface TraderRow {
+  userId: string;
+  name: string | null;
+  handle: string | null;
+  image: string | null;
+  realizedThb: number;
+  unrealizedThb: number;
+  totalGainThb: number;
+  /** Total gain against the cost of every position with a known gain. */
+  totalGainPct: number | null;
+  /** Closed positions (bought then sold) — the win-rate denominator. */
+  closedTrades: number;
+  wins: number;
+  positions: TraderPosition[];
+}
+
+export async function getTopTraders(limit = 25): Promise<TraderRow[]> {
+  const sales = await prisma.escrowTransaction.findMany({
+    where: { status: "RELEASED" },
+    orderBy: [{ releasedAt: "asc" }, { createdAt: "asc" }],
+    select: {
+      amountThb: true,
+      releasedAt: true,
+      createdAt: true,
+      buyerId: true,
+      sellerId: true,
+      asset: {
+        select: {
+          id: true,
+          name: true,
+          subtitle: true,
+          category: true,
+          gradingCompany: true,
+          grade: true,
+          isBlackLabel: true,
+          themeIndex: true,
+          priceThb: true,
+          ownerId: true,
+          redeemedAt: true,
+          catalogImageUrl: true,
+          verificationPhotos: { orderBy: { createdAt: "asc" }, select: { url: true } },
+        },
+      },
+    },
+  });
+
+  const positionsByUser = new Map<string, TraderPosition[]>();
+  // Per asset: who bought it last, that position, and the asset itself.
+  type SoldAsset = (typeof sales)[number]["asset"];
+  const open = new Map<string, { userId: string; position: TraderPosition; asset: SoldAsset }>();
+  const pct = (gain: number, cost: number) => (cost > 0 ? (gain / cost) * 100 : null);
+
+  for (const s of sales) {
+    const a = s.asset;
+    const at = (s.releasedAt ?? s.createdAt).toISOString();
+    const held = open.get(a.id);
+    if (held && held.userId === s.sellerId) {
+      const p = held.position;
+      p.soldThb = s.amountThb;
+      p.soldAt = at;
+      p.gainThb = s.amountThb - p.boughtThb;
+      p.gainPct = pct(p.gainThb, p.boughtThb);
+    }
+    const position: TraderPosition = {
+      assetId: a.id,
+      name: a.name,
+      subtitle: a.subtitle,
+      category: a.category,
+      gradingCompany: a.gradingCompany,
+      grade: a.grade,
+      isBlackLabel: a.isBlackLabel,
+      themeIndex: a.themeIndex,
+      photoUrl: displayImage(a)?.url ?? null,
+      boughtThb: s.amountThb,
+      boughtAt: at,
+      soldThb: null,
+      soldAt: null,
+      currentThb: null,
+      gainThb: null,
+      gainPct: null,
+    };
+    open.set(a.id, { userId: s.buyerId, position, asset: a });
+    positionsByUser.set(s.buyerId, [...(positionsByUser.get(s.buyerId) ?? []), position]);
+  }
+
+  // Mark still-held cards at their current asking price. A card that left
+  // the buyer some other way (swap, redeemed) has no comparable price.
+  for (const { userId, position: p, asset: a } of open.values()) {
+    if (a.ownerId !== userId || a.redeemedAt || a.priceThb == null) continue;
+    p.currentThb = a.priceThb;
+    p.gainThb = a.priceThb - p.boughtThb;
+    p.gainPct = pct(p.gainThb, p.boughtThb);
+  }
+
+  const users = await prisma.user.findMany({
+    where: { id: { in: [...positionsByUser.keys()] } },
+    select: { id: true, name: true, handle: true, image: true },
+  });
+
+  const rows: TraderRow[] = users.map((u) => {
+    const positions = positionsByUser.get(u.id)!;
+    let realized = 0;
+    let unrealized = 0;
+    let cost = 0;
+    let closed = 0;
+    let wins = 0;
+    for (const p of positions) {
+      if (p.gainThb == null) continue;
+      cost += p.boughtThb;
+      if (p.soldThb != null) {
+        realized += p.gainThb;
+        closed++;
+        if (p.gainThb > 0) wins++;
+      } else unrealized += p.gainThb;
+    }
+    const total = realized + unrealized;
+    // Biggest winners first, then positions with no known gain.
+    positions.sort((x, y) => (y.gainThb ?? -Infinity) - (x.gainThb ?? -Infinity));
+    return {
+      userId: u.id,
+      name: u.name,
+      handle: u.handle,
+      image: u.image,
+      realizedThb: realized,
+      unrealizedThb: unrealized,
+      totalGainThb: total,
+      totalGainPct: pct(total, cost),
+      closedTrades: closed,
+      wins,
+      positions,
+    };
+  });
+
+  return rows.sort((x, y) => y.totalGainThb - x.totalGainThb).slice(0, limit);
 }

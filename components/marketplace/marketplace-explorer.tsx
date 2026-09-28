@@ -15,6 +15,7 @@ import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/com
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { CARD_GAME_LABELS } from "@/lib/labels";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/landing/language-provider";
 import { EMPTY_FILTERS, type AssetSummary, type MarketplaceFilterState } from "@/lib/types";
 
 const CATEGORY_TILES: { category: CardGame | "ALL" | "VAULT"; label: string; icon: typeof LayoutGrid }[] = [
@@ -65,6 +66,8 @@ export function MarketplaceExplorer({
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const isFirstRender = useRef(true);
   const activeFilterCount = countActiveFilters(filters);
+  const t = useT();
+  const itemCount = t(listings.length === 1 ? "{count} item" : "{count} items", { count: listings.length });
 
   useEffect(() => {
     if (isFirstRender.current) {
@@ -129,14 +132,14 @@ export function MarketplaceExplorer({
       <Sheet open={filterSheetOpen} onOpenChange={setFilterSheetOpen}>
         <SheetContent side="bottom" className="lg:hidden">
           <SheetHeader>
-            <SheetTitle>Filters</SheetTitle>
+            <SheetTitle>{t("Filters")}</SheetTitle>
           </SheetHeader>
           <div className="overflow-y-auto px-4 pb-4">
             <FilterBar filters={filters} onChange={setFilters} className="border-0 p-0 shadow-none" />
           </div>
           <SheetFooter>
             <Button onClick={() => setFilterSheetOpen(false)} disabled={loading}>
-              {loading ? "Searching…" : `Show ${listings.length} item${listings.length === 1 ? "" : "s"}`}
+              {loading ? t("Searching…") : t("Show {items}", { items: itemCount })}
             </Button>
           </SheetFooter>
         </SheetContent>
@@ -166,7 +169,7 @@ export function MarketplaceExplorer({
                 )}
               >
                 <Icon className="size-4" />
-                {label}
+                {t(label)}
               </button>
             );
           })}
@@ -175,25 +178,25 @@ export function MarketplaceExplorer({
         <div>
           <div className="mb-4 flex items-center justify-between gap-3">
             <p className="text-muted-foreground text-sm">
-              {loading ? "Searching…" : `${listings.length} item${listings.length === 1 ? "" : "s"}`}
+              {loading ? t("Searching…") : itemCount}
             </p>
             <div className="flex items-center gap-2">
               {initialListings.some((listing) => listing.priceThb != null) && (
                 <Dialog>
                   <DialogTrigger asChild>
-                    <Button variant="outline" size="sm"><Scale /> Compare prices</Button>
+                    <Button variant="outline" size="sm"><Scale /> {t("Compare prices")}</Button>
                   </DialogTrigger>
                   <DialogContent className="max-w-5xl">
                     <DialogHeader>
-                      <DialogTitle>Compare prices</DialogTitle>
-                      <DialogDescription>Compare asking prices across cards and grading institutes.</DialogDescription>
+                      <DialogTitle>{t("Compare prices")}</DialogTitle>
+                      <DialogDescription>{t("Compare asking prices across cards and grading institutes.")}</DialogDescription>
                     </DialogHeader>
                     <PriceCompareTable listings={initialListings} />
                   </DialogContent>
                 </Dialog>
               )}
               <Button variant="outline" size="sm" className="lg:hidden" onClick={() => setFilterSheetOpen(true)}>
-                <SlidersHorizontal /> Filters
+                <SlidersHorizontal /> {t("Filters")}
                 {activeFilterCount > 0 && (
                   <Badge className="ml-1 size-4 rounded-full p-0 text-[10px]">{activeFilterCount}</Badge>
                 )}
@@ -210,10 +213,10 @@ export function MarketplaceExplorer({
           ) : listings.length === 0 ? (
             <div className="text-muted-foreground flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed py-24 text-center">
               <PackageSearch className="size-8" />
-              <p className="text-sm">No items match your filters. Try widening your search.</p>
+              <p className="text-sm">{t("No items match your filters. Try widening your search.")}</p>
               {activeFilterCount > 0 && (
                 <Button variant="ghost" size="sm" onClick={() => setFilters(EMPTY_FILTERS)}>
-                  Clear filters
+                  {t("Clear filters")}
                 </Button>
               )}
             </div>

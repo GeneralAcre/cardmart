@@ -3,9 +3,10 @@ import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/session";
 import { OnboardingForm } from "@/components/onboarding/onboarding-form";
 import { suggestHandle } from "@/lib/profile-utils";
+import { getT } from "@/lib/i18n/server";
 
 export default async function OnboardingPage() {
-  const user = await getSessionUser();
+  const [user, t] = await Promise.all([getSessionUser(), getT()]);
   if (user.profileComplete) redirect("/");
 
   const defaultName = user.name ?? "";
@@ -18,10 +19,9 @@ export default async function OnboardingPage() {
           <span>CardMart</span>
         </div>
         <div className="flex flex-col gap-1">
-          <h1 className="text-xl font-semibold">Set up your profile</h1>
+          <h1 className="text-xl font-semibold">{t("Set up your profile")}</h1>
           <p className="text-muted-foreground text-sm">
-            One last step before you can browse, list, and trade — we need
-            a few details so we can actually ship items to you.
+            {t("One last step before you can browse, list, and trade — we need a few details so we can actually ship items to you.")}
           </p>
         </div>
         <OnboardingForm defaultName={defaultName} defaultHandle={defaultHandle} />

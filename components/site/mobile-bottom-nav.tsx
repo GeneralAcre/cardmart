@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/landing/language-provider";
 import { isNavLinkActive, navLinksFor } from "@/lib/nav-links";
 
 // Primary mobile navigation — fixed to the bottom of the viewport instead of
@@ -12,6 +13,7 @@ import { isNavLinkActive, navLinksFor } from "@/lib/nav-links";
 export function MobileBottomNav({ isAdmin = false }: { isAdmin?: boolean }) {
   const pathname = usePathname();
   const links = navLinksFor(isAdmin);
+  const t = useT();
 
   return (
     <nav
@@ -32,7 +34,7 @@ export function MobileBottomNav({ isAdmin = false }: { isAdmin?: boolean }) {
               )}
             >
               <Icon className={cn("size-5", active && "text-primary")} />
-              <span className="max-w-full truncate">{l.shortLabel ?? l.label}</span>
+              <span className="max-w-full truncate">{t(l.shortLabel ?? l.label)}</span>
             </Link>
           );
         })}

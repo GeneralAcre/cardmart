@@ -23,6 +23,7 @@ import { KycCamera, type KycShot } from "@/components/portfolio/kyc-camera";
 import { submitKyc } from "@/lib/actions";
 import { KYC_ID_TYPE_LABELS, KYC_STATUS_LABELS } from "@/lib/labels";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/landing/language-provider";
 
 const STATUS_ICON = { NONE: ShieldAlert, PENDING: Clock, VERIFIED: BadgeCheck, REJECTED: ShieldAlert } as const;
 
@@ -50,6 +51,7 @@ export function IdentityCard({
   const [open, setOpen] = useState(false);
   const Icon = STATUS_ICON[status];
   const canSubmit = status === "NONE" || status === "REJECTED";
+  const t = useT();
 
   return (
     <div className="bg-card flex flex-wrap items-center justify-between gap-4 rounded-xl border p-4">
@@ -63,31 +65,33 @@ export function IdentityCard({
           <Icon className="size-4" />
         </div>
         <div className="flex min-w-0 flex-col gap-0.5">
-          <span className="text-sm font-semibold">Trust &amp; Safety · {KYC_STATUS_LABELS[status]}</span>
+          <span className="text-sm font-semibold">{t("Trust & Safety")} · {t(KYC_STATUS_LABELS[status])}</span>
           <span className="text-muted-foreground text-xs">
             {status === "VERIFIED"
-              ? "Buyers see an ID-verified badge on your store and listings."
+              ? t("Buyers see an ID-verified badge on your store and listings.")
               : status === "PENDING"
-                ? "Our team is reviewing your details. You'll get a notification once it's done."
+                ? t("Our team is reviewing your details. You'll get a notification once it's done.")
                 : status === "REJECTED"
-                  ? `${rejectReason ?? "We couldn't confirm your details."} You can submit again.`
-                  : "Verify your identity to earn an ID-verified badge buyers can trust."}
+                  ? `${rejectReason ? t(rejectReason) : t("We couldn't confirm your details.")} ${t("You can submit again.")}`
+                  : t("Verify your identity to earn an ID-verified badge buyers can trust.")}
           </span>
           <span className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 pt-1 text-xs">
             <span className="inline-flex items-center gap-1">
               <Star className="size-3" />
-              {rating != null && reviewCount > 0 ? `${rating.toFixed(1)} from ${reviewCount} review${reviewCount === 1 ? "" : "s"}` : "No ratings yet"}
+              {rating != null && reviewCount > 0
+                ? t(reviewCount === 1 ? "{rating} from {count} review" : "{rating} from {count} reviews", { rating: rating.toFixed(1), count: reviewCount })
+                : t("No ratings yet")}
             </span>
             <span className="inline-flex items-center gap-1">
               <ShieldCheck className="size-3" />
-              {completedSales} completed sale{completedSales === 1 ? "" : "s"} through escrow
+              {t(completedSales === 1 ? "{count} completed sale through escrow" : "{count} completed sales through escrow", { count: completedSales })}
             </span>
           </span>
         </div>
       </div>
       {canSubmit && (
         <Button size="sm" onClick={() => setOpen(true)}>
-          <BadgeCheck /> Verify identity
+          <BadgeCheck /> {t("Verify identity")}
         </Button>
       )}
       {open && <KycDialog open={open} onOpenChange={setOpen} photoStorageReady={photoStorageReady} />}
@@ -116,6 +120,7 @@ function KycDialog({
   const [consent, setConsent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const t = useT();
 
   // Release preview object URLs when a photo is replaced or the dialog closes.
   useEffect(() => () => { if (idShot) URL.revokeObjectURL(idShot.previewUrl); }, [idShot]);
@@ -145,7 +150,7 @@ function KycDialog({
           if (!/photo/i.test(result.error)) setStep(0);
           return;
         }
-        toast.success("Submitted — we'll notify you once it's reviewed.");
+        toast.success(t("Submitted — we'll notify you once it's reviewed."));
         onOpenChange(false);
         router.refresh();
       } catch {
@@ -158,9 +163,9 @@ function KycDialog({
     <Dialog open={open} onOpenChange={(o) => !pending && onOpenChange(o)}>
       <DialogContent className="max-h-[92dvh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Verify your identity</DialogTitle>
+          <DialogTitle>{t("Verify your identity")}</DialogTitle>
           <DialogDescription>
-            Takes about a minute. Staff check your details and photos by hand, usually within a day.
+            {t("Takes about a minute. Staff check your details and photos by hand, usually within a day.")}
           </DialogDescription>
         </DialogHeader>
 
@@ -170,7 +175,7 @@ function KycDialog({
             <li key={label} className="flex flex-col gap-1">
               <span className={cn("h-1 rounded-full", i <= step ? "bg-success" : "bg-muted")} />
               <span className={cn("text-[11px]", i === step ? "text-foreground font-medium" : "text-muted-foreground")}>
-                {label}
+                {t(label)}
               </span>
             </li>
           ))}
@@ -178,7 +183,7 @@ function KycDialog({
 
         {!photoStorageReady && (
           <p className="text-destructive rounded-lg border border-dashed p-3 text-sm">
-            ID photo storage isn&apos;t set up on this site yet, so verification can&apos;t be submitted right now.
+            {t("ID photo storage isn't set up on this site yet, so verification can't be submitted right now.")}
           </p>
         )}
 
@@ -186,7 +191,7 @@ function KycDialog({
           {step === 0 && (
             <>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="kyc-name">Full legal name (as on your ID)</Label>
+                <Label htmlFor="kyc-name">{t("Full legal name (as on your ID)")}</Label>
                 <Input
                   id="kyc-name"
                   autoComplete="name"
@@ -196,7 +201,7 @@ function KycDialog({
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="kyc-dob">Date of birth</Label>
+                  <Label htmlFor="kyc-dob">{t("Date of birth")}</Label>
                   <Input
                     id="kyc-dob"
                     type="date"
@@ -205,7 +210,7 @@ function KycDialog({
                   />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Label>ID type</Label>
+                  <Label>{t("ID type")}</Label>
                   <Select value={idType} onValueChange={setIdType}>
                     <SelectTrigger className="w-full">
                       <SelectValue />
@@ -213,7 +218,7 @@ function KycDialog({
                     <SelectContent>
                       {Object.entries(KYC_ID_TYPE_LABELS).map(([value, label]) => (
                         <SelectItem key={value} value={value}>
-                          {label}
+                          {t(label)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -221,17 +226,17 @@ function KycDialog({
                 </div>
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="kyc-id">ID number</Label>
+                <Label htmlFor="kyc-id">{t("ID number")}</Label>
                 <Input
                   id="kyc-id"
                   autoComplete="off"
                   inputMode={idType === "NATIONAL_ID" ? "numeric" : "text"}
-                  placeholder={idType === "NATIONAL_ID" ? "13 digits, e.g. 1-2345-67890-12-3" : undefined}
+                  placeholder={idType === "NATIONAL_ID" ? t("13 digits, e.g. 1-2345-67890-12-3") : undefined}
                   value={details.idNumber}
                   onChange={(e) => setDetails({ ...details, idNumber: e.target.value })}
                 />
                 <p className="text-muted-foreground text-xs">
-                  Thai ID numbers are checked automatically. Only the last 4 characters are stored.
+                  {t("Thai ID numbers are checked automatically. Only the last 4 characters are stored.")}
                 </p>
               </div>
             </>
@@ -250,36 +255,35 @@ function KycDialog({
                 ].map(({ shot, label }) => (
                   <figure key={label} className="flex flex-col gap-1">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={shot.previewUrl} alt={label} className="bg-muted aspect-[4/3] w-full rounded-lg border object-cover" />
-                    <figcaption className="text-muted-foreground text-xs">{label}</figcaption>
+                    <img src={shot.previewUrl} alt={t(label)} className="bg-muted aspect-[4/3] w-full rounded-lg border object-cover" />
+                    <figcaption className="text-muted-foreground text-xs">{t(label)}</figcaption>
                   </figure>
                 ))}
               </div>
               <dl className="bg-muted/40 grid grid-cols-1 gap-2 rounded-lg p-3 text-sm sm:grid-cols-3">
                 <div className="min-w-0">
-                  <dt className="text-muted-foreground text-xs">Legal name</dt>
+                  <dt className="text-muted-foreground text-xs">{t("Legal name")}</dt>
                   <dd className="truncate font-medium">{details.legalName}</dd>
                 </div>
                 <div>
-                  <dt className="text-muted-foreground text-xs">Date of birth</dt>
+                  <dt className="text-muted-foreground text-xs">{t("Date of birth")}</dt>
                   <dd className="font-medium">{details.dateOfBirth}</dd>
                 </div>
                 <div>
-                  <dt className="text-muted-foreground text-xs">{KYC_ID_TYPE_LABELS[idType as keyof typeof KYC_ID_TYPE_LABELS]}</dt>
+                  <dt className="text-muted-foreground text-xs">{t(KYC_ID_TYPE_LABELS[idType as keyof typeof KYC_ID_TYPE_LABELS])}</dt>
                   <dd className="font-medium">•••• {details.idNumber.replace(/[\s-]/g, "").slice(-4)}</dd>
                 </div>
               </dl>
               <label className="flex items-start gap-2 text-sm">
                 <Checkbox className="mt-0.5" checked={consent} onCheckedChange={(v) => setConsent(v === true)} />
                 <span>
-                  These details and photos are mine and accurate. I agree to CardMart staff reviewing them to verify my
-                  identity. The photos are stored privately and only staff can see them.
+                  {t("These details and photos are mine and accurate. I agree to CardMart staff reviewing them to verify my identity. The photos are stored privately and only staff can see them.")}
                 </span>
               </label>
             </>
           )}
 
-          {error && <p className="text-destructive text-sm">{error}</p>}
+          {error && <p className="text-destructive text-sm">{t(error)}</p>}
 
           <DialogFooter className="flex-row justify-between gap-2 sm:justify-between">
             <Button
@@ -288,16 +292,16 @@ function KycDialog({
               onClick={() => (step === 0 ? onOpenChange(false) : setStep(step - 1))}
               disabled={pending}
             >
-              {step === 0 ? "Cancel" : "Back"}
+              {step === 0 ? t("Cancel") : t("Back")}
             </Button>
             {step < STEPS.length - 1 ? (
               <Button type="button" onClick={() => { setError(null); setStep(step + 1); }} disabled={!canContinue}>
-                Continue
+                {t("Continue")}
               </Button>
             ) : (
               <Button type="button" onClick={submit} disabled={!canContinue || pending || !photoStorageReady}>
                 {pending && <Loader2 className="animate-spin" />}
-                Submit for review
+                {t("Submit for review")}
               </Button>
             )}
           </DialogFooter>

@@ -16,6 +16,8 @@ import { respondToTrade, withdrawTrade } from "@/lib/actions";
 import { formatDateTime, formatGrade, formatThb } from "@/lib/format";
 import { TRADE_OFFER_STATUS_LABELS } from "@/lib/labels";
 import { displayImage } from "@/lib/card-image";
+import { useT } from "@/components/landing/language-provider";
+import type { Translate } from "@/lib/i18n/translate";
 
 interface TradeCard {
   id: string;
@@ -49,8 +51,8 @@ export interface TradeOfferRow {
   offeredAsset: TradeCard;
 }
 
-function partyName(p: TradeParty) {
-  return p.name ?? (p.handle ? `@${p.handle}` : "A collector");
+function partyName(p: TradeParty, t: Translate) {
+  return p.name ?? (p.handle ? `@${p.handle}` : t("A collector"));
 }
 
 export function TradesPanel({
@@ -64,35 +66,35 @@ export function TradesPanel({
 }) {
   const pendingReceived = received.filter((t) => t.status === "PENDING");
   const pastReceived = received.filter((t) => t.status !== "PENDING");
+  const t = useT();
 
   return (
     <div className="flex flex-col gap-8">
       <p className="text-muted-foreground max-w-2xl text-sm">
-        Swap a vaulted card for another collector&apos;s vaulted card, with optional cash either way. Open any
-        vaulted item and choose <span className="text-foreground font-medium">Propose a Swap</span> to start one.
+        {t("Swap a vaulted card for another collector's vaulted card, with optional cash either way. Open any vaulted item and choose Propose a Swap to start one.")}
       </p>
 
       <section>
-        <h3 className="mb-3 text-sm font-semibold">Proposals for you ({pendingReceived.length})</h3>
+        <h3 className="mb-3 text-sm font-semibold">{t("Proposals for you")} ({pendingReceived.length})</h3>
         {pendingReceived.length === 0 ? (
-          <p className="text-muted-foreground text-sm">No swap proposals waiting for you.</p>
+          <p className="text-muted-foreground text-sm">{t("No swap proposals waiting for you.")}</p>
         ) : (
           <div className="flex flex-col gap-3">
-            {pendingReceived.map((t) => (
-              <TradeRow key={t.id} trade={t} perspective="received" escrowAuthorityAddress={escrowAuthorityAddress} />
+            {pendingReceived.map((row) => (
+              <TradeRow key={row.id} trade={row} perspective="received" escrowAuthorityAddress={escrowAuthorityAddress} />
             ))}
           </div>
         )}
       </section>
 
       <section>
-        <h3 className="mb-3 text-sm font-semibold">Your proposals ({sent.length})</h3>
+        <h3 className="mb-3 text-sm font-semibold">{t("Your proposals")} ({sent.length})</h3>
         {sent.length === 0 ? (
-          <p className="text-muted-foreground text-sm">You haven&apos;t proposed any swaps yet.</p>
+          <p className="text-muted-foreground text-sm">{t("You haven't proposed any swaps yet.")}</p>
         ) : (
           <div className="flex flex-col gap-3">
-            {sent.map((t) => (
-              <TradeRow key={t.id} trade={t} perspective="sent" escrowAuthorityAddress={escrowAuthorityAddress} />
+            {sent.map((row) => (
+              <TradeRow key={row.id} trade={row} perspective="sent" escrowAuthorityAddress={escrowAuthorityAddress} />
             ))}
           </div>
         )}
@@ -100,10 +102,10 @@ export function TradesPanel({
 
       {pastReceived.length > 0 && (
         <section>
-          <h3 className="mb-3 text-sm font-semibold">Past proposals for you</h3>
+          <h3 className="mb-3 text-sm font-semibold">{t("Past proposals for you")}</h3>
           <div className="flex flex-col gap-3">
-            {pastReceived.map((t) => (
-              <TradeRow key={t.id} trade={t} perspective="received" escrowAuthorityAddress={escrowAuthorityAddress} />
+            {pastReceived.map((row) => (
+              <TradeRow key={row.id} trade={row} perspective="received" escrowAuthorityAddress={escrowAuthorityAddress} />
             ))}
           </div>
         </section>
@@ -114,6 +116,7 @@ export function TradesPanel({
 
 function CardThumb({ card, caption }: { card: TradeCard; caption: string }) {
   const photo = displayImage(card);
+  const t = useT();
   return (
     <Link href={`/item/${card.id}`} className="flex min-w-0 flex-1 items-center gap-3 hover:underline">
       <div className="relative aspect-[3/4] w-12 shrink-0 overflow-hidden rounded-md border">
@@ -134,7 +137,7 @@ function CardThumb({ card, caption }: { card: TradeCard; caption: string }) {
         <span className="text-muted-foreground text-[11px] uppercase tracking-wide">{caption}</span>
         <span className="truncate text-sm font-semibold">{card.name}</span>
         <span className="text-muted-foreground text-xs">
-          {card.gradingCompany === "RAW" ? "Raw" : `${card.gradingCompany} ${formatGrade(card.grade)}`}
+          {card.gradingCompany === "RAW" ? t("Raw") : `${card.gradingCompany} ${formatGrade(card.grade)}`}
           {card.isBlackLabel && " · Black Label"}
         </span>
       </div>
@@ -154,6 +157,7 @@ function TradeRow({
   const router = useRouter();
   const { ensureConnected, approveCard, lockCash } = useTradeSigning();
   const [pending, setPending] = useState<null | "accept" | "reject" | "withdraw">(null);
+  const t = useT();
 
   const youGive = perspective === "received" ? trade.requestedAsset : trade.offeredAsset;
   const youGet = perspective === "received" ? trade.offeredAsset : trade.requestedAsset;
@@ -167,8 +171,8 @@ function TradeRow({
     trade.cashThb === 0
       ? null
       : viewerReceivesCash
-        ? `+ you receive ${formatThb(cash)}`
-        : `+ you pay ${formatThb(cash)}`;
+        ? t("+ you receive {amount}", { amount: formatThb(cash) })
+        : t("+ you pay {amount}", { amount: formatThb(cash) });
 
   async function accept() {
     setPending("accept");
@@ -180,15 +184,15 @@ function TradeRow({
         try {
           cashLock = await lockCash(cash, trade.proposer.walletAddress);
         } catch (err) {
-          toast.error(err instanceof Error ? err.message : "Could not lock your cash. Try again.");
+          toast.error(err instanceof Error ? err.message : t("Could not lock your cash. Try again."));
           return;
         }
       }
       await respondToTrade(trade.id, "accept", { approveTxSignature, cashLock });
-      toast.success("Swap complete — the new card is in your vault.");
+      toast.success(t("Swap complete — the new card is in your vault."));
       router.refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not accept swap.");
+      toast.error(err instanceof Error ? err.message : t("Could not accept swap."));
       router.refresh();
     } finally {
       setPending(null);
@@ -200,10 +204,10 @@ function TradeRow({
     try {
       if (kind === "reject") await respondToTrade(trade.id, "reject");
       else await withdrawTrade(trade.id);
-      toast.success(kind === "reject" ? "Swap declined." : "Proposal withdrawn.");
+      toast.success(kind === "reject" ? t("Swap declined.") : t("Proposal withdrawn."));
       router.refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Something went wrong.");
+      toast.error(err instanceof Error ? err.message : t("Something went wrong."));
     } finally {
       setPending(null);
     }
@@ -213,18 +217,21 @@ function TradeRow({
     <div className="bg-card flex flex-col gap-3 rounded-xl border p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-muted-foreground text-xs">
-          {perspective === "received" ? `From ${partyName(other)}` : `To ${partyName(other)}`} ·{" "}
+          {perspective === "received"
+            ? t("From {name}", { name: partyName(other, t) })
+            : t("To {name}", { name: partyName(other, t) })}{" "}
+          ·{" "}
           {formatDateTime(trade.createdAt)}
         </span>
         <Badge variant={trade.status === "ACCEPTED" ? "default" : "outline"}>
-          <Repeat className="size-3" /> {TRADE_OFFER_STATUS_LABELS[trade.status]}
+          <Repeat className="size-3" /> {t(TRADE_OFFER_STATUS_LABELS[trade.status])}
         </Badge>
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <CardThumb card={youGive} caption="You give" />
+        <CardThumb card={youGive} caption={t("You give")} />
         <ArrowLeftRight className="text-muted-foreground mx-auto size-4 shrink-0 rotate-90 sm:rotate-0" />
-        <CardThumb card={youGet} caption="You get" />
+        <CardThumb card={youGet} caption={t("You get")} />
       </div>
 
       {cashText && (
@@ -238,17 +245,17 @@ function TradeRow({
             <>
               <Button size="sm" variant="outline" onClick={() => run("reject")} disabled={pending !== null}>
                 {pending === "reject" ? <Loader2 className="animate-spin" /> : <X />}
-                Decline
+                {t("Decline")}
               </Button>
               <Button size="sm" onClick={accept} disabled={pending !== null}>
                 {pending === "accept" ? <Loader2 className="animate-spin" /> : <Check />}
-                Accept Swap
+                {t("Accept Swap")}
               </Button>
             </>
           ) : (
             <Button size="sm" variant="outline" onClick={() => run("withdraw")} disabled={pending !== null}>
               {pending === "withdraw" ? <Loader2 className="animate-spin" /> : <X />}
-              Withdraw
+              {t("Withdraw")}
             </Button>
           )}
         </div>

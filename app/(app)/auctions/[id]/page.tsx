@@ -4,10 +4,12 @@ import { ArrowLeft, Gavel } from "lucide-react";
 
 import { getAuctionById } from "@/lib/queries";
 import { getCurrentUser } from "@/lib/session";
+import { getT } from "@/lib/i18n/server";
 import { ItemGallery } from "@/components/item/item-gallery";
 import { BidPanel } from "@/components/auction/bid-panel";
 import { BidHistory } from "@/components/auction/bid-history";
 import { ClaimWinButton } from "@/components/auction/claim-win-button";
+import { AutoSettle } from "@/components/auction/auto-settle";
 import { CancelAuctionButton } from "@/components/auction/cancel-auction-button";
 import { CountdownTimer } from "@/components/auction/countdown-timer";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -20,7 +22,7 @@ const MIN_BID_INCREMENT_THB = 50;
 
 export default async function AuctionDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [auction, user] = await Promise.all([getAuctionById(id), getCurrentUser()]);
+  const [auction, user, t] = await Promise.all([getAuctionById(id), getCurrentUser(), getT()]);
 
   if (!auction) notFound();
 
@@ -30,7 +32,10 @@ export default async function AuctionDetailPage({ params }: { params: Promise<{ 
   const hasNotStarted = auction.startTime > new Date();
   const hasEnded = auction.status !== "ACTIVE" || auction.endTime <= new Date();
   const topBid = auction.bids[0] ?? null;
-  const isWinner = hasEnded && topBid?.bidderId === user.id;
+  // Bidding closed but settleAuction hasn't finished yet (see AutoSettle).
+  const awaitingSettlement = auction.status === "ACTIVE" && hasEnded && topBid != null;
+  const isWinner = awaitingSettlement && topBid.bidderId === user.id;
+  const myLockedBidThb = !hasEnded && topBid?.bidderId === user.id && topBid.lockStatus === "HELD" ? topBid.amountThb : null;
   const minBid = (auction.currentBidThb ?? auction.startPriceThb - MIN_BID_INCREMENT_THB) + MIN_BID_INCREMENT_THB;
 
   const sellerInitials = (asset.seller.name ?? "?")
@@ -42,12 +47,13 @@ export default async function AuctionDetailPage({ params }: { params: Promise<{ 
 
   return (
     <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6">
+      {awaitingSettlement && <AutoSettle auctionIds={[auction.id]} />}
       <Link
         href="/auctions"
         className="text-muted-foreground hover:text-foreground mb-6 inline-flex items-center gap-1.5 text-sm transition-colors"
       >
         <ArrowLeft className="size-4" />
-        Back to Auctions
+        {t("Back to Auctions")}
       </Link>
 
       <div className="grid grid-cols-1 items-start gap-10 md:grid-cols-2">
@@ -64,11 +70,11 @@ export default async function AuctionDetailPage({ params }: { params: Promise<{ 
           <div className="flex items-start justify-between gap-3">
             <div className="flex min-w-0 flex-col gap-1">
               <Badge variant="outline" className="w-fit rounded-full">
-                {CARD_GAME_LABELS[asset.game]}
+                {t(CARD_GAME_LABELS[asset.game])}
               </Badge>
               <span className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
                 {asset.gradingCompany === "RAW"
-                  ? "Raw / Ungraded"
+                  ? t("Raw / Ungraded")
                   : `${asset.gradingCompany} ${formatGrade(asset.grade)}${gradeTier ? ` · ${gradeTier}` : ""}`}
               </span>
               <h1 className="text-2xl font-semibold">{asset.name}</h1>
@@ -77,15 +83,15 @@ export default async function AuctionDetailPage({ params }: { params: Promise<{ 
             <div className="flex shrink-0 flex-col items-end gap-1.5">
               <Badge className="bg-foreground text-background border-0">
                 <Gavel className="size-3" />
-                {hasEnded ? "Ended" : hasNotStarted ? "Scheduled" : "Live"}
+                {hasEnded ? t("Ended") : hasNotStarted ? t("Scheduled") : t("Live")}
               </Badge>
               {hasNotStarted ? (
                 <span className="text-sm font-medium tabular-nums">
-                  Starts in <CountdownTimer endTime={auction.startTime.toISOString()} />
+                  {t("Starts in")} <CountdownTimer endTime={auction.startTime.toISOString()} />
                 </span>
               ) : !hasEnded && (
                 <span className="text-sm font-medium tabular-nums">
-                  Ends in <CountdownTimer endTime={auction.endTime.toISOString()} />
+                  {t("Ends in")} <CountdownTimer endTime={auction.endTime.toISOString()} />
                 </span>
               )}
             </div>
@@ -94,14 +100,14 @@ export default async function AuctionDetailPage({ params }: { params: Promise<{ 
           <div className="detail-panel grid grid-cols-2 divide-x rounded-xl border">
             <div className="flex flex-col gap-0.5 p-3">
               <span className="text-muted-foreground text-xs">
-                {auction.currentBidThb != null ? "Current Bid" : "Starting Bid"}
+                {auction.currentBidThb != null ? t("Current Bid") : t("Starting Bid")}
               </span>
               <span className="text-lg leading-none font-bold tabular-nums">
                 {formatThb(auction.currentBidThb ?? auction.startPriceThb)}
               </span>
             </div>
             <div className="flex flex-col gap-0.5 p-3">
-              <span className="text-muted-foreground text-xs">Bids</span>
+              <span className="text-muted-foreground text-xs">{t("Bids")}</span>
               <span className="text-lg leading-none font-bold tabular-nums">{auction.bids.length}</span>
             </div>
           </div>
@@ -109,9 +115,9 @@ export default async function AuctionDetailPage({ params }: { params: Promise<{ 
           {isOwner ? (
             <div className="detail-panel flex flex-col gap-3 rounded-lg border border-dashed p-4">
               <p className="text-muted-foreground text-sm">
-                This is your auction — manage it from{" "}
+                {t("This is your auction — manage it from")}{" "}
                 <Link href="/portfolio" className="text-foreground underline">
-                  Portfolio
+                  {t("Portfolio")}
                 </Link>
                 .
               </p>
@@ -121,23 +127,34 @@ export default async function AuctionDetailPage({ params }: { params: Promise<{ 
             </div>
           ) : hasNotStarted ? (
             <p className="detail-panel text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
-              Bidding opens <span className="font-medium text-foreground">{auction.startTime.toLocaleString()}</span>.
+              {t("Bidding opens")} <span className="font-medium text-foreground">{auction.startTime.toLocaleString()}</span>.
             </p>
           ) : isWinner ? (
             <ClaimWinButton
               auctionId={auction.id}
-              amountThb={topBid!.amountThb}
+              amountThb={topBid.amountThb}
               vaulted={asset.vaulted}
+              locked={topBid.lockStatus === "HELD"}
+              claimDeadline={auction.claimDeadline?.toISOString() ?? null}
               sellerWalletAddress={asset.owner.walletAddress}
             />
           ) : hasEnded ? (
             <p className="detail-panel text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
-              {topBid
-                ? `This auction ended — sold to the highest bidder for ${formatThb(topBid.amountThb)}.`
-                : "This auction ended with no bids."}
+              {auction.status === "ENDED_UNCLAIMED"
+                ? t("This auction ended, but the winner didn't claim it in time. The card went back to the seller.")
+                : awaitingSettlement
+                  ? t("Bidding closed at {amount} — waiting on the winner's delivery choice.", { amount: formatThb(topBid.amountThb) })
+                  : topBid
+                    ? t("This auction ended — sold to the highest bidder for {amount}.", { amount: formatThb(topBid.amountThb) })
+                    : t("This auction ended with no bids.")}
             </p>
           ) : (
-            <BidPanel auctionId={auction.id} minBid={minBid} />
+            <BidPanel
+              auctionId={auction.id}
+              minBid={minBid}
+              sellerWalletAddress={asset.owner.walletAddress}
+              myLockedBidThb={myLockedBidThb}
+            />
           )}
 
           <Link
@@ -149,7 +166,7 @@ export default async function AuctionDetailPage({ params }: { params: Promise<{ 
               <AvatarFallback className="text-sm font-medium">{sellerInitials}</AvatarFallback>
             </Avatar>
             <div className="flex min-w-0 flex-col gap-0.5">
-              <span className="text-muted-foreground text-xs">Seller</span>
+              <span className="text-muted-foreground text-xs">{t("Seller")}</span>
               <span className="truncate text-sm font-semibold">{asset.seller.name}</span>
             </div>
           </Link>
@@ -159,7 +176,7 @@ export default async function AuctionDetailPage({ params }: { params: Promise<{ 
       <Separator className="my-10" />
 
       <div className="max-w-xl">
-        <h2 className="mb-4 text-lg font-semibold">Bid History</h2>
+        <h2 className="mb-4 text-lg font-semibold">{t("Bid History")}</h2>
         <BidHistory bids={auction.bids} />
       </div>
     </div>

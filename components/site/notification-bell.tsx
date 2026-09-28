@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/sheet";
 import { markAllNotificationsRead, markNotificationRead } from "@/lib/actions";
 import { formatDateTime } from "@/lib/format";
+import { useT } from "@/components/landing/language-provider";
 
 export interface NotificationSummary {
   id: string;
@@ -39,6 +40,7 @@ export function NotificationBell({
   const [notifications, setNotifications] = useState(initialNotifications);
   const [unreadCount, setUnreadCount] = useState(initialUnreadCount);
   const [, startTransition] = useTransition();
+  const t = useT();
 
   function handleOpen(n: NotificationSummary) {
     if (n.readAt) return;
@@ -69,32 +71,32 @@ export function NotificationBell({
               {unreadCount > 9 ? "9+" : unreadCount}
             </Badge>
           )}
-          <span className="sr-only">Notifications</span>
+          <span className="sr-only">{t("Notifications")}</span>
         </Button>
       </SheetTrigger>
       <SheetContent side="right" className="w-full gap-0 p-0 sm:w-[28rem] sm:max-w-none">
         <SheetHeader className="border-b p-5 pr-12">
           <div className="flex items-center justify-between gap-3">
-            <SheetTitle>Notifications</SheetTitle>
-            {unreadCount > 0 && <Badge variant="secondary">{unreadCount} new</Badge>}
+            <SheetTitle>{t("Notifications")}</SheetTitle>
+            {unreadCount > 0 && <Badge variant="secondary">{t("{count} new", { count: unreadCount })}</Badge>}
           </div>
-          <p className="text-muted-foreground text-sm">Updates about your collection, offers, and auctions.</p>
+          <p className="text-muted-foreground text-sm">{t("Updates about your collection, offers, and auctions.")}</p>
         </SheetHeader>
         <div className="flex items-center justify-between border-b px-5 py-3">
-          <span className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Recent activity</span>
+          <span className="text-muted-foreground text-xs font-medium uppercase tracking-wide">{t("Recent activity")}</span>
           {unreadCount > 0 && (
             <button
               type="button"
               onClick={handleMarkAllRead}
               className="text-muted-foreground hover:text-foreground text-xs underline underline-offset-2"
             >
-              Mark all read
+              {t("Mark all read")}
             </button>
           )}
         </div>
         {notifications.length === 0 ? (
           <div className="text-muted-foreground flex flex-1 items-center justify-center px-6 text-center text-sm">
-            Nothing yet. Auction, offer, and collection updates will appear here.
+            {t("Nothing yet. Auction, offer, and collection updates will appear here.")}
           </div>
         ) : (
           <div className="min-h-0 flex-1 overflow-y-auto">

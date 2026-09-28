@@ -1,3 +1,5 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import { Gavel } from "lucide-react";
@@ -8,10 +10,12 @@ import { CARD_GAME_LABELS } from "@/lib/labels";
 import { displayImage } from "@/lib/card-image";
 import { formatThb } from "@/lib/format";
 import type { getActiveAuctions } from "@/lib/queries";
+import { useT } from "@/components/landing/language-provider";
 
 export function AuctionCard({ auction }: { auction: Awaited<ReturnType<typeof getActiveAuctions>>[number] }) {
   const { asset } = auction;
   const photo = displayImage(asset);
+  const t = useT();
 
   return (
     <Link
@@ -45,13 +49,13 @@ export function AuctionCard({ auction }: { auction: Awaited<ReturnType<typeof ge
         </div>
         <div className="flex flex-col gap-3 px-3 pb-3">
           <div className="flex flex-col gap-1">
-            <span className="text-muted-foreground text-xs">{CARD_GAME_LABELS[asset.game]}</span>
+            <span className="text-muted-foreground text-xs">{t(CARD_GAME_LABELS[asset.game])}</span>
             <h3 className="line-clamp-1 text-sm font-semibold">{asset.name}</h3>
             <p className="text-muted-foreground line-clamp-1 text-xs">{asset.subtitle}</p>
           </div>
           <div className="flex flex-col gap-0.5">
             <span className="text-muted-foreground text-[10px] uppercase tracking-wide">
-              {auction.currentBidThb != null ? "Current Bid" : "Starting Bid"}
+              {auction.currentBidThb != null ? t("Current Bid") : t("Starting Bid")}
             </span>
             <span className="text-lg font-bold tabular-nums">
               {formatThb(auction.currentBidThb ?? auction.startPriceThb)}

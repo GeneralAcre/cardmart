@@ -1,6 +1,9 @@
+"use client";
+
 import { Star } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/landing/language-provider";
 
 interface RatingStarsProps {
   /** Average rating (1-5), or null when the seller has no reviews yet. */
@@ -17,9 +20,10 @@ interface RatingStarsProps {
 // wants the real number.
 export function RatingStars({ average, count, size = "sm", showCount = true, className }: RatingStarsProps) {
   const starSize = size === "md" ? "size-4" : "size-3.5";
+  const t = useT();
 
   if (average == null || count === 0) {
-    return <span className={cn("text-muted-foreground text-xs", className)}>No ratings yet</span>;
+    return <span className={cn("text-muted-foreground text-xs", className)}>{t("No ratings yet")}</span>;
   }
 
   const filled = Math.round(average);

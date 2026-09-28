@@ -43,6 +43,7 @@ import {
 } from "@/lib/labels";
 import { themeIndexForSerial } from "@/lib/theme";
 import { getVerificationChecklist } from "@/lib/verification-checklist";
+import { useT } from "@/components/landing/language-provider";
 
 // CardMart only trades Pokémon and One Piece cards — both are trading cards,
 // which drives the grading companies and camera checklist below.
@@ -51,6 +52,7 @@ const CATEGORY: AssetCategory = "TRADING_CARD";
 export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddress: string | null }) {
   const router = useRouter();
   const { connected, connecting, connect, approveDelegate } = useWalletStore();
+  const t = useT();
 
   const [raw, setRaw] = useState(false);
   const category = CATEGORY;
@@ -161,7 +163,7 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
         // — no wallet needed just to create the listing.
         const res = await createListing({}, fd);
         if (res.error) {
-          toast.error(res.error);
+          toast.error(t(res.error));
           setSignOpen(false);
           return;
         }
@@ -177,16 +179,16 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
             const approveTxSignature = await approveDelegate(res.mintAddress, escrowAuthorityAddress);
             await confirmListingApproval(res.assetId!, approveTxSignature);
           } catch (err) {
-            toast.warning("Listed — but approving the transfer failed. You can retry this from your Portfolio.", {
+            toast.warning(t("Listed — but approving the transfer failed. You can retry this from your Portfolio."), {
               description: err instanceof Error ? err.message : undefined,
             });
           }
         }
 
-        toast.success("Listing published on the marketplace.");
+        toast.success(t("Listing published on the marketplace."));
         router.push("/marketplace");
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Could not create the listing. Try again.");
+        toast.error(err instanceof Error ? err.message : t("Could not create the listing. Try again."));
       }
     });
   }
@@ -207,33 +209,35 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
       <Card>
         <CardHeader>
-          <CardTitle>Listing</CardTitle>
+          <CardTitle>{t("Listing")}</CardTitle>
           <CardDescription>
             {raw
-              ? "Describe the item, then prove you have it with a quick camera check."
-              : "Tell us what's on the certificate, then prove you have it with a quick camera check."}
+              ? t("Describe the item, then prove you have it with a quick camera check.")
+              : t("Tell us what's on the certificate, then prove you have it with a quick camera check.")}
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-5">
-          <StepHeading step={1} title="What are you listing?" />
+          <StepHeading step={1} title={t("What are you listing?")} />
           <div className="flex flex-col gap-2">
-            <Label>Item Condition</Label>
+            <Label>{t("Item Condition")}</Label>
             <Tabs value={raw ? "raw" : "graded"} onValueChange={(v) => handleModeChange(v === "raw")}>
               <TabsList className="w-full">
-                <TabsTrigger value="graded">Already Graded</TabsTrigger>
-                <TabsTrigger value="raw">Raw / Ungraded</TabsTrigger>
+                <TabsTrigger value="graded">{t("Already Graded")}</TabsTrigger>
+                <TabsTrigger value="raw">{t("Raw / Ungraded")}</TabsTrigger>
               </TabsList>
             </Tabs>
             <p className="text-muted-foreground text-xs">
               {raw
-                ? "No official grading company is involved — show the item with a live camera checklist, then set your price."
-                : `You hold an official ${gradingCompanies.map((c) => GRADING_COMPANY_LABELS[c]).join(" / ")} certificate and self-declare its details.`}
+                ? t("No official grading company is involved — show the item with a live camera checklist, then set your price.")
+                : t("You hold an official {companies} certificate and self-declare its details.", {
+                    companies: gradingCompanies.map((c) => GRADING_COMPANY_LABELS[c]).join(" / "),
+                  })}
             </p>
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
-              <Label>Game</Label>
+              <Label>{t("Game")}</Label>
               <Select value={game} onValueChange={(v) => handleGameChange(v as CardGame)}>
                 <SelectTrigger className="w-full">
                   <SelectValue />
@@ -241,7 +245,7 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
                 <SelectContent>
                   {CARD_GAMES.map((g) => (
                     <SelectItem key={g} value={g}>
-                      {CARD_GAME_LABELS[g]}
+                      {t(CARD_GAME_LABELS[g])}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -249,7 +253,7 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
             </div>
             {!raw && (
               <div className="flex flex-col gap-2">
-                <Label>Who graded it?</Label>
+                <Label>{t("Who graded it?")}</Label>
                 <Select
                   value={gradingCompany}
                   onValueChange={(v) => {
@@ -274,19 +278,19 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
-              <Label htmlFor="name">Item Name</Label>
+              <Label htmlFor="name">{t("Item Name")}</Label>
               <Input
                 id="name"
-                placeholder="e.g. Charizard VMAX Rainbow Rare"
+                placeholder={t("e.g. Charizard VMAX Rainbow Rare")}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
               />
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="subtitle">{raw ? "Set / Origin / Condition" : "Set / Origin"}</Label>
+              <Label htmlFor="subtitle">{raw ? t("Set / Origin / Condition") : t("Set / Origin")}</Label>
               <Input
                 id="subtitle"
-                placeholder={raw ? "e.g. Evolving Skies, 2021 — near mint" : "e.g. Evolving Skies, 2021"}
+                placeholder={raw ? t("e.g. Evolving Skies, 2021 — near mint") : t("e.g. Evolving Skies, 2021")}
                 value={subtitle}
                 onChange={(e) => setSubtitle(e.target.value)}
               />
@@ -296,23 +300,23 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
           {!raw && (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-2">
-                <Label htmlFor="serial">Serial Number</Label>
+                <Label htmlFor="serial">{t("Serial Number")}</Label>
                 <Input
                   id="serial"
-                  placeholder="e.g. 84920193"
+                  placeholder={t("e.g. 84920193")}
                   value={serial}
                   onChange={(e) => setSerial(e.target.value)}
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="grade">Grade (1–10)</Label>
+                <Label htmlFor="grade">{t("Grade (1–10)")}</Label>
                 <Input
                   id="grade"
                   type="number"
                   step="0.5"
                   min={1}
                   max={10}
-                  placeholder="e.g. 10"
+                  placeholder={t("e.g. 10")}
                   value={grade}
                   onChange={(e) => {
                     setGrade(e.target.value);
@@ -326,7 +330,7 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
                       checked={isBlackLabel}
                       onCheckedChange={(checked) => setIsBlackLabel(checked === true)}
                     />
-                    Black Label (every sub-grade a perfect 10)
+                    {t("Black Label (every sub-grade a perfect 10)")}
                   </label>
                 )}
               </div>
@@ -337,24 +341,24 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
 
           <Separator />
 
-          <StepHeading step={2} title="Prove it's really yours" />
+          <StepHeading step={2} title={t("Prove it's really yours")} />
           <CameraCaptureGrid category={category} raw={raw} captures={captures} onChange={setCaptures} />
 
           <Separator />
 
-          <StepHeading step={3} title="Set your price" />
+          <StepHeading step={3} title={t("Set your price")} />
           <div className="flex flex-col gap-2">
-            <Label htmlFor="price">Listing Price (THB)</Label>
+            <Label htmlFor="price">{t("Listing Price (THB)")}</Label>
             <Input
               id="price"
               type="number"
               inputMode="numeric"
-              placeholder="e.g. 45000"
+              placeholder={t("e.g. 45000")}
               value={priceThb}
               onChange={(e) => setPriceThb(e.target.value)}
             />
             <p className="text-muted-foreground text-xs">
-              This is what buyers will see on the marketplace. You can change it anytime.
+              {t("This is what buyers will see on the marketplace. You can change it anytime.")}
             </p>
           </div>
 
@@ -365,18 +369,18 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
             onClick={() => setSignOpen(true)}
           >
             <BadgeCheck />
-            Create Listing
+            {t("Create Listing")}
           </Button>
           {!allCaptured && (
             <p className="text-muted-foreground text-center text-xs">
-              Complete every live capture above to unlock this button.
+              {t("Complete every live capture above to unlock this button.")}
             </p>
           )}
         </CardContent>
       </Card>
 
       <div className="flex flex-col gap-3">
-        <span className="text-muted-foreground text-sm font-medium">Digital Certificate Preview</span>
+        <span className="text-muted-foreground text-sm font-medium">{t("Digital Certificate Preview")}</span>
         <CardArt
           themeIndex={serial ? themeIndexForSerial(serial) : themeIndexForSerial(name || "preview")}
           category={category}
@@ -387,41 +391,41 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
           className={!allCaptured ? "opacity-40 grayscale" : undefined}
         />
         <p className="text-muted-foreground text-xs">
-          This artwork represents your digital certificate, generated from
-          your {raw ? "item details" : "certificate details"}.
+          {raw
+            ? t("This artwork represents your digital certificate, generated from your item details.")
+            : t("This artwork represents your digital certificate, generated from your certificate details.")}
         </p>
       </div>
 
       <Dialog open={signOpen} onOpenChange={(open) => !submitting && setSignOpen(open)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Confirm Your Listing</DialogTitle>
+            <DialogTitle>{t("Confirm Your Listing")}</DialogTitle>
             <DialogDescription>
-              Review your item and listing price. Your item will appear on the
-              marketplace after you create the listing.
+              {t("Review your item and listing price. Your item will appear on the marketplace after you create the listing.")}
             </DialogDescription>
           </DialogHeader>
           <div className="bg-muted/40 rounded-lg border p-3 text-sm">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">{raw ? "Item" : "Certificate"}</span>
+              <span className="text-muted-foreground">{raw ? t("Item") : t("Certificate")}</span>
               <span className="font-mono">{raw ? name : `${gradingCompany}-${serial}`}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Listing Price</span>
+              <span className="text-muted-foreground">{t("Listing Price")}</span>
               <span>{priceThb ? `${Number(priceThb).toLocaleString()} THB` : "—"}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Live Captures</span>
+              <span className="text-muted-foreground">{t("Live Captures")}</span>
               <span>{Object.keys(captures).length} / {checklist.length}</span>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSignOpen(false)} disabled={submitting}>
-              Cancel
+              {t("Cancel")}
             </Button>
             <Button onClick={handleConfirmAndSign} disabled={submitting || connecting}>
               {submitting ? <Loader2 className="animate-spin" /> : null}
-              {submitting ? "Creating…" : "Confirm & Create Listing"}
+              {submitting ? t("Creating…") : t("Confirm & Create Listing")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -437,11 +441,12 @@ function PsaLookupPanel({
   pending: boolean;
   result: PsaCertLookupResult | null;
 }) {
+  const t = useT();
   if (pending) {
     return (
       <div className="text-muted-foreground flex items-center gap-2 text-xs">
         <Loader2 className="size-3.5 animate-spin" />
-        Looking up this cert on PSA…
+        {t("Looking up this cert on PSA…")}
       </div>
     );
   }
@@ -458,7 +463,7 @@ function PsaLookupPanel({
     return (
       <div className="text-destructive flex items-center gap-2 text-xs">
         <SearchX className="size-3.5" />
-        No PSA cert found for this number. Double-check it against the slab label.
+        {t("No PSA cert found for this number. Double-check it against the slab label.")}
       </div>
     );
   }
@@ -468,42 +473,42 @@ function PsaLookupPanel({
     <div className="bg-muted/40 rounded-lg border p-3">
       <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-success">
         <CheckCircle2 className="size-3.5" />
-        Verified live on PSA — details pre-filled below, edit freely
+        {t("Verified live on PSA — details pre-filled below, edit freely")}
       </div>
       <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:grid-cols-3">
         {cert.subject && (
           <div>
-            <dt className="text-muted-foreground text-xs">Subject</dt>
+            <dt className="text-muted-foreground text-xs">{t("Subject")}</dt>
             <dd>{cert.subject}</dd>
           </div>
         )}
         {cert.year && (
           <div>
-            <dt className="text-muted-foreground text-xs">Year</dt>
+            <dt className="text-muted-foreground text-xs">{t("Year")}</dt>
             <dd>{cert.year}</dd>
           </div>
         )}
         {cert.brand && (
           <div>
-            <dt className="text-muted-foreground text-xs">Brand</dt>
+            <dt className="text-muted-foreground text-xs">{t("Brand")}</dt>
             <dd>{cert.brand}</dd>
           </div>
         )}
         {cert.cardNumber && (
           <div>
-            <dt className="text-muted-foreground text-xs">Card #</dt>
+            <dt className="text-muted-foreground text-xs">{t("Card #")}</dt>
             <dd className="font-mono">{cert.cardNumber}</dd>
           </div>
         )}
         {cert.cardGrade && (
           <div>
-            <dt className="text-muted-foreground text-xs">PSA Grade</dt>
+            <dt className="text-muted-foreground text-xs">{t("PSA Grade")}</dt>
             <dd>{cert.cardGrade}</dd>
           </div>
         )}
         {result.population?.total != null && (
           <div>
-            <dt className="text-muted-foreground text-xs">Total Population</dt>
+            <dt className="text-muted-foreground text-xs">{t("Total Population")}</dt>
             <dd>{result.population.total.toLocaleString()}</dd>
           </div>
         )}

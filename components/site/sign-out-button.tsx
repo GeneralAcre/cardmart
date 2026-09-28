@@ -5,10 +5,12 @@ import { LogOut } from "lucide-react";
 import { usePrivy } from "@privy-io/react-auth";
 
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { useT } from "@/components/landing/language-provider";
 
 export function SignOutButton() {
   const router = useRouter();
   const { logout } = usePrivy();
+  const t = useT();
 
   return (
     <DropdownMenuItem
@@ -18,7 +20,7 @@ export function SignOutButton() {
         router.push("/");
       }}
     >
-      <LogOut /> Sign out
+      <LogOut /> {t("Sign out")}
     </DropdownMenuItem>
   );
 }

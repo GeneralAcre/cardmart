@@ -17,9 +17,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { updateDisplayProfile } from "@/lib/profile-actions";
+import { useT } from "@/components/landing/language-provider";
 
 export function EditProfileDialog({ name, handle }: { name: string; handle: string | null }) {
   const router = useRouter();
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [nameValue, setNameValue] = useState(name);
   const [handleValue, setHandleValue] = useState(handle ?? "");
@@ -37,7 +39,7 @@ export function EditProfileDialog({ name, handle }: { name: string; handle: stri
         setError(res.error);
         return;
       }
-      toast.success("Profile updated.");
+      toast.success(t("Profile updated."));
       setOpen(false);
       router.refresh();
     });
@@ -49,23 +51,23 @@ export function EditProfileDialog({ name, handle }: { name: string; handle: stri
         type="button"
         onClick={() => setOpen(true)}
         className="text-muted-foreground hover:text-foreground shrink-0 rounded-full p-1 transition-colors"
-        aria-label="Edit profile"
+        aria-label={t("Edit profile")}
       >
         <Pencil className="size-3.5" />
       </button>
       <Dialog open={open} onOpenChange={(o) => !pending && setOpen(o)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Edit Profile</DialogTitle>
-            <DialogDescription>Update your display name and username.</DialogDescription>
+            <DialogTitle>{t("Edit Profile")}</DialogTitle>
+            <DialogDescription>{t("Update your display name and username.")}</DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
-              <Label htmlFor="edit-name">Display Name</Label>
+              <Label htmlFor="edit-name">{t("Display Name")}</Label>
               <Input id="edit-name" value={nameValue} onChange={(e) => setNameValue(e.target.value)} minLength={2} />
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="edit-handle">Username</Label>
+              <Label htmlFor="edit-handle">{t("Username")}</Label>
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground text-sm">@</span>
                 <Input
@@ -75,22 +77,22 @@ export function EditProfileDialog({ name, handle }: { name: string; handle: stri
                   minLength={3}
                   maxLength={24}
                   pattern="[a-z0-9_]+"
-                  title="Lowercase letters, numbers, and underscores only"
+                  title={t("Lowercase letters, numbers, and underscores only")}
                 />
               </div>
             </div>
-            {error && <p className="text-destructive text-sm">{error}</p>}
+            {error && <p className="text-destructive text-sm">{t(error)}</p>}
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={pending}>
-              Cancel
+              {t("Cancel")}
             </Button>
             <Button
               onClick={handleSave}
               disabled={pending || nameValue.trim().length < 2 || handleValue.trim().length < 3}
             >
               {pending && <Loader2 className="animate-spin" />}
-              Save
+              {t("Save")}
             </Button>
           </DialogFooter>
         </DialogContent>

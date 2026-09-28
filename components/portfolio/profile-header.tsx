@@ -12,6 +12,7 @@ import { EditProfileDialog } from "@/components/portfolio/edit-profile-dialog";
 import { PortfolioValueChart } from "@/components/portfolio/portfolio-value-chart";
 import { useWalletStore } from "@/lib/web3/wallet-store";
 import { formatDate, shortSignature } from "@/lib/format";
+import { useT } from "@/components/landing/language-provider";
 
 interface ProfileHeaderProps {
   name: string;
@@ -39,6 +40,7 @@ export function ProfileHeader({
 }: ProfileHeaderProps) {
   const { connected } = useWalletStore();
   const [copied, setCopied] = useState(false);
+  const t = useT();
   const initials = name
     .split(" ")
     .map((n) => n[0])
@@ -49,7 +51,7 @@ export function ProfileHeader({
   function copyWallet() {
     if (!walletAddress) return;
     navigator.clipboard.writeText(walletAddress);
-    toast.success("Wallet address copied");
+    toast.success(t("Wallet address copied"));
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }
@@ -79,17 +81,17 @@ export function ProfileHeader({
                   {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
                 </button>
               ) : (
-                <span>No wallet connected</span>
+                <span>{t("No wallet connected")}</span>
               )}
               <span className="text-border">&middot;</span>
-              <span>Member since {formatDate(createdAt)}</span>
+              <span>{t("Member since {date}", { date: formatDate(createdAt) })}</span>
             </div>
           </div>
         </div>
 
         <Separator className="hidden sm:block" orientation="vertical" />
 
-        <Stat label="SOL Balance" value={solBalance != null ? `${solBalance.toFixed(4)} SOL` : "—"} />
+        <Stat label={t("SOL Balance")} value={solBalance != null ? `${solBalance.toFixed(4)} SOL` : "—"} />
 
         <ShippingInfoDialog shippingAddress={shippingAddress} phone={phone} />
       </div>

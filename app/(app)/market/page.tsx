@@ -8,9 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { getMarketOverview, getRankings, RANKING_TIERS, type MarketUpdate, type RankingTier } from "@/lib/queries";
 import { formatDateTime, formatGrade, formatThb } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { getT } from "@/lib/i18n/server";
+import type { Translate } from "@/lib/i18n/translate";
 
-function gradeText(a: { gradingCompany: string; grade: number | null; isBlackLabel: boolean }) {
-  if (a.gradingCompany === "RAW") return "Raw";
+function gradeText(a: { gradingCompany: string; grade: number | null; isBlackLabel: boolean }, t: Translate) {
+  if (a.gradingCompany === "RAW") return t("Raw");
   return `${a.gradingCompany} ${formatGrade(a.grade)}${a.isBlackLabel ? " · Black Label" : ""}`;
 }
 
@@ -19,7 +21,7 @@ export default async function MarketPage({ searchParams }: { searchParams: Promi
   const tier: RankingTier = RANKING_TIERS.find((t) => t.key === tierParam)?.key ?? "grade-10";
   const tierInfo = RANKING_TIERS.find((t) => t.key === tier)!;
 
-  const [overview, rankings] = await Promise.all([getMarketOverview(), getRankings(tier)]);
+  const [overview, rankings, t] = await Promise.all([getMarketOverview(), getRankings(tier), getT()]);
 
   const stats = [
     { label: "Live listings", value: overview.activeListings.toLocaleString() },
@@ -32,17 +34,16 @@ export default async function MarketPage({ searchParams }: { searchParams: Promi
   return (
     <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6">
       <div className="mb-8 flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold">Market</h1>
+        <h1 className="text-2xl font-semibold">{t("Market")}</h1>
         <p className="text-muted-foreground max-w-2xl text-sm">
-          Rankings, prices and the latest moves across CardMart. Every number comes from real listings and completed
-          escrow sales. Medians are used so one unusual sale can&apos;t skew them.
+          {t("Rankings, prices and the latest moves across CardMart. Every number comes from real listings and completed escrow sales. Medians are used so one unusual sale can't skew them.")}
         </p>
       </div>
 
       <div className="mb-10 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 [&>*:last-child]:col-span-2 sm:[&>*:last-child]:col-span-1">
         {stats.map((s) => (
           <div key={s.label} className="bg-card flex flex-col gap-1 rounded-xl border p-4">
-            <span className="text-muted-foreground text-xs">{s.label}</span>
+            <span className="text-muted-foreground text-xs">{t(s.label)}</span>
             <span className="text-lg leading-tight font-bold tabular-nums">{s.value}</span>
           </div>
         ))}
@@ -54,32 +55,32 @@ export default async function MarketPage({ searchParams }: { searchParams: Promi
             <div className="bg-foreground text-background flex size-7 items-center justify-center rounded-lg">
               <Crown className="size-3.5" />
             </div>
-            <h2 className="text-lg font-semibold">Rankings</h2>
+            <h2 className="text-lg font-semibold">{t("Rankings")}</h2>
           </div>
 
           <div className="bg-muted scrollbar-none flex w-fit max-w-full overflow-x-auto rounded-lg p-1">
-            {RANKING_TIERS.map((t) => (
+            {RANKING_TIERS.map((item) => (
               <Link
-                key={t.key}
-                href={`/market?tier=${t.key}`}
+                key={item.key}
+                href={`/market?tier=${item.key}`}
                 scroll={false}
                 className={cn(
                   "rounded-md px-3 py-1 text-sm font-medium whitespace-nowrap transition-colors",
-                  t.key === tier ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                  item.key === tier ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                {t.label}
+                {t(item.label)}
               </Link>
             ))}
           </div>
           <p className="text-muted-foreground text-xs">
-            {tierInfo.description} Ranked by value: the asking price if listed, otherwise the last real sale.
+            {t(tierInfo.description)} {t("Ranked by value: the asking price if listed, otherwise the last real sale.")}
           </p>
 
           {rankings.length === 0 ? (
             <div className="text-muted-foreground flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed py-16 text-center">
               <BarChart3 className="size-6" />
-              <p className="text-sm">No {tierInfo.label} cards with a price yet.</p>
+              <p className="text-sm">{t("No {tier} cards with a price yet.", { tier: t(tierInfo.label) })}</p>
             </div>
           ) : (
             <ol className="flex flex-col gap-2">
@@ -115,7 +116,7 @@ export default async function MarketPage({ searchParams }: { searchParams: Promi
                       <span className="truncate text-sm font-semibold">{r.name}</span>
                       <span className="text-muted-foreground flex min-w-0 items-center gap-2 text-xs">
                         <span className="truncate">
-                          {gradeText(r)} · {r.owner.name ?? r.owner.handle ?? "Collector"}
+                          {gradeText(r, t)} · {r.owner.name ?? r.owner.handle ?? t("Collector")}
                         </span>
                         <VerifiedBadge status={r.owner.kycStatus} className="hidden sm:inline-flex" />
                       </span>
@@ -129,7 +130,7 @@ export default async function MarketPage({ searchParams }: { searchParams: Promi
                             {r.change30dPct.toFixed(0)}% 30d
                           </span>
                         )}
-                        {r.valueSource === "ask" ? "asking" : "last sale"}
+                        {r.valueSource === "ask" ? t("asking") : t("last sale")}
                       </span>
                     </div>
                   </Link>
@@ -144,21 +145,21 @@ export default async function MarketPage({ searchParams }: { searchParams: Promi
             <div className="bg-foreground text-background flex size-7 items-center justify-center rounded-lg">
               <Newspaper className="size-3.5" />
             </div>
-            <h2 className="text-lg font-semibold">Latest updates</h2>
+            <h2 className="text-lg font-semibold">{t("Latest updates")}</h2>
           </div>
           {overview.updates.length === 0 ? (
             <p className="text-muted-foreground rounded-xl border border-dashed p-6 text-center text-sm">
-              No market activity yet.
+              {t("No market activity yet.")}
             </p>
           ) : (
             <ul className="bg-card divide-y rounded-xl border">
               {overview.updates.map((u, i) => (
-                <UpdateRow key={`${u.kind}-${u.asset.id}-${i}`} update={u} />
+                <UpdateRow key={`${u.kind}-${u.asset.id}-${i}`} update={u} t={t} />
               ))}
             </ul>
           )}
           <Link href="/leaderboard" className="text-muted-foreground hover:text-foreground text-xs underline underline-offset-2">
-            See every card&apos;s gains and losses on the Leaderboard
+            {t("See every card's gains and losses on the Leaderboard")}
           </Link>
         </section>
       </div>
@@ -173,7 +174,7 @@ const UPDATE_META = {
   sold: { icon: CircleDollarSign, label: "Sold", className: "text-foreground" },
 } as const;
 
-function UpdateRow({ update }: { update: MarketUpdate }) {
+function UpdateRow({ update, t }: { update: MarketUpdate; t: Translate }) {
   const meta = UPDATE_META[update.kind];
   const Icon = meta.icon;
   return (
@@ -184,14 +185,14 @@ function UpdateRow({ update }: { update: MarketUpdate }) {
           <span className="truncate text-sm font-medium">{update.asset.name}</span>
           <span className="text-muted-foreground text-xs">
             <Badge variant="outline" className="mr-1.5 px-1.5 py-0 text-[10px]">
-              {meta.label}
+              {t(meta.label)}
             </Badge>
             {update.previousThb != null && update.kind !== "listed"
               ? `${formatThb(update.previousThb)} → ${formatThb(update.priceThb)}`
               : formatThb(update.priceThb)}
           </span>
           <span className="text-muted-foreground text-[11px]">
-            {gradeText(update.asset)} · {formatDateTime(update.at)}
+            {gradeText(update.asset, t)} · {formatDateTime(update.at)}
           </span>
         </div>
       </Link>

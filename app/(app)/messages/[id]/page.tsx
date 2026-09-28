@@ -4,12 +4,13 @@ import { ArrowLeft } from "lucide-react";
 
 import { getConversation } from "@/lib/queries";
 import { getCurrentUser } from "@/lib/session";
+import { getT } from "@/lib/i18n/server";
 import { MessageThread } from "@/components/messages/message-thread";
 import { displayNameOf, UserAvatar } from "@/components/messages/user-avatar";
 
 export default async function ConversationPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const user = await getCurrentUser();
+  const [user, t] = await Promise.all([getCurrentUser(), getT()]);
   const conversation = await getConversation(id, user.id);
   if (!conversation) notFound();
 
@@ -18,7 +19,7 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 py-6 sm:px-6">
       <div className="mb-4 flex items-center gap-3">
-        <Link href="/messages" className="text-muted-foreground hover:text-foreground" aria-label="Back to messages">
+        <Link href="/messages" className="text-muted-foreground hover:text-foreground" aria-label={t("Back to messages")}>
           <ArrowLeft className="size-5" />
         </Link>
         <Link href={`/store/${otherUser.id}`} className="flex min-w-0 items-center gap-3 hover:underline">

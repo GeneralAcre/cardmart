@@ -23,14 +23,16 @@ import {
   InspectionDialog,
   type InboundPackageWithRelations,
 } from "@/components/warehouse/inspection-dialog";
+import { useT } from "@/components/landing/language-provider";
+import type { Translate } from "@/lib/i18n/translate";
 
-function reportBulkResult(result: BulkActionResult, verb: string) {
+function reportBulkResult(result: BulkActionResult, verb: "Approved" | "Rejected", t: Translate) {
   if (result.succeeded.length > 0) {
-    toast.success(`${verb} ${result.succeeded.length} item${result.succeeded.length === 1 ? "" : "s"}.`);
+    toast.success(t(verb === "Approved" ? "Approved {count} item(s)." : "Rejected {count} item(s).", { count: result.succeeded.length }));
   }
   if (result.skipped.length > 0) {
     toast.error(
-      `Skipped ${result.skipped.length}: ${result.skipped
+      `${t("Skipped {count}:", { count: result.skipped.length })} ${result.skipped
         .slice(0, 3)
         .map((s) => `${s.itemName} (${s.reason})`)
         .join("; ")}${result.skipped.length > 3 ? "…" : ""}`,
@@ -44,12 +46,13 @@ export function InboundTable({ packages }: { packages: InboundPackageWithRelatio
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkAction, setBulkAction] = useState<"approve" | "reject" | null>(null);
   const [pending, startTransition] = useTransition();
+  const t = useT();
 
   if (packages.length === 0) {
     return (
       <div className="text-muted-foreground flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed py-24 text-center">
         <CheckCircle2 className="size-8" />
-        <p className="text-sm">Inbound queue is empty. Nothing awaiting inspection.</p>
+        <p className="text-sm">{t("Inbound queue is empty. Nothing awaiting inspection.")}</p>
       </div>
     );
   }
@@ -76,11 +79,11 @@ export function InboundTable({ packages }: { packages: InboundPackageWithRelatio
       try {
         const result =
           kind === "approve" ? await bulkApproveInboundPackages(ids) : await bulkRejectInboundPackages(ids);
-        reportBulkResult(result, kind === "approve" ? "Approved" : "Rejected");
+        reportBulkResult(result, kind === "approve" ? "Approved" : "Rejected", t);
         setSelected(new Set());
         router.refresh();
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Bulk action failed.");
+        toast.error(err instanceof Error ? err.message : t("Bulk action failed."));
       } finally {
         setBulkAction(null);
       }
@@ -91,22 +94,22 @@ export function InboundTable({ packages }: { packages: InboundPackageWithRelatio
     <div className="flex flex-col gap-3">
       {selected.size > 0 && (
         <div className="bg-card flex flex-wrap items-center justify-between gap-2 rounded-xl border p-3">
-          <span className="text-sm font-medium">{selected.size} selected</span>
+          <span className="text-sm font-medium">{t("{count} selected", { count: selected.size })}</span>
           <div className="flex gap-2">
             <Button size="sm" variant="outline" onClick={() => runBulk("reject")} disabled={pending}>
               {pending && bulkAction === "reject" ? <Loader2 className="animate-spin" /> : <XOctagon />}
-              Reject Selected
+              {t("Reject Selected")}
             </Button>
             <Button size="sm" onClick={() => runBulk("approve")} disabled={pending}>
               {pending && bulkAction === "approve" ? <Loader2 className="animate-spin" /> : <ShieldCheck />}
-              Approve Selected
+              {t("Approve Selected")}
             </Button>
           </div>
         </div>
       )}
       {selected.size > 0 && (
         <p className="text-muted-foreground -mt-1 text-xs">
-          &ldquo;Approve Selected&rdquo; only clears items with no data mismatch — anything flagged still needs individual review.
+          {t("“Approve Selected” only clears items with no data mismatch — anything flagged still needs individual review.")}
         </p>
       )}
 
@@ -115,13 +118,13 @@ export function InboundTable({ packages }: { packages: InboundPackageWithRelatio
           <TableHeader>
             <TableRow>
               <TableHead className="w-10">
-                <Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label="Select all" />
+                <Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label={t("Select all")} />
               </TableHead>
-              <TableHead>Item</TableHead>
-              <TableHead>Buyer / Seller</TableHead>
-              <TableHead>Amount</TableHead>
-              <TableHead>Arrived</TableHead>
-              <TableHead>Data Check</TableHead>
+              <TableHead>{t("Item")}</TableHead>
+              <TableHead>{t("Buyer / Seller")}</TableHead>
+              <TableHead>{t("Amount")}</TableHead>
+              <TableHead>{t("Arrived")}</TableHead>
+              <TableHead>{t("Data Check")}</TableHead>
               <TableHead />
             </TableRow>
           </TableHeader>
@@ -137,7 +140,7 @@ export function InboundTable({ packages }: { packages: InboundPackageWithRelatio
                     <Checkbox
                       checked={selected.has(pkg.id)}
                       onCheckedChange={() => toggleOne(pkg.id)}
-                      aria-label={`Select ${pkg.asset.name}`}
+                      aria-label={t("Select {name}", { name: pkg.asset.name })}
                     />
                   </TableCell>
                   <TableCell>
@@ -158,8 +161,8 @@ export function InboundTable({ packages }: { packages: InboundPackageWithRelatio
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col text-xs">
-                      <span>Buyer: {pkg.escrowTx.buyer.name}</span>
-                      <span className="text-muted-foreground">Seller: {pkg.escrowTx.seller.name}</span>
+                      <span>{t("Buyer:")} {pkg.escrowTx.buyer.name}</span>
+                      <span className="text-muted-foreground">{t("Seller:")} {pkg.escrowTx.seller.name}</span>
                     </div>
                   </TableCell>
                   <TableCell>{formatThb(pkg.escrowTx.amountThb)}</TableCell>
@@ -169,17 +172,17 @@ export function InboundTable({ packages }: { packages: InboundPackageWithRelatio
                   <TableCell>
                     {allMatch ? (
                       <Badge className="border-0 bg-success/15 text-success">
-                        <CheckCircle2 /> Match
+                        <CheckCircle2 /> {t("Match")}
                       </Badge>
                     ) : (
                       <Badge className="border-0 bg-destructive/15 text-destructive">
-                        <AlertTriangle /> Mismatch
+                        <AlertTriangle /> {t("Mismatch")}
                       </Badge>
                     )}
                   </TableCell>
                   <TableCell>
                     <Button size="sm" variant="outline" onClick={() => setActive(pkg)}>
-                      <Search /> Inspect
+                      <Search /> {t("Inspect")}
                     </Button>
                   </TableCell>
                 </TableRow>

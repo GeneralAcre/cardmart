@@ -9,6 +9,7 @@ import type { AssetCategory, GradingCompany } from "@prisma/client";
 import { CardArt } from "@/components/asset/card-art";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/landing/language-provider";
 
 interface Photo {
   id: string;
@@ -53,6 +54,7 @@ export function ItemGallery({
   // stylized fallback/twin.
   const [selectedId, setSelectedId] = useState<string>(photos[0]?.id ?? "twin");
   const [zoomOpen, setZoomOpen] = useState(false);
+  const t = useT();
   const selectedPhoto = photos.find((p) => p.id === selectedId);
 
   return (
@@ -139,16 +141,16 @@ export function ItemGallery({
 
       <p className="text-muted-foreground text-center text-xs">
         {selectedPhoto?.reference
-          ? "Official image of this card from TCGplayer's catalogue, for reference — not a photo of this copy."
+          ? t("Official image of this card from TCGplayer's catalogue, for reference — not a photo of this copy.")
           : selectedPhoto
-            ? `${selectedPhoto.viewLabel} — live camera capture, click to zoom`
-            : "Generated certificate artwork — click to zoom"}
+            ? `${t(selectedPhoto.viewLabel)} — ${t("live camera capture, click to zoom")}`
+            : t("Generated certificate artwork — click to zoom")}
       </p>
 
       <Dialog open={zoomOpen} onOpenChange={setZoomOpen}>
         <DialogContent className="max-w-md">
           <DialogTitle className="sr-only">
-            Zoomed {selectedPhoto ? selectedPhoto.viewLabel : "certificate artwork"}
+            {t("Zoomed {what}", { what: selectedPhoto ? t(selectedPhoto.viewLabel) : t("certificate artwork") })}
           </DialogTitle>
           {selectedPhoto ? (
             <div className="relative aspect-square w-full">

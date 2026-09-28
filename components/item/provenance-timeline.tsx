@@ -22,6 +22,7 @@ import type { ProvenanceType } from "@prisma/client";
 
 import { PROVENANCE_LABELS } from "@/lib/labels";
 import { formatDateTime } from "@/lib/format";
+import { getT } from "@/lib/i18n/server";
 
 const PROVENANCE_ICONS: Record<ProvenanceType, LucideIcon> = {
   MINTED_DIGITAL_TWIN: Sparkles,
@@ -58,7 +59,8 @@ function explorerTxUrl(signature: string) {
   return `https://explorer.solana.com/tx/${signature}?cluster=devnet`;
 }
 
-export function ProvenanceTimeline({ events }: { events: Entry[] }) {
+export async function ProvenanceTimeline({ events }: { events: Entry[] }) {
+  const t = await getT();
   return (
     <ol className="flex flex-col gap-0">
       {events.map((event, i) => {
@@ -73,7 +75,7 @@ export function ProvenanceTimeline({ events }: { events: Entry[] }) {
             </div>
             <div className="flex flex-1 flex-col gap-1 pt-1">
               <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-                <span className="text-base font-semibold">{PROVENANCE_LABELS[event.type]}</span>
+                <span className="text-base font-semibold">{t(PROVENANCE_LABELS[event.type])}</span>
                 <span className="text-muted-foreground text-xs">{formatDateTime(event.createdAt)}</span>
               </div>
               <p className="text-muted-foreground text-sm">{event.note}</p>
@@ -86,7 +88,7 @@ export function ProvenanceTimeline({ events }: { events: Entry[] }) {
                     rel="noreferrer"
                     className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs underline underline-offset-2"
                   >
-                    View on Solana Explorer <ExternalLink className="size-3" />
+                    {t("View on Solana Explorer")} <ExternalLink className="size-3" />
                   </a>
                 )}
               </div>

@@ -35,6 +35,7 @@ import { CARD_GAME_LABELS } from "@/lib/labels";
 import type { AssetSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { displayImage } from "@/lib/card-image";
+import { useT } from "@/components/landing/language-provider";
 
 export function PortfolioItemCard({
   asset,
@@ -54,6 +55,7 @@ export function PortfolioItemCard({
   const [auctionDurationDays, setAuctionDurationDays] = useState("3");
   const [auctionStartTime, setAuctionStartTime] = useState("");
   const [pending, startTransition] = useTransition();
+  const t = useT();
 
   // A real Approve (delegating the escrow authority as a 1-token spender)
   // whenever this asset has a real digital-twin mint — this is what
@@ -93,11 +95,11 @@ export function PortfolioItemCard({
       try {
         const tx = await signApprove(`CardMart relist: ${asset.name} | ${Number(price)} THB`);
         await vaultRelist(asset.id, Number(price), tx);
-        toast.success("Relisted for instant sale.");
+        toast.success(t("Relisted for instant sale."));
         setRelistOpen(false);
         router.refresh();
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Could not relist item.");
+        toast.error(err instanceof Error ? err.message : t("Could not relist item."));
       }
     });
   }
@@ -120,11 +122,11 @@ export function PortfolioItemCard({
           }
         }
         await vaultRedeem(asset.id, burnTx);
-        toast.success("Redeemed — digital twin burned and the card is on its way to you.");
+        toast.success(t("Redeemed — digital twin burned and the card is on its way to you."));
         setRedeemOpen(false);
         router.refresh();
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Could not redeem item.");
+        toast.error(err instanceof Error ? err.message : t("Could not redeem item."));
       }
     });
   }
@@ -134,11 +136,11 @@ export function PortfolioItemCard({
       try {
         const tx = await signApprove(`CardMart ${asset.forSale ? "reprice" : "list"}: ${asset.name} | ${Number(price)} THB`);
         await updateListingPrice(asset.id, Number(price), tx);
-        toast.success(asset.forSale ? "Price updated." : "Listed for sale.");
+        toast.success(asset.forSale ? t("Price updated.") : t("Listed for sale."));
         setPriceEditOpen(false);
         router.refresh();
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Could not update listing.");
+        toast.error(err instanceof Error ? err.message : t("Could not update listing."));
       }
     });
   }
@@ -148,10 +150,10 @@ export function PortfolioItemCard({
       try {
         const tx = await signRevoke(`CardMart delist: ${asset.name}`);
         await delistAsset(asset.id, tx);
-        toast.success("Delisted from the marketplace.");
+        toast.success(t("Delisted from the marketplace."));
         router.refresh();
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Could not delist item.");
+        toast.error(err instanceof Error ? err.message : t("Could not delist item."));
       }
     });
   }
@@ -165,11 +167,11 @@ export function PortfolioItemCard({
           Number(auctionDurationDays),
           auctionStartTime ? new Date(auctionStartTime).toISOString() : undefined,
         );
-        toast.success(auctionStartTime ? "Auction scheduled." : "Auction started.");
+        toast.success(auctionStartTime ? t("Auction scheduled.") : t("Auction started."));
         setAuctionOpen(false);
         router.refresh();
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Could not start auction.");
+        toast.error(err instanceof Error ? err.message : t("Could not start auction."));
       }
     });
   }
@@ -178,20 +180,19 @@ export function PortfolioItemCard({
     <Dialog open={auctionOpen} onOpenChange={setAuctionOpen}>
       <DialogTrigger asChild>
         <Button size="sm" variant="outline" className="w-full">
-          <Gavel /> Start Auction
+          <Gavel /> {t("Start Auction")}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Start an Auction</DialogTitle>
+          <DialogTitle>{t("Start an Auction")}</DialogTitle>
           <DialogDescription>
-            Replaces any fixed-price listing on this item. Bidding is separate from the
-            marketplace — see /auctions once it&apos;s live.
+            {t("Replaces any fixed-price listing on this item. Bidding is separate from the marketplace — see /auctions once it's live.")}
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="auction-start-price">Starting Price (THB)</Label>
+            <Label htmlFor="auction-start-price">{t("Starting Price (THB)")}</Label>
             <Input
               id="auction-start-price"
               type="number"
@@ -201,40 +202,40 @@ export function PortfolioItemCard({
             />
           </div>
           <div className="flex flex-col gap-2">
-            <Label>Duration</Label>
+            <Label>{t("Duration")}</Label>
             <Select value={auctionDurationDays} onValueChange={setAuctionDurationDays}>
               <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="1">1 day</SelectItem>
-                <SelectItem value="3">3 days</SelectItem>
-                <SelectItem value="7">7 days</SelectItem>
-                <SelectItem value="14">14 days</SelectItem>
+                <SelectItem value="1">{t("1 day")}</SelectItem>
+                <SelectItem value="3">{t("{days} days", { days: 3 })}</SelectItem>
+                <SelectItem value="7">{t("{days} days", { days: 7 })}</SelectItem>
+                <SelectItem value="14">{t("{days} days", { days: 14 })}</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="auction-start-time">Start time</Label>
+            <Label htmlFor="auction-start-time">{t("Start time")}</Label>
             <Input
               id="auction-start-time"
               type="datetime-local"
               value={auctionStartTime}
               onChange={(e) => setAuctionStartTime(e.target.value)}
             />
-            <p className="text-muted-foreground text-xs">Leave blank to start immediately. You can schedule up to 30 days ahead.</p>
+            <p className="text-muted-foreground text-xs">{t("Leave blank to start immediately. You can schedule up to 30 days ahead.")}</p>
           </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setAuctionOpen(false)} disabled={pending}>
-            Cancel
+            {t("Cancel")}
           </Button>
           <Button
             onClick={handleStartAuction}
             disabled={pending || !auctionStartPrice || Number(auctionStartPrice) <= 0}
           >
             {pending && <Loader2 className="animate-spin" />}
-            Start Auction
+            {t("Start Auction")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -281,7 +282,7 @@ export function PortfolioItemCard({
         )}
       </Link>
       <div className="flex flex-col gap-1">
-        <span className="text-muted-foreground text-xs">{CARD_GAME_LABELS[asset.game]}</span>
+        <span className="text-muted-foreground text-xs">{t(CARD_GAME_LABELS[asset.game])}</span>
         <Link href={`/item/${asset.id}`} className="line-clamp-1 text-sm font-semibold hover:underline">
           {asset.name}
         </Link>
@@ -297,17 +298,17 @@ export function PortfolioItemCard({
             asset.priceDirection === "down" && "text-destructive",
           )}
         >
-          Listed at {formatThb(asset.priceThb!)}
+          {t("Listed at {price}", { price: formatThb(asset.priceThb!) })}
         </Badge>
       )}
 
       {asset.marketStatus === "IN_AUCTION" ? (
         <div className="flex flex-col gap-1.5 pt-1">
           <Badge variant="secondary" className="w-fit">
-            <Gavel className="size-3" /> Up for Auction
+            <Gavel className="size-3" /> {t("Up for Auction")}
           </Badge>
           <Link href={`/item/${asset.id}`} className="text-muted-foreground text-xs underline underline-offset-2">
-            View auction &amp; manage bids
+            {t("View auction & manage bids")}
           </Link>
         </div>
       ) : asset.vaulted ? (
@@ -316,19 +317,18 @@ export function PortfolioItemCard({
             <Dialog open={relistOpen} onOpenChange={setRelistOpen}>
               <DialogTrigger asChild>
                 <Button size="sm" variant="secondary" className="w-full">
-                  <Repeat /> Relist
+                  <Repeat /> {t("Relist")}
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Relist for Instant Sale</DialogTitle>
+                  <DialogTitle>{t("Relist for Instant Sale")}</DialogTitle>
                   <DialogDescription>
-                    This item stays in the vault. A buyer can purchase it with
-                    zero shipping — ownership transfers digitally and instantly.
+                    {t("This item stays in the vault. A buyer can purchase it with zero shipping — ownership transfers digitally and instantly.")}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="relist-price">Price (THB)</Label>
+                  <Label htmlFor="relist-price">{t("Price (THB)")}</Label>
                   <Input
                     id="relist-price"
                     type="number"
@@ -339,11 +339,11 @@ export function PortfolioItemCard({
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setRelistOpen(false)} disabled={pending}>
-                    Cancel
+                    {t("Cancel")}
                   </Button>
                   <Button onClick={handleRelist} disabled={pending || !price || Number(price) <= 0}>
                     {pending && <Loader2 className="animate-spin" />}
-                    Confirm Relist
+                    {t("Confirm Relist")}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -352,29 +352,28 @@ export function PortfolioItemCard({
             <Dialog open={redeemOpen} onOpenChange={setRedeemOpen}>
               <DialogTrigger asChild>
                 <Button size="sm" variant="outline" className="w-full">
-                  <Truck /> Redeem
+                  <Truck /> {t("Redeem")}
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Redeem Physical Item</DialogTitle>
+                  <DialogTitle>{t("Redeem Physical Item")}</DialogTitle>
                   <DialogDescription>
-                    The warehouse ships the physical card to your address on
-                    file, and its digital twin is burned for good.
+                    {t("The warehouse ships the physical card to your address on file, and its digital twin is burned for good.")}
                   </DialogDescription>
                 </DialogHeader>
                 <ul className="text-muted-foreground flex list-disc flex-col gap-1 pl-5 text-sm">
-                  <li>You&apos;ll sign one wallet transaction that burns the token.</li>
-                  <li>The card can&apos;t be listed, auctioned or swapped on CardMart afterwards.</li>
-                  <li>Any open swap proposals for it are closed and refunded.</li>
+                  <li>{t("You'll sign one wallet transaction that burns the token.")}</li>
+                  <li>{t("The card can't be listed, auctioned or swapped on CardMart afterwards.")}</li>
+                  <li>{t("Any open swap proposals for it are closed and refunded.")}</li>
                 </ul>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setRedeemOpen(false)} disabled={pending}>
-                    Cancel
+                    {t("Cancel")}
                   </Button>
                   <Button onClick={handleRedeem} disabled={pending}>
                     {pending ? <Loader2 className="animate-spin" /> : <Flame />}
-                    Burn &amp; Redeem
+                    {t("Burn & Redeem")}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -383,27 +382,27 @@ export function PortfolioItemCard({
           {startAuctionButton}
         </div>
       ) : asset.marketStatus === "IN_ESCROW" ? (
-        <p className="text-muted-foreground pt-1 text-xs">Locked in an active sale.</p>
+        <p className="text-muted-foreground pt-1 text-xs">{t("Locked in an active sale.")}</p>
       ) : (
         <div className="flex flex-col gap-2 pt-1">
           <div className="grid grid-cols-1 gap-2">
             <Dialog open={priceEditOpen} onOpenChange={setPriceEditOpen}>
               <DialogTrigger asChild>
                 <Button size="sm" variant="secondary" className="w-full">
-                  <Tag /> {asset.forSale ? "Edit Price" : "List for Sale"}
+                  <Tag /> {asset.forSale ? t("Edit Price") : t("List for Sale")}
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>{asset.forSale ? "Update Listing Price" : "List for Sale"}</DialogTitle>
+                  <DialogTitle>{asset.forSale ? t("Update Listing Price") : t("List for Sale")}</DialogTitle>
                   <DialogDescription>
                     {asset.forSale
-                      ? "Changes the price buyers see on the marketplace right away."
-                      : "Puts this item back on the marketplace at the price you set."}
+                      ? t("Changes the price buyers see on the marketplace right away.")
+                      : t("Puts this item back on the marketplace at the price you set.")}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="price-edit">Price (THB)</Label>
+                  <Label htmlFor="price-edit">{t("Price (THB)")}</Label>
                   <Input
                     id="price-edit"
                     type="number"
@@ -414,11 +413,11 @@ export function PortfolioItemCard({
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setPriceEditOpen(false)} disabled={pending}>
-                    Cancel
+                    {t("Cancel")}
                   </Button>
                   <Button onClick={handleUpdatePrice} disabled={pending || !price || Number(price) <= 0}>
                     {pending && <Loader2 className="animate-spin" />}
-                    {asset.forSale ? "Update Price" : "List for Sale"}
+                    {asset.forSale ? t("Update Price") : t("List for Sale")}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -427,7 +426,7 @@ export function PortfolioItemCard({
             {asset.forSale && (
               <Button size="sm" variant="outline" className="w-full" onClick={handleDelist} disabled={pending}>
                 {pending ? <Loader2 className="animate-spin" /> : <TagX />}
-                Delist
+                {t("Delist")}
               </Button>
             )}
           </div>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/landing/language-provider";
 import { isNavLinkActive, navLinksFor } from "@/lib/nav-links";
 
 // Mobile navigation lives in MobileBottomNav (a fixed footer bar) instead of
@@ -11,6 +12,7 @@ import { isNavLinkActive, navLinksFor } from "@/lib/nav-links";
 export function NavLinks({ isAdmin = false }: { isAdmin?: boolean }) {
   const pathname = usePathname();
   const links = navLinksFor(isAdmin);
+  const t = useT();
 
   return (
     <nav className="hidden items-center gap-1 sm:flex">
@@ -25,7 +27,7 @@ export function NavLinks({ isAdmin = false }: { isAdmin?: boolean }) {
               : "text-muted-foreground hover:text-foreground hover:bg-accent/50",
           )}
         >
-          {l.label}
+          {t(l.label)}
         </Link>
       ))}
     </nav>

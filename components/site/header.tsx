@@ -2,6 +2,7 @@ import Link from "next/link";
 import { BookOpen, MessageCircle } from "lucide-react";
 
 import { getCurrentUser } from "@/lib/session";
+import { getT } from "@/lib/i18n/server";
 import { getMyNotifications, getUnreadMessageCount, getUnreadNotificationCount } from "@/lib/queries";
 import { WalletButton } from "@/components/site/wallet-button";
 import { NavLinks } from "@/components/site/nav-links";
@@ -22,13 +23,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export async function SiteHeader() {
-  const user = await getCurrentUser();
+  const [user, t] = await Promise.all([getCurrentUser(), getT()]);
   const [notifications, unreadCount, unreadMessageCount] = await Promise.all([
     getMyNotifications(user.id),
     getUnreadNotificationCount(user.id),
     getUnreadMessageCount(user.id),
   ]);
-  const displayName = user.name ?? user.handle ?? "Collector";
+  const displayName = user.name ?? user.handle ?? t("Collector");
   const initials = displayName
     .split(" ")
     .map((n) => n[0])
@@ -55,7 +56,7 @@ export async function SiteHeader() {
                     {unreadMessageCount > 9 ? "9+" : unreadMessageCount}
                   </Badge>
                 )}
-                <span className="sr-only">Messages</span>
+                <span className="sr-only">{t("Messages")}</span>
               </Link>
             </Button>
             <NotificationBell
@@ -88,7 +89,7 @@ export async function SiteHeader() {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                   <Link href="/guide">
-                    <BookOpen /> Getting started guide
+                    <BookOpen /> {t("Getting started guide")}
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />

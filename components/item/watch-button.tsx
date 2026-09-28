@@ -6,19 +6,21 @@ import { Bookmark, BookmarkCheck, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { toggleWatchlist } from "@/lib/actions";
+import { useT } from "@/components/landing/language-provider";
 
 export function WatchButton({ assetId, initialWatching }: { assetId: string; initialWatching: boolean }) {
   const [watching, setWatching] = useState(initialWatching);
   const [pending, startTransition] = useTransition();
+  const t = useT();
 
   function handleClick() {
     startTransition(async () => {
       try {
         const res = await toggleWatchlist(assetId);
         setWatching(res.watching);
-        toast.success(res.watching ? "Added to watchlist" : "Removed from watchlist");
+        toast.success(res.watching ? t("Added to watchlist") : t("Removed from watchlist"));
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Could not update watchlist.");
+        toast.error(err instanceof Error ? err.message : t("Could not update watchlist."));
       }
     });
   }
@@ -32,7 +34,7 @@ export function WatchButton({ assetId, initialWatching }: { assetId: string; ini
       ) : (
         <Bookmark />
       )}
-      {watching ? "Watching" : "Watch"}
+      {watching ? t("Watching") : t("Watch")}
     </Button>
   );
 }

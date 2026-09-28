@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Bookmark, Flame, PackageOpen } from "lucide-react";
 
 import {
+  getMyGradingSubmissions,
   getMyRedeemedAssets,
   getMyTradeOffers,
   getMyWantedCards,
@@ -15,6 +16,7 @@ import {
 import { prisma } from "@/lib/prisma";
 import { isKycPhotoStorageConfigured } from "@/lib/kyc-storage";
 import { getCurrentUser } from "@/lib/session";
+import { getT } from "@/lib/i18n/server";
 import { getDevnetSolBalance } from "@/lib/solana";
 import { getEscrowAuthorityAddress } from "@/lib/web3/escrow-server";
 import { ListingCard } from "@/components/marketplace/listing-card";
@@ -24,15 +26,16 @@ import { ProfileHeader } from "@/components/portfolio/profile-header";
 import { IdentityCard } from "@/components/portfolio/identity-card";
 import { WantedCardsPanel } from "@/components/wanted/wanted-cards-panel";
 import { TradesPanel } from "@/components/trade/trades-panel";
+import { GradingSubmissionsPanel } from "@/components/portfolio/grading-submissions-panel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatDate, formatGrade } from "@/lib/format";
 
-const TABS = ["all", "hand", "vault", "watchlist", "offers", "trades", "alerts"] as const;
+const TABS = ["all", "hand", "vault", "watchlist", "offers", "trades", "alerts", "grading"] as const;
 
 export default async function PortfolioPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const { tab } = await searchParams;
   const defaultTab = TABS.find((t) => t === tab) ?? "all";
-  const user = await getCurrentUser();
+  const [user, t] = await Promise.all([getCurrentUser(), getT()]);
   const walletAddress = user.walletAddress ?? user.walletMock;
   const [
     assets,
@@ -47,6 +50,7 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
     redeemed,
     rating,
     completedSales,
+    gradingSubmissions,
   ] = await Promise.all([
     getVaultAssets(user.id),
     getDevnetSolBalance(user.walletAddress), // real balance only for real (Privy) wallets, not the mock demo ones
@@ -60,7 +64,9 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
     getMyRedeemedAssets(user.id),
     getSellerRating(user.id),
     prisma.escrowTransaction.count({ where: { sellerId: user.id, status: "RELEASED" } }),
+    getMyGradingSubmissions(user.id),
   ]);
+  const gradingInProgress = gradingSubmissions.filter((s) => s.status !== "GRADED" && s.status !== "REJECTED").length;
   const pendingTradesForMe = trades.received.filter((t) => t.status === "PENDING").length;
 
   const inHand = assets.filter((a) => !a.vaulted);
@@ -70,7 +76,7 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
     <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6">
       <div className="mb-8">
         <ProfileHeader
-          name={user.name ?? user.handle ?? "Collector"}
+          name={user.name ?? user.handle ?? t("Collector")}
           handle={user.handle}
           image={user.image}
           walletAddress={walletAddress}
@@ -98,19 +104,20 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
 
       <Tabs defaultValue={defaultTab}>
         <TabsList>
-          <TabsTrigger value="all">All ({assets.length})</TabsTrigger>
+          <TabsTrigger value="all">{t("All")} ({assets.length})</TabsTrigger>
           <TabsTrigger value="hand">
-            <span className="sm:hidden">In Hand ({inHand.length})</span>
-            <span className="hidden sm:inline">Physical in My Hands ({inHand.length})</span>
+            <span className="sm:hidden">{t("In Hand")} ({inHand.length})</span>
+            <span className="hidden sm:inline">{t("Physical in My Hands")} ({inHand.length})</span>
           </TabsTrigger>
           <TabsTrigger value="vault">
-            <span className="sm:hidden">In Vault ({inVault.length})</span>
-            <span className="hidden sm:inline">Physical in Warehouse Vault ({inVault.length})</span>
+            <span className="sm:hidden">{t("In Vault")} ({inVault.length})</span>
+            <span className="hidden sm:inline">{t("Physical in Warehouse Vault")} ({inVault.length})</span>
           </TabsTrigger>
-          <TabsTrigger value="watchlist">Watchlist ({watchlist.length})</TabsTrigger>
-          <TabsTrigger value="offers">Offers ({offersReceived.length})</TabsTrigger>
-          <TabsTrigger value="trades">Trades ({pendingTradesForMe})</TabsTrigger>
-          <TabsTrigger value="alerts">Alerts ({wantedCards.length})</TabsTrigger>
+          <TabsTrigger value="watchlist">{t("Watchlist")} ({watchlist.length})</TabsTrigger>
+          <TabsTrigger value="offers">{t("Offers")} ({offersReceived.length})</TabsTrigger>
+          <TabsTrigger value="trades">{t("Trades")} ({pendingTradesForMe})</TabsTrigger>
+          <TabsTrigger value="alerts">{t("Alerts")} ({wantedCards.length})</TabsTrigger>
+          <TabsTrigger value="grading">{t("Grading")} ({gradingInProgress})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="all" className="pt-6">
@@ -124,7 +131,7 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
           {redeemed.length > 0 && (
             <div className="mt-10">
               <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
-                <Flame className="size-4" /> Redeemed ({redeemed.length})
+                <Flame className="size-4" /> {t("Redeemed")} ({redeemed.length})
               </h3>
               <div className="flex flex-col gap-2">
                 {redeemed.map((a) => (
@@ -136,11 +143,11 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
                     <span className="font-medium">
                       {a.name}{" "}
                       <span className="text-muted-foreground font-normal">
-                        · {a.gradingCompany === "RAW" ? "Raw" : `${a.gradingCompany} ${formatGrade(a.grade)}`}
+                        · {a.gradingCompany === "RAW" ? t("Raw") : `${a.gradingCompany} ${formatGrade(a.grade)}`}
                       </span>
                     </span>
                     <span className="text-muted-foreground text-xs">
-                      Shipped to you {a.redeemedAt ? formatDate(a.redeemedAt) : ""} · digital twin burned
+                      {t("Shipped to you {date} · digital twin burned", { date: a.redeemedAt ? formatDate(a.redeemedAt) : "" })}
                     </span>
                   </Link>
                 ))}
@@ -152,9 +159,9 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
           {watchlist.length === 0 ? (
             <div className="text-muted-foreground flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed py-24 text-center">
               <Bookmark className="size-8" />
-              <p className="text-sm">Nothing on your watchlist yet.</p>
+              <p className="text-sm">{t("Nothing on your watchlist yet.")}</p>
               <Link href="/marketplace" className="text-foreground text-sm underline">
-                Browse the marketplace
+                {t("Browse the marketplace")}
               </Link>
             </div>
           ) : (
@@ -174,12 +181,15 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
         <TabsContent value="alerts" className="pt-6">
           <WantedCardsPanel cards={wantedCards} />
         </TabsContent>
+        <TabsContent value="grading" className="pt-6">
+          <GradingSubmissionsPanel submissions={gradingSubmissions} />
+        </TabsContent>
       </Tabs>
     </div>
   );
 }
 
-function PortfolioGrid({
+async function PortfolioGrid({
   assets,
   escrowAuthorityAddress,
 }: {
@@ -187,10 +197,11 @@ function PortfolioGrid({
   escrowAuthorityAddress: string | null;
 }) {
   if (assets.length === 0) {
+    const t = await getT();
     return (
       <div className="text-muted-foreground flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed py-24 text-center">
         <PackageOpen className="size-8" />
-        <p className="text-sm">Nothing here yet.</p>
+        <p className="text-sm">{t("Nothing here yet.")}</p>
       </div>
     );
   }

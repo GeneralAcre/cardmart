@@ -6,6 +6,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { PrivyProvider } from "@/components/providers/privy-provider";
 import { LanguageProvider } from "@/components/landing/language-provider";
+import { getLocale } from "@/lib/i18n/server";
 
 const epilogue = Epilogue({
   variable: "--font-epilogue",
@@ -45,14 +46,15 @@ export const metadata: Metadata = {
 // entirely, which is what actually broke the Vercel build.
 export const dynamic = "force-dynamic";
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const locale = await getLocale();
   return (
     <html
-      lang="en"
+      lang={locale}
       className={`${epilogue.variable} ${notoSansThai.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <LanguageProvider>
+        <LanguageProvider initialLocale={locale}>
           <PrivyProvider>
             {children}
             <Toaster position="bottom-right" />

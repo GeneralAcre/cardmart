@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { reviewKyc } from "@/lib/actions";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { KYC_ID_TYPE_LABELS, KYC_STATUS_LABELS } from "@/lib/labels";
+import { useT } from "@/components/landing/language-provider";
 
 export interface KycRow {
   id: string;
@@ -45,14 +46,15 @@ function age(dob: string) {
 // account (display name, email, shipping phone) and approves or declines
 // with a reason the user sees.
 export function KycReview({ pending, reviewed }: { pending: KycRow[]; reviewed: KycRow[] }) {
+  const t = useT();
   return (
     <div className="flex flex-col gap-8">
       <section>
-        <h3 className="mb-3 text-sm font-semibold">Awaiting review ({pending.length})</h3>
+        <h3 className="mb-3 text-sm font-semibold">{t("Awaiting review")} ({pending.length})</h3>
         {pending.length === 0 ? (
           <div className="text-muted-foreground flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed py-16 text-center">
             <UserCheck className="size-6" />
-            <p className="text-sm">No identity submissions waiting.</p>
+            <p className="text-sm">{t("No identity submissions waiting.")}</p>
           </div>
         ) : (
           <div className="flex flex-col gap-3">
@@ -65,15 +67,15 @@ export function KycReview({ pending, reviewed }: { pending: KycRow[]; reviewed: 
 
       {reviewed.length > 0 && (
         <section>
-          <h3 className="mb-3 text-sm font-semibold">Recently reviewed</h3>
+          <h3 className="mb-3 text-sm font-semibold">{t("Recently reviewed")}</h3>
           <div className="rounded-xl border">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Legal name</TableHead>
-                  <TableHead>Reviewed</TableHead>
-                  <TableHead>Outcome</TableHead>
+                  <TableHead>{t("User")}</TableHead>
+                  <TableHead>{t("Legal name")}</TableHead>
+                  <TableHead>{t("Reviewed")}</TableHead>
+                  <TableHead>{t("Outcome")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -91,7 +93,7 @@ export function KycReview({ pending, reviewed }: { pending: KycRow[]; reviewed: 
                     </TableCell>
                     <TableCell className="whitespace-normal">
                       <Badge variant={row.kycStatus === "REJECTED" ? "destructive" : "secondary"}>
-                        {KYC_STATUS_LABELS[row.kycStatus]}
+                        {t(KYC_STATUS_LABELS[row.kycStatus])}
                       </Badge>
                       {row.kycRejectReason && (
                         <p className="text-muted-foreground mt-1 text-xs">{row.kycRejectReason}</p>
@@ -113,37 +115,39 @@ function PendingRow({ row }: { row: KycRow }) {
   const [reason, setReason] = useState("");
   const [rejecting, setRejecting] = useState(false);
   const [pending, startTransition] = useTransition();
+  const t = useT();
 
   function review(action: "approve" | "reject") {
     startTransition(async () => {
       try {
         await reviewKyc(row.id, action, action === "reject" ? reason : undefined);
-        toast.success(action === "approve" ? "Identity verified." : "Verification declined.");
+        toast.success(action === "approve" ? t("Identity verified.") : t("Verification declined."));
         router.refresh();
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Could not update verification.");
+        toast.error(err instanceof Error ? err.message : t("Could not update verification."));
       }
     });
   }
 
   const facts: [string, string][] = [
-    ["Legal name", row.kycLegalName ?? "—"],
-    ["Date of birth", row.kycDateOfBirth ? `${formatDate(row.kycDateOfBirth)} (age ${age(row.kycDateOfBirth)})` : "—"],
-    ["ID", row.kycIdType ? `${KYC_ID_TYPE_LABELS[row.kycIdType]} ending ${row.kycIdLast4 ?? "????"}` : "—"],
-    ["Account name", row.name ?? "—"],
-    ["Email", row.email ?? "—"],
-    ["Phone", row.phone ?? "—"],
+    [t("Legal name"), row.kycLegalName ?? "—"],
+    [t("Date of birth"), row.kycDateOfBirth ? `${formatDate(row.kycDateOfBirth)} (${t("age {n}", { n: age(row.kycDateOfBirth) })})` : "—"],
+    [t("ID"), row.kycIdType ? t("{type} ending {last4}", { type: t(KYC_ID_TYPE_LABELS[row.kycIdType]), last4: row.kycIdLast4 ?? "????" }) : "—"],
+    [t("Account name"), row.name ?? "—"],
+    [t("Email"), row.email ?? "—"],
+    [t("Phone"), row.phone ?? "—"],
   ];
 
   return (
     <div className="bg-card flex flex-col gap-3 rounded-xl border p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="font-semibold">
-          {row.name ?? "Unnamed user"}
+          {row.name ?? t("Unnamed user")}
           {row.handle && <span className="text-muted-foreground ml-1.5 text-sm font-normal">@{row.handle}</span>}
         </span>
         <span className="text-muted-foreground text-xs">
-          Submitted {row.kycSubmittedAt ? formatDateTime(row.kycSubmittedAt) : "—"} · member since {formatDate(row.createdAt)}
+          {t("Submitted {date}", { date: row.kycSubmittedAt ? formatDateTime(row.kycSubmittedAt) : "—" })} ·{" "}
+          {t("Member since {date}", { date: formatDate(row.createdAt) })}
         </span>
       </div>
       <div className="grid grid-cols-2 gap-3">
@@ -159,27 +163,26 @@ function PendingRow({ row }: { row: KycRow }) {
                 href={`/api/admin/kyc-photo?userId=${row.id}&kind=${p.kind}`}
                 target="_blank"
                 rel="noreferrer"
-                title="Open full size"
+                title={t("Open full size")}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={`/api/admin/kyc-photo?userId=${row.id}&kind=${p.kind}`}
-                  alt={p.label}
+                  alt={t(p.label)}
                   className="bg-muted aspect-[4/3] w-full rounded-lg border object-cover"
                 />
               </a>
             ) : (
               <div className="bg-muted text-muted-foreground flex aspect-[4/3] items-center justify-center rounded-lg border text-xs">
-                No photo
+                {t("No photo")}
               </div>
             )}
-            <figcaption className="text-muted-foreground text-xs">{p.label} · tap to enlarge</figcaption>
+            <figcaption className="text-muted-foreground text-xs">{t(p.label)} · {t("tap to enlarge")}</figcaption>
           </figure>
         ))}
       </div>
       <p className="text-muted-foreground text-xs">
-        Check the name and date of birth match the ID, the ID looks genuine and unaltered, and the face in the selfie
-        matches the ID photo.
+        {t("Check the name and date of birth match the ID, the ID looks genuine and unaltered, and the face in the selfie matches the ID photo.")}
       </p>
       <dl className="grid grid-cols-1 gap-x-4 gap-y-2 text-sm sm:grid-cols-3">
         {facts.map(([label, value]) => (
@@ -191,7 +194,7 @@ function PendingRow({ row }: { row: KycRow }) {
       </dl>
       {rejecting && (
         <Input
-          placeholder="Reason shown to the user (e.g. name doesn't match the account)"
+          placeholder={t("Reason shown to the user (e.g. name doesn't match the account)")}
           value={reason}
           onChange={(e) => setReason(e.target.value)}
         />
@@ -200,21 +203,21 @@ function PendingRow({ row }: { row: KycRow }) {
         {rejecting ? (
           <>
             <Button size="sm" variant="outline" onClick={() => setRejecting(false)} disabled={pending}>
-              Cancel
+              {t("Cancel")}
             </Button>
             <Button size="sm" variant="destructive" onClick={() => review("reject")} disabled={pending}>
               {pending ? <Loader2 className="animate-spin" /> : <X />}
-              Confirm decline
+              {t("Confirm decline")}
             </Button>
           </>
         ) : (
           <>
             <Button size="sm" variant="outline" onClick={() => setRejecting(true)} disabled={pending}>
-              <X /> Decline
+              <X /> {t("Decline")}
             </Button>
             <Button size="sm" onClick={() => review("approve")} disabled={pending}>
               {pending ? <Loader2 className="animate-spin" /> : <Check />}
-              Approve
+              {t("Approve")}
             </Button>
           </>
         )}

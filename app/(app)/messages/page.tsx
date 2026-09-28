@@ -3,29 +3,29 @@ import { MessageCircle } from "lucide-react";
 
 import { getMyConversations } from "@/lib/queries";
 import { getCurrentUser } from "@/lib/session";
+import { getT } from "@/lib/i18n/server";
 import { displayNameOf, UserAvatar } from "@/components/messages/user-avatar";
 import { Badge } from "@/components/ui/badge";
 import { formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export default async function MessagesPage() {
-  const user = await getCurrentUser();
+  const [user, t] = await Promise.all([getCurrentUser(), getT()]);
   const conversations = await getMyConversations(user.id);
 
   return (
     <div className="mx-auto w-full max-w-3xl flex-1 px-4 py-10 sm:px-6">
-      <h1 className="mb-6 text-2xl font-semibold">Messages</h1>
+      <h1 className="mb-6 text-2xl font-semibold">{t("Messages")}</h1>
 
       {conversations.length === 0 ? (
         <div className="text-muted-foreground flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed py-24 text-center">
           <MessageCircle className="size-8" />
-          <p className="text-sm">No conversations yet.</p>
+          <p className="text-sm">{t("No conversations yet.")}</p>
           <p className="max-w-xs text-xs">
-            Open a seller&apos;s profile or a listing and tap &quot;Message Seller&quot; to ask a question or
-            negotiate a price.
+            {t("Open a seller's profile or a listing and tap “Message Seller” to ask a question or negotiate a price.")}
           </p>
           <Link href="/marketplace" className="text-foreground text-sm underline">
-            Browse the marketplace
+            {t("Browse the marketplace")}
           </Link>
         </div>
       ) : (
@@ -54,8 +54,8 @@ export default async function MessagesPage() {
                       )}
                     >
                       {c.lastMessage
-                        ? `${c.lastMessage.senderId === user.id ? "You: " : ""}${c.lastMessage.body}`
-                        : "No messages yet"}
+                        ? `${c.lastMessage.senderId === user.id ? `${t("You:")} ` : ""}${c.lastMessage.body}`
+                        : t("No messages yet")}
                     </span>
                     {unread && <Badge className="shrink-0 rounded-full px-1.5 text-[10px]">{c.unreadCount}</Badge>}
                   </div>

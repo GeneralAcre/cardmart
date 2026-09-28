@@ -7,12 +7,13 @@ import { Loader2, MessageCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { startConversation } from "@/lib/actions";
+import { useT } from "@/components/landing/language-provider";
 
 // Opens (or reuses) the private thread with this user and jumps straight
 // into it — used on the seller's store profile and the item page.
 export function MessageSellerButton({
   sellerId,
-  label = "Message Seller",
+  label,
   size = "sm",
   variant = "outline",
   className,
@@ -25,6 +26,7 @@ export function MessageSellerButton({
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const t = useT();
 
   function open() {
     startTransition(async () => {
@@ -32,7 +34,7 @@ export function MessageSellerButton({
         const conversationId = await startConversation(sellerId);
         router.push(`/messages/${conversationId}`);
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Could not open the conversation.");
+        toast.error(err instanceof Error ? err.message : t("Could not open the conversation."));
       }
     });
   }
@@ -40,7 +42,7 @@ export function MessageSellerButton({
   return (
     <Button type="button" size={size} variant={variant} className={className} onClick={open} disabled={pending}>
       {pending ? <Loader2 className="animate-spin" /> : <MessageCircle />}
-      {label}
+      {label ?? t("Message Seller")}
     </Button>
   );
 }

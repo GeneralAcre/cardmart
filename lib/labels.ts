@@ -107,6 +107,7 @@ export const AUCTION_STATUS_LABELS: Record<AuctionStatus, string> = {
   ACTIVE: "Active",
   ENDED_SOLD: "Ended — Sold",
   ENDED_NO_BIDS: "Ended — No Bids",
+  ENDED_UNCLAIMED: "Ended — Unclaimed",
   CANCELLED: "Cancelled",
 };
 

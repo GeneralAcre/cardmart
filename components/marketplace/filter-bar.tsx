@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { CARD_GAMES, CARD_GAME_LABELS, GRADING_COMPANY_LABELS } from "@/lib/labels";
 import { EMPTY_FILTERS, type MarketplaceFilterState } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/landing/language-provider";
 
 const GRADING_COMPANIES: GradingCompany[] = ["PSA", "BGS", "CGC", "RAW"];
 const GRADES = [10, 9.5, 9, 8.5, 8, 7];
@@ -50,11 +51,12 @@ function FilterSection({
   icon: typeof Search;
   children: React.ReactNode;
 }) {
+  const t = useT();
   return (
     <div className="flex flex-col gap-2.5">
       <div className="flex items-center gap-1.5">
         <Icon className="text-muted-foreground size-3.5" />
-        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</span>
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t(label)}</span>
       </div>
       <div className="flex flex-wrap gap-2">{children}</div>
     </div>
@@ -70,6 +72,8 @@ export function FilterBar({
   onChange: (next: MarketplaceFilterState) => void;
   className?: string;
 }) {
+  const t = useT();
+
   function toggleGame(game: CardGame) {
     const has = filters.games.includes(game);
     onChange({
@@ -107,7 +111,7 @@ export function FilterBar({
         <Input
           value={filters.q}
           onChange={(e) => onChange({ ...filters, q: e.target.value })}
-          placeholder="Search by name, serial, or seller…"
+          placeholder={t("Search by name, serial, or seller…")}
           className="pl-9"
         />
       </div>
@@ -117,9 +121,9 @@ export function FilterBar({
         onValueChange={(v) => onChange({ ...filters, vaultedStatus: v as MarketplaceFilterState["vaultedStatus"] })}
       >
         <TabsList className="w-full">
-          <TabsTrigger value="ALL">All</TabsTrigger>
-          <TabsTrigger value="IN_VAULT">In Vault</TabsTrigger>
-          <TabsTrigger value="SHIPPING">Shipping</TabsTrigger>
+          <TabsTrigger value="ALL">{t("All")}</TabsTrigger>
+          <TabsTrigger value="IN_VAULT">{t("In Vault")}</TabsTrigger>
+          <TabsTrigger value="SHIPPING">{t("Shipping")}</TabsTrigger>
         </TabsList>
       </Tabs>
 
@@ -128,7 +132,7 @@ export function FilterBar({
       <FilterSection label="Game" icon={Layers}>
         {CARD_GAMES.map((game) => (
           <FilterPill key={game} active={filters.games.includes(game)} onClick={() => toggleGame(game)}>
-            {CARD_GAME_LABELS[game]}
+            {t(CARD_GAME_LABELS[game])}
           </FilterPill>
         ))}
       </FilterSection>
@@ -140,7 +144,7 @@ export function FilterBar({
             active={filters.gradingCompanies.includes(company)}
             onClick={() => toggleGradingCompany(company)}
           >
-            {GRADING_COMPANY_LABELS[company]}
+            {t(GRADING_COMPANY_LABELS[company])}
           </FilterPill>
         ))}
       </FilterSection>
@@ -164,14 +168,14 @@ export function FilterBar({
         <div className="flex items-center gap-1.5">
           <Wallet className="text-muted-foreground size-3.5" />
           <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Price Range (THB)
+            {t("Price Range (THB)")}
           </span>
         </div>
         <div className="flex items-center gap-2">
           <Input
             type="number"
             inputMode="numeric"
-            placeholder="Min"
+            placeholder={t("Min")}
             className="w-28"
             value={filters.priceMin ?? ""}
             onChange={(e) =>
@@ -185,7 +189,7 @@ export function FilterBar({
           <Input
             type="number"
             inputMode="numeric"
-            placeholder="Max"
+            placeholder={t("Max")}
             className="w-28"
             value={filters.priceMax ?? ""}
             onChange={(e) =>
@@ -202,7 +206,7 @@ export function FilterBar({
         <>
           <Separator />
           <Button variant="ghost" size="sm" className="w-fit" onClick={() => onChange(EMPTY_FILTERS)}>
-            Clear filters
+            {t("Clear filters")}
           </Button>
         </>
       )}

@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { makeOffer } from "@/lib/actions";
 import { formatThb } from "@/lib/format";
+import { useT } from "@/components/landing/language-provider";
 
 // Rendered both on the marketplace card (nested inside the whole-card
 // <Link>, hence the preventDefault/stopPropagation on open) and on the item
@@ -43,18 +44,19 @@ export function MakeOfferButton({
   const [amount, setAmount] = useState("");
   const [message, setMessage] = useState("");
   const [pending, startTransition] = useTransition();
+  const t = useT();
 
   function submit() {
     startTransition(async () => {
       try {
         await makeOffer(assetId, Number(amount), message.trim() || undefined);
-        toast.success("Offer sent — the seller has been notified.");
+        toast.success(t("Offer sent — the seller has been notified."));
         setOpen(false);
         setAmount("");
         setMessage("");
         router.refresh();
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Could not send offer.");
+        toast.error(err instanceof Error ? err.message : t("Could not send offer."));
       }
     });
   }
@@ -72,35 +74,35 @@ export function MakeOfferButton({
           setOpen(true);
         }}
       >
-        <HandCoins /> Make Offer
+        <HandCoins /> {t("Make Offer")}
       </Button>
       <Dialog open={open} onOpenChange={(o) => !pending && setOpen(o)}>
         <DialogContent onClick={(e) => e.stopPropagation()}>
           <DialogHeader>
-            <DialogTitle>Make an Offer</DialogTitle>
+            <DialogTitle>{t("Make an Offer")}</DialogTitle>
             <DialogDescription>
-              Propose a price for {assetName}
-              {listPriceThb != null ? ` — listed at ${formatThb(listPriceThb)}` : ""}. The seller can accept or
-              decline from their Portfolio.
+              {t("Propose a price for {name}", { name: assetName })}
+              {listPriceThb != null ? ` — ${t("listed at {price}", { price: formatThb(listPriceThb) })}` : ""}.{" "}
+              {t("The seller can accept or decline from their Portfolio.")}
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-2">
-              <Label htmlFor="offer-amount">Your Offer (THB)</Label>
+              <Label htmlFor="offer-amount">{t("Your Offer (THB)")}</Label>
               <Input
                 id="offer-amount"
                 type="number"
                 inputMode="numeric"
-                placeholder="e.g. 35000"
+                placeholder={t("e.g. 35000")}
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
               />
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="offer-message">Message (optional)</Label>
+              <Label htmlFor="offer-message">{t("Message (optional)")}</Label>
               <Textarea
                 id="offer-message"
-                placeholder="Anything you'd like the seller to know…"
+                placeholder={t("Anything you'd like the seller to know…")}
                 rows={3}
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
@@ -109,11 +111,11 @@ export function MakeOfferButton({
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)} disabled={pending}>
-              Cancel
+              {t("Cancel")}
             </Button>
             <Button onClick={submit} disabled={pending || !amount || Number(amount) < 100}>
               {pending && <Loader2 className="animate-spin" />}
-              Send Offer
+              {t("Send Offer")}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { z } from "zod";
 import type { AssetCategory, GradingCompany, KycIdType, NotificationType, Prisma } from "@prisma/client";
 
@@ -13,11 +14,12 @@ import {
 } from "@/lib/web3/mock-chain";
 import { releaseTradeToSeller, refundTradeToBuyer, getEscrowAuthorityAddress } from "@/lib/web3/escrow-server";
 import { isDigitalTwinHeldBy, mintDigitalTwinToken, transferDigitalTwinToken } from "@/lib/web3/token-server";
-import { FULL_SERVICE_PACKAGE_PRICE_THB } from "@/lib/pricing";
+import { FULL_SERVICE_PACKAGE_PRICE_THB, thbToLamports } from "@/lib/pricing";
 import { themeIndexForSerial } from "@/lib/theme";
 import { getVerificationChecklist } from "@/lib/verification-checklist";
 import { BGS_BLACK_LABEL_GRADE, gradeTierLabel } from "@/lib/labels";
 import { requestDevnetAirdrop } from "@/lib/solana";
+import { EMAILED_NOTIFICATION_TYPES, isEmailConfigured, sendEmail } from "@/lib/email";
 import { checkAllIntegrations } from "@/lib/integrations";
 import { findCatalogImage } from "@/lib/card-catalog";
 import { checkKycPhoto, deleteKycPhotos, isKycPhotoStorageConfigured, saveKycPhoto } from "@/lib/kyc-storage";
@@ -43,9 +45,20 @@ function revalidateMarketplace(assetId?: string) {
 // never backfilled or synthesized after the fact. notifyUser is for a
 // specific buyer/seller; notifyAdmins broadcasts to every isAdmin user by
 // leaving userId unset, since staff alerts aren't addressed to one person.
+// The important ones are also emailed (lib/email.ts) — after the response,
+// so a slow or failed email never holds up or breaks the action itself.
 async function notifyUser(userId: string, type: NotificationType, title: string, body: string, href?: string) {
   await prisma.notification.create({
     data: { audience: "USER", userId, type, title, body, href },
+  });
+  if (EMAILED_NOTIFICATION_TYPES.has(type)) emailUser(userId, title, body, href);
+}
+
+function emailUser(userId: string, title: string, body: string, href?: string) {
+  if (!isEmailConfigured()) return;
+  after(async () => {
+    const recipient = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
+    if (recipient?.email) await sendEmail(recipient.email, title, body, href);
   });
 }
 
@@ -638,9 +651,9 @@ export async function buyListing(
 // ---------------------------------------------------------------------------
 // Auctions — a separate sale channel from the fixed-price marketplace above.
 // No cron/background job settles these: expiry is checked lazily wherever an
-// auction is read (see getActiveAuctions/getAuctionById in lib/queries.ts),
-// and a sold auction still needs its winner to actively claim it with a real
-// wallet signature — see claimAuctionWin below.
+// auction is read (see getActiveAuctions/getAuctionById in lib/queries.ts)
+// and by settleAuction below. Every bid locks its amount in escrow, so the
+// winning bid is always backed by real money — see placeBid.
 // ---------------------------------------------------------------------------
 
 const MIN_BID_INCREMENT_THB = 50;
@@ -729,51 +742,115 @@ export async function cancelAuction(auctionId: string) {
 
 const placeBidSchema = z.object({ amountThb: z.coerce.number().int().min(1) });
 
-/** Buyer places a bid — must clear the current highest (or the start price, if none yet) by at least MIN_BID_INCREMENT_THB. */
-export async function placeBid(auctionId: string, amountThb: number) {
+// A winner of a non-vaulted item gets this long after bidding closes to
+// choose ship or vault — their money is already locked, so if they don't,
+// the item simply goes to the vault for them.
+const CLAIM_WINDOW_MS = 48 * 3_600_000;
+
+type BidWithBidder = Prisma.BidGetPayload<{ include: { bidder: true } }>;
+
+/**
+ * Returns a bid's locked funds to the bidder (outbid, or swept up at
+ * settlement). Claims the refund in the DB first so two concurrent callers
+ * can't both refund; if the real on-chain refund fails, the bid goes back to
+ * HELD so the next settleAuction sweep retries it.
+ */
+async function refundBidLock(bid: BidWithBidder, assetId: string) {
+  if (bid.lockStatus !== "HELD") return;
+  const claimed = await prisma.bid.updateMany({ where: { id: bid.id, lockStatus: "HELD" }, data: { lockStatus: "REFUNDED" } });
+  if (claimed.count === 0) return;
+  try {
+    await releaseOrRefundEscrow(
+      "refund",
+      {
+        onChain: bid.onChain,
+        onChainTradeId: bid.onChainTradeId,
+        buyer: { walletAddress: bid.bidder.walletAddress },
+        seller: { walletAddress: null },
+      },
+      assetId,
+    );
+  } catch (err) {
+    await prisma.bid.update({ where: { id: bid.id }, data: { lockStatus: "HELD" } });
+    console.error(`Refund of bid ${bid.id} failed; will retry at settlement.`, err);
+  }
+}
+
+/**
+ * Buyer places a bid — must clear the current highest (or the start price,
+ * if none yet) by at least MIN_BID_INCREMENT_THB. The bid's full amount is
+ * locked in escrow by the bidder's own wallet signature before this runs
+ * (components/auction/bid-panel.tsx), so a winning bid is always backed by
+ * real money. Any rejection below refunds that lock straight away.
+ */
+export async function placeBid(auctionId: string, amountThb: number, bidLock?: EscrowLockInput) {
   const user = await getCurrentUser();
-  if (user.isBanned) throw new Error("Your account is suspended and can't bid.");
+  const reject = async (message: string): Promise<never> => {
+    await refundUnrecordedLock(bidLock, user.walletAddress, auctionId);
+    throw new Error(message);
+  };
+
+  if (user.isBanned) return reject("Your account is suspended and can't bid.");
   const parsed = placeBidSchema.safeParse({ amountThb });
-  if (!parsed.success) throw new Error("Enter a valid bid amount.");
+  if (!parsed.success) return reject("Enter a valid bid amount.");
+  const amount = parsed.data.amountThb;
 
   const auction = await prisma.auction.findUniqueOrThrow({ where: { id: auctionId }, include: { asset: true } });
-  if (auction.asset.ownerId === user.id) throw new Error("You can't bid on your own item.");
+  if (auction.asset.ownerId === user.id) return reject("You can't bid on your own item.");
   const now = new Date();
-  if (auction.startTime > now) throw new Error("This auction has not started yet.");
-  if (auction.status !== "ACTIVE" || auction.endTime <= new Date()) {
-    throw new Error("This auction has ended.");
-  }
+  if (auction.startTime > now) return reject("This auction has not started yet.");
+  if (auction.status !== "ACTIVE" || auction.endTime <= now) return reject("This auction has ended.");
 
   const minBid = (auction.currentBidThb ?? auction.startPriceThb - MIN_BID_INCREMENT_THB) + MIN_BID_INCREMENT_THB;
-  if (parsed.data.amountThb < minBid) {
-    throw new Error(`Bid at least ${minBid.toLocaleString()} THB.`);
+  if (amount < minBid) return reject(`Bid at least ${minBid.toLocaleString()} THB.`);
+  if (bidLock && BigInt(bidLock.lamports) !== thbToLamports(amount)) {
+    return reject("The locked amount doesn't match your bid. Try again.");
   }
-
-  // Previous highest bidder, if any — read before the write so there's
-  // something to compare against for the outbid notification below. A real
-  // race between two simultaneous top bids is vanishingly unlikely at this
-  // scale and isn't worth a DB-level lock here.
-  const previousTopBid = await prisma.bid.findFirst({ where: { auctionId }, orderBy: { amountThb: "desc" } });
 
   const shouldExtend = auction.endTime.getTime() - now.getTime() <= ANTI_SNIPING_WINDOW_MS;
   const extendedEndTime = shouldExtend ? new Date(auction.endTime.getTime() + ANTI_SNIPING_EXTENSION_MS) : auction.endTime;
 
-  await prisma.$transaction([
-    prisma.bid.create({ data: { auctionId, bidderId: user.id, amountThb: parsed.data.amountThb } }),
-    prisma.auction.update({
-      where: { id: auctionId },
-      data: { currentBidThb: parsed.data.amountThb, ...(shouldExtend ? { endTime: extendedEndTime } : {}) },
-    }),
-  ]);
+  // Only write if nobody else bid since we read the auction — two bidders
+  // racing for the top would otherwise both "win" with locked funds.
+  const placed = await prisma.$transaction(async (tx) => {
+    const res = await tx.auction.updateMany({
+      where: { id: auctionId, status: "ACTIVE", currentBidThb: auction.currentBidThb },
+      data: { currentBidThb: amount, ...(shouldExtend ? { endTime: extendedEndTime } : {}) },
+    });
+    if (res.count === 0) return null;
+    return tx.bid.create({
+      data: {
+        auctionId,
+        bidderId: user.id,
+        amountThb: amount,
+        lockStatus: "HELD",
+        onChain: Boolean(bidLock),
+        onChainTradeId: bidLock ? BigInt(bidLock.tradeId) : null,
+        tradeAccount: bidLock?.tradeAccount ?? null,
+        lamportsLocked: bidLock ? BigInt(bidLock.lamports) : null,
+        lockTxSignature: bidLock?.txSignature ?? null,
+      },
+    });
+  });
+  if (!placed) return reject("Someone else just bid. Refresh to see the new price and try again.");
 
-  if (previousTopBid && previousTopBid.bidderId !== user.id) {
-    await notifyUser(
-      previousTopBid.bidderId,
-      "OUTBID",
-      "You've been outbid",
-      `Someone bid ${parsed.data.amountThb.toLocaleString()} THB on ${auction.asset.name}.`,
-      `/auctions/${auctionId}`,
-    );
+  // Everyone else's standing lock on this auction — including this bidder's
+  // own previous, lower bid — goes back to them now.
+  const outbid = await prisma.bid.findMany({
+    where: { auctionId, lockStatus: "HELD", id: { not: placed.id } },
+    include: { bidder: true },
+  });
+  for (const bid of outbid) {
+    await refundBidLock(bid, auction.assetId);
+    if (bid.bidderId !== user.id) {
+      await notifyUser(
+        bid.bidderId,
+        "OUTBID",
+        "You've been outbid",
+        `Someone bid ${amount.toLocaleString()} THB on ${auction.asset.name}. Your ${bid.amountThb.toLocaleString()} THB lock has been returned.`,
+        `/auctions/${auctionId}`,
+      );
+    }
   }
 
   revalidatePath(`/auctions/${auctionId}`);
@@ -781,32 +858,47 @@ export async function placeBid(auctionId: string, amountThb: number) {
   return { extended: shouldExtend, endTime: extendedEndTime.toISOString() };
 }
 
-/**
- * The winning bidder claims a finished auction — same real wallet-signed
- * escrow lock as any other purchase (see completePurchase above). Nothing
- * transfers automatically the instant endTime passes; the winner has to
- * actively come complete it, since only they can sign for their own payment.
- */
-export async function claimAuctionWin(
-  auctionId: string,
-  fulfillmentChoice: "SHIP" | "VAULT",
-  escrowLock?: { tradeId: string; txSignature: string; lamports: string; tradeAccount: string },
-) {
-  const user = await getCurrentUser();
-  if (user.isBanned) throw new Error("Your account is suspended and can't complete a purchase.");
+type AuctionForSettlement = Prisma.AuctionGetPayload<{
+  include: { asset: { include: { owner: true } }; bids: { include: { bidder: true } } };
+}>;
 
-  const auction = await prisma.auction.findUniqueOrThrow({
+async function loadAuctionForSettlement(auctionId: string): Promise<AuctionForSettlement | null> {
+  return prisma.auction.findUnique({
     where: { id: auctionId },
-    include: { asset: { include: { owner: true } } },
+    include: { asset: { include: { owner: true } }, bids: { orderBy: { amountThb: "desc" }, include: { bidder: true } } },
   });
-  if (auction.status !== "ACTIVE" || auction.endTime > new Date()) {
-    throw new Error("This auction hasn't ended yet.");
-  }
-  const topBid = await prisma.bid.findFirst({ where: { auctionId }, orderBy: { amountThb: "desc" } });
-  if (!topBid) throw new Error("This auction ended with no bids.");
-  if (topBid.bidderId !== user.id) throw new Error("Only the winning bidder can claim this auction.");
+}
 
-  await prisma.auction.update({ where: { id: auctionId }, data: { status: "ENDED_SOLD", settledAt: new Date() } });
+/**
+ * Turns the winning bid into the sale. A locked bid's own escrow lock is
+ * reused as the purchase escrow (no second payment); a legacy unlocked bid
+ * passes the lock the winner just signed in claimAuctionWin instead.
+ */
+async function finalizeAuctionSale(
+  auction: AuctionForSettlement,
+  top: BidWithBidder,
+  fulfillmentChoice: "SHIP" | "VAULT",
+  legacyLock?: EscrowLockInput,
+) {
+  const claimed = await prisma.auction.updateMany({
+    where: { id: auction.id, status: "ACTIVE" },
+    data: { status: "ENDED_SOLD", settledAt: new Date() },
+  });
+  if (claimed.count === 0) throw new Error("This auction has already been settled.");
+
+  const escrowLock: EscrowLockInput | undefined =
+    top.lockStatus === "HELD"
+      ? top.onChain && top.onChainTradeId != null
+        ? {
+            tradeId: top.onChainTradeId.toString(),
+            txSignature: top.lockTxSignature ?? "",
+            lamports: (top.lamportsLocked ?? BigInt(0)).toString(),
+            tradeAccount: top.tradeAccount ?? "",
+          }
+        : undefined
+      : legacyLock;
+  if (top.lockStatus === "HELD") await prisma.bid.update({ where: { id: top.id }, data: { lockStatus: "CONVERTED" } });
+
   // completePurchase's vaulted branch only ever touches ownerId/forSale, not
   // marketStatus — reset it back from IN_AUCTION to IN_VAULT first so a
   // vaulted win doesn't get stuck reading "Up for Auction" forever.
@@ -814,25 +906,146 @@ export async function claimAuctionWin(
     await prisma.asset.update({ where: { id: auction.assetId }, data: { marketStatus: "IN_VAULT" } });
   }
 
-  await completePurchase({
-    asset: auction.asset,
-    user,
-    priceThb: topBid.amountThb,
-    fulfillmentChoice,
-    escrowLock,
-    soldNote: `${auction.asset.name} sold at auction for ${topBid.amountThb.toLocaleString()} THB.`,
-    purchasedNote: `You won the auction for ${auction.asset.name} at ${topBid.amountThb.toLocaleString()} THB.`,
-  });
+  try {
+    await completePurchase({
+      asset: auction.asset,
+      user: top.bidder,
+      priceThb: top.amountThb,
+      fulfillmentChoice,
+      escrowLock,
+      soldNote: `${auction.asset.name} sold at auction for ${top.amountThb.toLocaleString()} THB.`,
+      purchasedNote: `You won the auction for ${auction.asset.name} at ${top.amountThb.toLocaleString()} THB.`,
+    });
+  } catch (err) {
+    // Put everything back so the next settle/claim can retry — the winner's
+    // money is still locked, nothing moved.
+    await prisma.auction.update({ where: { id: auction.id }, data: { status: "ACTIVE", settledAt: null } });
+    if (top.lockStatus === "HELD") await prisma.bid.update({ where: { id: top.id }, data: { lockStatus: "HELD" } });
+    if (auction.asset.vaulted) {
+      await prisma.asset.update({ where: { id: auction.assetId }, data: { marketStatus: "IN_AUCTION" } });
+    }
+    throw err;
+  }
 
   await notifyUser(
-    user.id,
+    top.bidderId,
     "AUCTION_WON",
     "You won the auction",
-    `You won ${auction.asset.name} for ${topBid.amountThb.toLocaleString()} THB.`,
-    `/auctions/${auctionId}`,
+    `You won ${auction.asset.name} for ${top.amountThb.toLocaleString()} THB.`,
+    `/auctions/${auction.id}`,
   );
+  revalidatePath(`/auctions/${auction.id}`);
+  revalidatePath("/auctions");
+}
 
-  revalidatePath(`/auctions/${auctionId}`);
+/**
+ * Settles an auction whose bidding has closed. Safe for anyone to call, any
+ * number of times — it only acts when something is actually due, which is
+ * how auctions settle without a cron job (components/auction/auto-settle.tsx
+ * calls it from the auction pages):
+ *   - outbid locks that failed to refund earlier are retried;
+ *   - a vaulted item's sale completes straight away (nothing to choose);
+ *   - a non-vaulted item waits CLAIM_WINDOW_MS for the winner to choose
+ *     ship or vault, then defaults to the vault;
+ *   - a legacy winning bid with no lock that's never claimed within the
+ *     window ends ENDED_UNCLAIMED and the item goes back to the seller.
+ */
+export async function settleAuction(auctionId: string): Promise<{ settled: boolean }> {
+  const auction = await loadAuctionForSettlement(auctionId);
+  if (!auction || auction.status !== "ACTIVE" || auction.endTime > new Date()) return { settled: false };
+  const [top, ...rest] = auction.bids;
+  if (!top) return { settled: false }; // no-bid expiry: lib/queries.ts settleIfExpiredNoBids
+
+  for (const bid of rest) await refundBidLock(bid, auction.assetId);
+
+  const deadline = auction.claimDeadline ?? new Date(auction.endTime.getTime() + CLAIM_WINDOW_MS);
+  const needsChoice = top.lockStatus == null || !auction.asset.vaulted;
+  if (needsChoice && !auction.claimDeadline) {
+    const opened = await prisma.auction.updateMany({
+      where: { id: auctionId, claimDeadline: null },
+      data: { claimDeadline: deadline },
+    });
+    if (opened.count > 0) {
+      await notifyUser(
+        top.bidderId,
+        "AUCTION_WON",
+        "You won — choose delivery",
+        top.lockStatus == null
+          ? `You won ${auction.asset.name} for ${top.amountThb.toLocaleString()} THB. Complete payment by ${deadline.toLocaleString()} or the win lapses.`
+          : `You won ${auction.asset.name} for ${top.amountThb.toLocaleString()} THB. Choose ship or vault by ${deadline.toLocaleString()} — otherwise it goes to the vault for you.`,
+        `/auctions/${auctionId}`,
+      );
+      await notifyUser(
+        auction.asset.ownerId,
+        "AUCTION_ENDED_SELLER",
+        "Your auction ended",
+        `${auction.asset.name} sold for ${top.amountThb.toLocaleString()} THB — waiting on the winner's delivery choice.`,
+        `/auctions/${auctionId}`,
+      );
+    }
+  }
+  if (needsChoice && deadline > new Date()) {
+    if (rest.length > 0) revalidatePath(`/auctions/${auctionId}`);
+    return { settled: false };
+  }
+
+  if (top.lockStatus == null) {
+    const lapsed = await prisma.auction.updateMany({
+      where: { id: auctionId, status: "ACTIVE" },
+      data: { status: "ENDED_UNCLAIMED", settledAt: new Date() },
+    });
+    if (lapsed.count === 0) return { settled: false };
+    await prisma.asset.update({
+      where: { id: auction.assetId },
+      data: { marketStatus: auction.asset.vaulted ? "IN_VAULT" : "DELISTED" },
+    });
+    await notifyUser(
+      auction.asset.ownerId,
+      "AUCTION_ENDED_SELLER",
+      "Winner didn't claim",
+      `The winning bidder didn't pay for ${auction.asset.name} in time. It's back in your portfolio to relist.`,
+      `/item/${auction.assetId}`,
+    );
+    revalidateMarketplace(auction.assetId);
+    revalidatePath(`/auctions/${auctionId}`);
+    revalidatePath("/auctions");
+    return { settled: true };
+  }
+
+  await finalizeAuctionSale(auction, top, "VAULT");
+  return { settled: true };
+}
+
+/**
+ * The winning bidder completes a finished auction. With a locked bid the
+ * money is already in escrow, so this is only the ship-or-vault choice. A
+ * legacy unlocked bid still has to lock payment here, like any purchase.
+ */
+export async function claimAuctionWin(
+  auctionId: string,
+  fulfillmentChoice: "SHIP" | "VAULT",
+  escrowLock?: EscrowLockInput,
+) {
+  const user = await getCurrentUser();
+  const auction = await loadAuctionForSettlement(auctionId);
+  const top = auction?.bids[0];
+  const fail = async (message: string): Promise<never> => {
+    if (top?.lockStatus == null) await refundUnrecordedLock(escrowLock, user.walletAddress, auctionId);
+    throw new Error(message);
+  };
+  if (!auction) return fail("Auction not found.");
+  if (user.isBanned) return fail("Your account is suspended and can't complete a purchase.");
+  if (auction.status !== "ACTIVE" || auction.endTime > new Date()) return fail("This auction isn't waiting on a claim.");
+  if (!top) return fail("This auction ended with no bids.");
+  if (top.bidderId !== user.id) return fail("Only the winning bidder can claim this auction.");
+  const deadline = auction.claimDeadline ?? new Date(auction.endTime.getTime() + CLAIM_WINDOW_MS);
+  if (top.lockStatus == null && deadline <= new Date()) return fail("The claim window for this auction has closed.");
+
+  try {
+    await finalizeAuctionSale(auction, top, auction.asset.vaulted ? "VAULT" : fulfillmentChoice, escrowLock);
+  } catch (err) {
+    return fail(err instanceof Error ? err.message : "Could not complete the purchase.");
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -1427,9 +1640,9 @@ export async function delistAsset(assetId: string, txSignature?: string) {
 }
 
 const submitForGradingSchema = z.object({
-  itemName: z.string().min(2),
-  itemSubtitle: z.string().min(2),
-  category: z.enum(["TRADING_CARD", "SPORTS_CARD", "COMIC"]),
+  itemName: z.string().trim().min(2, "Enter the card's name."),
+  itemSubtitle: z.string().trim().min(2, "Add the set or a short description."),
+  game: z.enum(["POKEMON", "ONE_PIECE"]),
   gradingCompany: z.enum(["PSA", "BGS", "CGC"]),
 });
 
@@ -1453,7 +1666,7 @@ export async function submitForGrading(
   const parsed = submitForGradingSchema.safeParse({
     itemName: formData.get("itemName"),
     itemSubtitle: formData.get("itemSubtitle"),
-    category: formData.get("category"),
+    game: formData.get("game"),
     gradingCompany: formData.get("gradingCompany"),
   });
   if (!parsed.success) {
@@ -1466,7 +1679,9 @@ export async function submitForGrading(
     data: {
       itemName: data.itemName,
       itemSubtitle: data.itemSubtitle,
-      category: data.category as AssetCategory,
+      // CardMart only trades Pokémon and One Piece — both trading cards.
+      category: "TRADING_CARD",
+      game: data.game,
       gradingCompany: data.gradingCompany as GradingCompany,
       packagePriceThb: FULL_SERVICE_PACKAGE_PRICE_THB,
       status: "AWAITING_SHIPMENT_TO_GRADER",
@@ -1475,6 +1690,12 @@ export async function submitForGrading(
     },
   });
 
+  await notifyAdmins(
+    "NEW_SUBMISSION",
+    "New grading submission",
+    `${data.itemName} was sent in for ${data.gradingCompany} Full-Service grading.`,
+    "/admin/warehouse",
+  );
   revalidatePath("/portfolio");
   revalidatePath("/admin/warehouse");
   return { submissionId: submission.id };
@@ -1586,6 +1807,7 @@ export async function adminCompleteGrading(
       name: submission.itemName,
       subtitle: submission.itemSubtitle,
       category: submission.category,
+      game: submission.game,
       gradingCompany: submission.gradingCompany,
       grade: parsed.data.grade,
       isBlackLabel,
@@ -1949,10 +2171,20 @@ export async function sendMessage(conversationId: string, body: string) {
   if (!conversation) throw new Error("Conversation not found.");
 
   const now = new Date();
+  // Email the recipient only for the first message they haven't read yet —
+  // one email per burst of chat, not one per line.
+  const alreadyUnread = await prisma.message.count({
+    where: { conversationId, senderId: user.id, readAt: null },
+  });
   await prisma.$transaction([
     prisma.message.create({ data: { conversationId, senderId: user.id, body: parsed.data.body, createdAt: now } }),
     prisma.conversation.update({ where: { id: conversationId }, data: { lastMessageAt: now } }),
   ]);
+  if (alreadyUnread === 0) {
+    const recipientId = conversation.userAId === user.id ? conversation.userBId : conversation.userAId;
+    const preview = parsed.data.body.length > 140 ? `${parsed.data.body.slice(0, 140)}…` : parsed.data.body;
+    emailUser(recipientId, `New message from ${user.name ?? user.handle ?? "a collector"}`, preview, `/messages/${conversationId}`);
+  }
 
   revalidatePath("/messages");
   revalidatePath(`/messages/${conversationId}`);

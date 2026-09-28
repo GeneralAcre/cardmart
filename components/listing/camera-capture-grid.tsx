@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { getVerificationChecklist, type VerificationView } from "@/lib/verification-checklist";
+import { useT } from "@/components/landing/language-provider";
 
 // Each value is a Vercel Blob URL, not the raw image — the capture dialog
 // uploads directly to Blob storage and only ever hands back the resulting URL.
@@ -26,6 +27,7 @@ interface CameraCaptureGridProps {
 export function CameraCaptureGrid({ category, raw = false, captures, onChange }: CameraCaptureGridProps) {
   const checklist = getVerificationChecklist(category, raw);
   const [activeView, setActiveView] = useState<VerificationView | null>(null);
+  const t = useT();
 
   // Chains straight into the next uncaptured view instead of dropping the
   // user back to the grid after every single shot — they're already
@@ -42,9 +44,9 @@ export function CameraCaptureGrid({ category, raw = false, captures, onChange }:
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <span className="text-muted-foreground text-xs">Tap each tile and take a live photo</span>
+        <span className="text-muted-foreground text-xs">{t("Tap each tile and take a live photo")}</span>
         <span className="text-muted-foreground text-xs">
-          {completedCount} / {checklist.length} captured
+          {t("{done} / {total} captured", { done: completedCount, total: checklist.length })}
         </span>
       </div>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -62,7 +64,7 @@ export function CameraCaptureGrid({ category, raw = false, captures, onChange }:
             >
               {captured ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={captured} alt={view.label} className="absolute inset-0 size-full object-cover" />
+                <img src={captured} alt={t(view.label)} className="absolute inset-0 size-full object-cover" />
               ) : (
                 <Camera className="text-muted-foreground size-6" />
               )}
@@ -72,7 +74,7 @@ export function CameraCaptureGrid({ category, raw = false, captures, onChange }:
                   captured ? "bg-black/55 text-white" : "text-foreground",
                 )}
               >
-                {view.label}
+                {t(view.label)}
               </span>
               {captured && (
                 <span className="absolute right-1 top-1 rounded-full bg-success p-0.5">
@@ -81,7 +83,7 @@ export function CameraCaptureGrid({ category, raw = false, captures, onChange }:
               )}
               {captured && (
                 <span className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 bg-black/55 py-1 text-[11px] font-medium text-white opacity-0 transition-opacity group-hover:opacity-100">
-                  <RotateCcw className="size-3" /> Retake
+                  <RotateCcw className="size-3" /> {t("Retake")}
                 </span>
               )}
             </button>
@@ -89,9 +91,7 @@ export function CameraCaptureGrid({ category, raw = false, captures, onChange }:
         })}
       </div>
       <p className="text-muted-foreground text-xs">
-        Each photo is taken live with your camera — uploads from your gallery
-        aren&apos;t accepted, so no one can fake possession with someone
-        else&apos;s picture.
+        {t("Each photo is taken live with your camera — uploads from your gallery aren't accepted, so no one can fake possession with someone else's picture.")}
       </p>
 
       {activeView && (
@@ -131,6 +131,7 @@ function CameraCaptureDialog({
   // without needing a different view — e.g. after the user grants a
   // permission they'd previously denied.
   const [retryToken, setRetryToken] = useState(0);
+  const t = useT();
 
   useEffect(() => {
     unmountedRef.current = false;
@@ -237,15 +238,15 @@ function CameraCaptureDialog({
       <DialogContent className="max-w-md" showCloseButton={false}>
         <DialogTitle className="flex items-center gap-2 text-base">
           <Video className="size-4" />
-          {view.label}
+          {t(view.label)}
         </DialogTitle>
-        <p className="text-muted-foreground text-sm">{view.hint}</p>
+        <p className="text-muted-foreground text-sm">{t(view.hint)}</p>
 
         <div className="bg-muted relative flex aspect-square items-center justify-center overflow-hidden rounded-lg">
           {status === "error" ? (
             <div className="text-muted-foreground flex flex-col items-center gap-2 p-6 text-center text-sm">
               <XCircle className="size-8" />
-              {error}
+              {error && t(error)}
             </div>
           ) : (
             <>
@@ -262,7 +263,7 @@ function CameraCaptureDialog({
               {status === "uploading" && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/40">
                   <Loader2 className="size-8 animate-spin text-white" />
-                  <span className="text-sm font-medium text-white">Uploading…</span>
+                  <span className="text-sm font-medium text-white">{t("Uploading…")}</span>
                 </div>
               )}
             </>
@@ -271,26 +272,26 @@ function CameraCaptureDialog({
 
         <p className="text-muted-foreground text-center text-xs">
           {status === "positioning"
-            ? "Hold the item inside the frame, then tap Start when you're ready."
+            ? t("Hold the item inside the frame, then tap Start when you're ready.")
             : status === "uploading"
-              ? "Saving your capture…"
+              ? t("Saving your capture…")
               : status === "counting"
-                ? `Hold steady — capturing in ${countdown}s.`
+                ? t("Hold steady — capturing in {s}s.", { s: countdown })
                 : null}
         </p>
 
         <div className="flex gap-2">
           <Button variant="outline" onClick={onCancel} className="flex-1">
-            Cancel
+            {t("Cancel")}
           </Button>
           {status === "positioning" && (
             <Button onClick={() => setStatus("counting")} className="flex-1">
-              <Camera /> Start Capture
+              <Camera /> {t("Start Capture")}
             </Button>
           )}
           {status === "error" && (
             <Button onClick={() => setRetryToken((t) => t + 1)} className="flex-1">
-              <Video /> Try Again
+              <Video /> {t("Try Again")}
             </Button>
           )}
         </div>

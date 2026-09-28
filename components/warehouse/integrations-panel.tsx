@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { runIntegrationCheck } from "@/lib/actions";
 import type { IntegrationStatus } from "@/lib/integrations";
 import { formatDateTime } from "@/lib/format";
+import { useT } from "@/components/landing/language-provider";
 
 const STATE_ICON = { ok: CircleCheck, not_configured: CircleDashed, error: CircleAlert } as const;
 const STATE_CLASS = { ok: "text-success", not_configured: "text-muted-foreground", error: "text-destructive" } as const;
@@ -16,6 +17,7 @@ const STATE_CLASS = { ok: "text-success", not_configured: "text-muted-foreground
 export function IntegrationsPanel() {
   const [results, setResults] = useState<IntegrationStatus[] | null>(null);
   const [pending, startTransition] = useTransition();
+  const t = useT();
 
   function run() {
     startTransition(async () => {
@@ -27,12 +29,11 @@ export function IntegrationsPanel() {
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-muted-foreground max-w-xl text-sm">
-          Calls PSA, eBay and the TCG API live with the keys this deployment has, and shows exactly what each one
-          answered.
+          {t("Calls PSA, eBay, the TCG API and Resend live with the keys this deployment has, and shows exactly what each one answered.")}
         </p>
         <Button onClick={run} disabled={pending}>
           {pending ? <Loader2 className="animate-spin" /> : <RefreshCw />}
-          Run check
+          {t("Run check")}
         </Button>
       </div>
       {results && (
@@ -49,7 +50,7 @@ export function IntegrationsPanel() {
               </div>
             );
           })}
-          <p className="text-muted-foreground px-4 py-2 text-[11px]">Checked {formatDateTime(results[0].checkedAt)}</p>
+          <p className="text-muted-foreground px-4 py-2 text-[11px]">{t("Checked {date}", { date: formatDateTime(results[0].checkedAt) })}</p>
         </div>
       )}
     </div>

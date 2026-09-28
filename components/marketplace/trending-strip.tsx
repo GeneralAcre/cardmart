@@ -9,6 +9,7 @@ import { CardArt } from "@/components/asset/card-art";
 import { formatThb } from "@/lib/format";
 import { displayImage } from "@/lib/card-image";
 import type { AssetSummary } from "@/lib/types";
+import { useT } from "@/components/landing/language-provider";
 
 export interface TrendingListing {
   asset: AssetSummary;
@@ -24,6 +25,7 @@ export interface TrendingListing {
 // "Trending" row would be worse than no section at all.
 export function TrendingStrip({ week, month }: { week: TrendingListing[]; month: TrendingListing[] }) {
   const [range, setRange] = useState<7 | 30>(week.length > 0 ? 7 : 30);
+  const t = useT();
   if (week.length === 0 && month.length === 0) return null;
   const listings = range === 7 ? week : month;
 
@@ -33,9 +35,9 @@ export function TrendingStrip({ week, month }: { week: TrendingListing[]; month:
         <div className="bg-foreground text-background flex size-7 items-center justify-center rounded-lg">
           <TrendingUp className="size-3.5" />
         </div>
-        <h2 className="text-lg font-semibold">Trending</h2>
+        <h2 className="text-lg font-semibold">{t("Trending")}</h2>
         <span className="text-muted-foreground hidden text-xs sm:inline">
-          Biggest price gains in the last {range} days
+          {t("Biggest price gains in the last {days} days", { days: range })}
         </span>
         <div className="bg-muted ml-auto flex rounded-lg p-0.5 text-xs font-medium">
           {([7, 30] as const).map((days) => (
@@ -48,7 +50,7 @@ export function TrendingStrip({ week, month }: { week: TrendingListing[]; month:
                 range === days ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              {days} days
+              {t("{days} days", { days })}
             </button>
           ))}
         </div>
@@ -56,7 +58,7 @@ export function TrendingStrip({ week, month }: { week: TrendingListing[]; month:
 
       {listings.length === 0 && (
         <p className="text-muted-foreground rounded-xl border border-dashed p-6 text-center text-sm">
-          No price gains in the last {range} days.
+          {t("No price gains in the last {days} days.", { days: range })}
         </p>
       )}
 

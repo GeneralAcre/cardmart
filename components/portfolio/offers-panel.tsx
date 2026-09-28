@@ -12,6 +12,7 @@ import { CompletePurchaseButton } from "@/components/item/complete-purchase-butt
 import { completeOfferPurchase, respondToOffer, withdrawOffer } from "@/lib/actions";
 import { OFFER_STATUS_LABELS } from "@/lib/labels";
 import { formatDateTime, formatThb } from "@/lib/format";
+import { useT } from "@/components/landing/language-provider";
 
 interface OfferReceived {
   id: string;
@@ -32,12 +33,13 @@ interface OfferMade {
 }
 
 export function OffersPanel({ received, made }: { received: OfferReceived[]; made: OfferMade[] }) {
+  const t = useT();
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <h3 className="mb-3 text-sm font-semibold">Offers Received ({received.length})</h3>
+        <h3 className="mb-3 text-sm font-semibold">{t("Offers Received")} ({received.length})</h3>
         {received.length === 0 ? (
-          <p className="text-muted-foreground text-sm">No pending offers on your listings.</p>
+          <p className="text-muted-foreground text-sm">{t("No pending offers on your listings.")}</p>
         ) : (
           <div className="flex flex-col gap-2">
             {received.map((offer) => (
@@ -48,9 +50,9 @@ export function OffersPanel({ received, made }: { received: OfferReceived[]; mad
       </div>
 
       <div>
-        <h3 className="mb-3 text-sm font-semibold">My Offers ({made.length})</h3>
+        <h3 className="mb-3 text-sm font-semibold">{t("My Offers")} ({made.length})</h3>
         {made.length === 0 ? (
-          <p className="text-muted-foreground text-sm">You haven&apos;t made any offers yet.</p>
+          <p className="text-muted-foreground text-sm">{t("You haven't made any offers yet.")}</p>
         ) : (
           <div className="flex flex-col gap-2">
             {made.map((offer) => (
@@ -66,15 +68,16 @@ export function OffersPanel({ received, made }: { received: OfferReceived[]; mad
 function ReceivedOfferRow({ offer }: { offer: OfferReceived }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const t = useT();
 
   function respond(action: "accept" | "reject") {
     startTransition(async () => {
       try {
         await respondToOffer(offer.id, action);
-        toast.success(action === "accept" ? "Offer accepted." : "Offer declined.");
+        toast.success(action === "accept" ? t("Offer accepted.") : t("Offer declined."));
         router.refresh();
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Could not respond to offer.");
+        toast.error(err instanceof Error ? err.message : t("Could not respond to offer."));
       }
     });
   }
@@ -86,7 +89,7 @@ function ReceivedOfferRow({ offer }: { offer: OfferReceived }) {
           {offer.asset.name}
         </Link>
         <p className="text-muted-foreground text-xs">
-          {offer.buyer.name ?? offer.buyer.handle ?? "A buyer"} offered{" "}
+          {t("{buyer} offered", { buyer: offer.buyer.name ?? offer.buyer.handle ?? t("A buyer") })}{" "}
           <span className="font-semibold">{formatThb(offer.amountThb)}</span> — {formatDateTime(offer.createdAt)}
         </p>
         {offer.message && <p className="text-muted-foreground text-xs italic">&quot;{offer.message}&quot;</p>}
@@ -94,11 +97,11 @@ function ReceivedOfferRow({ offer }: { offer: OfferReceived }) {
       <div className="flex gap-2">
         <Button size="sm" variant="outline" onClick={() => respond("reject")} disabled={pending}>
           {pending ? <Loader2 className="animate-spin" /> : <X />}
-          Decline
+          {t("Decline")}
         </Button>
         <Button size="sm" onClick={() => respond("accept")} disabled={pending}>
           {pending ? <Loader2 className="animate-spin" /> : <Check />}
-          Accept
+          {t("Accept")}
         </Button>
       </div>
     </div>
@@ -108,15 +111,16 @@ function ReceivedOfferRow({ offer }: { offer: OfferReceived }) {
 function MadeOfferRow({ offer }: { offer: OfferMade }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const t = useT();
 
   function handleWithdraw() {
     startTransition(async () => {
       try {
         await withdrawOffer(offer.id);
-        toast.success("Offer withdrawn.");
+        toast.success(t("Offer withdrawn."));
         router.refresh();
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Could not withdraw offer.");
+        toast.error(err instanceof Error ? err.message : t("Could not withdraw offer."));
       }
     });
   }
@@ -128,18 +132,18 @@ function MadeOfferRow({ offer }: { offer: OfferMade }) {
           {offer.asset.name}
         </Link>
         <p className="text-muted-foreground text-xs">
-          You offered <span className="font-semibold">{formatThb(offer.amountThb)}</span> —{" "}
+          {t("You offered")} <span className="font-semibold">{formatThb(offer.amountThb)}</span> —{" "}
           {formatDateTime(offer.createdAt)}
         </p>
       </div>
       <div className="flex items-center gap-2">
         <Badge variant={offer.status === "ACCEPTED" ? "default" : "outline"}>
-          <HandCoins className="size-3" /> {OFFER_STATUS_LABELS[offer.status]}
+          <HandCoins className="size-3" /> {t(OFFER_STATUS_LABELS[offer.status])}
         </Badge>
         {offer.status === "PENDING" && (
           <Button size="sm" variant="outline" onClick={handleWithdraw} disabled={pending}>
             {pending && <Loader2 className="animate-spin" />}
-            Withdraw
+            {t("Withdraw")}
           </Button>
         )}
         {offer.status === "ACCEPTED" && (
@@ -147,10 +151,10 @@ function MadeOfferRow({ offer }: { offer: OfferMade }) {
             priceThb={offer.amountThb}
             vaulted={offer.asset.vaulted}
             sellerWalletAddress={offer.seller.walletAddress}
-            ctaLabel="Complete Purchase"
-            dialogTitle="Complete Your Purchase"
-            dialogDescription="Payment stays protected until the item is verified."
-            successMessage="Purchase complete!"
+            ctaLabel={t("Complete Purchase")}
+            dialogTitle={t("Complete Your Purchase")}
+            dialogDescription={t("Payment stays protected until the item is verified.")}
+            successMessage={t("Purchase complete!")}
             size="sm"
             onConfirm={(fulfillmentChoice, escrowLock) =>
               completeOfferPurchase(offer.id, fulfillmentChoice, escrowLock)

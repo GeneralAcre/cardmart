@@ -1,3 +1,5 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import { Images } from "lucide-react";
@@ -8,10 +10,12 @@ import { CARD_GAME_LABELS } from "@/lib/labels";
 import type { AssetSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { displayImage, realPhotos } from "@/lib/card-image";
+import { useT } from "@/components/landing/language-provider";
 
 export function ListingCard({ asset }: { asset: AssetSummary }) {
   const photos = realPhotos(asset.verificationPhotos);
   const image = displayImage(asset);
+  const t = useT();
 
   return (
     <Link
@@ -52,24 +56,24 @@ export function ListingCard({ asset }: { asset: AssetSummary }) {
           {/* An official catalogue image is the card, not this copy — say so. */}
           {image?.kind === "reference" && (
             <span className="absolute bottom-2 left-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
-              Reference image
+              {t("Reference image")}
             </span>
           )}
           {photos.length > 1 && (
             <span className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
               <Images className="size-3" />
-              {photos.length} views
+              {t("{count} views", { count: photos.length })}
             </span>
           )}
         </div>
         <div className="flex flex-col gap-3 px-3 pb-3">
           <div className="flex flex-col gap-1">
-            <span className="text-muted-foreground text-xs">{CARD_GAME_LABELS[asset.game]}</span>
+            <span className="text-muted-foreground text-xs">{t(CARD_GAME_LABELS[asset.game])}</span>
             <h3 className="line-clamp-1 text-sm font-semibold">{asset.name}</h3>
             <p className="text-muted-foreground line-clamp-1 text-xs">{asset.subtitle}</p>
             <p className="text-foreground line-clamp-1 text-xs font-medium">
-              <span className="text-muted-foreground">Grade: </span>
-              {asset.gradingCompany === "RAW" ? "Raw / Ungraded" : `${asset.gradingCompany} ${formatGrade(asset.grade)}`}
+              <span className="text-muted-foreground">{t("Grade:")} </span>
+              {asset.gradingCompany === "RAW" ? t("Raw / Ungraded") : `${asset.gradingCompany} ${formatGrade(asset.grade)}`}
               {asset.isBlackLabel && <span className="text-amber-500"> · Black Label</span>}
             </p>
           </div>
@@ -80,7 +84,7 @@ export function ListingCard({ asset }: { asset: AssetSummary }) {
               asset.priceDirection === "down" && "text-destructive",
             )}
           >
-            {asset.priceThb != null ? formatThb(asset.priceThb) : "Price unavailable"}
+            {asset.priceThb != null ? formatThb(asset.priceThb) : t("Price unavailable")}
           </span>
         </div>
       </div>

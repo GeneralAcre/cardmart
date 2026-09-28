@@ -86,8 +86,28 @@ async function checkTcg(): Promise<Omit<IntegrationStatus, "checkedAt">> {
 }
 
 /** Live check of every external price/verification API, for the admin Integrations tab. */
+async function checkResend(): Promise<Omit<IntegrationStatus, "checkedAt">> {
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  if (!apiKey) return { name: "Email (Resend)", state: "not_configured", message: "RESEND_API_KEY is not set — notifications stay in-app only." };
+  try {
+    // Listing domains needs a full-access key; a sending-only key answers
+    // 401 with a "restricted" error, which still proves the key is real.
+    const res = await fetch("https://api.resend.com/domains", {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      cache: "no-store",
+    });
+    const body = (await res.text()).slice(0, 200);
+    if (res.ok || body.includes("restricted_api_key")) {
+      return { name: "Email (Resend)", state: "ok", message: `Live — sending from ${process.env.EMAIL_FROM?.trim() || "onboarding@resend.dev (test sender)"}.` };
+    }
+    return { name: "Email (Resend)", state: "error", message: `Resend rejected the key (HTTP ${res.status}): ${body}` };
+  } catch (err) {
+    return { name: "Email (Resend)", state: "error", message: `Network error: ${err instanceof Error ? err.message : String(err)}` };
+  }
+}
+
 export async function checkAllIntegrations(): Promise<IntegrationStatus[]> {
   const checkedAt = new Date().toISOString();
-  const results = await Promise.all([checkPsa(), checkEbay(), checkTcg()]);
+  const results = await Promise.all([checkPsa(), checkEbay(), checkTcg(), checkResend()]);
   return results.map((r) => ({ ...r, checkedAt }));
 }

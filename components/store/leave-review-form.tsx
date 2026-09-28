@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { RatingInput } from "@/components/store/rating-input";
 import { submitReview } from "@/lib/actions";
+import { useT } from "@/components/landing/language-provider";
 
 export function LeaveReviewForm({ escrowTxId }: { escrowTxId: string }) {
   const router = useRouter();
@@ -16,15 +17,16 @@ export function LeaveReviewForm({ escrowTxId }: { escrowTxId: string }) {
   const [comment, setComment] = useState("");
   const [pending, startTransition] = useTransition();
   const [submitted, setSubmitted] = useState(false);
+  const t = useT();
 
   function handleSubmit() {
     startTransition(async () => {
       const res = await submitReview(escrowTxId, rating, comment);
       if (res.error) {
-        toast.error(res.error);
+        toast.error(t(res.error));
         return;
       }
-      toast.success("Review submitted — thanks!");
+      toast.success(t("Review submitted — thanks!"));
       setSubmitted(true);
       router.refresh();
     });
@@ -34,17 +36,17 @@ export function LeaveReviewForm({ escrowTxId }: { escrowTxId: string }) {
     return (
       <div className="text-muted-foreground flex items-center gap-2 rounded-xl border border-dashed p-4 text-sm">
         <CheckCircle2 className="size-4" />
-        Thanks for rating this seller.
+        {t("Thanks for rating this seller.")}
       </div>
     );
   }
 
   return (
     <div className="bg-card flex flex-col gap-3 rounded-xl border p-4">
-      <span className="text-sm font-semibold">Rate this seller</span>
+      <span className="text-sm font-semibold">{t("Rate this seller")}</span>
       <RatingInput value={rating} onChange={setRating} />
       <Textarea
-        placeholder="Optional — how was the transaction?"
+        placeholder={t("Optional — how was the transaction?")}
         value={comment}
         onChange={(e) => setComment(e.target.value)}
         rows={2}
@@ -52,9 +54,9 @@ export function LeaveReviewForm({ escrowTxId }: { escrowTxId: string }) {
       <div className="flex items-center gap-2">
         <Button size="sm" className="w-fit" disabled={rating === 0 || pending} onClick={handleSubmit}>
           {pending && <Loader2 className="animate-spin" />}
-          Submit Review
+          {t("Submit Review")}
         </Button>
-        {rating === 0 && <span className="text-muted-foreground text-xs">Select a rating first</span>}
+        {rating === 0 && <span className="text-muted-foreground text-xs">{t("Select a rating first")}</span>}
       </div>
     </div>
   );

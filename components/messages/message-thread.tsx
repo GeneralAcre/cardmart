@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { markConversationRead, sendMessage } from "@/lib/actions";
 import { formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/landing/language-provider";
 
 export interface ThreadMessage {
   id: string;
@@ -36,6 +37,7 @@ export function MessageThread({
   const [draft, setDraft] = useState("");
   const [pending, startTransition] = useTransition();
   const bottomRef = useRef<HTMLDivElement>(null);
+  const t = useT();
 
   const lastIncomingId = [...messages].reverse().find((m) => m.senderId !== currentUserId)?.id;
 
@@ -66,7 +68,7 @@ export function MessageThread({
         setDraft("");
         router.refresh();
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Could not send message.");
+        toast.error(err instanceof Error ? err.message : t("Could not send message."));
       }
     });
   }
@@ -76,7 +78,7 @@ export function MessageThread({
       <div className="flex max-h-[65vh] flex-1 flex-col gap-2 overflow-y-auto p-4">
         {messages.length === 0 ? (
           <p className="text-muted-foreground m-auto text-center text-sm">
-            Say hello — ask about the item&apos;s condition, shipping, or whether they&apos;d take a lower price.
+            {t("Say hello — ask about the item's condition, shipping, or whether they'd take a lower price.")}
           </p>
         ) : (
           messages.map((m) => {
@@ -116,13 +118,13 @@ export function MessageThread({
               submit();
             }
           }}
-          placeholder="Write a message…"
+          placeholder={t("Write a message…")}
           rows={1}
           maxLength={2000}
           className="max-h-32 min-h-10 resize-none"
           disabled={pending}
         />
-        <Button type="submit" size="icon" disabled={pending || !draft.trim()} aria-label="Send">
+        <Button type="submit" size="icon" disabled={pending || !draft.trim()} aria-label={t("Send")}>
           {pending ? <Loader2 className="animate-spin" /> : <Send />}
         </Button>
       </form>

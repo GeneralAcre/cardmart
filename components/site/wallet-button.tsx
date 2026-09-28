@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
+import { useT } from "@/components/landing/language-provider";
 
 function truncateKey(key: string) {
   return `${key.slice(0, 4)}…${key.slice(-4)}`;
@@ -23,11 +24,12 @@ export function WalletButton() {
   const router = useRouter();
   const [copied, setCopied] = useState(false);
   const { connected, connecting, publicKey, connect, disconnect } = useWalletStore();
+  const t = useT();
 
   function copyAddress() {
     if (!publicKey) return;
     navigator.clipboard.writeText(publicKey);
-    toast.success("Address copied — safe to send test SOL here");
+    toast.success(t("Address copied — safe to send test SOL here"));
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }
@@ -41,7 +43,7 @@ export function WalletButton() {
         onClick={async () => {
           try {
             const key = await connect();
-            toast.success("Wallet connected", {
+            toast.success(t("Wallet connected"), {
               description: truncateKey(key),
             });
           } catch {
@@ -51,7 +53,7 @@ export function WalletButton() {
         }}
       >
         <Wallet />
-        <span className="hidden sm:inline">{connecting ? "Connecting…" : "Connect Wallet"}</span>
+        <span className="hidden sm:inline">{connecting ? t("Connecting…") : t("Connect Wallet")}</span>
       </Button>
     );
   }
@@ -65,10 +67,10 @@ export function WalletButton() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-72">
-        <DropdownMenuLabel>Solana Wallet (Test Network)</DropdownMenuLabel>
+        <DropdownMenuLabel>{t("Solana Wallet (Test Network)")}</DropdownMenuLabel>
         <div className="flex flex-col gap-1.5 px-2 pb-2">
           <span className="text-muted-foreground text-[11px]">
-            Send test SOL to this address to fund it:
+            {t("Send test SOL to this address to fund it:")}
           </span>
           <button
             type="button"
@@ -88,12 +90,12 @@ export function WalletButton() {
           variant="destructive"
           onClick={() => {
             disconnect();
-            toast("Signed out");
+            toast(t("Signed out"));
             router.push("/");
           }}
         >
           <LogOut />
-          Sign out
+          {t("Sign out")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -9,6 +9,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getAssetPriceHistory } from "@/lib/actions";
 import { formatThb } from "@/lib/format";
 import type { PriceHistoryRange } from "@/lib/queries";
+import { useLanguage } from "@/components/landing/language-provider";
 
 interface PricePoint {
   priceThb: number;
@@ -33,6 +34,7 @@ export function PriceHistoryChart({
   const [range, setRange] = useState<PriceHistoryRange>("7d");
   const [history, setHistory] = useState(initialHistory);
   const [pending, startTransition] = useTransition();
+  const { locale, tr: t } = useLanguage();
 
   function handleRangeChange(next: PriceHistoryRange) {
     setRange(next);
@@ -43,7 +45,7 @@ export function PriceHistoryChart({
   }
 
   const chartData = history.map((p) => ({
-    date: new Date(p.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+    date: new Date(p.createdAt).toLocaleDateString(locale === "th" ? "th-TH" : "en-US", { month: "short", day: "numeric" }),
     priceThb: p.priceThb,
   }));
   const firstPrice = chartData[0]?.priceThb;
@@ -55,7 +57,7 @@ export function PriceHistoryChart({
         ? "var(--success)"
         : "var(--destructive)";
   const chartConfig = {
-    priceThb: { label: "Price", color: priceColor },
+    priceThb: { label: t("Price"), color: priceColor },
   } satisfies ChartConfig;
 
   return (
@@ -65,7 +67,7 @@ export function PriceHistoryChart({
           <div className="bg-foreground text-background flex size-7 items-center justify-center rounded-lg">
             <LineChart className="size-3.5" />
           </div>
-          <span className="text-sm font-semibold">Price History</span>
+          <span className="text-sm font-semibold">{t("Price History")}</span>
         </div>
         <Tabs value={range} onValueChange={(v) => handleRangeChange(v as PriceHistoryRange)}>
           <TabsList>
@@ -112,7 +114,7 @@ export function PriceHistoryChart({
             {currentPriceThb != null ? formatThb(currentPriceThb) : "—"}
           </span>
           <p className="text-muted-foreground text-xs">
-            Not enough price history yet in this window — check back after a reprice or sale.
+            {t("Not enough price history yet in this window — check back after a reprice or sale.")}
           </p>
         </div>
       )}

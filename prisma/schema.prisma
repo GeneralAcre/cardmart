@@ -45,14 +45,26 @@ enum MarketStatus {
 
 enum AuctionStatus {
   ACTIVE
-  // endTime passed with at least one bid — the highest bidder still has to
-  // actively claim it (sign the escrow lock themselves, same as any other
-  // purchase — see claimAuctionWin in lib/actions.ts) before it's really sold.
+  // Settled with a winner: the winning bid's locked funds became the sale's
+  // escrow (see settleAuction / claimAuctionWin in lib/actions.ts).
   ENDED_SOLD
   ENDED_NO_BIDS
+  // Legacy only: the winning bid was placed before bids locked funds, and
+  // the winner never claimed within the claim window, so the item was
+  // released back to the seller. Bids made since always hold a real lock.
+  ENDED_UNCLAIMED
   // Seller-cancelled — only allowed while there are zero bids, so no bidder
   // is ever pulled out from under after committing to a price.
   CANCELLED
+}
+
+enum BidLockStatus {
+  // Funds locked and still the bidder's standing bid.
+  HELD
+  // Outbid (or otherwise released) and the lock returned to the bidder.
+  REFUNDED
+  // The winning bid — its lock became the sale's EscrowTransaction.
+  CONVERTED
 }
 
 enum OfferStatus {
@@ -314,6 +326,10 @@ model Auction {
   status        AuctionStatus @default(ACTIVE)
   createdAt     DateTime      @default(now())
   settledAt     DateTime?
+  // Set once bidding closes with a winner on a non-vaulted item: the
+  // winner's money is already locked, they just pick ship or vault by then.
+  // After it passes the item defaults to the vault (see settleAuction).
+  claimDeadline DateTime?
 
   assetId String
   asset   Asset  @relation(fields: [assetId], references: [id])
@@ -334,6 +350,17 @@ model Bid {
   auction   Auction @relation(fields: [auctionId], references: [id])
   bidderId  String
   bidder    User    @relation(fields: [bidderId], references: [id])
+
+  // Every bid locks its full amount in the escrow program (the same
+  // lock_payment a normal purchase uses). Outbid locks are refunded by the
+  // escrow authority; the winning lock becomes the sale's EscrowTransaction.
+  // lockStatus is null only for bids placed before locking existed.
+  lockStatus      BidLockStatus?
+  onChain         Boolean        @default(false)
+  onChainTradeId  BigInt?
+  tradeAccount    String?
+  lamportsLocked  BigInt?
+  lockTxSignature String?
 
   @@index([auctionId, amountThb])
   @@index([bidderId])
@@ -499,6 +526,7 @@ model GradingSubmission {
   itemName        String
   itemSubtitle    String
   category        AssetCategory
+  game            CardGame                @default(POKEMON)
   gradingCompany  GradingCompany
   packagePriceThb Int
   status          GradingSubmissionStatus @default(AWAITING_SHIPMENT_TO_GRADER)

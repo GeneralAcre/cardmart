@@ -5,6 +5,7 @@ import { CircleCheck, MessageSquare, PackageOpen } from "lucide-react";
 
 import { getSellerProfile } from "@/lib/queries";
 import { getCurrentUser } from "@/lib/session";
+import { getT } from "@/lib/i18n/server";
 import { MessageSellerButton } from "@/components/messages/message-seller-button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ListingCard } from "@/components/marketplace/listing-card";
@@ -18,12 +19,12 @@ import { displayImage } from "@/lib/card-image";
 
 export default async function StorePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [profile, currentUser] = await Promise.all([getSellerProfile(id), getCurrentUser()]);
+  const [profile, currentUser, t] = await Promise.all([getSellerProfile(id), getCurrentUser(), getT()]);
 
   if (!profile) notFound();
   const { seller, listings, rating, reviews, soldHistory, saleCount } = profile;
 
-  const displayName = seller.name ?? seller.handle ?? "Collector";
+  const displayName = seller.name ?? seller.handle ?? t("Collector");
   const initials = displayName
     .split(" ")
     .map((n) => n[0])
@@ -46,9 +47,9 @@ export default async function StorePage({ params }: { params: Promise<{ id: stri
           </div>
           <RatingStars average={rating.average} count={rating.count} size="md" />
           <span className="text-muted-foreground text-xs">
-            Member since {formatDate(seller.createdAt)} &middot; {listings.length} listed item
-            {listings.length === 1 ? "" : "s"} &middot; {saleCount} completed sale
-            {saleCount === 1 ? "" : "s"}
+            {t("Member since {date}", { date: formatDate(seller.createdAt) })} &middot;{" "}
+            {t(listings.length === 1 ? "{count} listed item" : "{count} listed items", { count: listings.length })} &middot;{" "}
+            {t(saleCount === 1 ? "{count} completed sale" : "{count} completed sales", { count: saleCount })}
           </span>
           {seller.walletAddress && <SellerWalletAddress address={seller.walletAddress} />}
         </div>
@@ -62,16 +63,16 @@ export default async function StorePage({ params }: { params: Promise<{ id: stri
           show three consecutive empty-state boxes on first view. */}
       <Tabs defaultValue="listings">
         <TabsList>
-          <TabsTrigger value="listings">Listings ({listings.length})</TabsTrigger>
-          <TabsTrigger value="sold">Sold History ({soldHistory.length})</TabsTrigger>
-          <TabsTrigger value="reviews">Reviews ({reviews.length})</TabsTrigger>
+          <TabsTrigger value="listings">{t("Listings")} ({listings.length})</TabsTrigger>
+          <TabsTrigger value="sold">{t("Sold History")} ({soldHistory.length})</TabsTrigger>
+          <TabsTrigger value="reviews">{t("Reviews")} ({reviews.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="listings" className="pt-6">
           {listings.length === 0 ? (
             <div className="text-muted-foreground flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed py-24 text-center">
               <PackageOpen className="size-8" />
-              <p className="text-sm">Nothing listed for sale right now.</p>
+              <p className="text-sm">{t("Nothing listed for sale right now.")}</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4">
@@ -86,7 +87,7 @@ export default async function StorePage({ params }: { params: Promise<{ id: stri
           {soldHistory.length === 0 ? (
             <div className="text-muted-foreground flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed py-16 text-center">
               <CircleCheck className="size-8" />
-              <p className="text-sm">No completed sales yet.</p>
+              <p className="text-sm">{t("No completed sales yet.")}</p>
             </div>
           ) : (
             <div className="flex max-w-2xl flex-col gap-2">
@@ -114,8 +115,8 @@ export default async function StorePage({ params }: { params: Promise<{ id: stri
                     <div className="flex min-w-0 flex-1 flex-col">
                       <span className="truncate text-sm font-medium">{tx.asset.name}</span>
                       <span className="text-muted-foreground text-xs">
-                        {CARD_GAME_LABELS[tx.asset.game]} &middot; Sold{" "}
-                        {tx.releasedAt ? formatDate(tx.releasedAt) : formatDate(tx.createdAt)}
+                        {t(CARD_GAME_LABELS[tx.asset.game])} &middot;{" "}
+                        {t("Sold {date}", { date: formatDate(tx.releasedAt ?? tx.createdAt) })}
                       </span>
                     </div>
                     <span className="text-sm font-semibold">{formatThb(tx.amountThb)}</span>
@@ -130,7 +131,7 @@ export default async function StorePage({ params }: { params: Promise<{ id: stri
           {reviews.length === 0 ? (
             <div className="text-muted-foreground flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed py-16 text-center">
               <MessageSquare className="size-8" />
-              <p className="text-sm">No reviews yet — they show up here after a completed sale.</p>
+              <p className="text-sm">{t("No reviews yet — they show up here after a completed sale.")}</p>
             </div>
           ) : (
             <div className="flex max-w-2xl flex-col gap-3">
@@ -142,8 +143,8 @@ export default async function StorePage({ params }: { params: Promise<{ id: stri
                   </div>
                   {review.comment && <p className="text-sm">{review.comment}</p>}
                   <span className="text-muted-foreground text-xs">
-                    {review.buyer.name ?? review.buyer.handle ?? "A buyer"} &middot; bought &quot;
-                    {review.escrowTx.asset.name}&quot;
+                    {review.buyer.name ?? review.buyer.handle ?? t("A buyer")} &middot;{" "}
+                    {t("bought “{name}”", { name: review.escrowTx.asset.name })}
                   </span>
                 </div>
               ))}

@@ -21,6 +21,7 @@ import { WantedCardButton } from "@/components/wanted/wanted-card-form";
 import { ProposeSwapButton } from "@/components/trade/propose-swap-button";
 import { VerifiedBadge } from "@/components/store/verified-badge";
 import { getCurrentUser } from "@/lib/session";
+import { getT } from "@/lib/i18n/server";
 import { ItemGallery } from "@/components/item/item-gallery";
 import { PriceHistoryChart } from "@/components/item/price-history-chart";
 import { ProvenanceTimeline } from "@/components/item/provenance-timeline";
@@ -55,7 +56,7 @@ import { realPhotos } from "@/lib/card-image";
 
 export default async function ItemDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [asset, user] = await Promise.all([getAssetById(id), getCurrentUser()]);
+  const [asset, user, t] = await Promise.all([getAssetById(id), getCurrentUser(), getT()]);
 
   if (!asset) notFound();
 
@@ -147,10 +148,10 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
     pendingOffers: insightData.pendingOffers,
     market: cardMarket,
     psa: psaCert ? { totalPopulation: psaCert.totalPopulation, populationHigher: psaCert.populationHigher } : null,
-  });
+  }, t);
   const gradeLabel =
     asset.gradingCompany === "RAW"
-      ? "Raw / ungraded"
+      ? t("Raw / Ungraded")
       : `${asset.gradingCompany} ${formatGrade(asset.grade)}${asset.isBlackLabel ? " Black Label" : ""}`;
   const wantedDefaults = {
     query: asset.name,
@@ -170,7 +171,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
       <Button asChild variant="outline" className="mb-6">
         <Link href="/marketplace">
           <ArrowLeft />
-          Back to Marketplace
+          {t("Back to Marketplace")}
         </Link>
       </Button>
 
@@ -195,15 +196,15 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="outline" className="rounded-full">
-                {CARD_GAME_LABELS[asset.game]}
+                {t(CARD_GAME_LABELS[asset.game])}
               </Badge>
               {asset.vaulted && (
                 <Badge variant="secondary" className="rounded-full">
-                  In Platform Vault
+                  {t("In Platform Vault")}
                 </Badge>
               )}
               <Badge className={cn("rounded-full border-0", VERIFICATION_PACKAGE_BADGE_CLASS[asset.verificationPackage])}>
-                {VERIFICATION_PACKAGE_LABELS[asset.verificationPackage]}
+                {t(VERIFICATION_PACKAGE_LABELS[asset.verificationPackage])}
               </Badge>
             </div>
             {!isOwner && <WatchButton assetId={asset.id} initialWatching={isWatching} />}
@@ -217,7 +218,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
             <div className="flex min-w-0 flex-col gap-1">
               <span className="text-muted-foreground flex flex-wrap items-center gap-1.5 text-xs font-semibold tracking-wide uppercase">
                 {asset.gradingCompany === "RAW"
-                  ? "Raw / Ungraded — verified by camera"
+                  ? t("Raw / Ungraded — verified by camera")
                   : `${asset.gradingCompany} ${formatGrade(asset.grade)}${gradeTier ? ` · ${gradeTier}` : ""}`}
                 {asset.isBlackLabel && (
                   <span className="rounded bg-amber-400 px-1 py-0.5 text-[9px] font-bold normal-case tracking-wide text-neutral-900">
@@ -234,13 +235,13 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
                   rel="noreferrer"
                   className="text-muted-foreground hover:text-foreground mt-1 inline-flex w-fit items-center gap-1 text-xs underline underline-offset-2"
                 >
-                  View on PSA <ExternalLink className="size-3" />
+                  {t("View on PSA")} <ExternalLink className="size-3" />
                 </a>
               )}
             </div>
             <div className="flex shrink-0 flex-col items-end gap-1.5">
               <Badge className={cn("border-0", MARKET_STATUS_BADGE_CLASS[asset.marketStatus])}>
-                {MARKET_STATUS_LABELS[asset.marketStatus]}
+                {t(MARKET_STATUS_LABELS[asset.marketStatus])}
               </Badge>
               {asset.priceThb != null && (
                 <span className="text-xl leading-none font-bold tabular-nums">{formatThb(asset.priceThb)}</span>
@@ -253,17 +254,17 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
               token id), backed by this platform's own real SPL mint. */}
           <div className="detail-panel grid grid-cols-3 divide-x rounded-xl border text-sm">
             <div className="flex min-w-0 flex-col gap-0.5 p-3">
-              <span className="text-muted-foreground text-xs">Owned by</span>
+              <span className="text-muted-foreground text-xs">{t("Owned by")}</span>
               <Link href={`/store/${asset.owner.id}`} className="truncate font-medium hover:underline">
                 {asset.owner.name}
               </Link>
             </div>
             <div className="flex min-w-0 flex-col gap-0.5 p-3">
-              <span className="text-muted-foreground text-xs">Serial</span>
+              <span className="text-muted-foreground text-xs">{t("Serial")}</span>
               <span className="truncate font-mono">{asset.serial}</span>
             </div>
             <div className="flex min-w-0 flex-col gap-0.5 p-3">
-              <span className="text-muted-foreground text-xs">Mint Address</span>
+              <span className="text-muted-foreground text-xs">{t("Mint Address")}</span>
               {asset.mintAddress ? (
                 <a
                   href={`https://explorer.solana.com/address/${asset.mintAddress}?cluster=devnet`}
@@ -285,13 +286,13 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
               channel (see below) and don't feed into this fixed-price figure. */}
           <div className="detail-panel grid grid-cols-2 divide-x rounded-xl border">
             <div className="flex flex-col gap-0.5 p-3">
-              <span className="text-muted-foreground text-xs">Listing Price</span>
+              <span className="text-muted-foreground text-xs">{t("Listing Price")}</span>
               <span className="text-lg leading-none font-bold tabular-nums">
                 {asset.priceThb != null ? formatThb(asset.priceThb) : "—"}
               </span>
             </div>
             <div className="flex flex-col gap-0.5 p-3">
-              <span className="text-muted-foreground text-xs">Previous Price</span>
+              <span className="text-muted-foreground text-xs">{t("Previous Price")}</span>
               <span className="text-lg leading-none font-bold tabular-nums">
                 {previousPriceThb != null ? formatThb(previousPriceThb) : "—"}
               </span>
@@ -302,10 +303,9 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
             <div className="flex items-start gap-3 rounded-xl border border-dashed p-4 text-sm">
               <Flame className="text-muted-foreground mt-0.5 size-4 shrink-0" />
               <p>
-                <span className="font-semibold">Redeemed on {formatDate(asset.redeemedAt)}.</span>{" "}
+                <span className="font-semibold">{t("Redeemed on {date}.", { date: formatDate(asset.redeemedAt) })}</span>{" "}
                 <span className="text-muted-foreground">
-                  The physical card was shipped to its owner and its digital twin was burned, so it can no longer be
-                  bought, auctioned or swapped here.
+                  {t("The physical card was shipped to its owner and its digital twin was burned, so it can no longer be bought, auctioned or swapped here.")}
                 </span>
               </p>
             </div>
@@ -316,12 +316,12 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
             >
               <Gavel className="size-5 shrink-0" />
               <div className="flex flex-col">
-                <span className="font-semibold">This item is up for auction</span>
+                <span className="font-semibold">{t("This item is up for auction")}</span>
                 <span className="text-background/80 text-sm">
                   {activeAuction.currentBidThb != null
-                    ? `Current bid ${formatThb(activeAuction.currentBidThb)}`
-                    : `Starting at ${formatThb(activeAuction.startPriceThb)}`}{" "}
-                  — view the live auction to bid
+                    ? t("Current bid {amount}", { amount: formatThb(activeAuction.currentBidThb) })
+                    : t("Starting at {amount}", { amount: formatThb(activeAuction.startPriceThb) })}{" "}
+                  — {t("view the live auction to bid")}
                 </span>
               </div>
             </Link>
@@ -368,7 +368,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
           {!isOwner && (
             <WantedCardButton
               defaults={wantedDefaults}
-              label={asset.forSale ? "Notify me about other copies" : "Notify me when listed"}
+              label={asset.forSale ? t("Notify me about other copies") : t("Notify me when listed")}
               className="w-full"
               variant="outline"
             />
@@ -389,7 +389,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
               <AvatarFallback className="text-sm font-medium">{sellerInitials}</AvatarFallback>
             </Avatar>
             <div className="flex min-w-0 flex-col gap-0.5">
-              <span className="text-muted-foreground text-xs">Listed by</span>
+              <span className="text-muted-foreground text-xs">{t("Listed by")}</span>
               <span className="flex min-w-0 items-center gap-2">
                 <span className="truncate text-sm font-semibold">{asset.seller.name}</span>
                 <VerifiedBadge status={asset.seller.kycStatus} />
@@ -402,7 +402,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
           {!isOwner && <MessageSellerButton sellerId={asset.owner.id} className="w-full" />}
           {asset.owner.id !== asset.seller.id && (
             <p className="text-muted-foreground text-xs">
-              Currently owned by{" "}
+              {t("Currently owned by")}{" "}
               <Link href={`/store/${asset.owner.id}`} className="text-foreground font-medium hover:underline">
                 {asset.owner.name}
               </Link>
@@ -416,22 +416,22 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
               separate solid badge and a separate card. */}
           <details className="detail-panel group rounded-xl border" open>
             <summary className="flex cursor-pointer list-none items-center justify-between p-4 text-sm font-semibold">
-              Card Details
+              {t("Card Details")}
               <ChevronDown className="text-muted-foreground size-4 transition-transform group-open:rotate-180" />
             </summary>
             <dl className="grid grid-cols-2 gap-x-4 gap-y-3 border-t p-4 text-sm sm:grid-cols-3">
               <div>
-                <dt className="text-muted-foreground text-xs">Game</dt>
-                <dd className="font-medium">{CARD_GAME_LABELS[asset.game]}</dd>
+                <dt className="text-muted-foreground text-xs">{t("Game")}</dt>
+                <dd className="font-medium">{t(CARD_GAME_LABELS[asset.game])}</dd>
               </div>
               {asset.gradingCompany !== "RAW" && (
                 <>
                   <div>
-                    <dt className="text-muted-foreground text-xs">Grader</dt>
+                    <dt className="text-muted-foreground text-xs">{t("Grader")}</dt>
                     <dd className="font-medium">{asset.gradingCompany}</dd>
                   </div>
                   <div>
-                    <dt className="text-muted-foreground text-xs">Grade</dt>
+                    <dt className="text-muted-foreground text-xs">{t("Grade")}</dt>
                     <dd className="font-medium">
                       {formatGrade(asset.grade)}
                       {gradeTier ? ` — ${gradeTier}` : ""}
@@ -439,65 +439,65 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-muted-foreground text-xs">Serial</dt>
+                    <dt className="text-muted-foreground text-xs">{t("Serial")}</dt>
                     <dd className="font-mono font-medium">{asset.serial}</dd>
                   </div>
                 </>
               )}
               {psaCert?.year && (
                 <div>
-                  <dt className="text-muted-foreground text-xs">Year</dt>
+                  <dt className="text-muted-foreground text-xs">{t("Year")}</dt>
                   <dd className="font-medium">{psaCert.year}</dd>
                 </div>
               )}
               {psaCert?.brand && (
                 <div>
-                  <dt className="text-muted-foreground text-xs">Brand / Set</dt>
+                  <dt className="text-muted-foreground text-xs">{t("Brand / Set")}</dt>
                   <dd className="font-medium">{psaCert.brand}</dd>
                 </div>
               )}
               {psaCert?.cardNumber && (
                 <div>
-                  <dt className="text-muted-foreground text-xs">Card # (PSA)</dt>
+                  <dt className="text-muted-foreground text-xs">{t("Card # (PSA)")}</dt>
                   <dd className="font-mono font-medium">{psaCert.cardNumber}</dd>
                 </div>
               )}
               {psaCert?.variety && (
                 <div>
-                  <dt className="text-muted-foreground text-xs">Variety</dt>
+                  <dt className="text-muted-foreground text-xs">{t("Variety")}</dt>
                   <dd className="font-medium">{psaCert.variety}</dd>
                 </div>
               )}
               {psaCert?.gradeDescription && (
                 <div>
-                  <dt className="text-muted-foreground text-xs">Grade Description</dt>
+                  <dt className="text-muted-foreground text-xs">{t("Grade Description")}</dt>
                   <dd className="font-medium">{psaCert.gradeDescription}</dd>
                 </div>
               )}
               {psaCert?.totalPopulation != null && (
                 <div>
-                  <dt className="text-muted-foreground text-xs">Population at Grade</dt>
+                  <dt className="text-muted-foreground text-xs">{t("Population at Grade")}</dt>
                   <dd className="font-medium">{psaCert.totalPopulation.toLocaleString()}</dd>
                 </div>
               )}
               {psaCert?.populationHigher != null && (
                 <div>
-                  <dt className="text-muted-foreground text-xs">Population Higher</dt>
+                  <dt className="text-muted-foreground text-xs">{t("Population Higher")}</dt>
                   <dd className="font-medium">{psaCert.populationHigher.toLocaleString()}</dd>
                 </div>
               )}
               {psaPopulation?.total != null && (
                 <div>
-                  <dt className="text-muted-foreground text-xs">Total Pop. (All Grades)</dt>
+                  <dt className="text-muted-foreground text-xs">{t("Total Pop. (All Grades)")}</dt>
                   <dd className="font-medium">{psaPopulation.total.toLocaleString()}</dd>
                 </div>
               )}
             </dl>
             {psaCert && (
               <p className="text-muted-foreground border-t px-4 py-3 text-[11px]">
-                Grader detail sourced live from PSA&apos;s public Cert Verification API
-                {psaCert.itemStatus ? ` — status: ${psaCert.itemStatus}.` : "."} PSA does not publish a price
-                guide through this API, so no market value is shown here — see Price Comparison below.
+                {t("Grader detail sourced live from PSA's public Cert Verification API")}
+                {psaCert.itemStatus ? ` — ${t("status:")} ${psaCert.itemStatus}.` : "."}{" "}
+                {t("PSA does not publish a price guide through this API, so no market value is shown here — see Price Comparison below.")}
               </p>
             )}
           </details>
@@ -529,7 +529,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
             <div className="bg-foreground text-background flex size-7 items-center justify-center rounded-lg">
               <History className="size-3.5" />
             </div>
-            <h2 className="text-lg font-semibold">Item History</h2>
+            <h2 className="text-lg font-semibold">{t("Item History")}</h2>
           </div>
           <ProvenanceTimeline events={asset.provenance} />
         </div>

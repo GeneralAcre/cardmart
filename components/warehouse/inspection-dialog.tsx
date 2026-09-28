@@ -21,6 +21,7 @@ import { warehouseApproveShip, warehouseApproveVault, warehouseReject } from "@/
 import { formatGrade, formatThb } from "@/lib/format";
 import { extractPsaCertNumber, psaCertUrl } from "@/lib/psa-client";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/landing/language-provider";
 
 export type InboundPackageWithRelations = InboundPackage & {
   asset: Asset;
@@ -45,16 +46,17 @@ function AddressRow({
   address: string | null;
   phone: string | null;
 }) {
+  const t = useT();
   return (
     <div className="flex flex-col gap-0.5">
-      <span className="text-muted-foreground text-xs font-medium">{label}</span>
+      <span className="text-muted-foreground text-xs font-medium">{t(label)}</span>
       {address ? (
         <>
           <span>{address}</span>
-          <span className="text-muted-foreground text-xs">{phone ?? "No phone on file"}</span>
+          <span className="text-muted-foreground text-xs">{phone ?? t("No phone on file")}</span>
         </>
       ) : (
-        <span className="text-destructive text-xs">No shipping info on file — contact them before dispatch.</span>
+        <span className="text-destructive text-xs">{t("No shipping info on file — contact them before dispatch.")}</span>
       )}
     </div>
   );
@@ -70,9 +72,10 @@ function MatchRow({
   official: string;
 }) {
   const match = declared === official;
+  const t = useT();
   return (
     <div className="grid grid-cols-3 items-center gap-2 py-1.5 text-sm">
-      <span className="text-muted-foreground">{label}</span>
+      <span className="text-muted-foreground">{t(label)}</span>
       <span className="font-mono">{declared}</span>
       <span className={cn("flex items-center gap-1.5 font-mono", !match && "text-destructive font-semibold")}>
         {match ? (
@@ -99,6 +102,7 @@ export function InspectionDialog({
   const [pending, startTransition] = useTransition();
   const [action, setAction] = useState<"ship" | "vault" | "reject" | null>(null);
   const [vaultLocation, setVaultLocation] = useState("");
+  const t = useT();
 
   const allMatch =
     pkg.declaredSerial === pkg.officialSerial &&
@@ -112,15 +116,15 @@ export function InspectionDialog({
         await fn();
         toast.success(
           kind === "ship"
-            ? "Approved. Shipping label generated and item delivered to buyer."
+            ? t("Approved. Shipping label generated and item delivered to buyer.")
             : kind === "vault"
-              ? "Approved. Item deposited into the platform vault."
-              : "Item rejected. Buyer refunded and item returned to seller.",
+              ? t("Approved. Item deposited into the platform vault.")
+              : t("Item rejected. Buyer refunded and item returned to seller."),
         );
         onOpenChange(false);
         router.refresh();
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Action failed.");
+        toast.error(err instanceof Error ? err.message : t("Action failed."));
       } finally {
         setAction(null);
       }
@@ -133,27 +137,26 @@ export function InspectionDialog({
         <DialogHeader>
           <DialogTitle>{pkg.asset.name}</DialogTitle>
           <DialogDescription>
-            Compare the seller&apos;s declared certificate data against the
-            official grading database before paying the seller.
+            {t("Compare the seller's declared certificate data against the official grading database before paying the seller.")}
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Buyer</span>
+          <span className="text-muted-foreground">{t("Buyer")}</span>
           <span>{pkg.escrowTx.buyer.name}</span>
         </div>
         <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Seller</span>
+          <span className="text-muted-foreground">{t("Seller")}</span>
           <span>{pkg.escrowTx.seller.name}</span>
         </div>
         <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Sale Amount</span>
+          <span className="text-muted-foreground">{t("Sale Amount")}</span>
           <span className="font-semibold">{formatThb(pkg.escrowTx.amountThb)}</span>
         </div>
         <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Buyer&apos;s Delivery Choice</span>
+          <span className="text-muted-foreground">{t("Buyer's Delivery Choice")}</span>
           <Badge variant="secondary">
-            {pkg.escrowTx.fulfillmentChoice === "SHIP" ? "Ship to Address" : "Keep in Vault"}
+            {pkg.escrowTx.fulfillmentChoice === "SHIP" ? t("Ship to Address") : t("Keep in Vault")}
           </Badge>
         </div>
 
@@ -174,9 +177,9 @@ export function InspectionDialog({
 
         <div className="bg-muted/40 rounded-lg border p-3">
           <div className="grid grid-cols-3 gap-2 border-b pb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            <span>Field</span>
-            <span>Seller Declared</span>
-            <span>Official Database</span>
+            <span>{t("Field")}</span>
+            <span>{t("Seller Declared")}</span>
+            <span>{t("Official Database")}</span>
           </div>
           <MatchRow label="Serial" declared={pkg.declaredSerial} official={pkg.officialSerial} />
           <MatchRow
@@ -192,7 +195,7 @@ export function InspectionDialog({
           {!allMatch && (
             <p className="text-destructive mt-2 flex items-center gap-1.5 text-xs font-medium">
               <XOctagon className="size-3.5" />
-              Mismatch detected — recommend rejecting this item.
+              {t("Mismatch detected — recommend rejecting this item.")}
             </p>
           )}
           {pkg.officialGradingCompany === "PSA" && (
@@ -202,18 +205,18 @@ export function InspectionDialog({
               rel="noreferrer"
               className="text-muted-foreground hover:text-foreground mt-2 inline-flex items-center gap-1 text-xs underline underline-offset-2"
             >
-              View cert on PSA <ExternalLink className="size-3" />
+              {t("View cert on PSA")} <ExternalLink className="size-3" />
             </a>
           )}
         </div>
 
         {pkg.escrowTx.fulfillmentChoice === "VAULT" && (
           <div className="flex flex-col gap-1.5">
-            <span className="text-muted-foreground text-xs font-medium">Vault location (optional)</span>
+            <span className="text-muted-foreground text-xs font-medium">{t("Vault location (optional)")}</span>
             <Input
               value={vaultLocation}
               onChange={(e) => setVaultLocation(e.target.value)}
-              placeholder="e.g. Row 3, Shelf B, Box 12"
+              placeholder={t("e.g. Row 3, Shelf B, Box 12")}
               className="h-8 text-xs"
               disabled={pending}
             />
@@ -227,7 +230,7 @@ export function InspectionDialog({
             disabled={pending}
           >
             {pending && action === "reject" ? <Loader2 className="animate-spin" /> : <XOctagon />}
-            Reject Item
+            {t("Reject Item")}
           </Button>
           <div className="flex flex-wrap gap-2">
             <Button
@@ -236,7 +239,7 @@ export function InspectionDialog({
               disabled={pending}
             >
               {pending && action === "vault" ? <Loader2 className="animate-spin" /> : <Vault />}
-              Approve &amp; Deposit to Vault
+              {t("Approve & Deposit to Vault")}
             </Button>
             <Button
               variant={pkg.escrowTx.fulfillmentChoice === "SHIP" ? "default" : "outline"}
@@ -244,7 +247,7 @@ export function InspectionDialog({
               disabled={pending}
             >
               {pending && action === "ship" ? <Loader2 className="animate-spin" /> : <Truck />}
-              Approve &amp; Ship to Buyer
+              {t("Approve & Ship to Buyer")}
             </Button>
           </div>
         </DialogFooter>

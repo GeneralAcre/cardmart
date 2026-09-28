@@ -36,22 +36,24 @@ import {
 } from "@/lib/actions";
 import {
   BGS_BLACK_LABEL_GRADE,
-  CATEGORY_LABELS,
+  CARD_GAME_LABELS,
   GRADING_COMPANY_LABELS,
   GRADING_SUBMISSION_STATUS_LABELS,
   gradeTierLabel,
 } from "@/lib/labels";
 import { formatDate } from "@/lib/format";
+import { useT } from "@/components/landing/language-provider";
+import type { Translate } from "@/lib/i18n/translate";
 
 type SubmissionWithSeller = GradingSubmission & { seller: User };
 
-function reportBulkResult(result: BulkActionResult, verb: string) {
+function reportBulkResult(result: BulkActionResult, t: Translate) {
   if (result.succeeded.length > 0) {
-    toast.success(`${verb} ${result.succeeded.length} item${result.succeeded.length === 1 ? "" : "s"}.`);
+    toast.success(t("Marked shipped for {count} item(s).", { count: result.succeeded.length }));
   }
   if (result.skipped.length > 0) {
     toast.error(
-      `Skipped ${result.skipped.length}: ${result.skipped
+      `${t("Skipped {count}:", { count: result.skipped.length })} ${result.skipped
         .slice(0, 3)
         .map((s) => `${s.itemName} (${s.reason})`)
         .join("; ")}${result.skipped.length > 3 ? "…" : ""}`,
@@ -71,6 +73,7 @@ export function GradingQueue({ submissions }: { submissions: SubmissionWithSelle
   const gradeTier = gradeTarget ? gradeTierLabel(gradeTarget.gradingCompany, Number(grade) || null, isBlackLabel) : null;
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkPending, startBulkTransition] = useTransition();
+  const t = useT();
 
   // Only shipment confirmation is a real bulk candidate — completing a
   // grade needs one number typed per item, and rejecting needs individual
@@ -96,11 +99,11 @@ export function GradingQueue({ submissions }: { submissions: SubmissionWithSelle
     startBulkTransition(async () => {
       try {
         const result = await bulkMarkAtGradingCompany(ids);
-        reportBulkResult(result, "Marked shipped for");
+        reportBulkResult(result, t);
         setSelected(new Set());
         router.refresh();
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Bulk action failed.");
+        toast.error(err instanceof Error ? err.message : t("Bulk action failed."));
       }
     });
   }
@@ -110,10 +113,10 @@ export function GradingQueue({ submissions }: { submissions: SubmissionWithSelle
     startTransition(async () => {
       try {
         await adminMarkAtGradingCompany(id);
-        toast.success("Marked as shipped to the grading company.");
+        toast.success(t("Marked as shipped to the grading company."));
         router.refresh();
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Action failed.");
+        toast.error(err instanceof Error ? err.message : t("Action failed."));
       } finally {
         setBusyId(null);
       }
@@ -134,10 +137,10 @@ export function GradingQueue({ submissions }: { submissions: SubmissionWithSelle
 
         const res = await adminCompleteGrading(gradeTarget.id, {}, fd);
         if (res.error) {
-          toast.error(res.error);
+          toast.error(t(res.error));
           return;
         }
-        toast.success("Graded and minted on-chain. The seller can now price and list it.");
+        toast.success(t("Graded and minted on-chain. The seller can now price and list it."));
         setGradeTarget(null);
         setGrade("");
         setIsBlackLabel(false);
@@ -154,11 +157,11 @@ export function GradingQueue({ submissions }: { submissions: SubmissionWithSelle
     startTransition(async () => {
       try {
         await adminRejectGradingSubmission(rejectTarget.id);
-        toast.success("Submission rejected.");
+        toast.success(t("Submission rejected."));
         setRejectTarget(null);
         router.refresh();
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Action failed.");
+        toast.error(err instanceof Error ? err.message : t("Action failed."));
       } finally {
         setBusyId(null);
       }
@@ -169,7 +172,7 @@ export function GradingQueue({ submissions }: { submissions: SubmissionWithSelle
     return (
       <div className="text-muted-foreground flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed py-24 text-center">
         <Sparkles className="size-8" />
-        <p className="text-sm">No Full-Service submissions in progress.</p>
+        <p className="text-sm">{t("No Full-Service submissions in progress.")}</p>
       </div>
     );
   }
@@ -178,10 +181,10 @@ export function GradingQueue({ submissions }: { submissions: SubmissionWithSelle
     <div className="flex flex-col gap-3">
       {selected.size > 0 && (
         <div className="bg-card flex flex-wrap items-center justify-between gap-2 rounded-xl border p-3">
-          <span className="text-sm font-medium">{selected.size} selected</span>
+          <span className="text-sm font-medium">{t("{count} selected", { count: selected.size })}</span>
           <Button size="sm" onClick={bulkMarkShipped} disabled={bulkPending}>
             {bulkPending ? <Loader2 className="animate-spin" /> : <PackageCheck />}
-            Mark Shipped Selected
+            {t("Mark Shipped Selected")}
           </Button>
         </div>
       )}
@@ -192,14 +195,14 @@ export function GradingQueue({ submissions }: { submissions: SubmissionWithSelle
           <TableRow>
             <TableHead className="w-10">
               {shippable.length > 0 && (
-                <Checkbox checked={allShippableSelected} onCheckedChange={toggleAllShippable} aria-label="Select all shippable" />
+                <Checkbox checked={allShippableSelected} onCheckedChange={toggleAllShippable} aria-label={t("Select all shippable")} />
               )}
             </TableHead>
-            <TableHead>Item</TableHead>
-            <TableHead>Seller</TableHead>
-            <TableHead>Grading Co.</TableHead>
-            <TableHead>Submitted</TableHead>
-            <TableHead>Status</TableHead>
+            <TableHead>{t("Item")}</TableHead>
+            <TableHead>{t("Seller")}</TableHead>
+            <TableHead>{t("Grading Co.")}</TableHead>
+            <TableHead>{t("Submitted")}</TableHead>
+            <TableHead>{t("Status")}</TableHead>
             <TableHead />
           </TableRow>
         </TableHeader>
@@ -211,14 +214,14 @@ export function GradingQueue({ submissions }: { submissions: SubmissionWithSelle
                   <Checkbox
                     checked={selected.has(s.id)}
                     onCheckedChange={() => toggleOne(s.id)}
-                    aria-label={`Select ${s.itemName}`}
+                    aria-label={t("Select {name}", { name: s.itemName })}
                   />
                 )}
               </TableCell>
               <TableCell>
                 <div className="flex flex-col">
                   <span className="font-medium">{s.itemName}</span>
-                  <span className="text-muted-foreground text-xs">{CATEGORY_LABELS[s.category]}</span>
+                  <span className="text-muted-foreground text-xs">{t(CARD_GAME_LABELS[s.game])}</span>
                 </div>
               </TableCell>
               <TableCell>
@@ -226,7 +229,7 @@ export function GradingQueue({ submissions }: { submissions: SubmissionWithSelle
                   <span>{s.seller.name}</span>
                   {s.status === "AWAITING_SHIPMENT_TO_GRADER" && (
                     <span className="text-muted-foreground max-w-48 truncate text-xs" title={s.seller.shippingAddress ?? undefined}>
-                      {s.seller.shippingAddress ?? "No pickup address on file"}
+                      {s.seller.shippingAddress ?? t("No pickup address on file")}
                     </span>
                   )}
                 </div>
@@ -234,23 +237,23 @@ export function GradingQueue({ submissions }: { submissions: SubmissionWithSelle
               <TableCell>{GRADING_COMPANY_LABELS[s.gradingCompany]}</TableCell>
               <TableCell className="text-muted-foreground text-xs">{formatDate(s.createdAt)}</TableCell>
               <TableCell>
-                <Badge variant="secondary">{GRADING_SUBMISSION_STATUS_LABELS[s.status]}</Badge>
+                <Badge variant="secondary">{t(GRADING_SUBMISSION_STATUS_LABELS[s.status])}</Badge>
               </TableCell>
               <TableCell>
                 <div className="flex flex-wrap justify-end gap-2">
                   {s.status === "AWAITING_SHIPMENT_TO_GRADER" && (
                     <Button size="sm" variant="outline" disabled={pending && busyId === s.id} onClick={() => markShipped(s.id)}>
                       {pending && busyId === s.id ? <Loader2 className="animate-spin" /> : null}
-                      Mark Shipped
+                      {t("Mark Shipped")}
                     </Button>
                   )}
                   {s.status === "AT_GRADING_COMPANY" && (
                     <>
                       <Button size="sm" variant="outline" onClick={() => setRejectTarget(s)}>
-                        <XOctagon /> Reject
+                        <XOctagon /> {t("Reject")}
                       </Button>
                       <Button size="sm" onClick={() => setGradeTarget(s)}>
-                        <PackageCheck /> Complete
+                        <PackageCheck /> {t("Complete")}
                       </Button>
                     </>
                   )}
@@ -273,14 +276,16 @@ export function GradingQueue({ submissions }: { submissions: SubmissionWithSelle
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Record Grading Result</DialogTitle>
+            <DialogTitle>{t("Record Grading Result")}</DialogTitle>
             <DialogDescription>
-              Enter the grade {gradeTarget ? GRADING_COMPANY_LABELS[gradeTarget.gradingCompany] : ""} assigned to{" "}
-              {gradeTarget?.itemName}. This creates the digital certificate and the listing.
+              {t("Enter the grade {grader} assigned to {name}. This creates the digital certificate and the listing.", {
+                grader: gradeTarget ? GRADING_COMPANY_LABELS[gradeTarget.gradingCompany] : "",
+                name: gradeTarget?.itemName ?? "",
+              })}
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="grade">Grade (1–10)</Label>
+            <Label htmlFor="grade">{t("Grade (1–10)")}</Label>
             <Input
               id="grade"
               type="number"
@@ -297,7 +302,7 @@ export function GradingQueue({ submissions }: { submissions: SubmissionWithSelle
             {showBlackLabelOption && (
               <label className="mt-1 flex items-center gap-2 text-sm">
                 <Checkbox checked={isBlackLabel} onCheckedChange={(checked) => setIsBlackLabel(checked === true)} />
-                Black Label (every sub-grade a perfect 10)
+                {t("Black Label (every sub-grade a perfect 10)")}
               </label>
             )}
           </div>
@@ -311,11 +316,11 @@ export function GradingQueue({ submissions }: { submissions: SubmissionWithSelle
               }}
               disabled={pending}
             >
-              Cancel
+              {t("Cancel")}
             </Button>
             <Button onClick={completeGrading} disabled={pending || !grade}>
               {pending && <Loader2 className="animate-spin" />}
-              Confirm &amp; Mint
+              {t("Confirm & Mint")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -324,20 +329,18 @@ export function GradingQueue({ submissions }: { submissions: SubmissionWithSelle
       <Dialog open={!!rejectTarget} onOpenChange={(o) => !pending && !o && setRejectTarget(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Reject Submission</DialogTitle>
+            <DialogTitle>{t("Reject Submission")}</DialogTitle>
             <DialogDescription>
-              {rejectTarget?.itemName} will be marked rejected — e.g. the
-              grading company found it inauthentic or ungradeable. No digital
-              twin will be minted.
+              {t("{name} will be marked rejected — e.g. the grading company found it inauthentic or ungradeable. No digital twin will be minted.", { name: rejectTarget?.itemName ?? "" })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setRejectTarget(null)} disabled={pending}>
-              Cancel
+              {t("Cancel")}
             </Button>
             <Button variant="destructive" onClick={reject} disabled={pending}>
               {pending && <Loader2 className="animate-spin" />}
-              Confirm Rejection
+              {t("Confirm Rejection")}
             </Button>
           </DialogFooter>
         </DialogContent>

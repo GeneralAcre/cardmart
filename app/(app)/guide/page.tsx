@@ -18,20 +18,25 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { SELF_MINT_FEE_THB, SELLER_SHIPPING_COST_THB, THB_PER_SOL } from "@/lib/pricing";
+import { FULL_SERVICE_PACKAGE_PRICE_THB, SELF_MINT_FEE_THB, SELLER_SHIPPING_COST_THB, THB_PER_SOL } from "@/lib/pricing";
 import { formatThb } from "@/lib/format";
+import { getT } from "@/lib/i18n/server";
+import type { Translate, TranslateVars } from "@/lib/i18n/translate";
 
+// Titles and bodies are English t() keys; {placeholders} are filled from vars.
 interface Step {
   icon: LucideIcon;
   title: string;
   body: string;
+  vars?: TranslateVars;
 }
 
 const BUY_STEPS: Step[] = [
   {
     icon: Wallet,
     title: "Top up your wallet",
-    body: `Every account comes with a Solana wallet. On Portfolio, choose Deposit to add test SOL (devnet). Prices are in THB and convert at ${THB_PER_SOL.toLocaleString()} THB per SOL.`,
+    body: "Every account comes with a Solana wallet. On Portfolio, choose Deposit to add test SOL (devnet). Prices are in THB and convert at {rate} THB per SOL.",
+    vars: { rate: THB_PER_SOL.toLocaleString() },
   },
   {
     icon: Search,
@@ -59,7 +64,14 @@ const SELL_STEPS: Step[] = [
   {
     icon: Camera,
     title: "List with Instant Verify",
-    body: `Open Listing and follow the live-camera checklist (front, back, label, corners). Type a PSA cert number and the card details fill in automatically. Listing costs a flat ${formatThb(SELF_MINT_FEE_THB)}.`,
+    body: "Open Listing and follow the live-camera checklist (front, back, label, corners). Type a PSA cert number and the card details fill in automatically. Listing costs a flat {fee}.",
+    vars: { fee: formatThb(SELF_MINT_FEE_THB) },
+  },
+  {
+    icon: Sparkles,
+    title: "Or send a raw card for grading",
+    body: "Choose “Get it graded first” on Listing. We ship the card to PSA, BGS or CGC, pay their fee and mint it when it comes back — {price} all-in. Track it from the Grading tab on Portfolio.",
+    vars: { price: formatThb(FULL_SERVICE_PACKAGE_PRICE_THB) },
   },
   {
     icon: Sparkles,
@@ -74,7 +86,8 @@ const SELL_STEPS: Step[] = [
   {
     icon: PackageCheck,
     title: "Ship to the warehouse when it sells",
-    body: `When a buyer pays, send the card to our warehouse (${formatThb(SELLER_SHIPPING_COST_THB)} shipping). Once it passes inspection, the escrow pays you. Cards already in the vault sell instantly.`,
+    body: "When a buyer pays, send the card to our warehouse ({shipping} shipping). Once it passes inspection, the escrow pays you. Cards already in the vault sell instantly.",
+    vars: { shipping: formatThb(SELLER_SHIPPING_COST_THB) },
   },
   {
     icon: BadgeCheck,
@@ -94,7 +107,7 @@ const MORE: { icon: LucideIcon; title: string; body: string; href: string; cta: 
   {
     icon: Gavel,
     title: "Auctions",
-    body: "Minimum bids go up in 50 THB steps. A bid in the last 5 minutes adds 5 more. You're notified when you're outbid, when an auction starts and when you win.",
+    body: "Your bid is locked in escrow when you place it and returned automatically if you're outbid, so every winning bid is real money. Minimum bids go up in 50 THB steps, and a bid in the last 5 minutes adds 5 more.",
     href: "/auctions",
     cta: "See auctions",
   },
@@ -114,7 +127,7 @@ const MORE: { icon: LucideIcon; title: string; body: string; href: string; cta: 
   },
 ];
 
-function StepList({ steps }: { steps: Step[] }) {
+function StepList({ steps, t }: { steps: Step[]; t: Translate }) {
   return (
     <ol className="flex flex-col gap-3">
       {steps.map((step, i) => {
@@ -129,9 +142,9 @@ function StepList({ steps }: { steps: Step[] }) {
             <div className="flex min-w-0 flex-col gap-1">
               <span className="flex items-center gap-2 font-semibold">
                 <Icon className="text-muted-foreground size-4" />
-                {step.title}
+                {t(step.title)}
               </span>
-              <p className="text-muted-foreground text-sm">{step.body}</p>
+              <p className="text-muted-foreground text-sm">{t(step.body, step.vars)}</p>
             </div>
           </li>
         );
@@ -141,47 +154,46 @@ function StepList({ steps }: { steps: Step[] }) {
 }
 
 export default async function GuidePage({ searchParams }: { searchParams: Promise<{ welcome?: string; tab?: string }> }) {
-  const { welcome, tab } = await searchParams;
+  const [{ welcome, tab }, t] = await Promise.all([searchParams, getT()]);
 
   return (
     <div className="mx-auto w-full max-w-3xl flex-1 px-4 py-10 sm:px-6">
       {welcome && (
         <div className="bg-foreground text-background mb-8 rounded-xl p-5">
-          <p className="text-lg font-semibold">Welcome to CardMart</p>
+          <p className="text-lg font-semibold">{t("Welcome to CardMart")}</p>
           <p className="text-background/80 mt-1 text-sm">
-            Your profile is set up. Here&apos;s a two-minute tour of how buying and selling works. You can come back
-            to it any time from the menu under your avatar.
+            {t("Your profile is set up. Here's a two-minute tour of how buying and selling works. You can come back to it any time from the menu under your avatar.")}
           </p>
         </div>
       )}
 
       <div className="mb-6 flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold">Getting started</h1>
+        <h1 className="text-2xl font-semibold">{t("Getting started")}</h1>
         <p className="text-muted-foreground text-sm">
-          New to collecting graded cards? Pick a path below and follow the steps.
+          {t("New to collecting graded cards? Pick a path below and follow the steps.")}
         </p>
       </div>
 
       <Tabs defaultValue={tab === "sell" ? "sell" : "buy"}>
         <TabsList>
-          <TabsTrigger value="buy">I want to buy</TabsTrigger>
-          <TabsTrigger value="sell">I want to sell</TabsTrigger>
+          <TabsTrigger value="buy">{t("I want to buy")}</TabsTrigger>
+          <TabsTrigger value="sell">{t("I want to sell")}</TabsTrigger>
         </TabsList>
         <TabsContent value="buy" className="flex flex-col gap-4 pt-4">
-          <StepList steps={BUY_STEPS} />
+          <StepList steps={BUY_STEPS} t={t} />
           <Button asChild className="w-fit">
-            <Link href="/marketplace">Start browsing</Link>
+            <Link href="/marketplace">{t("Start browsing")}</Link>
           </Button>
         </TabsContent>
         <TabsContent value="sell" className="flex flex-col gap-4 pt-4">
-          <StepList steps={SELL_STEPS} />
+          <StepList steps={SELL_STEPS} t={t} />
           <Button asChild className="w-fit">
-            <Link href="/listing">List your first card</Link>
+            <Link href="/listing">{t("List your first card")}</Link>
           </Button>
         </TabsContent>
       </Tabs>
 
-      <h2 className="mt-12 mb-4 text-lg font-semibold">More ways to trade</h2>
+      <h2 className="mt-12 mb-4 text-lg font-semibold">{t("More ways to trade")}</h2>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {MORE.map((m) => {
           const Icon = m.icon;
@@ -189,11 +201,11 @@ export default async function GuidePage({ searchParams }: { searchParams: Promis
             <div key={m.title} className="bg-card flex flex-col gap-2 rounded-xl border p-4">
               <span className="flex items-center gap-2 font-semibold">
                 <Icon className="text-muted-foreground size-4" />
-                {m.title}
+                {t(m.title)}
               </span>
-              <p className="text-muted-foreground flex-1 text-sm">{m.body}</p>
+              <p className="text-muted-foreground flex-1 text-sm">{t(m.body)}</p>
               <Link href={m.href} className="text-sm font-medium underline underline-offset-2">
-                {m.cta}
+                {t(m.cta)}
               </Link>
             </div>
           );

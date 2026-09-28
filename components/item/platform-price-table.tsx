@@ -5,6 +5,7 @@ import { formatThb, formatUsd } from "@/lib/format";
 import { ebaySoldListingsUrl, type EbayPriceQuote } from "@/lib/ebay";
 import type { CardPriceQuote } from "@/lib/tcg-price";
 import { cn } from "@/lib/utils";
+import { getT } from "@/lib/i18n/server";
 
 interface Row {
   source: string;
@@ -26,7 +27,7 @@ function searchUrl(base: string, param: string, query: string, extra: Record<str
  * PriceCharting, TCGplayer without an API key) are still listed as one-click
  * searches pre-filled for this exact card, so the comparison is always complete.
  */
-export function PlatformPriceTable({
+export async function PlatformPriceTable({
   priceThb,
   forSale,
   gradeLabel,
@@ -51,16 +52,17 @@ export function PlatformPriceTable({
   tcg: CardPriceQuote | null;
   ebay: EbayPriceQuote | null;
 }) {
+  const t = await getT();
   const rows: Row[] = [
     {
-      source: "CardMart — this listing",
+      source: t("CardMart — this listing"),
       kind: "Asking",
       price: forSale && priceThb != null ? formatThb(priceThb) : null,
-      note: forSale ? gradeLabel : "Not listed for sale right now",
+      note: forSale ? gradeLabel : t("Not listed for sale right now"),
       highlight: true,
     },
     {
-      source: "CardMart — same card",
+      source: t("CardMart — same card"),
       kind: "Asking",
       price:
         cardMart.lowestAskThb != null
@@ -70,48 +72,49 @@ export function PlatformPriceTable({
           : null,
       note:
         cardMart.listingCount > 0
-          ? `${cardMart.listingCount} live listing${cardMart.listingCount === 1 ? "" : "s"}, lowest to highest`
-          : "No live listings",
+          ? t(cardMart.listingCount === 1 ? "{count} live listing, lowest to highest" : "{count} live listings, lowest to highest", {
+              count: cardMart.listingCount,
+            })
+          : t("No live listings"),
     },
     {
-      source: "CardMart — median sale",
+      source: t("CardMart — median sale"),
       kind: "Sold",
       price: cardMart.medianSaleThb != null ? formatThb(cardMart.medianSaleThb) : null,
       note:
         cardMart.saleCount > 0
-          ? `Median of ${cardMart.saleCount} completed sale${cardMart.saleCount === 1 ? "" : "s"} in ${cardMart.saleLookbackDays} days${
-              cardMart.lastSaleThb != null ? ` · last ${formatThb(cardMart.lastSaleThb)}` : ""
-            }`
-          : `No completed sales in ${cardMart.saleLookbackDays} days`,
+          ? t(cardMart.saleCount === 1 ? "Median of {count} completed sale in {days} days" : "Median of {count} completed sales in {days} days", { count: cardMart.saleCount, days: cardMart.saleLookbackDays }) +
+            (cardMart.lastSaleThb != null ? ` · ${t("last {price}", { price: formatThb(cardMart.lastSaleThb) })}` : "")
+          : t("No completed sales in {days} days", { days: cardMart.saleLookbackDays }),
     },
     {
       source: "eBay",
       kind: ebay ? "Asking" : "Search",
       price: ebay ? formatUsd(ebay.medianPriceUsd) : null,
       note: ebay
-        ? `Median of ${ebay.itemCount} active listing${ebay.itemCount === 1 ? "" : "s"} · ${formatUsd(ebay.lowPriceUsd)}–${formatUsd(ebay.highPriceUsd)}`
-        : "Sold listings for this card and grade",
+        ? `${t("Median of {count} active listings", { count: ebay.itemCount })} · ${formatUsd(ebay.lowPriceUsd)}–${formatUsd(ebay.highPriceUsd)}`
+        : t("Sold listings for this card and grade"),
       href: ebaySoldListingsUrl(marketQuery),
     },
     {
       source: "TCGplayer",
       kind: tcg?.marketPriceUsd != null ? "Market" : "Search",
       price: tcg?.marketPriceUsd != null ? formatUsd(tcg.marketPriceUsd) : null,
-      note: tcg?.marketPriceUsd != null ? `Ungraded market price · ${tcg.matchedName}` : "Ungraded card prices",
+      note: tcg?.marketPriceUsd != null ? `${t("Ungraded market price")} · ${tcg.matchedName}` : t("Ungraded card prices"),
       href: searchUrl("https://www.tcgplayer.com/search/all/product", "q", tcg?.matchedName ?? marketQuery),
     },
     {
       source: "Beckett",
       kind: "Search",
       price: null,
-      note: "Beckett marketplace and price guide",
+      note: t("Beckett marketplace and price guide"),
       href: searchUrl("https://www.beckett.com/search/", "term", marketQuery),
     },
     {
       source: "PriceCharting",
       kind: "Search",
       price: null,
-      note: "Graded sale history by grade",
+      note: t("Graded sale history by grade"),
       href: searchUrl("https://www.pricecharting.com/search-products", "q", marketQuery, { type: "prices" }),
     },
   ];
@@ -122,7 +125,7 @@ export function PlatformPriceTable({
         <div className="bg-foreground text-background flex size-7 items-center justify-center rounded-lg">
           <Scale className="size-3.5" />
         </div>
-        <h2 className="text-lg font-semibold">Price Comparison</h2>
+        <h2 className="text-lg font-semibold">{t("Price Comparison")}</h2>
       </div>
       {/* A list, not a <table>: each source is one row with the price pinned
           right, so it fits a phone screen without any sideways scrolling. */}
@@ -147,19 +150,18 @@ export function PlatformPriceTable({
             <div className="flex shrink-0 flex-col items-end gap-1">
               <span className="text-sm font-semibold tabular-nums sm:text-base">
                 {row.price ?? (
-                  <span className="text-muted-foreground text-xs font-normal">{row.href ? "Open search" : "—"}</span>
+                  <span className="text-muted-foreground text-xs font-normal">{row.href ? t("Open search") : "—"}</span>
                 )}
               </span>
               <Badge variant="outline" className="text-[10px]">
-                {row.kind}
+                {t(row.kind)}
               </Badge>
             </div>
           </li>
         ))}
       </ul>
       <p className="text-muted-foreground text-[11px]">
-        CardMart figures are in THB from real listings and completed sales. Outside prices stay in their own
-        currency (USD) and aren&apos;t converted. eBay figures are asking prices, not sold prices.
+        {t("CardMart figures are in THB from real listings and completed sales. Outside prices stay in their own currency (USD) and aren't converted. eBay figures are asking prices, not sold prices.")}
       </p>
     </div>
   );

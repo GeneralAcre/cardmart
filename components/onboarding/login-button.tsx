@@ -17,7 +17,7 @@ export function LoginButton({
   size?: "sm" | "default" | "lg";
   label?: string;
 }) {
-  const { t } = useLanguage();
+  const { t, tr } = useLanguage();
   const { ready, authenticated, getAccessToken, logout } = usePrivy();
   const { login } = useLogin({
     // Fires after auth AND embedded wallet creation both finish (since
@@ -47,7 +47,7 @@ export function LoginButton({
     // good. Staying purely derived from Privy's own ready/authenticated
     // state means it always reflects reality.
     onError: (error) => {
-      toast.error("Sign-in failed", { description: error });
+      toast.error(tr("Sign-in failed"), { description: error });
     },
   });
 

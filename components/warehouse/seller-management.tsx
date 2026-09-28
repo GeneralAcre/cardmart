@@ -17,6 +17,7 @@ import {
 import { RatingStars } from "@/components/store/rating-stars";
 import { toggleUserBan } from "@/lib/actions";
 import { formatDate } from "@/lib/format";
+import { useT } from "@/components/landing/language-provider";
 
 export interface SellerManagementRow {
   id: string;
@@ -39,6 +40,7 @@ export function SellerManagement({ users }: { users: SellerManagementRow[] }) {
   const [rows, setRows] = useState(users);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
+  const t = useT();
 
   function handleToggleBan(userId: string) {
     setPendingId(userId);
@@ -46,9 +48,9 @@ export function SellerManagement({ users }: { users: SellerManagementRow[] }) {
       try {
         const { isBanned } = await toggleUserBan(userId);
         setRows((prev) => prev.map((r) => (r.id === userId ? { ...r, isBanned } : r)));
-        toast.success(isBanned ? "Account suspended." : "Account restored.");
+        toast.success(isBanned ? t("Account suspended.") : t("Account restored."));
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Could not update this account.");
+        toast.error(err instanceof Error ? err.message : t("Could not update this account."));
       } finally {
         setPendingId(null);
       }
@@ -59,7 +61,7 @@ export function SellerManagement({ users }: { users: SellerManagementRow[] }) {
     return (
       <div className="text-muted-foreground flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed py-24 text-center">
         <Users className="size-8" />
-        <p className="text-sm">No onboarded users yet.</p>
+        <p className="text-sm">{t("No onboarded users yet.")}</p>
       </div>
     );
   }
@@ -69,12 +71,12 @@ export function SellerManagement({ users }: { users: SellerManagementRow[] }) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>User</TableHead>
-            <TableHead>Rating</TableHead>
-            <TableHead>Listings</TableHead>
-            <TableHead>Sales</TableHead>
-            <TableHead>Joined</TableHead>
-            <TableHead>Status</TableHead>
+            <TableHead>{t("User")}</TableHead>
+            <TableHead>{t("Rating")}</TableHead>
+            <TableHead>{t("Listings")}</TableHead>
+            <TableHead>{t("Sales")}</TableHead>
+            <TableHead>{t("Joined")}</TableHead>
+            <TableHead>{t("Status")}</TableHead>
             <TableHead />
           </TableRow>
         </TableHeader>
@@ -97,11 +99,11 @@ export function SellerManagement({ users }: { users: SellerManagementRow[] }) {
               <TableCell className="text-muted-foreground text-xs">{formatDate(u.createdAt)}</TableCell>
               <TableCell>
                 {u.isAdmin ? (
-                  <Badge variant="outline">Staff</Badge>
+                  <Badge variant="outline">{t("Staff")}</Badge>
                 ) : u.isBanned ? (
-                  <Badge variant="destructive">Suspended</Badge>
+                  <Badge variant="destructive">{t("Suspended")}</Badge>
                 ) : (
-                  <Badge variant="secondary">Active</Badge>
+                  <Badge variant="secondary">{t("Active")}</Badge>
                 )}
               </TableCell>
               <TableCell>
@@ -119,7 +121,7 @@ export function SellerManagement({ users }: { users: SellerManagementRow[] }) {
                     ) : (
                       <ShieldOff />
                     )}
-                    {u.isBanned ? "Restore" : "Suspend"}
+                    {u.isBanned ? t("Restore") : t("Suspend")}
                   </Button>
                 )}
               </TableCell>

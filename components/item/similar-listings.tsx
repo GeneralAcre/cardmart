@@ -7,12 +7,13 @@ import { displayImage } from "@/lib/card-image";
 import { formatThb } from "@/lib/format";
 import type { AssetSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { getT } from "@/lib/i18n/server";
 
 // Same card (same name, grading company and grade), listed by other
 // sellers — from getSimilarAssets, sorted cheapest-first. The delta badge is
 // the point: it says who's pricing this exact card higher or lower than the
 // listing you're currently looking at, not "here are some related items".
-export function SimilarListings({
+export async function SimilarListings({
   currentPriceThb,
   listings,
 }: {
@@ -20,6 +21,7 @@ export function SimilarListings({
   listings: AssetSummary[];
 }) {
   if (listings.length === 0) return null;
+  const t = await getT();
 
   return (
     <div className="flex flex-col gap-4">
@@ -27,8 +29,8 @@ export function SimilarListings({
         <div className="bg-foreground text-background flex size-7 items-center justify-center rounded-lg">
           <Scale className="size-3.5" />
         </div>
-        <h2 className="text-lg font-semibold">Compare Prices</h2>
-        <span className="text-muted-foreground text-xs">Same card, other sellers — cheapest first</span>
+        <h2 className="text-lg font-semibold">{t("Compare Prices")}</h2>
+        <span className="text-muted-foreground text-xs">{t("Same card, other sellers — cheapest first")}</span>
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
@@ -79,7 +81,7 @@ export function SimilarListings({
                 </div>
                 <div className="flex flex-col gap-2 px-3 pb-3">
                   <div className="flex min-w-0 items-center gap-1.5">
-                    <span className="text-muted-foreground text-[11px]">Seller</span>
+                    <span className="text-muted-foreground text-[11px]">{t("Seller")}</span>
                     <span className="truncate text-xs font-medium">{asset.seller.name}</span>
                   </div>
                   <span
@@ -89,7 +91,7 @@ export function SimilarListings({
                       asset.priceDirection === "down" && "text-destructive",
                     )}
                   >
-                    {asset.priceThb != null ? formatThb(asset.priceThb) : "Not for sale"}
+                    {asset.priceThb != null ? formatThb(asset.priceThb) : t("Not for sale")}
                   </span>
                 </div>
               </div>

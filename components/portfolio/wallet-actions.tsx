@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useWalletStore } from "@/lib/web3/wallet-store";
 import { requestSolAirdrop } from "@/lib/actions";
+import { useT } from "@/components/landing/language-provider";
 
 const AIRDROP_PRESETS_SOL = [0.5, 1, 2];
 
@@ -28,6 +29,7 @@ export function WalletActions({ solBalance }: { solBalance?: number | null }) {
   const { connected, publicKey, sendSol } = useWalletStore();
   const [depositOpen, setDepositOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const t = useT();
 
   if (!connected || !publicKey) return null;
 
@@ -35,10 +37,10 @@ export function WalletActions({ solBalance }: { solBalance?: number | null }) {
     <>
       <div className="flex gap-2">
         <Button size="sm" variant="outline" onClick={() => setDepositOpen(true)}>
-          <ArrowDownToLine /> Deposit
+          <ArrowDownToLine /> {t("Deposit")}
         </Button>
         <Button size="sm" variant="outline" onClick={() => setWithdrawOpen(true)}>
-          <ArrowUpFromLine /> Withdraw
+          <ArrowUpFromLine /> {t("Withdraw")}
         </Button>
       </div>
       <DepositDialog open={depositOpen} onOpenChange={setDepositOpen} walletAddress={publicKey} />
@@ -53,6 +55,7 @@ export function WalletActions({ solBalance }: { solBalance?: number | null }) {
 }
 
 function TxLink({ signature }: { signature: string }) {
+  const t = useT();
   return (
     <a
       href={explorerTxUrl(signature)}
@@ -60,7 +63,7 @@ function TxLink({ signature }: { signature: string }) {
       rel="noreferrer"
       className="text-muted-foreground hover:text-foreground flex items-center justify-center gap-1 text-xs underline underline-offset-2"
     >
-      View on Explorer <ExternalLink className="size-3" />
+      {t("View on Explorer")} <ExternalLink className="size-3" />
     </a>
   );
 }
@@ -79,11 +82,12 @@ function DepositDialog({
   const [amount, setAmount] = useState(1);
   const [pending, startTransition] = useTransition();
   const [signature, setSignature] = useState<string | null>(null);
+  const t = useT();
 
   function copyAddress() {
     navigator.clipboard.writeText(walletAddress);
     setCopied(true);
-    toast.success("Address copied");
+    toast.success(t("Address copied"));
     setTimeout(() => setCopied(false), 1500);
   }
 
@@ -92,11 +96,11 @@ function DepositDialog({
     startTransition(async () => {
       const res = await requestSolAirdrop(amount);
       if (res.error) {
-        toast.error(res.error);
+        toast.error(t(res.error));
         return;
       }
       setSignature(res.signature ?? null);
-      toast.success(`${amount} SOL deposited`);
+      toast.success(t("{amount} SOL deposited", { amount }));
       router.refresh();
     });
   }
@@ -105,7 +109,7 @@ function DepositDialog({
     <Dialog open={open} onOpenChange={(o) => !pending && onOpenChange(o)}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle className="text-center">Deposit</DialogTitle>
+          <DialogTitle className="text-center">{t("Deposit")}</DialogTitle>
         </DialogHeader>
 
         <button
@@ -116,13 +120,13 @@ function DepositDialog({
           <span className="break-all font-mono text-sm">{walletAddress}</span>
           <span className="text-muted-foreground flex items-center gap-1 text-xs">
             {copied ? <Check className="size-3.5 text-success" /> : <Copy className="size-3.5" />}
-            {copied ? "Copied" : "Tap to copy"}
+            {copied ? t("Copied") : t("Tap to copy")}
           </span>
         </button>
 
         <div className="flex items-center gap-2">
           <div className="bg-border h-px flex-1" />
-          <span className="text-muted-foreground text-xs">or get free test SOL (no real money)</span>
+          <span className="text-muted-foreground text-xs">{t("or get free test SOL (no real money)")}</span>
           <div className="bg-border h-px flex-1" />
         </div>
 
@@ -143,7 +147,7 @@ function DepositDialog({
 
         <Button size="lg" className="w-full" onClick={handleAirdrop} disabled={pending}>
           {pending ? <Loader2 className="animate-spin" /> : <ArrowDownToLine />}
-          {pending ? "Requesting…" : `Deposit ${amount} SOL`}
+          {pending ? t("Requesting…") : t("Deposit {amount} SOL", { amount })}
         </Button>
 
         {signature && <TxLink signature={signature} />}
@@ -168,6 +172,7 @@ function WithdrawDialog({
   const [amount, setAmount] = useState("");
   const [sending, setSending] = useState(false);
   const [signature, setSignature] = useState<string | null>(null);
+  const t = useT();
 
   const amountNumber = Number(amount);
   const addressTrimmed = toAddress.trim();
@@ -180,10 +185,10 @@ function WithdrawDialog({
     try {
       const sig = await sendSol(addressTrimmed, amountNumber);
       setSignature(sig);
-      toast.success("Sent");
+      toast.success(t("Sent"));
       router.refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Withdrawal failed.");
+      toast.error(err instanceof Error ? err.message : t("Withdrawal failed."));
     } finally {
       setSending(false);
     }
@@ -204,19 +209,19 @@ function WithdrawDialog({
     >
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle className="text-center">Withdraw</DialogTitle>
+          <DialogTitle className="text-center">{t("Withdraw")}</DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-col gap-1">
           <Input
-            placeholder="Recipient address"
+            placeholder={t("Recipient address")}
             value={toAddress}
             onChange={(e) => setToAddress(e.target.value)}
             disabled={sending}
             className="font-mono text-xs"
           />
           {addressTrimmed.length > 0 && !addressValid && (
-            <span className="text-destructive text-xs">That doesn&apos;t look like a valid address.</span>
+            <span className="text-destructive text-xs">{t("That doesn't look like a valid address.")}</span>
           )}
         </div>
 
@@ -246,12 +251,12 @@ function WithdrawDialog({
           </div>
         </div>
         {balance != null && (
-          <span className="text-muted-foreground -mt-2 text-xs">Balance: {balance.toFixed(4)} SOL</span>
+          <span className="text-muted-foreground -mt-2 text-xs">{t("Balance: {amount} SOL", { amount: balance.toFixed(4) })}</span>
         )}
 
         <Button size="lg" className="w-full" onClick={handleSend} disabled={!canSend}>
           {sending ? <Loader2 className="animate-spin" /> : <ArrowUpFromLine />}
-          {sending ? "Sending…" : "Send"}
+          {sending ? t("Sending…") : t("Send")}
         </Button>
 
         {signature && <TxLink signature={signature} />}

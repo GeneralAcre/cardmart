@@ -9,6 +9,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getMyPortfolioPriceHistory } from "@/lib/actions";
 import { formatThb } from "@/lib/format";
 import type { PriceHistoryRange } from "@/lib/queries";
+import { useLanguage } from "@/components/landing/language-provider";
 
 interface ValuePoint {
   totalThb: number;
@@ -16,10 +17,6 @@ interface ValuePoint {
 }
 
 const RANGE_LABELS: Record<PriceHistoryRange, string> = { "1d": "24H", "7d": "7D", "30d": "30D" };
-
-const chartConfig = {
-  totalThb: { label: "Total Value", color: "var(--foreground)" },
-} satisfies ChartConfig;
 
 // Same real-data-only rule as the per-item price chart: every point here
 // comes from lib/queries.ts's getPortfolioPriceHistory, which merges the
@@ -29,6 +26,10 @@ export function PortfolioValueChart({ initialHistory }: { initialHistory: ValueP
   const [range, setRange] = useState<PriceHistoryRange>("7d");
   const [history, setHistory] = useState(initialHistory);
   const [pending, startTransition] = useTransition();
+  const { locale, tr: t } = useLanguage();
+  const chartConfig = {
+    totalThb: { label: t("Total Value"), color: "var(--foreground)" },
+  } satisfies ChartConfig;
 
   function handleRangeChange(next: PriceHistoryRange) {
     setRange(next);
@@ -39,7 +40,7 @@ export function PortfolioValueChart({ initialHistory }: { initialHistory: ValueP
   }
 
   const chartData = history.map((p) => ({
-    date: new Date(p.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+    date: new Date(p.createdAt).toLocaleDateString(locale === "th" ? "th-TH" : "en-US", { month: "short", day: "numeric" }),
     totalThb: p.totalThb,
   }));
   const latest = history.at(-1)?.totalThb ?? null;
@@ -49,7 +50,7 @@ export function PortfolioValueChart({ initialHistory }: { initialHistory: ValueP
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <LineChart className="text-muted-foreground size-4" />
-          <span className="text-muted-foreground text-xs">Portfolio Value</span>
+          <span className="text-muted-foreground text-xs">{t("Portfolio Value")}</span>
         </div>
         <Tabs value={range} onValueChange={(v) => handleRangeChange(v as PriceHistoryRange)}>
           <TabsList>
@@ -93,8 +94,8 @@ export function PortfolioValueChart({ initialHistory }: { initialHistory: ValueP
       ) : (
         <p className="text-muted-foreground py-6 text-center text-xs">
           {latest != null
-            ? `Currently ${formatThb(latest)} — not enough history yet to plot a trend in this window.`
-            : "No priced assets yet — list or reprice something to start tracking value over time."}
+            ? t("Currently {amount} — not enough history yet to plot a trend in this window.", { amount: formatThb(latest) })
+            : t("No priced assets yet — list or reprice something to start tracking value over time.")}
         </p>
       )}
     </div>

@@ -1,11 +1,15 @@
+"use client";
+
 import { Lightbulb, Minus, TrendingDown, TrendingUp } from "lucide-react";
 
 import type { PriceInsight } from "@/lib/insights";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/landing/language-provider";
 
 const TONE_ICON = { up: TrendingUp, down: TrendingDown, neutral: Minus } as const;
 
 export function PriceInsights({ insights }: { insights: PriceInsight[] }) {
+  const t = useT();
   if (insights.length === 0) return null;
 
   return (
@@ -14,7 +18,7 @@ export function PriceInsights({ insights }: { insights: PriceInsight[] }) {
         <div className="bg-foreground text-background flex size-7 items-center justify-center rounded-lg">
           <Lightbulb className="size-3.5" />
         </div>
-        <span className="text-sm font-semibold">Price Insights</span>
+        <span className="text-sm font-semibold">{t("Price Insights")}</span>
       </div>
       <ul className="divide-y">
         {insights.map((insight) => {
@@ -38,7 +42,7 @@ export function PriceInsights({ insights }: { insights: PriceInsight[] }) {
         })}
       </ul>
       <p className="text-muted-foreground border-t px-4 py-3 text-[11px]">
-        Based only on real CardMart sales and listings, this listing&apos;s own price history and PSA population data.
+        {t("Based only on real CardMart sales and listings, this listing's own price history and PSA population data.")}
       </p>
     </div>
   );

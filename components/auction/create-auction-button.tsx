@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/dialog";
 import { startAuction } from "@/lib/actions";
 import { formatThb } from "@/lib/format";
+import { useT } from "@/components/landing/language-provider";
 
 export interface EligibleAsset {
   id: string;
@@ -46,6 +47,7 @@ export function CreateAuctionButton({ eligibleAssets }: { eligibleAssets: Eligib
   const [durationDays, setDurationDays] = useState("3");
   const [startTime, setStartTime] = useState("");
   const [pending, startTransition] = useTransition();
+  const t = useT();
 
   function handleOpenChange(next: boolean) {
     setOpen(next);
@@ -71,11 +73,11 @@ export function CreateAuctionButton({ eligibleAssets }: { eligibleAssets: Eligib
           Number(durationDays),
           startTime ? new Date(startTime).toISOString() : undefined,
         );
-        toast.success(startTime ? "Auction scheduled." : "Auction started.");
+        toast.success(startTime ? t("Auction scheduled.") : t("Auction started."));
         setOpen(false);
         router.refresh();
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Could not start auction.");
+        toast.error(err instanceof Error ? err.message : t("Could not start auction."));
       }
     });
   }
@@ -84,27 +86,25 @@ export function CreateAuctionButton({ eligibleAssets }: { eligibleAssets: Eligib
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button>
-          <Gavel /> Create Auction
+          <Gavel /> {t("Create Auction")}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Start an Auction</DialogTitle>
+          <DialogTitle>{t("Start an Auction")}</DialogTitle>
           <DialogDescription>
-            Replaces any fixed-price listing on the item you pick. Bidding is separate from the
-            marketplace.
+            {t("Replaces any fixed-price listing on the item you pick. Bidding is separate from the marketplace.")}
           </DialogDescription>
         </DialogHeader>
 
         {eligibleAssets.length === 0 ? (
           <p className="text-muted-foreground text-sm">
-            Nothing in your Portfolio is eligible right now — an item can&apos;t already be up for
-            auction or locked in an active sale.
+            {t("Nothing in your Portfolio is eligible right now — an item can't already be up for auction or locked in an active sale.")}
           </p>
         ) : (
           <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-2">
-              <Label>Item</Label>
+              <Label>{t("Item")}</Label>
               <Select value={assetId} onValueChange={handleAssetChange}>
                 <SelectTrigger className="w-full">
                   <SelectValue />
@@ -119,7 +119,7 @@ export function CreateAuctionButton({ eligibleAssets }: { eligibleAssets: Eligib
               </Select>
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="create-auction-start-price">Starting Price (THB)</Label>
+              <Label htmlFor="create-auction-start-price">{t("Starting Price (THB)")}</Label>
               <Input
                 id="create-auction-start-price"
                 type="number"
@@ -129,21 +129,21 @@ export function CreateAuctionButton({ eligibleAssets }: { eligibleAssets: Eligib
               />
             </div>
             <div className="flex flex-col gap-2">
-              <Label>Duration</Label>
+              <Label>{t("Duration")}</Label>
               <Select value={durationDays} onValueChange={setDurationDays}>
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="1">1 day</SelectItem>
-                  <SelectItem value="3">3 days</SelectItem>
-                  <SelectItem value="7">7 days</SelectItem>
-                  <SelectItem value="14">14 days</SelectItem>
+                  <SelectItem value="1">{t("1 day")}</SelectItem>
+                  <SelectItem value="3">{t("{days} days", { days: 3 })}</SelectItem>
+                  <SelectItem value="7">{t("{days} days", { days: 7 })}</SelectItem>
+                  <SelectItem value="14">{t("{days} days", { days: 14 })}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="create-auction-start-time">Start time</Label>
+              <Label htmlFor="create-auction-start-time">{t("Start time")}</Label>
               <Input
                 id="create-auction-start-time"
                 type="datetime-local"
@@ -151,12 +151,12 @@ export function CreateAuctionButton({ eligibleAssets }: { eligibleAssets: Eligib
                 onChange={(e) => setStartTime(e.target.value)}
               />
               <p className="text-muted-foreground text-xs">
-                Leave blank to start immediately. You can schedule up to 30 days ahead.
+                {t("Leave blank to start immediately. You can schedule up to 30 days ahead.")}
               </p>
             </div>
             {eligibleAssets.find((a) => a.id === assetId)?.priceThb != null && (
               <p className="text-muted-foreground text-xs">
-                Current listing price: {formatThb(eligibleAssets.find((a) => a.id === assetId)!.priceThb!)}
+                {t("Current listing price:")} {formatThb(eligibleAssets.find((a) => a.id === assetId)!.priceThb!)}
               </p>
             )}
           </div>
@@ -164,14 +164,14 @@ export function CreateAuctionButton({ eligibleAssets }: { eligibleAssets: Eligib
 
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)} disabled={pending}>
-            Cancel
+            {t("Cancel")}
           </Button>
           <Button
             onClick={handleSubmit}
             disabled={pending || eligibleAssets.length === 0 || !assetId || !startPrice || Number(startPrice) <= 0}
           >
             {pending && <Loader2 className="animate-spin" />}
-            Start Auction
+            {t("Start Auction")}
           </Button>
         </DialogFooter>
       </DialogContent>

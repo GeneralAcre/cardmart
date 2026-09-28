@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/table";
 import { updateVaultLocation } from "@/lib/actions";
 import { formatGrade } from "@/lib/format";
+import { useT } from "@/components/landing/language-provider";
 
 export interface VaultInventoryItem {
   id: string;
@@ -36,15 +37,16 @@ export function VaultInventory({ items }: { items: VaultInventoryItem[] }) {
   );
   const [savingId, setSavingId] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const t = useT();
 
   function save(assetId: string) {
     setSavingId(assetId);
     startTransition(async () => {
       try {
         await updateVaultLocation(assetId, locations[assetId] ?? "");
-        toast.success("Location updated.");
+        toast.success(t("Location updated."));
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Could not update location.");
+        toast.error(err instanceof Error ? err.message : t("Could not update location."));
       } finally {
         setSavingId(null);
       }
@@ -55,7 +57,7 @@ export function VaultInventory({ items }: { items: VaultInventoryItem[] }) {
     return (
       <div className="text-muted-foreground flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed py-24 text-center">
         <Vault className="size-8" />
-        <p className="text-sm">Nothing in the vault right now.</p>
+        <p className="text-sm">{t("Nothing in the vault right now.")}</p>
       </div>
     );
   }
@@ -65,11 +67,11 @@ export function VaultInventory({ items }: { items: VaultInventoryItem[] }) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Item</TableHead>
-            <TableHead>Owner</TableHead>
+            <TableHead>{t("Item")}</TableHead>
+            <TableHead>{t("Owner")}</TableHead>
             <TableHead>
               <span className="flex items-center gap-1">
-                <MapPin className="size-3.5" /> Location
+                <MapPin className="size-3.5" /> {t("Location")}
               </span>
             </TableHead>
             <TableHead />
@@ -92,7 +94,7 @@ export function VaultInventory({ items }: { items: VaultInventoryItem[] }) {
                 <Input
                   value={locations[item.id] ?? ""}
                   onChange={(e) => setLocations((prev) => ({ ...prev, [item.id]: e.target.value }))}
-                  placeholder="e.g. Row 3, Shelf B, Box 12"
+                  placeholder={t("e.g. Row 3, Shelf B, Box 12")}
                   className="h-8 w-48 text-xs"
                 />
               </TableCell>
@@ -104,7 +106,7 @@ export function VaultInventory({ items }: { items: VaultInventoryItem[] }) {
                   onClick={() => save(item.id)}
                 >
                   {pending && savingId === item.id ? <Loader2 className="animate-spin" /> : <Save />}
-                  Save
+                  {t("Save")}
                 </Button>
               </TableCell>
             </TableRow>
