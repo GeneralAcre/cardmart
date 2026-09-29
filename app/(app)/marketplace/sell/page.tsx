@@ -13,15 +13,20 @@ export default async function SellPage() {
 
   return (
     <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6">
-      <div className="mb-8 flex flex-col gap-2">
-        <div className="flex items-center gap-3">
-          <Button asChild variant="outline" size="icon" className="shrink-0">
-            <Link href="/marketplace" aria-label={t("Back to Marketplace")} title={t("Back to Marketplace")}>
-              <ChevronLeft />
-            </Link>
-          </Button>
-          <h1 className="text-2xl font-semibold">{t("Sell a card")}</h1>
-        </div>
+      <div className="relative mb-8 flex flex-col gap-2">
+        {/* Wide screens: sits in the empty space left of the content column,
+            level with the title. Narrower: just above the title. */}
+        <Button
+          asChild
+          variant="secondary"
+          size="sm"
+          className="mb-2 w-fit xl:absolute xl:top-0 xl:right-full xl:mr-10 xl:mb-0"
+        >
+          <Link href="/marketplace" title={t("Back to Marketplace")}>
+            <ChevronLeft /> {t("Back")}
+          </Link>
+        </Button>
+        <h1 className="text-2xl font-semibold">{t("Sell a card")}</h1>
         <p className="text-muted-foreground max-w-2xl text-sm">
           {t("List a card you have now, or send a raw card in to be graded first.")}
         </p>
