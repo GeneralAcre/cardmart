@@ -14,13 +14,14 @@ export default async function SellPage() {
   return (
     <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6">
       <div className="relative mb-8 flex flex-col gap-2">
-        {/* Wide screens: sits in the empty space left of the content column,
-            level with the title. Narrower: just above the title. */}
+        {/* From 1200px wide there's room in the margin left of the content
+            column, so it sits there, level with the title; narrower screens
+            (phones, small laptops) get it just above the title. */}
         <Button
           asChild
           variant="secondary"
           size="sm"
-          className="mb-2 w-fit xl:absolute xl:top-0 xl:right-full xl:mr-10 xl:mb-0"
+          className="mb-2 w-fit min-[1200px]:absolute min-[1200px]:top-0 min-[1200px]:right-full min-[1200px]:mr-6 min-[1200px]:mb-0"
         >
           <Link href="/marketplace" title={t("Back to Marketplace")}>
             <ChevronLeft /> {t("Back")}
