@@ -8,6 +8,8 @@ export const AGENT: Record<string, string> = {
     "วงเงินของคุณถูกบังคับด้วยระบบและยอดเงินในกระเป๋า ไม่ได้ปล่อยให้ AI ตัดสินใจเอง ทุกการซื้อยังผ่านเอสโครว์และการตรวจสอบที่คลัง",
   "The buying agent isn't switched on for this site yet.": "เอเจนต์ซื้อการ์ดยังไม่เปิดใช้งานบนเว็บนี้",
   "Your agent found {count} card(s) waiting for your OK — see below.": "เอเจนต์พบการ์ด {count} ใบที่รอคุณอนุมัติ — ดูด้านล่าง",
+  "You can already fund your agent wallet. Planning and buying start once the AI is connected.":
+    "เติมเงินเข้ากระเป๋าเอเจนต์ได้แล้ว การวางแผนและการซื้อจะเริ่มเมื่อเชื่อมต่อ AI",
   "Agent wallets aren't configured on this server, so purchases run in simulated mode.": "ยังไม่ได้ตั้งค่ากระเป๋าเอเจนต์ การซื้อจึงทำงานแบบจำลอง",
 
   // Wallet

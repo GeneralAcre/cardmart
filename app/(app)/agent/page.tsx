@@ -1,4 +1,4 @@
-import { Bot, ShieldCheck } from "lucide-react";
+import { Bot, CircleAlert, ShieldCheck } from "lucide-react";
 
 import { AgentWalletCard } from "@/components/agent/agent-wallet-card";
 import { NewTaskForm } from "@/components/agent/new-task-form";
@@ -24,23 +24,29 @@ export default async function AgentPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-8 px-4 py-10 sm:px-6">
-      <header className="flex flex-col gap-2">
+      <header className="flex max-w-3xl flex-col gap-2">
         <h1 className="flex items-center gap-2 text-2xl font-semibold">
           <Bot className="size-6" /> {t("Buying agent")}
         </h1>
-        <p className="text-muted-foreground max-w-2xl text-sm">
+        <p className="text-muted-foreground text-sm">
           {t("Tell it what you're hunting for. It checks every new listing, judges whether it's the right card at a fair price, and buys it from its own wallet — within limits you set.")}
         </p>
-        <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
-          <ShieldCheck className="size-3.5" />
+        <p className="text-muted-foreground flex items-start gap-1.5 text-xs">
+          <ShieldCheck className="mt-px size-3.5 shrink-0" />
           {t("Your limits are enforced in code and by the wallet balance, never left to the AI. Every purchase still goes through escrow and warehouse inspection.")}
         </p>
       </header>
 
       {!aiReady && (
-        <p className="border-destructive/50 text-destructive rounded-xl border p-4 text-sm">
-          {t("The buying agent isn't switched on for this site yet.")}
-        </p>
+        <div className="bg-muted/40 flex items-start gap-3 rounded-xl border px-4 py-3 text-sm">
+          <CircleAlert className="text-muted-foreground mt-0.5 size-4 shrink-0" />
+          <div className="flex flex-col gap-0.5">
+            <span className="font-medium">{t("The buying agent isn't switched on for this site yet.")}</span>
+            <span className="text-muted-foreground text-xs">
+              {t("You can already fund your agent wallet. Planning and buying start once the AI is connected.")}
+            </span>
+          </div>
+        </div>
       )}
 
       {waiting > 0 && (

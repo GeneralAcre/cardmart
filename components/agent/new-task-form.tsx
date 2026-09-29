@@ -118,7 +118,7 @@ export function NewTaskForm() {
               key={ex}
               type="button"
               onClick={() => setInstruction(ex)}
-              className="text-muted-foreground hover:text-foreground hover:border-foreground/40 rounded-full border px-3 py-1 text-left text-xs"
+              className="text-muted-foreground hover:text-foreground hover:border-foreground/40 rounded-lg border px-3 py-1.5 text-left text-xs"
             >
               {ex}
             </button>

@@ -98,26 +98,30 @@ export function AgentWalletCard({ address, balanceSol }: { address: string; bala
         {t("Your agent can only spend what's in this wallet, so its balance is your hard limit. Unused SOL can be moved back any time.")}
       </p>
 
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <div className="flex flex-1 gap-2">
-          <Input
-            inputMode="decimal"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            className="w-24 font-mono"
-            aria-label={t("Amount in SOL")}
-          />
-          <Button className="flex-1" onClick={fund} disabled={!connected || busy !== null}>
+      {/* Always stacked: this card sits in a narrow column next to the task form. */}
+      <div className="mt-auto flex flex-col gap-2">
+        <div className="flex gap-2">
+          <div className="relative w-28 shrink-0">
+            <Input
+              inputMode="decimal"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="pr-10 font-mono"
+              aria-label={t("Amount in SOL")}
+            />
+            <span className="text-muted-foreground pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-xs">SOL</span>
+          </div>
+          <Button className="min-w-0 flex-1" onClick={fund} disabled={!connected || busy !== null}>
             {busy === "fund" ? <Loader2 className="animate-spin" /> : <ArrowDownToLine />}
             {t("Fund from my wallet")}
           </Button>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={airdrop} disabled={busy !== null} className="flex-1">
+        <div className="grid grid-cols-2 gap-2">
+          <Button variant="outline" onClick={airdrop} disabled={busy !== null}>
             {busy === "airdrop" ? <Loader2 className="animate-spin" /> : <Droplets />}
             {t("Test SOL")}
           </Button>
-          <Button variant="ghost" onClick={withdraw} disabled={busy !== null || !balanceSol} className="flex-1">
+          <Button variant="outline" onClick={withdraw} disabled={busy !== null || !balanceSol}>
             {busy === "withdraw" ? <Loader2 className="animate-spin" /> : <ArrowUpFromLine />}
             {t("Withdraw all")}
           </Button>
