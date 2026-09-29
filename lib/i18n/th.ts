@@ -1,6 +1,7 @@
 // English → Thai for the app UI, split by area. Keys are the exact English
 // strings passed to t() — see lib/i18n/translate.ts.
 import { ADMIN } from "@/lib/i18n/th/admin";
+import { AGENT } from "@/lib/i18n/th/agent";
 import { AUCTION } from "@/lib/i18n/th/auction";
 import { BACKOFFICE } from "@/lib/i18n/th/backoffice";
 import { COMMON } from "@/lib/i18n/th/common";
@@ -24,4 +25,5 @@ export const TH: Record<string, string> = {
   ...ADMIN,
   ...BACKOFFICE,
   ...ORDERS,
+  ...AGENT,
 };

@@ -218,6 +218,8 @@ model User {
   tradeOffersReceived TradeOffer[]        @relation("TradeOfferRecipient")
   shipmentsReceived   Shipment[]          @relation("ShipmentRecipient")
   disputesOpened      Dispute[]           @relation("DisputeOpener")
+  agentWallet         AgentWallet?
+  agentMandates       AgentMandate[]
 
   @@index([kycStatus])
 }
@@ -302,6 +304,7 @@ model Asset {
   tradeOffersFor     TradeOffer[]        @relation("TradeOfferRequested")
   tradeOffersWith    TradeOffer[]        @relation("TradeOfferOffered")
   shipments          Shipment[]
+  agentDecisions     AgentDecision[]
 
   @@index([sellerId])
   @@index([ownerId])
@@ -584,10 +587,14 @@ model EscrowTransaction {
   // only when the buyer actually signed a lock_payment transaction, never
   // backfilled. Falls back to the old DB-only simulated flow when false (no
   // wallet available), same pattern as ProvenanceEvent.onChain.
-  onChain        Boolean @default(false)
-  onChainTradeId BigInt? // u64 seed used to derive the on-chain Trade PDA
-  tradeAccount   String? // base58 address of the Trade PDA, for convenience
-  lamportsLocked BigInt? // actual lamports locked on-chain (THB -> SOL at lock time)
+  onChain            Boolean @default(false)
+  onChainTradeId     BigInt? // u64 seed used to derive the on-chain Trade PDA
+  tradeAccount       String? // base58 address of the Trade PDA, for convenience
+  lamportsLocked     BigInt? // actual lamports locked on-chain (THB -> SOL at lock time)
+  // The wallet that actually signed lock_payment, when it isn't the buyer's
+  // own wallet (a buying-agent purchase pays from the agent wallet). The
+  // Trade PDA is derived from this address, so release/refund must use it.
+  payerWalletAddress String?
 
   assetId  String
   asset    Asset  @relation(fields: [assetId], references: [id])
@@ -600,6 +607,7 @@ model EscrowTransaction {
   review         Review?
   shipment       Shipment?
   dispute        Dispute?
+  agentDecision  AgentDecision?
 
   @@index([assetId])
   // getSellerProfile's sold-history section filters on exactly this pair on
@@ -830,6 +838,9 @@ enum NotificationType {
   SELLER_SHIP_REQUIRED
   SELLER_SHIPPED
   SALE_CANCELLED
+  AGENT_PROPOSAL
+  AGENT_PURCHASE
+  AGENT_FAILED
 }
 
 model Notification {
@@ -849,4 +860,106 @@ model Notification {
 
   @@index([userId, readAt])
   @@index([audience, readAt])
+}
+
+// ---------------------------------------------------------------------------
+// Buying agent. A user describes what they want in plain words; Claude turns
+// it into a mandate with hard limits (max price per card, total budget,
+// number of cards) that the user confirms. When a matching card is listed,
+// Claude judges whether it's a real match and a fair price, and the agent
+// buys it from the user's agent wallet — or asks first, if the user chose
+// that. The limits are enforced in code and by the wallet's balance, never
+// left to the model.
+// ---------------------------------------------------------------------------
+
+// A per-user Solana keypair the agent pays from. The user funds it; its
+// balance is the hard on-chain spending cap. The 32-byte private key is
+// stored AES-256-GCM encrypted with AGENT_WALLET_SECRET.
+model AgentWallet {
+  id              String   @id @default(cuid())
+  address         String   @unique
+  encryptedSecret String
+  createdAt       DateTime @default(now())
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id])
+}
+
+enum AgentMandateStatus {
+  ACTIVE
+  PAUSED
+  DONE
+}
+
+model AgentMandate {
+  id          String             @id @default(cuid())
+  // What the user typed, and Claude's one-line summary of it.
+  instruction String
+  summary     String
+  status      AgentMandateStatus @default(ACTIVE)
+
+  // Search criteria (parsed by Claude, confirmed by the user).
+  query            String
+  game             CardGame?
+  gradingCompanies GradingCompany[]
+  minGrade         Float?
+  blackLabelOnly   Boolean          @default(false)
+
+  // Hard limits.
+  maxPriceThb        Int
+  budgetThb          Int
+  maxCards           Int               @default(1)
+  spentThb           Int               @default(0)
+  boughtCount        Int               @default(0)
+  trustedSellersOnly Boolean           @default(false)
+  // false = the agent proposes and the user approves each buy.
+  autoBuy            Boolean           @default(false)
+  fulfillment        FulfillmentChoice @default(VAULT)
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastScannedAt DateTime?
+
+  userId    String
+  user      User            @relation(fields: [userId], references: [id])
+  decisions AgentDecision[]
+
+  @@index([status])
+  @@index([userId])
+}
+
+enum AgentDecisionStatus {
+  // Claude recommended buying; waiting for the user (ask-first mode).
+  PROPOSED
+  // Bought.
+  EXECUTED
+  // Claude judged it not a match / not worth it.
+  SKIPPED
+  DECLINED
+  // Tried to buy but couldn't (sold out, not enough funds, chain error).
+  FAILED
+}
+
+// One evaluation of one listing, at one price, for one mandate — so a
+// listing is judged once, and again only if its price changes.
+model AgentDecision {
+  id           String              @id @default(cuid())
+  status       AgentDecisionStatus
+  priceThb     Int
+  fairValueThb Int?
+  confidence   String?
+  reasoning    String
+  error        String?
+  createdAt    DateTime            @default(now())
+  resolvedAt   DateTime?
+
+  mandateId  String
+  mandate    AgentMandate       @relation(fields: [mandateId], references: [id], onDelete: Cascade)
+  assetId    String
+  asset      Asset              @relation(fields: [assetId], references: [id])
+  escrowTxId String?            @unique
+  escrowTx   EscrowTransaction? @relation(fields: [escrowTxId], references: [id])
+
+  @@unique([mandateId, assetId, priceThb])
+  @@index([mandateId, createdAt])
 }

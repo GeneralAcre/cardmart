@@ -93,19 +93,21 @@ async function buildTransaction(feePayer: Address, instruction: Instruction): Pr
   return new Uint8Array(getTransactionEncoder().encode(compileTransaction(message)));
 }
 
-/** Buyer-signed: locks `lamports` into a fresh Trade PDA. Returns the unsigned transaction bytes and the derived trade account. */
-export async function buildLockPaymentTransaction(opts: {
+/**
+ * The lock_payment instruction on its own — for a buyer the server signs for
+ * (the buying agent's wallet, see lib/agent/wallet.ts). Browser wallets use
+ * buildLockPaymentTransaction below instead.
+ */
+export async function buildLockPaymentInstruction(opts: {
   buyer: string;
   seller: string;
   tradeId: bigint;
   lamports: bigint;
-}): Promise<{ transactionBytes: Uint8Array; tradeAccount: Address }> {
+}): Promise<{ instruction: Instruction; tradeAccount: Address }> {
   const buyer = address(opts.buyer);
   const seller = address(opts.seller);
   const trade = await deriveTradePda(buyer, opts.tradeId);
-
   const data = concatBytes(DISCRIMINATOR.lockPayment, u64LeBytes(opts.tradeId), u64LeBytes(opts.lamports));
-
   const instruction: Instruction = {
     programAddress: ESCROW_PROGRAM_ID,
     accounts: [
@@ -116,9 +118,19 @@ export async function buildLockPaymentTransaction(opts: {
     ],
     data,
   };
+  return { instruction, tradeAccount: trade };
+}
 
-  const transactionBytes = await buildTransaction(buyer, instruction);
-  return { transactionBytes, tradeAccount: trade };
+/** Buyer-signed: locks `lamports` into a fresh Trade PDA. Returns the unsigned transaction bytes and the derived trade account. */
+export async function buildLockPaymentTransaction(opts: {
+  buyer: string;
+  seller: string;
+  tradeId: bigint;
+  lamports: bigint;
+}): Promise<{ transactionBytes: Uint8Array; tradeAccount: Address }> {
+  const { instruction, tradeAccount } = await buildLockPaymentInstruction(opts);
+  const transactionBytes = await buildTransaction(address(opts.buyer), instruction);
+  return { transactionBytes, tradeAccount };
 }
 
 /**

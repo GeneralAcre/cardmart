@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { ClipboardList, Gavel, Trophy, Store, Wallet } from "lucide-react";
+import { Bot, ClipboardList, Gavel, Trophy, Store, Wallet } from "lucide-react";
 
 export interface NavLink {
   href: string;
@@ -17,6 +17,7 @@ export const NAV_LINKS: NavLink[] = [
   { href: "/marketplace", label: "Marketplace", shortLabel: "Market", icon: Store },
   { href: "/leaderboard", label: "Leaderboard", shortLabel: "Ranking", icon: Trophy },
   { href: "/auctions", label: "Auctions", icon: Gavel },
+  { href: "/agent", label: "Agent", icon: Bot },
   { href: "/listing", label: "Listing", icon: ClipboardList },
   { href: "/portfolio", label: "Portfolio", icon: Wallet },
 ];

@@ -19,6 +19,8 @@ import { themeIndexForSerial } from "@/lib/theme";
 import { getVerificationChecklist } from "@/lib/verification-checklist";
 import { BGS_BLACK_LABEL_GRADE, gradeTierLabel } from "@/lib/labels";
 import { requestDevnetAirdrop } from "@/lib/solana";
+import { runMandate, runMandatesForListing } from "@/lib/agent/engine";
+import { agentLockPayment, isAgentChainEnabled } from "@/lib/agent/wallet";
 import { EMAILED_NOTIFICATION_TYPES, isEmailConfigured, sendEmail } from "@/lib/email";
 import { checkAllIntegrations } from "@/lib/integrations";
 import {
@@ -437,6 +439,7 @@ export async function createListing(
   }
 
   await notifyWantedCardMatches(asset.id);
+  triggerAgentsForListing(asset.id);
 
   revalidateMarketplace(asset.id);
   return { assetId: asset.id, mintAddress: mintAddress ?? undefined };
@@ -487,8 +490,10 @@ async function completePurchase(opts: {
   escrowLock?: { tradeId: string; txSignature: string; lamports: string; tradeAccount: string };
   soldNote: string;
   purchasedNote: string;
-}) {
-  const { asset, user, priceThb, fulfillmentChoice, escrowLock, soldNote, purchasedNote } = opts;
+  /** The wallet that signed the lock, when it isn't the buyer's own (the buying agent). */
+  payerWalletAddress?: string;
+}): Promise<{ escrowTxId: string }> {
+  const { asset, user, priceThb, fulfillmentChoice, escrowLock, soldNote, purchasedNote, payerWalletAddress } = opts;
   const assetId = asset.id;
 
   // Real on-chain lock when the buyer actually signed one (see
@@ -511,6 +516,7 @@ async function completePurchase(opts: {
       onChainTradeId: escrowLock ? BigInt(escrowLock.tradeId) : null,
       tradeAccount: escrowLock?.tradeAccount ?? null,
       lamportsLocked: escrowLock ? BigInt(escrowLock.lamports) : null,
+      payerWalletAddress: payerWalletAddress ?? null,
     },
   });
   await prisma.provenanceEvent.create({
@@ -539,6 +545,7 @@ async function completePurchase(opts: {
         onChainTradeId: escrowLock ? BigInt(escrowLock.tradeId) : null,
         buyer: { walletAddress: user.walletAddress },
         seller: { walletAddress: asset.owner.walletAddress },
+        payerWalletAddress,
       },
       assetId,
     );
@@ -613,6 +620,7 @@ async function completePurchase(opts: {
 
   await cancelTradesInvolving(assetId);
   revalidateMarketplace(assetId);
+  return { escrowTxId: escrowTx.id };
 }
 
 /**
@@ -1194,9 +1202,18 @@ async function loadInboundPackage(inboundPackageId: string) {
  */
 async function releaseOrRefundEscrow(
   kind: "release" | "refund",
-  escrowTx: { onChain: boolean; onChainTradeId: bigint | null; buyer: { walletAddress: string | null }; seller: { walletAddress: string | null } },
+  escrowTx: {
+    onChain: boolean;
+    onChainTradeId: bigint | null;
+    buyer: { walletAddress: string | null };
+    seller: { walletAddress: string | null };
+    // Set when someone other than the buyer's own wallet locked the funds
+    // (the buying agent) — the Trade PDA is derived from the payer.
+    payerWalletAddress?: string | null;
+  },
   assetId: string,
 ): Promise<{ signature: string; onChain: boolean }> {
+  const buyerWallet = escrowTx.payerWalletAddress ?? escrowTx.buyer.walletAddress;
   if (!escrowTx.onChain) {
     // Nothing real was ever locked — the old simulated flow is a safe,
     // honest fallback.
@@ -1213,19 +1230,19 @@ async function releaseOrRefundEscrow(
       "This trade holds real on-chain funds, but the escrow authority isn't configured (ESCROW_AUTHORITY_SECRET_KEY).",
     );
   }
-  if (escrowTx.onChainTradeId == null || !escrowTx.buyer.walletAddress || !escrowTx.seller.walletAddress) {
+  if (escrowTx.onChainTradeId == null || !buyerWallet || !escrowTx.seller.walletAddress) {
     throw new Error("This trade is marked on-chain but is missing the data needed to release/refund it.");
   }
 
   const signature =
     kind === "release"
       ? await releaseTradeToSeller({
-          buyer: escrowTx.buyer.walletAddress,
+          buyer: buyerWallet,
           seller: escrowTx.seller.walletAddress,
           tradeId: escrowTx.onChainTradeId,
         })
       : await refundTradeToBuyer({
-          buyer: escrowTx.buyer.walletAddress,
+          buyer: buyerWallet,
           tradeId: escrowTx.onChainTradeId,
         });
   return { signature, onChain: true };
@@ -1447,6 +1464,7 @@ export async function warehouseReject(inboundPackageId: string) {
     }),
   ]);
 
+  await returnAgentBudget(pkg.escrowTxId);
   await notifyUser(
     pkg.escrowTx.buyerId,
     "SALE_CANCELLED",
@@ -1583,6 +1601,7 @@ export async function vaultRelist(assetId: string, priceThb: number, txSignature
     await notifyWatchersOfPriceDrop(assetId, asset.name, asset.priceThb, priceThb);
   }
   if (!wasForSale) await notifyWantedCardMatches(assetId);
+  triggerAgentsForListing(assetId);
 
   revalidateMarketplace(assetId);
 }
@@ -1633,6 +1652,7 @@ export async function updateListingPrice(assetId: string, priceThb: number, txSi
     await notifyWatchersOfPriceDrop(assetId, asset.name, asset.priceThb, priceThb);
   }
   if (!wasForSale) await notifyWantedCardMatches(assetId);
+  triggerAgentsForListing(assetId);
 
   revalidateMarketplace(assetId);
 }
@@ -3063,6 +3083,7 @@ export async function expireOverdueSellerShipments(opts: { revalidate?: boolean 
         },
       }),
     ]);
+    await returnAgentBudget(pkg.escrowTxId);
     await notifyUser(
       pkg.escrowTx.buyerId,
       "SALE_CANCELLED",
@@ -3087,4 +3108,184 @@ export async function expireOverdueSellerShipments(opts: { revalidate?: boolean 
     expired++;
   }
   return expired;
+}
+
+// ---------------------------------------------------------------------------
+// Buying agent — executing purchases. Planning and judging live in
+// lib/agent/; this part lives here because it reuses completePurchase and the
+// escrow helpers above. Every limit is re-checked right before paying, and
+// the budget and the listing are each claimed with a conditional update, so
+// two runs (or the agent and a human buyer) can't both win.
+// ---------------------------------------------------------------------------
+
+async function notifyAgentOwner(userId: string, type: NotificationType, title: string, body: string, href: string) {
+  await notifyUser(userId, type, title, body, href);
+}
+
+async function failAgentDecision(decisionId: string, userId: string, assetName: string, reason: string) {
+  await prisma.agentDecision.update({
+    where: { id: decisionId },
+    data: { status: "FAILED", error: reason, resolvedAt: new Date() },
+  });
+  await notifyUser(userId, "AGENT_FAILED", "Your agent couldn't buy a card", `${assetName}: ${reason}`, "/agent");
+}
+
+async function executeAgentDecision(decisionId: string): Promise<void> {
+  const decision = await prisma.agentDecision.findUnique({
+    where: { id: decisionId },
+    include: { mandate: { include: { user: { include: { agentWallet: true } } } }, asset: { include: { owner: true } } },
+  });
+  if (!decision || decision.status !== "PROPOSED") return;
+  const { mandate, asset } = decision;
+  const buyer = mandate.user;
+  const price = decision.priceThb;
+
+  if (buyer.isBanned) return failAgentDecision(decisionId, buyer.id, asset.name, "Your account is suspended.");
+  if (mandate.status !== "ACTIVE") return failAgentDecision(decisionId, buyer.id, asset.name, "This agent task is paused or finished.");
+  if (price > mandate.maxPriceThb) return failAgentDecision(decisionId, buyer.id, asset.name, "Over your maximum price.");
+  if (!asset.forSale || asset.priceThb !== price || asset.redeemedAt || asset.ownerId === buyer.id) {
+    return failAgentDecision(decisionId, buyer.id, asset.name, "It's no longer for sale at that price.");
+  }
+
+  // Claim budget and a card slot.
+  const budget = await prisma.agentMandate.updateMany({
+    where: {
+      id: mandate.id,
+      status: "ACTIVE",
+      spentThb: { lte: mandate.budgetThb - price },
+      boughtCount: { lt: mandate.maxCards },
+    },
+    data: { spentThb: { increment: price }, boughtCount: { increment: 1 } },
+  });
+  if (budget.count === 0) return failAgentDecision(decisionId, buyer.id, asset.name, "Not enough budget left on this task.");
+
+  const releaseBudget = () =>
+    prisma.agentMandate.update({
+      where: { id: mandate.id },
+      data: { spentThb: { decrement: price }, boughtCount: { decrement: 1 } },
+    });
+
+  // Claim the listing itself.
+  const listing = await prisma.asset.updateMany({
+    where: { id: asset.id, forSale: true, priceThb: price, marketStatus: { in: ["READY_TO_SHIP", "IN_VAULT"] } },
+    data: { forSale: false },
+  });
+  if (listing.count === 0) {
+    await releaseBudget();
+    return failAgentDecision(decisionId, buyer.id, asset.name, "Someone else bought it first.");
+  }
+
+  try {
+    // Real on-chain payment from the agent wallet when everything needed is
+    // there; otherwise the same simulated escrow a browser purchase falls
+    // back to.
+    const wallet = buyer.agentWallet;
+    const onChain = Boolean(wallet && asset.owner.walletAddress && (await isAgentChainEnabled()));
+    const escrowLock =
+      onChain && wallet && asset.owner.walletAddress
+        ? await agentLockPayment({ wallet, sellerWalletAddress: asset.owner.walletAddress, lamports: thbToLamports(price) })
+        : undefined;
+
+    const { escrowTxId } = await completePurchase({
+      asset,
+      user: buyer,
+      priceThb: price,
+      fulfillmentChoice: mandate.fulfillment,
+      escrowLock,
+      payerWalletAddress: escrowLock && wallet ? wallet.address : undefined,
+      soldNote: `${asset.name} sold instantly from your vault for ${price.toLocaleString()} THB.`,
+      purchasedNote: asset.vaulted
+        ? `Your buying agent bought ${asset.name} for ${price.toLocaleString()} THB — it's already in your vault.`
+        : `Your buying agent bought ${asset.name} for ${price.toLocaleString()} THB. The payment is held safely until warehouse inspection passes.`,
+    });
+
+    await prisma.agentDecision.update({
+      where: { id: decisionId },
+      data: { status: "EXECUTED", escrowTxId, resolvedAt: new Date() },
+    });
+    const updated = await prisma.agentMandate.findUniqueOrThrow({ where: { id: mandate.id } });
+    if (updated.boughtCount >= updated.maxCards) {
+      await prisma.agentMandate.update({ where: { id: mandate.id }, data: { status: "DONE" } });
+    }
+    await notifyUser(
+      buyer.id,
+      "AGENT_PURCHASE",
+      "Your agent bought a card",
+      `${asset.name} for ${price.toLocaleString()} THB. ${decision.reasoning}`,
+      `/item/${asset.id}`,
+    );
+  } catch (err) {
+    // Nothing was bought: put the listing and the budget back.
+    await prisma.asset.updateMany({
+      where: { id: asset.id, ownerId: asset.ownerId, marketStatus: asset.marketStatus },
+      data: { forSale: true },
+    });
+    await releaseBudget();
+    await failAgentDecision(decisionId, buyer.id, asset.name, err instanceof Error ? err.message : "The purchase failed.");
+  }
+}
+
+/** When an agent-bought sale is refunded (inspection rejected, seller didn't ship), give the task its budget back. */
+async function returnAgentBudget(escrowTxId: string) {
+  const decision = await prisma.agentDecision.findUnique({ where: { escrowTxId } });
+  if (!decision || decision.status !== "EXECUTED") return;
+  await prisma.agentDecision.update({
+    where: { id: decision.id },
+    data: { status: "FAILED", error: "The sale was cancelled and refunded to your agent wallet." },
+  });
+  await prisma.agentMandate.update({
+    where: { id: decision.mandateId },
+    data: { spentThb: { decrement: decision.priceThb }, boughtCount: { decrement: 1 }, status: "ACTIVE" },
+  });
+}
+
+/** Lets any active buying agent look at a card that just went on sale (runs after the response). */
+function triggerAgentsForListing(assetId: string) {
+  after(() =>
+    runMandatesForListing(assetId, { execute: executeAgentDecision, notify: notifyAgentOwner }).catch((err) =>
+      console.error("Agent run failed", err),
+    ),
+  );
+}
+
+async function loadOwnMandate(mandateId: string) {
+  const user = await getCurrentUser();
+  const mandate = await prisma.agentMandate.findUnique({ where: { id: mandateId } });
+  if (!mandate || mandate.userId !== user.id) throw new Error("Agent task not found.");
+  return mandate;
+}
+
+/** "Scan now": judge every current listing that fits the task. */
+export async function scanAgentMandate(mandateId: string): Promise<{ recorded: number; error?: string }> {
+  const mandate = await loadOwnMandate(mandateId);
+  if (mandate.status !== "ACTIVE") return { recorded: 0, error: "Resume this task to scan." };
+  try {
+    const recorded = await runMandate(mandateId, { execute: executeAgentDecision, notify: notifyAgentOwner });
+    revalidatePath("/agent");
+    return { recorded };
+  } catch (err) {
+    console.error("Agent scan failed", err);
+    return { recorded: 0, error: "The agent couldn't finish this scan. Try again in a moment." };
+  }
+}
+
+/** Ask-first mode: the user approves one proposed buy, and the agent pays for it. */
+export async function approveAgentDecision(decisionId: string): Promise<{ error?: string }> {
+  const user = await getCurrentUser();
+  const decision = await prisma.agentDecision.findUnique({ where: { id: decisionId }, include: { mandate: true } });
+  if (!decision || decision.mandate.userId !== user.id) return { error: "Not found." };
+  if (decision.status !== "PROPOSED") return { error: "This suggestion was already handled." };
+  await executeAgentDecision(decisionId);
+  revalidatePath("/agent");
+  const result = await prisma.agentDecision.findUniqueOrThrow({ where: { id: decisionId } });
+  return result.status === "EXECUTED" ? {} : { error: result.error ?? "The purchase failed." };
+}
+
+export async function declineAgentDecision(decisionId: string) {
+  const user = await getCurrentUser();
+  await prisma.agentDecision.updateMany({
+    where: { id: decisionId, status: "PROPOSED", mandate: { userId: user.id } },
+    data: { status: "DECLINED", resolvedAt: new Date() },
+  });
+  revalidatePath("/agent");
 }

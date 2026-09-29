@@ -1379,3 +1379,34 @@ export async function getAwaitingSellerShipments() {
     },
   });
 }
+
+/** Everything the /agent page shows: the user's tasks and the agent's recent decisions. */
+export async function getAgentDashboard(userId: string) {
+  const [mandates, decisions] = await Promise.all([
+    prisma.agentMandate.findMany({
+      where: { userId },
+      orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+      include: { _count: { select: { decisions: true } } },
+    }),
+    prisma.agentDecision.findMany({
+      where: { mandate: { userId } },
+      orderBy: { createdAt: "desc" },
+      take: 40,
+      include: {
+        mandate: { select: { summary: true } },
+        asset: {
+          select: {
+            id: true,
+            name: true,
+            gradingCompany: true,
+            grade: true,
+            isBlackLabel: true,
+            catalogImageUrl: true,
+            verificationPhotos: { orderBy: { createdAt: "asc" }, take: 1, select: { url: true } },
+          },
+        },
+      },
+    }),
+  ]);
+  return { mandates, decisions };
+}
