@@ -63,7 +63,7 @@ export function WalletButton() {
       <DropdownMenuTrigger asChild>
         <Button size="sm" variant="outline">
           <Wallet className="text-success" />
-          {truncateKey(publicKey!)}
+          <span className="hidden sm:inline">{truncateKey(publicKey!)}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-72">

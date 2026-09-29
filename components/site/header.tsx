@@ -42,12 +42,12 @@ export async function SiteHeader() {
       <header className="bg-background/80 sticky top-0 z-40 border-b backdrop-blur">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-2 px-4 sm:gap-4 sm:px-6">
           <div className="flex min-w-0 items-center gap-2 sm:gap-6">
-            <Link href="/" className="flex shrink-0 items-center gap-2 text-lg font-bold tracking-wide uppercase">
+            <Link href="/" className="flex shrink-0 items-center gap-2 text-base font-bold sm:text-lg tracking-wide uppercase">
               <span>CardMart</span>
             </Link>
             <NavLinks />
           </div>
-          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+          <div className="flex shrink-0 items-center gap-1 sm:gap-3">
             <Button asChild variant="ghost" size="icon" className="relative rounded-full">
               <Link href="/messages">
                 <MessageCircle className="size-4" />

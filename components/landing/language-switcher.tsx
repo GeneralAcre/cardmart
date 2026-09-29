@@ -21,7 +21,7 @@ export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
       <DropdownMenuTrigger asChild>
         <Button type="button" variant="outline" size="sm" className="gap-1.5" aria-label={`Language: ${current?.label}`}>
           <Languages className="size-4" />
-          {compact ? (locale === "th" ? "ไทย" : "EN") : current?.label}
+          {compact ? <span className="hidden sm:inline">{locale === "th" ? "ไทย" : "EN"}</span> : current?.label}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
