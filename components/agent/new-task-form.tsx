@@ -19,7 +19,7 @@ import { useT } from "@/components/landing/language-provider";
 const EXAMPLES = [
   "One PSA 10 Charizard ex from 151, up to 20,000 THB, trusted sellers only",
   "Any Pikachu graded 9 or higher under 3,000 THB — buy up to 3",
-  "ลูฟี่ One Piece การ์ดเกรด PSA 10 ไม่เกิน 8,000 บาท",
+  "A PSA 10 Monkey D. Luffy One Piece card, max 8,000 THB",
 ];
 
 const GRADERS = ["PSA", "BGS", "CGC", "RAW"] as const;

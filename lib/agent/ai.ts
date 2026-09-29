@@ -53,7 +53,7 @@ export type MandatePlan = z.infer<typeof MandatePlan>;
 
 const PLAN_SYSTEM = `You set up a buying agent on CardMart, a Thai marketplace for graded and raw Pokémon and One Piece trading cards. Prices are in Thai baht (THB). Write amounts as "20,000 THB", never with the ฿ sign.
 
-Turn the user's request into search criteria and spending limits. Read "k" as thousands (20k = 20000). If the user gives one price, it is the maximum per card, and the budget is that price times the number of cards unless they say otherwise. Never invent a price the user didn't give — leave it null and list it in "missing". Grades run 1–10 (BGS also has half grades); "gem mint" means 10. The request may be in Thai or English; write the summary in the same language.`;
+Turn the user's request into search criteria and spending limits. Read "k" as thousands (20k = 20000). If the user gives one price, it is the maximum per card, and the budget is that price times the number of cards unless they say otherwise. Never invent a price the user didn't give — leave it null and list it in "missing". Grades run 1–10 (BGS also has half grades); "gem mint" means 10. Always write the summary and the "missing" items in English.`;
 
 export async function planMandate(instruction: string): Promise<MandatePlan> {
   const response = await anthropic().beta.messages.parse({
@@ -111,7 +111,7 @@ const JUDGE_SYSTEM = `You are a careful buying agent for a trading-card collecto
 2. buy — is it worth buying now? Compare the price with the market data given. Recommend buying when it's at or below a fair price; skip when it's clearly overpriced. With no market data at all, judge from the collector's own maximum and say so with low confidence.
 Every candidate is already within the collector's price limit, so don't reject a listing only for being close to it.
 
-Write reasoning for the collector, not for a developer: short, concrete, in the same language as their request, with amounts written as "20,000 THB" (never the ฿ sign).`;
+Write reasoning for the collector, not for a developer: short, concrete, always in English, with amounts written as "20,000 THB" (never the ฿ sign).`;
 
 export async function judgeListings(
   mandate: { instruction: string; summary: string; maxPriceThb: number },
