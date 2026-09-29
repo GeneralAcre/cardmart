@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Gavel, Loader2 } from "lucide-react";
 
+import { ActionButton } from "@/components/ui/action-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -85,9 +86,7 @@ export function CreateAuctionButton({ eligibleAssets }: { eligibleAssets: Eligib
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button>
-          <Gavel /> {t("Create Auction")}
-        </Button>
+        <ActionButton icon={Gavel}>{t("Create Auction")}</ActionButton>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

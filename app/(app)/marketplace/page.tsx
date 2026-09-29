@@ -1,8 +1,7 @@
-import Link from "next/link";
 import { Plus } from "lucide-react";
 
 import { MarketplaceExplorer } from "@/components/marketplace/marketplace-explorer";
-import { Button } from "@/components/ui/button";
+import { ActionButton } from "@/components/ui/action-button";
 import { getMarketplaceListings, getTrendingListings } from "@/lib/queries";
 import { getT } from "@/lib/i18n/server";
 
@@ -23,11 +22,9 @@ export default async function MarketplacePage() {
             {t("Certified cards, paid through escrow and checked at our warehouse before the seller is paid.")}
           </p>
         </div>
-        <Button asChild>
-          <Link href="/marketplace/sell">
-            <Plus /> {t("Sell a card")}
-          </Link>
-        </Button>
+        <ActionButton href="/marketplace/sell" icon={Plus}>
+          {t("Sell a card")}
+        </ActionButton>
       </div>
       <MarketplaceExplorer initialListings={listings} trendingWeek={trendingWeek} trendingMonth={trendingMonth} />
     </div>
