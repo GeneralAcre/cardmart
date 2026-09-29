@@ -4,6 +4,7 @@ import { Bookmark, Flame, PackageOpen } from "lucide-react";
 import {
   getMyGradingSubmissions,
   getMyRedeemedAssets,
+  getMySalesToShip,
   getMyTradeOffers,
   getMyWantedCards,
   getOffersMade,
@@ -28,6 +29,9 @@ import { WantedCardsPanel } from "@/components/wanted/wanted-cards-panel";
 import { TradesPanel } from "@/components/trade/trades-panel";
 import { GradingSubmissionsPanel } from "@/components/portfolio/grading-submissions-panel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SalesToShipPanel } from "@/components/portfolio/ship-to-warehouse";
+import { expireOverdueSellerShipments } from "@/lib/actions";
+import { toSaleToShip } from "@/lib/shipping";
 import { formatDate, formatGrade } from "@/lib/format";
 
 const TABS = ["all", "hand", "vault", "watchlist", "offers", "trades", "alerts", "grading"] as const;
@@ -36,6 +40,7 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
   const { tab } = await searchParams;
   const defaultTab = TABS.find((t) => t === tab) ?? "all";
   const [user, t] = await Promise.all([getCurrentUser(), getT()]);
+  await expireOverdueSellerShipments({ revalidate: false });
   const walletAddress = user.walletAddress ?? user.walletMock;
   const [
     assets,
@@ -51,6 +56,7 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
     rating,
     completedSales,
     gradingSubmissions,
+    salesToShip,
   ] = await Promise.all([
     getVaultAssets(user.id),
     getDevnetSolBalance(user.walletAddress), // real balance only for real (Privy) wallets, not the mock demo ones
@@ -65,6 +71,7 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
     getSellerRating(user.id),
     prisma.escrowTransaction.count({ where: { sellerId: user.id, status: "RELEASED" } }),
     getMyGradingSubmissions(user.id),
+    getMySalesToShip(user.id),
   ]);
   const gradingInProgress = gradingSubmissions.filter((s) => s.status !== "GRADED" && s.status !== "REJECTED").length;
   const pendingTradesForMe = trades.received.filter((t) => t.status === "PENDING").length;
@@ -90,6 +97,12 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
           phone={user.phone}
         />
       </div>
+
+      {salesToShip.length > 0 && (
+        <div className="mb-8">
+          <SalesToShipPanel sales={salesToShip.map(toSaleToShip)} />
+        </div>
+      )}
 
       <div className="mb-8">
         <IdentityCard

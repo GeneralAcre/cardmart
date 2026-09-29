@@ -21,7 +21,13 @@ import { BGS_BLACK_LABEL_GRADE, gradeTierLabel } from "@/lib/labels";
 import { requestDevnetAirdrop } from "@/lib/solana";
 import { EMAILED_NOTIFICATION_TYPES, isEmailConfigured, sendEmail } from "@/lib/email";
 import { checkAllIntegrations } from "@/lib/integrations";
-import { DISPUTE_WINDOW_DAYS, isWithinDisputeWindow } from "@/lib/shipping";
+import {
+  DISPUTE_WINDOW_DAYS,
+  SELLER_SHIP_DAYS,
+  isWithinDisputeWindow,
+  packageReference,
+  sellerShipByDeadline,
+} from "@/lib/shipping";
 import { findCatalogImage } from "@/lib/card-catalog";
 import { checkKycPhoto, deleteKycPhotos, isKycPhotoStorageConfigured, saveKycPhoto } from "@/lib/kyc-storage";
 import { getPortfolioPriceHistory, getPriceHistory, type PriceHistoryRange } from "@/lib/queries";
@@ -559,22 +565,16 @@ async function completePurchase(opts: {
     await notifyUser(asset.ownerId, "ITEM_SOLD", "Item sold", soldNote, `/item/${assetId}`);
     await notifyUser(user.id, "ITEM_PURCHASED", "Purchase complete", purchasedNote, `/item/${assetId}`);
   } else {
+    // The seller now has to actually send the card in (markShippedToWarehouse)
+    // before it reaches the inspection queue — until then the buyer's money
+    // sits in escrow, and it's refunded if the deadline passes
+    // (expireOverdueSellerShipments).
     await prisma.asset.update({
       where: { id: assetId },
       data: {
         forSale: false,
         marketStatus: "IN_ESCROW",
-        pipelineStage: "IN_INSPECTION",
-      },
-    });
-    const shipTx = await mockEscrowInstruction("lock", assetId);
-    await prisma.provenanceEvent.create({
-      data: {
-        assetId,
-        type: "SHIPPED_TO_WAREHOUSE",
-        note: "Seller shipped package to platform warehouse.",
-        mockTxSignature: shipTx.txSignature,
-        actorId: asset.sellerId,
+        pipelineStage: "AWAITING_SELLER_SHIPMENT",
       },
     });
     // Real check against PSA's cert database when possible — falls back to
@@ -597,14 +597,16 @@ async function completePurchase(opts: {
         officialGradingCompany: asset.gradingCompany,
         officialGrade: psaCert?.gradeNumber ?? asset.grade ?? 0,
         officialName: psaCert?.subject ?? asset.name,
-        status: "PENDING_INSPECTION",
+        status: "AWAITING_SELLER_SHIPMENT",
+        shipByDeadline: sellerShipByDeadline(),
       },
     });
-    await notifyAdmins(
-      "NEW_SUBMISSION",
-      "New inbound package",
-      `${asset.name} sold for ${priceThb.toLocaleString()} THB and is awaiting warehouse inspection.`,
-      "/admin/inbound",
+    await notifyUser(
+      asset.ownerId,
+      "SELLER_SHIP_REQUIRED",
+      "Sold! Ship it to CardMart",
+      `${asset.name} sold for ${priceThb.toLocaleString()} THB. Send it to our warehouse and add the tracking number within ${SELLER_SHIP_DAYS} days, or the sale is cancelled and the buyer refunded.`,
+      "/portfolio",
     );
     await notifyUser(user.id, "ITEM_PURCHASED", "Purchase confirmed", purchasedNote, `/item/${assetId}`);
   }
@@ -1169,11 +1171,14 @@ export async function completeOfferPurchase(
   });
 }
 
+/** A package staff can act on right now — it has to be in the inspection queue. */
 async function loadInboundPackage(inboundPackageId: string) {
-  return prisma.inboundPackage.findUniqueOrThrow({
+  const pkg = await prisma.inboundPackage.findUniqueOrThrow({
     where: { id: inboundPackageId },
     include: { asset: true, escrowTx: { include: { buyer: true, seller: true } } },
   });
+  if (pkg.status !== "PENDING_INSPECTION") throw new Error("This package isn't waiting for inspection.");
+  return pkg;
 }
 
 /**
@@ -1442,6 +1447,20 @@ export async function warehouseReject(inboundPackageId: string) {
     }),
   ]);
 
+  await notifyUser(
+    pkg.escrowTx.buyerId,
+    "SALE_CANCELLED",
+    "Purchase cancelled: refunded",
+    `${pkg.asset.name} didn't match its certificate at inspection, so the sale was cancelled and your ${pkg.escrowTx.amountThb.toLocaleString()} THB refunded.`,
+    `/item/${pkg.assetId}`,
+  );
+  await notifyUser(
+    pkg.escrowTx.sellerId,
+    "SALE_CANCELLED",
+    "Sale cancelled at inspection",
+    `${pkg.asset.name} didn't match its declared certificate data, so the buyer was refunded. The card will be returned to you.`,
+    `/item/${pkg.assetId}`,
+  );
   revalidateMarketplace(pkg.assetId);
 }
 
@@ -2903,4 +2922,169 @@ export async function resolveDispute(disputeId: string, outcome: "refunded" | "n
   );
   revalidatePath("/admin", "layout");
   revalidatePath(`/item/${dispute.escrowTx.assetId}`);
+}
+
+// ---------------------------------------------------------------------------
+// Seller → warehouse leg. After a non-vaulted sale the seller has
+// SELLER_SHIP_DAYS to send the card in and enter its tracking number; only
+// then does the package join the inspection queue. Missing the deadline
+// cancels the sale and refunds the buyer.
+// ---------------------------------------------------------------------------
+
+const sellerShipmentSchema = z.object({
+  carrier: z.string().trim().min(2, "Enter the courier.").max(60),
+  trackingNumber: z.string().trim().min(4, "Enter the tracking number.").max(60),
+});
+
+export async function markShippedToWarehouse(
+  inboundPackageId: string,
+  carrier: string,
+  trackingNumber: string,
+): Promise<{ error?: string }> {
+  const user = await getCurrentUser();
+  const parsed = sellerShipmentSchema.safeParse({ carrier, trackingNumber });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid tracking details." };
+
+  const pkg = await prisma.inboundPackage.findUnique({
+    where: { id: inboundPackageId },
+    include: { asset: true, escrowTx: true },
+  });
+  if (!pkg || pkg.escrowTx.sellerId !== user.id) return { error: "This isn't one of your sales." };
+
+  // A tracking-number correction after shipping: just update it.
+  if (pkg.status === "PENDING_INSPECTION") {
+    await prisma.inboundPackage.update({
+      where: { id: pkg.id },
+      data: { sellerCarrier: parsed.data.carrier, sellerTrackingNumber: parsed.data.trackingNumber },
+    });
+    revalidatePath("/portfolio");
+    revalidatePath("/admin", "layout");
+    return {};
+  }
+  if (pkg.status !== "AWAITING_SELLER_SHIPMENT") return { error: "This sale is no longer waiting for you to ship." };
+  if (pkg.shipByDeadline && pkg.shipByDeadline < new Date()) {
+    return { error: "The shipping deadline has passed, so this sale is being cancelled." };
+  }
+
+  // Conditional on the status so this can't race the deadline expiry.
+  const now = new Date();
+  const claimed = await prisma.inboundPackage.updateMany({
+    where: { id: pkg.id, status: "AWAITING_SELLER_SHIPMENT" },
+    data: {
+      status: "PENDING_INSPECTION",
+      sellerCarrier: parsed.data.carrier,
+      sellerTrackingNumber: parsed.data.trackingNumber,
+      sellerShippedAt: now,
+      arrivedAt: now,
+    },
+  });
+  if (claimed.count === 0) return { error: "This sale is no longer waiting for you to ship." };
+
+  const shipTx = await mockEscrowInstruction("lock", pkg.assetId);
+  await prisma.asset.update({ where: { id: pkg.assetId }, data: { pipelineStage: "IN_TRANSIT_TO_WAREHOUSE" } });
+  await prisma.provenanceEvent.create({
+    data: {
+      assetId: pkg.assetId,
+      type: "SHIPPED_TO_WAREHOUSE",
+      note: `Seller shipped the card to the CardMart warehouse with ${parsed.data.carrier}.`,
+      mockTxSignature: shipTx.txSignature,
+      actorId: user.id,
+    },
+  });
+  await notifyUser(
+    pkg.escrowTx.buyerId,
+    "SELLER_SHIPPED",
+    "The seller shipped your card",
+    `${pkg.asset.name} is on its way to our warehouse for inspection (${parsed.data.carrier} ${parsed.data.trackingNumber}).`,
+    `/item/${pkg.assetId}`,
+  );
+  await notifyAdmins(
+    "NEW_SUBMISSION",
+    "Inbound package on its way",
+    `${pkg.asset.name} (${packageReference(pkg.id)}) sold for ${pkg.escrowTx.amountThb.toLocaleString()} THB — ${parsed.data.carrier} ${parsed.data.trackingNumber}.`,
+    "/admin/inbound",
+  );
+  revalidateMarketplace(pkg.assetId);
+  return {};
+}
+
+/**
+ * Cancels every sale whose seller missed the shipping deadline: refunds the
+ * buyer, takes the listing down (the seller can relist once they're ready to
+ * ship) and tells both sides. Safe to call from anywhere, any number of
+ * times — it only ever touches packages that are already overdue, and each
+ * one is claimed with a conditional update so two callers can't refund the
+ * same sale. Runs daily from /api/cron/expire-seller-shipments and lazily
+ * when Portfolio, an item page or the inbound queue is viewed; pass
+ * { revalidate: false } from inside a render, where revalidatePath isn't allowed.
+ */
+export async function expireOverdueSellerShipments(opts: { revalidate?: boolean } = {}): Promise<number> {
+  const overdue = await prisma.inboundPackage.findMany({
+    where: { status: "AWAITING_SELLER_SHIPMENT", shipByDeadline: { lt: new Date() } },
+    include: { asset: true, escrowTx: { include: { buyer: true, seller: true } } },
+    take: 25,
+  });
+
+  let expired = 0;
+  for (const pkg of overdue) {
+    const claimed = await prisma.inboundPackage.updateMany({
+      where: { id: pkg.id, status: "AWAITING_SELLER_SHIPMENT" },
+      data: { status: "EXPIRED", resolvedAt: new Date() },
+    });
+    if (claimed.count === 0) continue;
+
+    let refund: { signature: string; onChain: boolean };
+    try {
+      refund = await releaseOrRefundEscrow("refund", pkg.escrowTx, pkg.assetId);
+    } catch (err) {
+      // Real funds are still locked on-chain — put the package back so the
+      // next run retries, rather than recording a refund that didn't happen.
+      await prisma.inboundPackage.update({
+        where: { id: pkg.id },
+        data: { status: "AWAITING_SELLER_SHIPMENT", resolvedAt: null },
+      });
+      console.error(`Refund for overdue sale ${pkg.id} failed; will retry.`, err);
+      continue;
+    }
+
+    await prisma.$transaction([
+      prisma.escrowTransaction.update({ where: { id: pkg.escrowTxId }, data: { status: "REFUNDED" } }),
+      prisma.asset.update({
+        where: { id: pkg.assetId },
+        data: { forSale: false, marketStatus: "DELISTED", pipelineStage: "NONE" },
+      }),
+      prisma.provenanceEvent.create({
+        data: {
+          assetId: pkg.assetId,
+          type: "ESCROW_REFUNDED",
+          note: `Seller didn't ship within ${SELLER_SHIP_DAYS} days. Sale cancelled and the buyer refunded in full.`,
+          mockTxSignature: refund.signature,
+          onChain: refund.onChain,
+        },
+      }),
+    ]);
+    await notifyUser(
+      pkg.escrowTx.buyerId,
+      "SALE_CANCELLED",
+      "Purchase cancelled: refunded",
+      `The seller didn't ship ${pkg.asset.name} in time, so the sale was cancelled and your ${pkg.escrowTx.amountThb.toLocaleString()} THB refunded.`,
+      `/item/${pkg.assetId}`,
+    );
+    await notifyUser(
+      pkg.escrowTx.sellerId,
+      "SALE_CANCELLED",
+      "Sale cancelled: not shipped in time",
+      `${pkg.asset.name} wasn't shipped within ${SELLER_SHIP_DAYS} days, so the buyer was refunded and the listing taken down. Relist it from Portfolio when you're ready to ship.`,
+      "/portfolio",
+    );
+    await notifyAdmins(
+      "NEW_SUBMISSION",
+      "Sale cancelled: seller didn't ship",
+      `${pkg.asset.name} (${packageReference(pkg.id)}) — ${pkg.escrowTx.seller.name ?? pkg.escrowTx.seller.handle ?? "seller"} missed the shipping deadline. Buyer refunded.`,
+      "/admin/history",
+    );
+    if (opts.revalidate !== false) revalidateMarketplace(pkg.assetId);
+    expired++;
+  }
+  return expired;
 }

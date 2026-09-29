@@ -129,6 +129,8 @@ export const PIPELINE_STAGE_LABELS: Record<PipelineStage, string> = {
 };
 
 export const INBOUND_STATUS_LABELS: Record<InboundStatus, string> = {
+  AWAITING_SELLER_SHIPMENT: "Waiting for Seller to Ship",
+  EXPIRED: "Cancelled — Seller Didn't Ship",
   PENDING_INSPECTION: "Pending Inspection",
   APPROVED_SHIP: "Approved — Ship to Buyer",
   APPROVED_VAULT: "Approved — Deposited to Vault",

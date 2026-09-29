@@ -216,7 +216,7 @@ export async function getAssetById(id: string) {
       seller: true,
       owner: true,
       provenance: { orderBy: { createdAt: "asc" }, include: { actor: true } },
-      escrowTxs: { orderBy: { createdAt: "desc" }, include: { review: true, dispute: true } },
+      escrowTxs: { orderBy: { createdAt: "desc" }, include: { review: true, dispute: true, inboundPackage: true } },
       verificationPhotos: { orderBy: { createdAt: "asc" } },
     },
   });
@@ -408,7 +408,7 @@ export async function getGradingSubmissionHistory() {
 
 export async function getWarehouseHistory() {
   const packages = await prisma.inboundPackage.findMany({
-    where: { status: { not: "PENDING_INSPECTION" } },
+    where: { status: { in: ["APPROVED_SHIP", "APPROVED_VAULT", "REJECTED", "EXPIRED"] } },
     orderBy: { resolvedAt: "desc" },
     take: 20,
     include: {
@@ -1347,5 +1347,35 @@ export async function getShipmentForRecipient(assetId: string, recipientId: stri
   return prisma.shipment.findFirst({
     where: { assetId, recipientId },
     orderBy: { createdAt: "desc" },
+  });
+}
+
+/** A seller's sales that still need them to ship the card in, or that are on their way to inspection. */
+export async function getMySalesToShip(sellerId: string) {
+  return prisma.inboundPackage.findMany({
+    where: { escrowTx: { sellerId }, status: { in: ["AWAITING_SELLER_SHIPMENT", "PENDING_INSPECTION"] } },
+    orderBy: { shipByDeadline: "asc" },
+    include: {
+      asset: { select: { id: true, name: true, serial: true } },
+      escrowTx: { select: { amountThb: true } },
+    },
+  });
+}
+
+/** Back office: sales where the card hasn't been sent in yet, soonest deadline first. */
+export async function getAwaitingSellerShipments() {
+  return prisma.inboundPackage.findMany({
+    where: { status: "AWAITING_SELLER_SHIPMENT" },
+    orderBy: { shipByDeadline: "asc" },
+    include: {
+      asset: { select: { id: true, name: true, serial: true } },
+      escrowTx: {
+        select: {
+          amountThb: true,
+          seller: { select: { name: true, handle: true, email: true, phone: true } },
+          buyer: { select: { name: true, handle: true } },
+        },
+      },
+    },
   });
 }

@@ -39,6 +39,9 @@ export const EMAILED_NOTIFICATION_TYPES = new Set<NotificationType>([
   "SHIPMENT_DISPATCHED",
   "SHIPMENT_DELIVERED",
   "DISPUTE_RESOLVED",
+  "SELLER_SHIP_REQUIRED",
+  "SELLER_SHIPPED",
+  "SALE_CANCELLED",
 ]);
 
 function escapeHtml(s: string) {

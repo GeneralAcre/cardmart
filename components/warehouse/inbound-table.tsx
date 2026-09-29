@@ -19,6 +19,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { CardArt } from "@/components/asset/card-art";
 import { bulkApproveInboundPackages, bulkRejectInboundPackages, type BulkActionResult } from "@/lib/actions";
 import { formatDateTime, formatThb } from "@/lib/format";
+import { packageReference } from "@/lib/shipping";
 import {
   InspectionDialog,
   type InboundPackageWithRelations,
@@ -123,7 +124,7 @@ export function InboundTable({ packages }: { packages: InboundPackageWithRelatio
               <TableHead>{t("Item")}</TableHead>
               <TableHead>{t("Buyer / Seller")}</TableHead>
               <TableHead>{t("Amount")}</TableHead>
-              <TableHead>{t("Arrived")}</TableHead>
+              <TableHead>{t("Package")}</TableHead>
               <TableHead>{t("Data Check")}</TableHead>
               <TableHead />
             </TableRow>
@@ -166,8 +167,16 @@ export function InboundTable({ packages }: { packages: InboundPackageWithRelatio
                     </div>
                   </TableCell>
                   <TableCell>{formatThb(pkg.escrowTx.amountThb)}</TableCell>
-                  <TableCell className="text-muted-foreground text-xs">
-                    {formatDateTime(pkg.arrivedAt)}
+                  <TableCell className="text-xs">
+                    <div className="flex flex-col">
+                      <span className="font-mono font-semibold">{packageReference(pkg.id)}</span>
+                      {pkg.sellerTrackingNumber && (
+                        <span className="text-muted-foreground">
+                          {pkg.sellerCarrier} <span className="font-mono">{pkg.sellerTrackingNumber}</span>
+                        </span>
+                      )}
+                      <span className="text-muted-foreground">{formatDateTime(pkg.arrivedAt)}</span>
+                    </div>
                   </TableCell>
                   <TableCell>
                     {allMatch ? (

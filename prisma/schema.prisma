@@ -97,6 +97,11 @@ enum EscrowStatus {
 }
 
 enum InboundStatus {
+  // Sold, but the seller hasn't sent the card to the warehouse yet. They
+  // have until shipByDeadline; after that the sale is cancelled and the
+  // buyer refunded (EXPIRED) — see expireOverdueSellerShipments.
+  AWAITING_SELLER_SHIPMENT
+  EXPIRED
   PENDING_INSPECTION
   APPROVED_SHIP
   APPROVED_VAULT
@@ -632,8 +637,17 @@ model InboundPackage {
   officialGrade          Float
   officialName           String
   status                 InboundStatus  @default(PENDING_INSPECTION)
+  // When the package entered the inspection queue — the moment the seller
+  // marked it shipped (or the sale time, for packages from before sellers
+  // had a shipping step).
   arrivedAt              DateTime       @default(now())
   resolvedAt             DateTime?
+
+  // The seller's leg: card from the seller to our warehouse.
+  shipByDeadline       DateTime?
+  sellerCarrier        String?
+  sellerTrackingNumber String?
+  sellerShippedAt      DateTime?
 
   assetId    String
   asset      Asset             @relation(fields: [assetId], references: [id])
@@ -641,6 +655,7 @@ model InboundPackage {
   escrowTx   EscrowTransaction @relation(fields: [escrowTxId], references: [id])
 
   @@index([assetId])
+  @@index([status, shipByDeadline])
 }
 
 // Footer "Contact & Support" form submissions. Not tied to a User — the
@@ -812,6 +827,9 @@ enum NotificationType {
   DISPUTE_OPENED
   DISPUTE_RESOLVED
   CONTACT_MESSAGE
+  SELLER_SHIP_REQUIRED
+  SELLER_SHIPPED
+  SALE_CANCELLED
 }
 
 model Notification {

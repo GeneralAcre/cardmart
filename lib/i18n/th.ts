@@ -8,6 +8,7 @@ import { ITEM } from "@/lib/i18n/th/item";
 import { LEADERBOARD } from "@/lib/i18n/th/leaderboard";
 import { LISTING } from "@/lib/i18n/th/listing";
 import { MARKETPLACE } from "@/lib/i18n/th/marketplace";
+import { ORDERS } from "@/lib/i18n/th/orders";
 import { PAGES } from "@/lib/i18n/th/pages";
 import { PORTFOLIO } from "@/lib/i18n/th/portfolio";
 
@@ -22,4 +23,5 @@ export const TH: Record<string, string> = {
   ...PAGES,
   ...ADMIN,
   ...BACKOFFICE,
+  ...ORDERS,
 };

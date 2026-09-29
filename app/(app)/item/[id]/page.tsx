@@ -35,7 +35,10 @@ import { SimilarListings } from "@/components/item/similar-listings";
 import { LeaveReviewForm } from "@/components/store/leave-review-form";
 import { ReportProblem } from "@/components/item/report-problem";
 import { ShipmentTracking } from "@/components/item/shipment-tracking";
-import { isWithinDisputeWindow } from "@/lib/shipping";
+import { isWithinDisputeWindow, toSaleToShip } from "@/lib/shipping";
+import { expireOverdueSellerShipments } from "@/lib/actions";
+import { OrderProgress } from "@/components/item/order-progress";
+import { ShipToWarehouseTask } from "@/components/portfolio/ship-to-warehouse";
 import { RatingStars } from "@/components/store/rating-stars";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -60,6 +63,9 @@ import { realPhotos } from "@/lib/card-image";
 
 export default async function ItemDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  // Cancel any sale whose seller missed the shipping deadline before reading
+  // the item, so its status below is never stale.
+  await expireOverdueSellerShipments({ revalidate: false });
   const [asset, user, t] = await Promise.all([getAssetById(id), getCurrentUser(), getT()]);
 
   if (!asset) notFound();
@@ -133,6 +139,17 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
       isWithinDisputeWindow(myCompletedPurchase.releasedAt));
 
   const isOwner = asset.ownerId === user.id;
+
+  // A sale of this item still in escrow — shown to the buyer as order
+  // progress, and to the seller as the "ship it to us" task.
+  const openSale = asset.escrowTxs.find((tx) => tx.status === "LOCKED" && tx.inboundPackage);
+  const myOpenOrder = openSale?.buyerId === user.id ? openSale : null;
+  const saleToShip =
+    openSale?.sellerId === user.id &&
+    openSale.inboundPackage &&
+    (openSale.inboundPackage.status === "AWAITING_SELLER_SHIPMENT" || openSale.inboundPackage.status === "PENDING_INSPECTION")
+      ? toSaleToShip({ ...openSale.inboundPackage, asset, escrowTx: openSale })
+      : null;
   const isWatching = !isOwner && (await isAssetWatched(user.id, asset.id));
 
   // Card swaps are vault-to-vault only — see proposeTrade in lib/actions.ts.
@@ -429,6 +446,15 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
             </p>
           )}
 
+          {myOpenOrder?.inboundPackage && (
+            <OrderProgress
+              pkg={myOpenOrder.inboundPackage}
+              amountThb={myOpenOrder.amountThb}
+              fulfillment={myOpenOrder.fulfillmentChoice}
+              paidAt={myOpenOrder.createdAt}
+            />
+          )}
+          {saleToShip && <ShipToWarehouseTask sale={saleToShip} />}
           {myShipment && <ShipmentTracking shipment={myShipment} />}
 
           {reviewableEscrow && <LeaveReviewForm escrowTxId={reviewableEscrow.id} />}
