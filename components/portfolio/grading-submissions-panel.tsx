@@ -21,7 +21,7 @@ export async function GradingSubmissionsPanel({
       <div className="text-muted-foreground flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed py-20 text-center">
         <Sparkles className="size-8" />
         <p className="text-sm">{t("No cards sent for grading yet.")}</p>
-        <Link href="/listing" className="text-foreground text-sm font-medium underline">
+        <Link href="/marketplace/sell" className="text-foreground text-sm font-medium underline">
           {t("Send a raw card for grading")}
         </Link>
       </div>

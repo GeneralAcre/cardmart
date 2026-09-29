@@ -9,7 +9,7 @@ const NAV_LINKS = [
   { href: "/marketplace", label: "Marketplace" },
   { href: "/leaderboard", label: "Leaderboard" },
   { href: "/guide", label: "Getting Started" },
-  { href: "/listing", label: "Listing" },
+  { href: "/marketplace/sell", label: "Sell a card" },
   { href: "/portfolio", label: "Portfolio" },
 ];
 

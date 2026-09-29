@@ -188,7 +188,7 @@ export default async function GuidePage({ searchParams }: { searchParams: Promis
         <TabsContent value="sell" className="flex flex-col gap-4 pt-4">
           <StepList steps={SELL_STEPS} t={t} />
           <Button asChild className="w-fit">
-            <Link href="/listing">{t("List your first card")}</Link>
+            <Link href="/marketplace/sell">{t("List your first card")}</Link>
           </Button>
         </TabsContent>
       </Tabs>
