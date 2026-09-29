@@ -2,6 +2,7 @@
 export const LISTING: Record<string, string> = {
   "Create a Listing": "ลงขายสินค้า",
   "Sell a card": "ขายการ์ด",
+  "Back to Marketplace": "กลับไปที่ตลาด",
   "Certified cards, paid through escrow and checked at our warehouse before the seller is paid.":
     "การ์ดที่ผ่านการรับรอง ชำระผ่านเอสโครว์ และตรวจสอบที่คลังของเราก่อนจ่ายเงินให้ผู้ขาย",
   "List a card you have now, or send a raw card in to be graded first.": "ลงขายการ์ดที่คุณมีตอนนี้ หรือส่งการ์ดดิบเข้ามาเกรดก่อน",
