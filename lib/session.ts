@@ -1,6 +1,6 @@
 import "server-only";
 import { cache } from "react";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
 import { PRIVY_ENFORCED, getPrivyUserProfile, primarySolanaWallet, verifyPrivySession } from "@/lib/privy-server";
@@ -59,15 +59,15 @@ export const getCurrentUser = cache(async () => {
 });
 
 /**
- * Gates /admin/warehouse and its Server Actions to staff only. Redirects
- * non-admins to "/" rather than showing a 403 — this is a warehouse ops
- * tool, not a page regular users have any reason to land on or discover
- * exists. Call this at the top of the page AND inside every warehouse/
+ * Gates the /admin back office and its Server Actions to staff only. Answers
+ * non-admins with a plain 404 rather than a 403 or a redirect, so the back
+ * office looks exactly like a page that doesn't exist to anyone who
+ * stumbles on the path. Call this at the top of the page AND inside every warehouse/
  * grading Server Action — the page check alone doesn't stop someone from
  * calling an action directly.
  */
 export const requireAdmin = cache(async () => {
   const user = await getCurrentUser();
-  if (!user.isAdmin) redirect("/");
+  if (!user.isAdmin) notFound();
   return user;
 });

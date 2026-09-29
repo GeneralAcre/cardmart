@@ -45,7 +45,7 @@ export async function SiteHeader() {
             <Link href="/" className="flex shrink-0 items-center gap-2 text-lg font-bold tracking-wide uppercase">
               <span>CardMart</span>
             </Link>
-            <NavLinks isAdmin={user.isAdmin} />
+            <NavLinks />
           </div>
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             <Button asChild variant="ghost" size="icon" className="relative rounded-full">
@@ -99,7 +99,7 @@ export async function SiteHeader() {
           </div>
         </div>
       </header>
-      <MobileBottomNav isAdmin={user.isAdmin} />
+      <MobileBottomNav />
     </>
   );
 }

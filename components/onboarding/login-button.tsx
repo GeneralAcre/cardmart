@@ -12,10 +12,13 @@ export function LoginButton({
   className,
   size = "lg",
   label,
+  redirectTo = "/marketplace",
 }: {
   className?: string;
   size?: "sm" | "default" | "lg";
   label?: string;
+  /** Where to land after signing in — the staff sign-in page sends people to /admin instead. */
+  redirectTo?: string;
 }) {
   const { t, tr } = useLanguage();
   const { ready, authenticated, getAccessToken, logout } = usePrivy();
@@ -36,7 +39,7 @@ export function LoginButton({
     // actual click on Login does (see handleClick below).
     onComplete: ({ wasAlreadyAuthenticated }) => {
       if (wasAlreadyAuthenticated) return;
-      window.location.href = "/marketplace";
+      window.location.href = redirectTo;
     },
     // Surfaces a visible reason instead of silently doing nothing — e.g.
     // when a login method is rejected by the Privy dashboard config.
@@ -63,7 +66,7 @@ export function LoginButton({
     }
     const token = await getAccessToken().catch(() => null);
     if (token) {
-      window.location.href = "/marketplace";
+      window.location.href = redirectTo;
       return;
     }
     await logout();

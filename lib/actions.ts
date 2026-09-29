@@ -21,6 +21,7 @@ import { BGS_BLACK_LABEL_GRADE, gradeTierLabel } from "@/lib/labels";
 import { requestDevnetAirdrop } from "@/lib/solana";
 import { EMAILED_NOTIFICATION_TYPES, isEmailConfigured, sendEmail } from "@/lib/email";
 import { checkAllIntegrations } from "@/lib/integrations";
+import { DISPUTE_WINDOW_DAYS, isWithinDisputeWindow } from "@/lib/shipping";
 import { findCatalogImage } from "@/lib/card-catalog";
 import { checkKycPhoto, deleteKycPhotos, isKycPhotoStorageConfigured, saveKycPhoto } from "@/lib/kyc-storage";
 import { getPortfolioPriceHistory, getPriceHistory, type PriceHistoryRange } from "@/lib/queries";
@@ -36,7 +37,7 @@ import {
 function revalidateMarketplace(assetId?: string) {
   revalidatePath("/marketplace");
   revalidatePath("/portfolio");
-  revalidatePath("/admin/warehouse");
+  revalidatePath("/admin", "layout");
   if (assetId) revalidatePath(`/item/${assetId}`);
 }
 
@@ -603,7 +604,7 @@ async function completePurchase(opts: {
       "NEW_SUBMISSION",
       "New inbound package",
       `${asset.name} sold for ${priceThb.toLocaleString()} THB and is awaiting warehouse inspection.`,
-      `/admin/warehouse`,
+      "/admin/inbound",
     );
     await notifyUser(user.id, "ITEM_PURCHASED", "Purchase confirmed", purchasedNote, `/item/${assetId}`);
   }
@@ -1271,6 +1272,16 @@ export async function warehouseApproveShip(inboundPackageId: string) {
       where: { id: inboundPackageId },
       data: { status: "APPROVED_SHIP", resolvedAt: new Date() },
     }),
+    prisma.shipment.create({
+      data: {
+        reason: "SALE",
+        assetId: pkg.assetId,
+        recipientId: pkg.escrowTx.buyerId,
+        escrowTxId: pkg.escrowTxId,
+        shippingAddress: pkg.escrowTx.buyer.shippingAddress ?? "",
+        phone: pkg.escrowTx.buyer.phone,
+      },
+    }),
     prisma.escrowTransaction.update({
       where: { id: pkg.escrowTxId },
       data: { status: "RELEASED", releasedAt: new Date() },
@@ -1296,7 +1307,7 @@ export async function warehouseApproveShip(inboundPackageId: string) {
         {
           assetId: pkg.assetId,
           type: "DELIVERED_TO_BUYER",
-          note: "Shipping label generated and package delivered to buyer's address.",
+          note: "Approved to ship to the buyer's address — tracking is added once the courier collects it.",
           mockTxSignature: transfer.signature,
         },
         {
@@ -1694,10 +1705,10 @@ export async function submitForGrading(
     "NEW_SUBMISSION",
     "New grading submission",
     `${data.itemName} was sent in for ${data.gradingCompany} Full-Service grading.`,
-    "/admin/warehouse",
+    "/admin/grading",
   );
   revalidatePath("/portfolio");
-  revalidatePath("/admin/warehouse");
+  revalidatePath("/admin", "layout");
   return { submissionId: submission.id };
 }
 
@@ -1719,7 +1730,7 @@ export async function adminMarkAtGradingCompany(submissionId: string) {
     where: { id: submissionId },
     data: { status: "AT_GRADING_COMPANY" },
   });
-  revalidatePath("/admin/warehouse");
+  revalidatePath("/admin", "layout");
   revalidatePath("/portfolio");
 }
 
@@ -1865,7 +1876,7 @@ export async function adminRejectGradingSubmission(submissionId: string) {
     where: { id: submissionId },
     data: { status: "REJECTED", resolvedAt: new Date() },
   });
-  revalidatePath("/admin/warehouse");
+  revalidatePath("/admin", "layout");
   revalidatePath("/portfolio");
 }
 
@@ -1938,6 +1949,21 @@ export async function vaultRedeem(assetId: string, burnTxSignature?: string) {
       },
     ],
   });
+  await prisma.shipment.create({
+    data: {
+      reason: "REDEEM",
+      assetId,
+      recipientId: user.id,
+      shippingAddress: user.shippingAddress,
+      phone: user.phone,
+    },
+  });
+  await notifyAdmins(
+    "NEW_SUBMISSION",
+    "Vault redemption",
+    `${asset.name} was redeemed and needs to be packed and shipped to its owner.`,
+    "/admin/shipments",
+  );
 
   await cancelTradesInvolving(assetId);
   revalidateMarketplace(assetId);
@@ -2093,7 +2119,7 @@ export async function markAdminAlertRead(notificationId: string) {
     where: { id: notificationId, audience: "ADMIN" },
     data: { readAt: new Date() },
   });
-  revalidatePath("/admin/warehouse");
+  revalidatePath("/admin", "layout");
 }
 
 /**
@@ -2111,7 +2137,7 @@ export async function updateVaultLocation(assetId: string, vaultLocation: string
     where: { id: assetId },
     data: { vaultLocation: vaultLocation.trim() || null },
   });
-  revalidatePath("/admin/warehouse");
+  revalidatePath("/admin", "layout");
 }
 
 /**
@@ -2129,7 +2155,7 @@ export async function toggleUserBan(userId: string): Promise<{ isBanned: boolean
     where: { id: userId },
     data: { isBanned: !target.isBanned },
   });
-  revalidatePath("/admin/warehouse");
+  revalidatePath("/admin", "layout");
   return { isBanned: updated.isBanned };
 }
 
@@ -2684,11 +2710,11 @@ export async function submitKyc(_prev: KycState, formData: FormData): Promise<Ky
     "KYC_SUBMITTED",
     "Identity verification submitted",
     `${user.name ?? user.handle ?? "A user"} submitted their identity for review.`,
-    "/admin/warehouse?tab=kyc",
+    "/admin/identity",
   );
 
   revalidatePath("/portfolio");
-  revalidatePath("/admin/warehouse");
+  revalidatePath("/admin", "layout");
   return { ok: true };
 }
 
@@ -2718,7 +2744,7 @@ export async function reviewKyc(userId: string, action: "approve" | "reject", re
     await notifyUser(userId, "KYC_REJECTED", "Identity verification declined", `${trimmed} You can submit again.`, "/portfolio");
   }
 
-  revalidatePath("/admin/warehouse");
+  revalidatePath("/admin", "layout");
   revalidatePath(`/store/${userId}`);
 }
 
@@ -2726,4 +2752,155 @@ export async function reviewKyc(userId: string, action: "approve" | "reject", re
 export async function runIntegrationCheck() {
   await requireAdmin();
   return checkAllIntegrations();
+}
+
+/**
+ * Staff-only: grants or revokes back-office access. An admin can't demote
+ * themselves, so the back office can never be left with nobody able to get in
+ * by accident.
+ */
+export async function toggleUserAdmin(userId: string): Promise<{ isAdmin: boolean }> {
+  const admin = await requireAdmin();
+  if (userId === admin.id) throw new Error("You can't remove your own staff access.");
+
+  const target = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+  if (target.isBanned && !target.isAdmin) throw new Error("Restore this account before giving it staff access.");
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: { isAdmin: !target.isAdmin },
+  });
+  revalidatePath("/admin", "layout");
+  return { isAdmin: updated.isAdmin };
+}
+
+// ---------------------------------------------------------------------------
+// Shipments — a card leaving the warehouse for a home address (see Shipment
+// in prisma/schema.prisma). Created by warehouseApproveShip and vaultRedeem;
+// staff move it along from the back office.
+// ---------------------------------------------------------------------------
+
+const dispatchSchema = z.object({
+  carrier: z.string().trim().min(2, "Enter the courier.").max(60),
+  trackingNumber: z.string().trim().min(4, "Enter the tracking number.").max(60),
+});
+
+export async function dispatchShipment(shipmentId: string, carrier: string, trackingNumber: string) {
+  await requireAdmin();
+  const parsed = dispatchSchema.safeParse({ carrier, trackingNumber });
+  if (!parsed.success) throw new Error(parsed.error.issues[0]?.message ?? "Invalid tracking details.");
+
+  const shipment = await prisma.shipment.findUniqueOrThrow({ where: { id: shipmentId }, include: { asset: true } });
+  if (shipment.status === "DELIVERED") throw new Error("This shipment was already delivered.");
+
+  await prisma.shipment.update({
+    where: { id: shipmentId },
+    data: { ...parsed.data, status: "SHIPPED", shippedAt: shipment.shippedAt ?? new Date() },
+  });
+  // Only notify on the first dispatch, not on a later tracking-number correction.
+  if (shipment.status === "AWAITING_DISPATCH") {
+    await notifyUser(
+      shipment.recipientId,
+      "SHIPMENT_DISPATCHED",
+      "Your card is on its way",
+      `${shipment.asset.name} shipped with ${parsed.data.carrier}. Tracking number: ${parsed.data.trackingNumber}.`,
+      `/item/${shipment.assetId}`,
+    );
+  }
+  revalidatePath("/admin", "layout");
+  revalidatePath(`/item/${shipment.assetId}`);
+}
+
+export async function markShipmentDelivered(shipmentId: string) {
+  await requireAdmin();
+  const shipment = await prisma.shipment.findUniqueOrThrow({ where: { id: shipmentId }, include: { asset: true } });
+  if (shipment.status !== "SHIPPED") throw new Error("Add tracking before marking this delivered.");
+
+  await prisma.shipment.update({
+    where: { id: shipmentId },
+    data: { status: "DELIVERED", deliveredAt: new Date() },
+  });
+  await notifyUser(
+    shipment.recipientId,
+    "SHIPMENT_DELIVERED",
+    "Delivered",
+    `${shipment.asset.name} was delivered. If anything is wrong with it, report a problem from the item page.`,
+    `/item/${shipment.assetId}`,
+  );
+  revalidatePath("/admin", "layout");
+  revalidatePath(`/item/${shipment.assetId}`);
+}
+
+// ---------------------------------------------------------------------------
+// Disputes — a buyer reporting a problem with a completed purchase. The
+// escrow is already released by then, so resolving one records the outcome;
+// any refund is paid out by staff outside the app.
+// ---------------------------------------------------------------------------
+
+const disputeSchema = z.object({
+  reason: z.enum(["NOT_RECEIVED", "NOT_AS_DESCRIBED", "DAMAGED", "OTHER"]),
+  description: z.string().trim().min(20, "Describe the problem in at least 20 characters.").max(2000),
+});
+
+export async function openDispute(
+  escrowTxId: string,
+  reason: string,
+  description: string,
+): Promise<{ error?: string }> {
+  const user = await getCurrentUser();
+  const parsed = disputeSchema.safeParse({ reason, description });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid report." };
+
+  const tx = await prisma.escrowTransaction.findUnique({
+    where: { id: escrowTxId },
+    include: { asset: true, dispute: true },
+  });
+  if (!tx || tx.buyerId !== user.id) return { error: "You can only report a problem with your own purchase." };
+  if (tx.status !== "RELEASED" || !tx.releasedAt) return { error: "This purchase isn't complete yet." };
+  if (tx.dispute) return { error: "You already reported a problem with this purchase." };
+  if (!isWithinDisputeWindow(tx.releasedAt)) {
+    return { error: `Problems can be reported up to ${DISPUTE_WINDOW_DAYS} days after a purchase.` };
+  }
+
+  await prisma.dispute.create({
+    data: { ...parsed.data, escrowTxId, openedById: user.id },
+  });
+  await notifyAdmins(
+    "DISPUTE_OPENED",
+    "Problem reported",
+    `${user.name ?? user.handle ?? "A buyer"} reported a problem with ${tx.asset.name} (${tx.amountThb.toLocaleString()} THB).`,
+    "/admin/disputes",
+  );
+  revalidatePath("/admin", "layout");
+  revalidatePath(`/item/${tx.assetId}`);
+  return {};
+}
+
+export async function resolveDispute(disputeId: string, outcome: "refunded" | "no_action", note: string) {
+  await requireAdmin();
+  const trimmed = note.trim().slice(0, 1000);
+  if (trimmed.length < 5) throw new Error("Add a short note for the buyer.");
+
+  const dispute = await prisma.dispute.findUniqueOrThrow({
+    where: { id: disputeId },
+    include: { escrowTx: { include: { asset: true } } },
+  });
+  if (dispute.status !== "OPEN") throw new Error("This dispute is already resolved.");
+
+  await prisma.dispute.update({
+    where: { id: disputeId },
+    data: {
+      status: outcome === "refunded" ? "RESOLVED_REFUNDED" : "RESOLVED_NO_ACTION",
+      resolutionNote: trimmed,
+      resolvedAt: new Date(),
+    },
+  });
+  await notifyUser(
+    dispute.openedById,
+    "DISPUTE_RESOLVED",
+    outcome === "refunded" ? "Your report was resolved: refund issued" : "Your report was reviewed",
+    trimmed,
+    `/item/${dispute.escrowTx.assetId}`,
+  );
+  revalidatePath("/admin", "layout");
+  revalidatePath(`/item/${dispute.escrowTx.assetId}`);
 }

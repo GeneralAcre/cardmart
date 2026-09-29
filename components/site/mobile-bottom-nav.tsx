@@ -5,14 +5,13 @@ import { usePathname } from "next/navigation";
 
 import { cn } from "@/lib/utils";
 import { useT } from "@/components/landing/language-provider";
-import { isNavLinkActive, navLinksFor } from "@/lib/nav-links";
+import { NAV_LINKS as links, isNavLinkActive } from "@/lib/nav-links";
 
 // Primary mobile navigation — fixed to the bottom of the viewport instead of
 // tucked behind a hamburger menu in the header, so it's reachable one-handed
 // and always visible. Icons are lucide-react placeholders for now.
-export function MobileBottomNav({ isAdmin = false }: { isAdmin?: boolean }) {
+export function MobileBottomNav() {
   const pathname = usePathname();
-  const links = navLinksFor(isAdmin);
   const t = useT();
 
   return (

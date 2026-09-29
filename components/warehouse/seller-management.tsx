@@ -2,7 +2,14 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Loader2, ShieldOff, UserCheck, Users } from "lucide-react";
+import {
+  Loader2,
+  ShieldCheck,
+  ShieldMinus,
+  ShieldOff,
+  UserCheck,
+  Users,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,7 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { RatingStars } from "@/components/store/rating-stars";
-import { toggleUserBan } from "@/lib/actions";
+import { toggleUserAdmin, toggleUserBan } from "@/lib/actions";
 import { formatDate } from "@/lib/format";
 import { useT } from "@/components/landing/language-provider";
 
@@ -35,8 +42,15 @@ export interface SellerManagementRow {
 
 // Staff-only — real counts pulled from existing listings/sales/reviews data,
 // no separate fabricated "seller score." Ban/unban is reversible and never
-// touches a user's existing listings, escrows, or review history.
-export function SellerManagement({ users }: { users: SellerManagementRow[] }) {
+// touches a user's existing listings, escrows, or review history. Staff
+// access is granted here too; nobody can change their own row.
+export function SellerManagement({
+  users,
+  currentUserId,
+}: {
+  users: SellerManagementRow[];
+  currentUserId: string;
+}) {
   const [rows, setRows] = useState(users);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
@@ -47,10 +61,41 @@ export function SellerManagement({ users }: { users: SellerManagementRow[] }) {
     startTransition(async () => {
       try {
         const { isBanned } = await toggleUserBan(userId);
-        setRows((prev) => prev.map((r) => (r.id === userId ? { ...r, isBanned } : r)));
-        toast.success(isBanned ? t("Account suspended.") : t("Account restored."));
+        setRows((prev) =>
+          prev.map((r) => (r.id === userId ? { ...r, isBanned } : r)),
+        );
+        toast.success(
+          isBanned ? t("Account suspended.") : t("Account restored."),
+        );
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : t("Could not update this account."));
+        toast.error(
+          err instanceof Error
+            ? err.message
+            : t("Could not update this account."),
+        );
+      } finally {
+        setPendingId(null);
+      }
+    });
+  }
+
+  function handleToggleAdmin(userId: string) {
+    setPendingId(userId);
+    startTransition(async () => {
+      try {
+        const { isAdmin } = await toggleUserAdmin(userId);
+        setRows((prev) =>
+          prev.map((r) => (r.id === userId ? { ...r, isAdmin } : r)),
+        );
+        toast.success(
+          isAdmin ? t("Staff access granted.") : t("Staff access removed."),
+        );
+      } catch (err) {
+        toast.error(
+          err instanceof Error
+            ? err.message
+            : t("Could not update this account."),
+        );
       } finally {
         setPendingId(null);
       }
@@ -85,7 +130,9 @@ export function SellerManagement({ users }: { users: SellerManagementRow[] }) {
             <TableRow key={u.id}>
               <TableCell>
                 <div className="flex flex-col">
-                  <span className="font-medium">{u.name ?? u.handle ?? "—"}</span>
+                  <span className="font-medium">
+                    {u.name ?? u.handle ?? "—"}
+                  </span>
                   <span className="text-muted-foreground text-xs">
                     {u.handle ? `@${u.handle}` : u.email}
                   </span>
@@ -96,7 +143,9 @@ export function SellerManagement({ users }: { users: SellerManagementRow[] }) {
               </TableCell>
               <TableCell className="text-sm">{u.listingCount}</TableCell>
               <TableCell className="text-sm">{u.saleCount}</TableCell>
-              <TableCell className="text-muted-foreground text-xs">{formatDate(u.createdAt)}</TableCell>
+              <TableCell className="text-muted-foreground text-xs">
+                {formatDate(u.createdAt)}
+              </TableCell>
               <TableCell>
                 {u.isAdmin ? (
                   <Badge variant="outline">{t("Staff")}</Badge>
@@ -107,22 +156,41 @@ export function SellerManagement({ users }: { users: SellerManagementRow[] }) {
                 )}
               </TableCell>
               <TableCell>
-                {!u.isAdmin && (
-                  <Button
-                    size="sm"
-                    variant={u.isBanned ? "outline" : "destructive"}
-                    disabled={pendingId === u.id}
-                    onClick={() => handleToggleBan(u.id)}
-                  >
-                    {pendingId === u.id ? (
-                      <Loader2 className="animate-spin" />
-                    ) : u.isBanned ? (
-                      <UserCheck />
-                    ) : (
-                      <ShieldOff />
+                {u.id === currentUserId ? (
+                  <span className="text-muted-foreground text-xs">
+                    {t("You")}
+                  </span>
+                ) : (
+                  <div className="flex justify-end gap-2">
+                    {!u.isBanned && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={pendingId === u.id}
+                        onClick={() => handleToggleAdmin(u.id)}
+                      >
+                        {u.isAdmin ? <ShieldMinus /> : <ShieldCheck />}
+                        {u.isAdmin ? t("Remove staff") : t("Make staff")}
+                      </Button>
                     )}
-                    {u.isBanned ? t("Restore") : t("Suspend")}
-                  </Button>
+                    {!u.isAdmin && (
+                      <Button
+                        size="sm"
+                        variant={u.isBanned ? "outline" : "destructive"}
+                        disabled={pendingId === u.id}
+                        onClick={() => handleToggleBan(u.id)}
+                      >
+                        {pendingId === u.id ? (
+                          <Loader2 className="animate-spin" />
+                        ) : u.isBanned ? (
+                          <UserCheck />
+                        ) : (
+                          <ShieldOff />
+                        )}
+                        {u.isBanned ? t("Restore") : t("Suspend")}
+                      </Button>
+                    )}
+                  </div>
                 )}
               </TableCell>
             </TableRow>

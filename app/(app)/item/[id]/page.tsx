@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import {
   getAcceptedOfferForViewer,
   getActiveAuctionForAsset,
+  getShipmentForRecipient,
   getAssetById,
   getAssetInsightData,
   getCardMarketStats,
@@ -32,6 +33,9 @@ import { MessageSellerButton } from "@/components/messages/message-seller-button
 import { AcceptedOfferBanner } from "@/components/item/accepted-offer-banner";
 import { SimilarListings } from "@/components/item/similar-listings";
 import { LeaveReviewForm } from "@/components/store/leave-review-form";
+import { ReportProblem } from "@/components/item/report-problem";
+import { ShipmentTracking } from "@/components/item/shipment-tracking";
+import { isWithinDisputeWindow } from "@/lib/shipping";
 import { RatingStars } from "@/components/store/rating-stars";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -119,6 +123,15 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
     (tx) => tx.buyerId === user.id && tx.status === "RELEASED" && !tx.review,
   );
 
+  // The viewer's most recent completed purchase of this item — the one they
+  // can report a problem with (see openDispute). The form is offered for
+  // DISPUTE_WINDOW_DAYS after the sale; an existing report stays visible after that.
+  const myCompletedPurchase = asset.escrowTxs.find((tx) => tx.buyerId === user.id && tx.status === "RELEASED");
+  const canReportProblem =
+    myCompletedPurchase?.releasedAt != null &&
+    (myCompletedPurchase.dispute != null ||
+      isWithinDisputeWindow(myCompletedPurchase.releasedAt));
+
   const isOwner = asset.ownerId === user.id;
   const isWatching = !isOwner && (await isAssetWatched(user.id, asset.id));
 
@@ -130,11 +143,12 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
     asset.marketStatus !== "IN_ESCROW" &&
     asset.marketStatus !== "IN_AUCTION";
 
-  const [activeAuction, acceptedOffer, mySwappableCards, escrowAuthorityAddress] = await Promise.all([
+  const [activeAuction, acceptedOffer, mySwappableCards, escrowAuthorityAddress, myShipment] = await Promise.all([
     asset.marketStatus === "IN_AUCTION" ? getActiveAuctionForAsset(asset.id) : Promise.resolve(null),
     !isOwner ? getAcceptedOfferForViewer(asset.id, user.id) : Promise.resolve(null),
     swappable ? getMySwappableAssets(user.id) : Promise.resolve([]),
     swappable ? getEscrowAuthorityAddress() : Promise.resolve(null),
+    isOwner ? getShipmentForRecipient(asset.id, user.id) : Promise.resolve(null),
   ]);
 
   const insights = buildPriceInsights({
@@ -415,7 +429,22 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
             </p>
           )}
 
+          {myShipment && <ShipmentTracking shipment={myShipment} />}
+
           {reviewableEscrow && <LeaveReviewForm escrowTxId={reviewableEscrow.id} />}
+
+          {canReportProblem && myCompletedPurchase && (
+            <ReportProblem
+              escrowTxId={myCompletedPurchase.id}
+              dispute={
+                myCompletedPurchase.dispute && {
+                  reason: myCompletedPurchase.dispute.reason,
+                  status: myCompletedPurchase.dispute.status,
+                  resolutionNote: myCompletedPurchase.dispute.resolutionNote,
+                }
+              }
+            />
+          )}
 
           {/* Collapsible key-value spec sheet — every field the old grade
               seal + PSA panel showed, just laid out as rows instead of a

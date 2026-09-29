@@ -2,6 +2,7 @@
 // strings passed to t() — see lib/i18n/translate.ts.
 import { ADMIN } from "@/lib/i18n/th/admin";
 import { AUCTION } from "@/lib/i18n/th/auction";
+import { BACKOFFICE } from "@/lib/i18n/th/backoffice";
 import { COMMON } from "@/lib/i18n/th/common";
 import { ITEM } from "@/lib/i18n/th/item";
 import { LEADERBOARD } from "@/lib/i18n/th/leaderboard";
@@ -20,4 +21,5 @@ export const TH: Record<string, string> = {
   ...LEADERBOARD,
   ...PAGES,
   ...ADMIN,
+  ...BACKOFFICE,
 };

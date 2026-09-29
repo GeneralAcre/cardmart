@@ -216,7 +216,7 @@ export async function getAssetById(id: string) {
       seller: true,
       owner: true,
       provenance: { orderBy: { createdAt: "asc" }, include: { actor: true } },
-      escrowTxs: { orderBy: { createdAt: "desc" }, include: { review: true } },
+      escrowTxs: { orderBy: { createdAt: "desc" }, include: { review: true, dispute: true } },
       verificationPhotos: { orderBy: { createdAt: "asc" } },
     },
   });
@@ -1262,4 +1262,90 @@ export async function getTopTraders(limit = 25): Promise<TraderRow[]> {
   });
 
   return rows.sort((x, y) => y.totalGainThb - x.totalGainThb).slice(0, limit);
+}
+
+// ---------------------------------------------------------------------------
+// Back office (/admin) — staff-only reads. Every page that calls these runs
+// requireAdmin() first.
+// ---------------------------------------------------------------------------
+
+/** One number per back-office queue: drives the sidebar badges and the overview tiles. */
+export async function getBackofficeCounts() {
+  const [inbound, grading, shipments, disputes, kyc, support, alerts, vault] = await Promise.all([
+    prisma.inboundPackage.count({ where: { status: "PENDING_INSPECTION" } }),
+    prisma.gradingSubmission.count({ where: { status: { in: ["AWAITING_SHIPMENT_TO_GRADER", "AT_GRADING_COMPANY"] } } }),
+    prisma.shipment.count({ where: { status: "AWAITING_DISPATCH" } }),
+    prisma.dispute.count({ where: { status: "OPEN" } }),
+    prisma.user.count({ where: { kycStatus: "PENDING" } }),
+    prisma.contactMessage.count({ where: { handledAt: null } }),
+    prisma.notification.count({ where: { audience: "ADMIN", readAt: null } }),
+    prisma.asset.count({ where: { vaulted: true } }),
+  ]);
+  return { inbound, grading, shipments, disputes, kyc, support, alerts, vault };
+}
+
+export type BackofficeCounts = Awaited<ReturnType<typeof getBackofficeCounts>>;
+
+const shipmentInclude = {
+  asset: { select: { id: true, name: true, serial: true } },
+  recipient: { select: { id: true, name: true, handle: true } },
+} satisfies Prisma.ShipmentInclude;
+
+/** Everything not yet delivered (oldest first), plus the most recent deliveries. */
+export async function getShipments() {
+  const [open, delivered] = await Promise.all([
+    prisma.shipment.findMany({
+      where: { status: { in: ["AWAITING_DISPATCH", "SHIPPED"] } },
+      orderBy: { createdAt: "asc" },
+      include: shipmentInclude,
+    }),
+    prisma.shipment.findMany({
+      where: { status: "DELIVERED" },
+      orderBy: { deliveredAt: "desc" },
+      take: 20,
+      include: shipmentInclude,
+    }),
+  ]);
+  return { open, delivered };
+}
+
+/** Open disputes (oldest first) and the most recently resolved ones. */
+export async function getDisputes() {
+  const include = {
+    openedBy: { select: { id: true, name: true, handle: true, email: true } },
+    escrowTx: {
+      select: {
+        id: true,
+        amountThb: true,
+        fulfillmentChoice: true,
+        releasedAt: true,
+        onChain: true,
+        asset: { select: { id: true, name: true, serial: true } },
+        seller: { select: { id: true, name: true, handle: true } },
+        shipment: { select: { status: true, carrier: true, trackingNumber: true } },
+      },
+    },
+  } satisfies Prisma.DisputeInclude;
+  const [open, resolved] = await Promise.all([
+    prisma.dispute.findMany({ where: { status: "OPEN" }, orderBy: { createdAt: "asc" }, include }),
+    prisma.dispute.findMany({ where: { status: { not: "OPEN" } }, orderBy: { resolvedAt: "desc" }, take: 20, include }),
+  ]);
+  return { open, resolved };
+}
+
+/** Footer contact-form messages: unhandled first, then recently handled. */
+export async function getContactMessages() {
+  const [open, handled] = await Promise.all([
+    prisma.contactMessage.findMany({ where: { handledAt: null }, orderBy: { createdAt: "desc" } }),
+    prisma.contactMessage.findMany({ where: { handledAt: { not: null } }, orderBy: { handledAt: "desc" }, take: 30 }),
+  ]);
+  return { open, handled };
+}
+
+/** The latest shipment of this asset to this user, for the tracking card on the item page. */
+export async function getShipmentForRecipient(assetId: string, recipientId: string) {
+  return prisma.shipment.findFirst({
+    where: { assetId, recipientId },
+    orderBy: { createdAt: "desc" },
+  });
 }

@@ -163,8 +163,9 @@ model User {
   phone           String?
   profileComplete Boolean @default(false)
 
-  // Gates /admin/warehouse and its Server Actions — warehouse staff only.
-  // Defaults false; only rows explicitly flagged true in the database get in.
+  // Gates the /admin back office and its Server Actions — staff only.
+  // Defaults false; granted by another admin from /admin/users (or the
+  // scripts/make-admin.ts bootstrap for the very first one).
   isAdmin Boolean @default(false)
 
   // Staff seller-management control (back office "suspension/ban"). A
@@ -210,6 +211,8 @@ model User {
   wantedCards         WantedCard[]
   tradeOffersMade     TradeOffer[]        @relation("TradeOfferProposer")
   tradeOffersReceived TradeOffer[]        @relation("TradeOfferRecipient")
+  shipmentsReceived   Shipment[]          @relation("ShipmentRecipient")
+  disputesOpened      Dispute[]           @relation("DisputeOpener")
 
   @@index([kycStatus])
 }
@@ -293,6 +296,7 @@ model Asset {
   offers             Offer[]
   tradeOffersFor     TradeOffer[]        @relation("TradeOfferRequested")
   tradeOffersWith    TradeOffer[]        @relation("TradeOfferOffered")
+  shipments          Shipment[]
 
   @@index([sellerId])
   @@index([ownerId])
@@ -589,6 +593,8 @@ model EscrowTransaction {
 
   inboundPackage InboundPackage?
   review         Review?
+  shipment       Shipment?
+  dispute        Dispute?
 
   @@index([assetId])
   // getSellerProfile's sold-history section filters on exactly this pair on
@@ -677,11 +683,92 @@ model Message {
 }
 
 model ContactMessage {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   name      String
   email     String
   message   String
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
+  // Set when staff mark it dealt with in the back office support inbox.
+  handledAt DateTime?
+
+  @@index([handledAt, createdAt])
+}
+
+// A physical card leaving the warehouse for someone's home address — either
+// a sale the buyer chose to have shipped (warehouseApproveShip) or an owner
+// redeeming a vaulted card (vaultRedeem). Created when the card is approved
+// to leave; staff add the courier and tracking number once it's collected.
+// The address is a snapshot, so a later profile edit doesn't rewrite where
+// a package already went.
+enum ShipmentReason {
+  SALE
+  REDEEM
+}
+
+enum ShipmentStatus {
+  AWAITING_DISPATCH
+  SHIPPED
+  DELIVERED
+}
+
+model Shipment {
+  id              String         @id @default(cuid())
+  reason          ShipmentReason
+  status          ShipmentStatus @default(AWAITING_DISPATCH)
+  shippingAddress String
+  phone           String?
+  carrier         String?
+  trackingNumber  String?
+  createdAt       DateTime       @default(now())
+  shippedAt       DateTime?
+  deliveredAt     DateTime?
+
+  assetId     String
+  asset       Asset              @relation(fields: [assetId], references: [id])
+  recipientId String
+  recipient   User               @relation("ShipmentRecipient", fields: [recipientId], references: [id])
+  // Set for SALE shipments only.
+  escrowTxId  String?            @unique
+  escrowTx    EscrowTransaction? @relation(fields: [escrowTxId], references: [id])
+
+  @@index([status, createdAt])
+  @@index([assetId])
+  @@index([recipientId])
+}
+
+// A buyer reporting a problem with a completed purchase (card never
+// arrived, not as described, damaged). One per purchase. The escrow has
+// already been released on-chain by then, so a refund is issued by staff
+// outside the app — RESOLVED_REFUNDED records that it happened, it doesn't
+// move funds itself.
+enum DisputeReason {
+  NOT_RECEIVED
+  NOT_AS_DESCRIBED
+  DAMAGED
+  OTHER
+}
+
+enum DisputeStatus {
+  OPEN
+  RESOLVED_REFUNDED
+  RESOLVED_NO_ACTION
+}
+
+model Dispute {
+  id             String        @id @default(cuid())
+  reason         DisputeReason
+  description    String
+  status         DisputeStatus @default(OPEN)
+  resolutionNote String?
+  createdAt      DateTime      @default(now())
+  resolvedAt     DateTime?
+
+  escrowTxId String            @unique
+  escrowTx   EscrowTransaction @relation(fields: [escrowTxId], references: [id])
+  openedById String
+  openedBy   User              @relation("DisputeOpener", fields: [openedById], references: [id])
+
+  @@index([status, createdAt])
 }
 
 // USER: a personal notice for one specific buyer/seller (userId set).
@@ -720,6 +807,11 @@ enum NotificationType {
   KYC_SUBMITTED
   KYC_APPROVED
   KYC_REJECTED
+  SHIPMENT_DISPATCHED
+  SHIPMENT_DELIVERED
+  DISPUTE_OPENED
+  DISPUTE_RESOLVED
+  CONTACT_MESSAGE
 }
 
 model Notification {

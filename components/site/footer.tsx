@@ -11,7 +11,6 @@ const NAV_LINKS = [
   { href: "/guide", label: "Getting Started" },
   { href: "/listing", label: "Listing" },
   { href: "/portfolio", label: "Portfolio" },
-  { href: "/admin/warehouse", label: "Warehouse Admin" },
 ];
 
 const LEGAL_LINKS = [

@@ -36,6 +36,9 @@ export const EMAILED_NOTIFICATION_TYPES = new Set<NotificationType>([
   "TRADE_OFFER_REJECTED",
   "KYC_APPROVED",
   "KYC_REJECTED",
+  "SHIPMENT_DISPATCHED",
+  "SHIPMENT_DELIVERED",
+  "DISPUTE_RESOLVED",
 ]);
 
 function escapeHtml(s: string) {

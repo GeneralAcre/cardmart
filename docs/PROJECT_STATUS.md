@@ -172,7 +172,11 @@ This report covers everything built so far (49 commits, 2 Sep → 25 Sep 2026), 
 - Staff alerts: new submission, duplicate cert attempt (fraud flag).
 - The important ones (sold, purchased, inspection passed, grading done, outbid, auction won/ended, offers, trades, KYC result) are also **emailed via Resend**, plus the first unread chat message in a conversation. Without `RESEND_API_KEY` they stay in-app only. No browser push.
 
-### 3.12 Back office (`/admin/warehouse`, staff only)
+### 3.12 Back office (`/admin`, staff only)
+- **A separate site** with its own sidebar layout (`app/(backoffice)`), not linked anywhere on the marketplace. Pages: Overview, Inbound, Grading, Shipments, Vault, Disputes, Identity, Users, Support inbox, Alerts, History, Integrations. Old `/admin/warehouse?tab=…` links redirect.
+- **Shipments:** every approved ship-to-buyer sale and every vault redemption creates a shipment. Staff add the courier and tracking number, then mark it delivered. The recipient is notified and sees a tracking card on the item page.
+- **Disputes:** a buyer can report a problem (never arrived / not as described / damaged / other) up to 30 days after a completed purchase. Staff record the outcome (refund issued or closed) with a note to the buyer. The escrow is already released by then, so a refund is paid outside the app.
+- **Users:** suspend accounts and grant/remove staff access (you can’t change your own).
 - **Inbound queue:** compare what the seller declared with the official certificate data (serial, company, grade).
   - Actions: approve and ship to buyer, approve into the vault, or reject and refund.
   - Bulk approve/reject. Bulk approve still re-checks each item and skips any that don't match.
@@ -237,14 +241,14 @@ The app falls back to a simulated version whenever the real service isn't config
    - `DATABASE_URL`, `NEON_AUTH…_URL` and `POSTGRES_URL_NO_SSL` show **"Needs Attention"**. Check what the badge says; most likely they should be marked Sensitive and the Neon password rotated.
    - Confirm every optional key is set on Vercel: `ESCROW_*`, `PSA_API_TOKEN`, `TCG_API_KEY`, `EBAY_APP_ID`/`EBAY_CERT_ID`, `QA_VERIFY_API_KEY`, `BLOB_READ_WRITE_TOKEN`, `RESEND_API_KEY`/`EMAIL_FROM`. **eBay keys are not in the local `.env` either**, so eBay pricing is currently off.
 6. **Resend (email):** create an API key at resend.com and set `RESEND_API_KEY`. Until a domain is verified and `EMAIL_FROM` is set, Resend only delivers to the account owner's own address.
-4. **Admin accounts:** only the seeded demo user is an admin. To give a real teammate staff access, set `isAdmin = true` on their `User` row in the database. There is no UI for this.
+4. **Admin accounts:** bootstrap the first one with `npx tsx scripts/make-admin.ts <email>` (the account must have signed in once). After that, staff grant or remove access from **Back office → Users**.
 5. **GitHub:** the repo was renamed to `GeneralAcre/cardmart`. Update local remotes with `git remote set-url origin https://github.com/GeneralAcre/cardmart.git`.
 
 ### 5.2 Product gaps (code)
 1. ~~Full-Service grading has no way in~~: restored as "Get it graded first" on `/listing`, with a Grading tab on Portfolio.
 2. ~~Unclaimed auction wins never close~~: bids now lock funds, and a 48-hour claim window settles every auction (see §3.6).
 3. ~~Unfinished compare table and item-page button~~: both now shipped (the compare table is on the Marketplace page).
-4. **No admin view for contact-form messages.** They are saved to the `ContactMessage` table, but staff can only read them in the database.
+4. ~~No admin view for contact-form messages~~: the back office now has a **Support inbox** (reply by email, mark handled).
 5. **Messaging is polling-based.** Realtime (websocket / Pusher / Supabase Realtime) would be an upgrade.
 6. **No browser push notifications.** Email is done (Resend); push is not.
 7. ~~Thai translation covers the landing page only~~: the whole app is translated. Text the server writes into the database (notification bodies, item-history notes, server error messages) stays English.

@@ -5,13 +5,12 @@ import { usePathname } from "next/navigation";
 
 import { cn } from "@/lib/utils";
 import { useT } from "@/components/landing/language-provider";
-import { isNavLinkActive, navLinksFor } from "@/lib/nav-links";
+import { NAV_LINKS as links, isNavLinkActive } from "@/lib/nav-links";
 
 // Mobile navigation lives in MobileBottomNav (a fixed footer bar) instead of
 // a hamburger dropdown here — easier to reach one-handed and always visible.
-export function NavLinks({ isAdmin = false }: { isAdmin?: boolean }) {
+export function NavLinks() {
   const pathname = usePathname();
-  const links = navLinksFor(isAdmin);
   const t = useT();
 
   return (
