@@ -37,6 +37,46 @@ async function readTradeAccount(tradeAccount: string) {
 }
 
 /**
+ * Throws unless the lock's own transaction also paid the buyer-protection
+ * fee: a transfer of at least `minLamports` from the buyer to the platform,
+ * in the same successful transaction that created `tradeAccount` — so one
+ * fee can't be claimed for two purchases.
+ */
+export async function verifyServiceFee(
+  lock: EscrowLockClaim,
+  expected: { buyer: string; platform: string; minLamports: bigint },
+): Promise<bigint> {
+  if (expected.minLamports <= BigInt(0)) return BigInt(0);
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const tx = await rpc
+      .getTransaction(lock.txSignature as Parameters<typeof rpc.getTransaction>[0], {
+        encoding: "jsonParsed",
+        commitment: "confirmed",
+        maxSupportedTransactionVersion: 0,
+      })
+      .send()
+      .catch(() => null);
+    if (tx) {
+      if (tx.meta?.err) throw new Error("Your payment transaction failed on-chain.");
+      const message = tx.transaction.message as unknown as {
+        accountKeys: ({ pubkey: string } | string)[];
+        instructions: { program?: string; parsed?: { type?: string; info?: { source?: string; destination?: string; lamports?: number } } }[];
+      };
+      const keys = message.accountKeys.map((k) => (typeof k === "string" ? k : k.pubkey));
+      if (!keys.includes(lock.tradeAccount)) throw new Error("The protection fee wasn't paid with this payment.");
+      const paid = message.instructions
+        .filter((ix) => ix.program === "system" && ix.parsed?.type === "transfer")
+        .filter((ix) => ix.parsed!.info?.source === expected.buyer && ix.parsed!.info?.destination === expected.platform)
+        .reduce((sum, ix) => sum + BigInt(ix.parsed!.info?.lamports ?? 0), BigInt(0));
+      if (paid < expected.minLamports) throw new Error("The buyer protection fee wasn't paid. Try again.");
+      return paid;
+    }
+    await new Promise((r) => setTimeout(r, 1200));
+  }
+  throw new Error("Your payment isn't confirmed yet. Wait a few seconds and try again.");
+}
+
+/**
  * Throws a buyer-readable error unless `lock` is a real, still-locked escrow
  * trade by `buyer`, paying `seller` (when given), holding at least
  * `minLamports`, and not already used for anything else on CardMart.

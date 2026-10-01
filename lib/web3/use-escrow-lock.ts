@@ -2,7 +2,7 @@
 
 import { useWalletStore } from "@/lib/web3/wallet-store";
 import { buildLockPaymentTransaction, randomTradeId } from "@/lib/web3/escrow-program";
-import { thbToLamports } from "@/lib/pricing";
+import { buyerFeeThb, thbToLamports } from "@/lib/pricing";
 
 export type EscrowLock = { tradeId: string; txSignature: string; lamports: string; tradeAccount: string };
 
@@ -16,7 +16,11 @@ export type EscrowLock = { tradeId: string; txSignature: string; lamports: strin
 export function useEscrowLock() {
   const { connected, connecting, connect, publicKey, signMessage, signAndSendRawTransaction } = useWalletStore();
 
-  async function lock(priceThb: number, sellerWalletAddress: string | null, fallbackMessage: string) {
+  /**
+   * `feeTo` is the platform wallet: pass it to charge the buyer-protection fee
+   * in the same transaction (Buy Now, accepted offers) — not for bids.
+   */
+  async function lock(priceThb: number, sellerWalletAddress: string | null, fallbackMessage: string, feeTo?: string | null) {
     const buyer = connected && publicKey ? publicKey : await connect();
     if (!sellerWalletAddress || !buyer) {
       await signMessage(fallbackMessage);
@@ -29,6 +33,7 @@ export function useEscrowLock() {
       seller: sellerWalletAddress,
       tradeId,
       lamports,
+      fee: feeTo ? { platform: feeTo, lamports: thbToLamports(buyerFeeThb(priceThb)) } : undefined,
     });
     const txSignature = await signAndSendRawTransaction(transactionBytes);
     return { tradeId: tradeId.toString(), txSignature, lamports: lamports.toString(), tradeAccount } satisfies EscrowLock;

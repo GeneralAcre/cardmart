@@ -14,9 +14,10 @@ import {
 } from "@/lib/web3/mock-chain";
 import { releaseTradeToSeller, refundTradeToBuyer, getEscrowAuthorityAddress } from "@/lib/web3/escrow-server";
 import { isDigitalTwinHeldBy, mintDigitalTwinToken, transferDigitalTwinToken } from "@/lib/web3/token-server";
-import { FULL_SERVICE_PACKAGE_PRICE_THB, THB_PER_USD, thbToLamports } from "@/lib/pricing";
+import { FULL_SERVICE_PACKAGE_PRICE_THB, THB_PER_USD, buyerFeeThb, thbToLamports } from "@/lib/pricing";
 import { lookupEbayPrice } from "@/lib/ebay";
-import { verifyEscrowLock } from "@/lib/web3/escrow-verify";
+import { verifyEscrowLock, verifyServiceFee } from "@/lib/web3/escrow-verify";
+import { sendFromPlatform } from "@/lib/web3/escrow-server";
 import { deriveTradePda } from "@/lib/web3/escrow-program";
 import { address } from "@solana/kit";
 import { photoUrlProblem, psaCertMismatch } from "@/lib/listing-checks";
@@ -573,8 +574,12 @@ async function completePurchase(opts: {
   purchasedNote: string;
   /** The wallet that signed the lock, when it isn't the buyer's own (the buying agent). */
   payerWalletAddress?: string;
+  /** Charge the buyer-protection fee (BUYER_FEE_PERCENT) — Buy Now, accepted offers, agent buys. */
+  chargeFee?: boolean;
 }): Promise<{ escrowTxId: string }> {
   const { asset, user, priceThb, fulfillmentChoice, escrowLock, soldNote, purchasedNote, payerWalletAddress } = opts;
+  const serviceFeeThb = opts.chargeFee ? buyerFeeThb(priceThb) : 0;
+  let serviceFeeLamports: bigint | null = null;
   const assetId = asset.id;
 
   // Real on-chain lock when the buyer actually signed one (see
@@ -586,6 +591,14 @@ async function completePurchase(opts: {
     const payer = payerWalletAddress ?? user.walletAddress;
     if (!payer) throw new Error("Your account has no wallet to pay from.");
     await verifyEscrowLock(escrowLock, { buyer: payer, seller: asset.owner.walletAddress, minLamports: thbToLamports(priceThb) });
+    const platform = serviceFeeThb > 0 ? await getEscrowAuthorityAddress() : null;
+    if (platform) {
+      serviceFeeLamports = await verifyServiceFee(escrowLock, {
+        buyer: payer,
+        platform,
+        minLamports: thbToLamports(serviceFeeThb),
+      });
+    }
   }
   const onChain = Boolean(escrowLock);
   const lockSignature = escrowLock?.txSignature ?? (await mockEscrowInstruction("lock", assetId)).txSignature;
@@ -603,6 +616,8 @@ async function completePurchase(opts: {
       tradeAccount: escrowLock?.tradeAccount ?? null,
       lamportsLocked: escrowLock ? BigInt(escrowLock.lamports) : null,
       payerWalletAddress: payerWalletAddress ?? null,
+      serviceFeeThb,
+      serviceFeeLamports,
     },
   });
   await prisma.provenanceEvent.create({
@@ -741,6 +756,7 @@ export async function buyListing(
     priceThb: asset.priceThb,
     fulfillmentChoice,
     escrowLock,
+    chargeFee: true,
     soldNote: `${asset.name} sold instantly from your vault for ${asset.priceThb.toLocaleString()} THB.`,
     purchasedNote: asset.vaulted
       ? `${asset.name} is yours — ownership transferred instantly from the vault.`
@@ -1284,11 +1300,36 @@ export async function completeOfferPurchase(
     priceThb: offer.amountThb,
     fulfillmentChoice,
     escrowLock,
+    chargeFee: true,
     soldNote: `${offer.asset.name} sold for ${offer.amountThb.toLocaleString()} THB (accepted offer).`,
     purchasedNote: offer.asset.vaulted
       ? `${offer.asset.name} is yours — ownership transferred instantly from the vault.`
       : `${offer.asset.name} — your payment of ${offer.amountThb.toLocaleString()} THB is held safely until warehouse inspection passes.`,
   });
+}
+
+/**
+ * Gives the buyer-protection fee back when a sale is cancelled (inspection
+ * failed, seller never shipped): the platform wallet returns the lamports to
+ * whichever wallet paid them. Claimed in the DB first so it's sent once; if
+ * the transfer fails it's un-claimed and logged for staff to retry.
+ */
+async function refundServiceFee(escrowTxId: string | null) {
+  if (!escrowTxId) return;
+  const tx = await prisma.escrowTransaction.findUnique({ where: { id: escrowTxId }, include: { buyer: true } });
+  const to = tx?.payerWalletAddress ?? tx?.buyer.walletAddress;
+  if (!tx?.serviceFeeLamports || tx.serviceFeeRefunded || !to) return;
+  const claimed = await prisma.escrowTransaction.updateMany({
+    where: { id: escrowTxId, serviceFeeRefunded: false },
+    data: { serviceFeeRefunded: true },
+  });
+  if (claimed.count === 0) return;
+  try {
+    await sendFromPlatform(to, tx.serviceFeeLamports);
+  } catch (err) {
+    await prisma.escrowTransaction.update({ where: { id: escrowTxId }, data: { serviceFeeRefunded: false } });
+    console.error(`Service fee refund for sale ${escrowTxId} failed.`, err);
+  }
 }
 
 /** A package staff can act on right now — it has to be in the inspection queue. */
@@ -1539,6 +1580,7 @@ export async function warehouseReject(inboundPackageId: string) {
   await requireAdmin();
   const pkg = await loadInboundPackage(inboundPackageId);
   const refund = await releaseOrRefundEscrow("refund", pkg.escrowTx, pkg.assetId);
+  await refundServiceFee(pkg.escrowTxId);
 
   await prisma.$transaction([
     prisma.inboundPackage.update({
@@ -3215,6 +3257,7 @@ export async function expireOverdueSellerShipments(opts: { revalidate?: boolean 
     let refund: { signature: string; onChain: boolean };
     try {
       refund = await releaseOrRefundEscrow("refund", pkg.escrowTx, pkg.assetId);
+      await refundServiceFee(pkg.escrowTxId);
     } catch (err) {
       // Real funds are still locked on-chain — put the package back so the
       // next run retries, rather than recording a refund that didn't happen.
@@ -3351,7 +3394,12 @@ async function executeAgentDecision(decisionId: string): Promise<void> {
     const onChain = Boolean(wallet && asset.owner.walletAddress && (await isAgentChainEnabled()));
     const escrowLock =
       onChain && wallet && asset.owner.walletAddress
-        ? await agentLockPayment({ wallet, sellerWalletAddress: asset.owner.walletAddress, lamports: thbToLamports(price) })
+        ? await agentLockPayment({
+            wallet,
+            sellerWalletAddress: asset.owner.walletAddress,
+            lamports: thbToLamports(price),
+            feeLamports: thbToLamports(buyerFeeThb(price)),
+          })
         : undefined;
 
     const { escrowTxId } = await completePurchase({
@@ -3361,6 +3409,7 @@ async function executeAgentDecision(decisionId: string): Promise<void> {
       fulfillmentChoice: mandate.fulfillment,
       escrowLock,
       payerWalletAddress: escrowLock && wallet ? wallet.address : undefined,
+      chargeFee: true,
       soldNote: `${asset.name} sold instantly from your vault for ${price.toLocaleString()} THB.`,
       purchasedNote: asset.vaulted
         ? `Your buying agent bought ${asset.name} for ${price.toLocaleString()} THB — it's already in your vault.`

@@ -21,6 +21,7 @@ import {
 import { buyListing, updateListingPrice } from "@/lib/actions";
 import { useWalletStore } from "@/lib/web3/wallet-store";
 import { useEscrowLock, type EscrowLock } from "@/lib/web3/use-escrow-lock";
+import { PriceRows } from "@/components/item/complete-purchase-button";
 import { formatThb } from "@/lib/format";
 import { useT } from "@/components/landing/language-provider";
 
@@ -34,6 +35,8 @@ interface BuyPanelProps {
   isOwner: boolean;
   /** The current owner's real wallet address — null for demo/mock wallets, in which case escrow stays simulated. */
   sellerWalletAddress: string | null;
+  /** The platform wallet the buyer-protection fee is paid to. */
+  platformWalletAddress: string | null;
 }
 
 // The default active tab (bg-background) is almost the same black as the
@@ -49,6 +52,7 @@ export function BuyPanel({
   marketStatus,
   isOwner,
   sellerWalletAddress,
+  platformWalletAddress,
 }: BuyPanelProps) {
   const router = useRouter();
   const { lock, connecting } = useEscrowLock();
@@ -96,7 +100,7 @@ export function BuyPanel({
       // otherwise the simulated signed-message flow (see useEscrowLock).
       let escrowLock: EscrowLock | undefined;
       try {
-        escrowLock = await lock(priceThb, sellerWalletAddress, `Confirm payment of ${priceThb} THB for this item`);
+        escrowLock = await lock(priceThb, sellerWalletAddress, `Confirm payment of ${priceThb} THB for this item`, platformWalletAddress);
       } catch (err) {
         toast.error(err instanceof Error ? err.message : t("Could not lock in your payment. Try again."));
         return;
@@ -161,10 +165,7 @@ export function BuyPanel({
             <DialogDescription>{t("Payment stays protected until the item is verified.")}</DialogDescription>
           </DialogHeader>
           <div className="bg-muted/40 flex flex-col gap-2 rounded-lg border p-3 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">{t("Amount")}</span>
-              <span className="font-semibold">{formatThb(priceThb)}</span>
-            </div>
+            <PriceRows priceThb={priceThb} withFee />
             <div className="flex justify-between">
               <span className="text-muted-foreground">{t("Delivery")}</span>
               <span>{t(vaulted ? "Instant Vault Transfer" : fulfillment === "SHIP" ? "Ship to Address" : "Deposit to Vault")}</span>

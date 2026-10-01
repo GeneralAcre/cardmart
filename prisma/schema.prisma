@@ -598,6 +598,12 @@ model EscrowTransaction {
   onChainTradeId     BigInt? // u64 seed used to derive the on-chain Trade PDA
   tradeAccount       String? // base58 address of the Trade PDA, for convenience
   lamportsLocked     BigInt? // actual lamports locked on-chain (THB -> SOL at lock time)
+  // Buyer protection (BUYER_FEE_PERCENT) paid on top of amountThb, and the
+  // lamports that went to the platform wallet for it — refunded with the
+  // escrow if the sale is cancelled. 0 / null for sales without the fee.
+  serviceFeeThb      Int     @default(0)
+  serviceFeeLamports BigInt?
+  serviceFeeRefunded Boolean @default(false)
   // The wallet that actually signed lock_payment, when it isn't the buyer's
   // own wallet (a buying-agent purchase pays from the agent wallet). The
   // Trade PDA is derived from this address, so release/refund must use it.

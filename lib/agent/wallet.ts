@@ -21,7 +21,7 @@ import { getTransferSolInstruction } from "@solana-program/system";
 
 import { prisma } from "@/lib/prisma";
 import { getEscrowAuthorityAddress, rpc, signAndSend } from "@/lib/web3/authority-server";
-import { buildLockPaymentInstruction, randomTradeId } from "@/lib/web3/escrow-program";
+import { buildLockPaymentInstruction, buildServiceFeeInstruction, randomTradeId } from "@/lib/web3/escrow-program";
 
 const LAMPORTS_PER_SOL = BigInt(1_000_000_000);
 // Covers the Trade account's rent on top of the locked amount.
@@ -95,13 +95,16 @@ export async function agentLockPayment(opts: {
   wallet: { address: string; encryptedSecret: string };
   sellerWalletAddress: string;
   lamports: bigint;
+  /** Buyer-protection fee, paid to the platform in the same transaction. */
+  feeLamports?: bigint;
 }): Promise<{ tradeId: string; txSignature: string; lamports: string; tradeAccount: string }> {
   const authority = await getEscrowAuthorityAddress();
   if (!authority) throw new Error("The escrow authority isn't configured.");
 
+  const fee = opts.feeLamports ?? BigInt(0);
   const balance = await getAgentBalanceLamports(opts.wallet.address);
-  if (balance < opts.lamports + LOCK_HEADROOM_LAMPORTS) {
-    const short = lamportsToSol(opts.lamports + LOCK_HEADROOM_LAMPORTS - balance);
+  if (balance < opts.lamports + fee + LOCK_HEADROOM_LAMPORTS) {
+    const short = lamportsToSol(opts.lamports + fee + LOCK_HEADROOM_LAMPORTS - balance);
     throw new Error(`Your agent wallet needs about ${short.toFixed(3)} more SOL for this purchase.`);
   }
 
@@ -112,8 +115,10 @@ export async function agentLockPayment(opts: {
     tradeId,
     lamports: opts.lamports,
   });
+  const feeInstruction =
+    fee > BigInt(0) ? [buildServiceFeeInstruction({ buyer: opts.wallet.address, platform: authority, lamports: fee })] : [];
   const keyPair = await loadAgentKeyPair(opts.wallet);
-  const txSignature = await signAndSend([instruction], authority, [keyPair]);
+  const txSignature = await signAndSend([...feeInstruction, instruction], authority, [keyPair]);
   return { tradeId: tradeId.toString(), txSignature, lamports: opts.lamports.toString(), tradeAccount };
 }
 

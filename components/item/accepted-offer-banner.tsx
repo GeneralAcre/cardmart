@@ -16,11 +16,13 @@ export function AcceptedOfferBanner({
   amountThb,
   vaulted,
   sellerWalletAddress,
+  platformWalletAddress,
 }: {
   offerId: string;
   amountThb: number;
   vaulted: boolean;
   sellerWalletAddress: string | null;
+  platformWalletAddress: string | null;
 }) {
   const t = useT();
   return (
@@ -36,6 +38,7 @@ export function AcceptedOfferBanner({
         priceThb={amountThb}
         vaulted={vaulted}
         sellerWalletAddress={sellerWalletAddress}
+        feeTo={platformWalletAddress}
         ctaLabel={t("Complete Purchase — {amount}", { amount: formatThb(amountThb) })}
         dialogTitle={t("Complete Your Purchase")}
         dialogDescription={t("Payment stays protected until the item is verified.")}

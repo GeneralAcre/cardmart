@@ -23,6 +23,17 @@ export const AGENT_TASK_MAX_REVIEWS = 300;
 /** Free "Plan it" requests per user per day (each one is an AI call). */
 export const AGENT_PLANS_PER_DAY = 30;
 
+/**
+ * Buyer protection: what CardMart charges the buyer on top of the price for
+ * escrow and inspection (Buy Now, accepted offers, agent buys). Paid to the
+ * platform wallet in the same transaction as the escrow lock, and refunded
+ * with it if the sale is cancelled.
+ */
+export const BUYER_FEE_PERCENT = 3;
+export function buyerFeeThb(priceThb: number): number {
+  return Math.round((priceThb * BUYER_FEE_PERCENT) / 100);
+}
+
 /** Flat mock domestic shipping cost the seller bears when their self-minted item sells and ships. */
 export const SELLER_SHIPPING_COST_THB = 150;
 

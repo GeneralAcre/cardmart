@@ -9,6 +9,9 @@ import "server-only";
 // Keypair loading + sign-and-send lives in lib/web3/authority-server.ts,
 // shared with lib/web3/token-server.ts (same platform authority mints and
 // transfers digital-twin tokens too).
+import { address, createNoopSigner } from "@solana/kit";
+import { getTransferSolInstruction } from "@solana-program/system";
+
 import { getEscrowAuthorityAddress, signAndSend } from "@/lib/web3/authority-server";
 import {
   buildReleaseToSellerInstruction,
@@ -44,6 +47,18 @@ export async function refundTradeToBuyer(opts: { buyer: string; tradeId: bigint 
     authority: authorityAddress,
     buyer: opts.buyer,
     tradeId: opts.tradeId,
+  });
+  return signAndSend([instruction], authorityAddress);
+}
+
+/** Sends SOL from the platform wallet — used to refund a cancelled sale's buyer-protection fee. */
+export async function sendFromPlatform(to: string, lamports: bigint): Promise<string> {
+  const authorityAddress = await getEscrowAuthorityAddress();
+  if (!authorityAddress) throw new Error("The escrow authority isn't configured.");
+  const instruction = getTransferSolInstruction({
+    source: createNoopSigner(address(authorityAddress)),
+    destination: address(to),
+    amount: lamports,
   });
   return signAndSend([instruction], authorityAddress);
 }

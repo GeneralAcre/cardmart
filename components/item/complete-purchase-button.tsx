@@ -18,6 +18,7 @@ import {
 import { useEscrowLock, type EscrowLock } from "@/lib/web3/use-escrow-lock";
 import { formatThb } from "@/lib/format";
 import { useT } from "@/components/landing/language-provider";
+import { BUYER_FEE_PERCENT, buyerFeeThb } from "@/lib/pricing";
 
 export type { EscrowLock };
 
@@ -35,6 +36,7 @@ export function CompletePurchaseButton({
   successMessage,
   onConfirm,
   size = "lg",
+  feeTo,
 }: {
   priceThb: number;
   vaulted: boolean;
@@ -45,6 +47,8 @@ export function CompletePurchaseButton({
   successMessage: string;
   onConfirm: (fulfillmentChoice: "SHIP" | "VAULT", escrowLock: EscrowLock | undefined) => Promise<void>;
   size?: "sm" | "default" | "lg";
+  /** The platform wallet — when set, the buyer-protection fee is charged in the same payment. */
+  feeTo?: string | null;
 }) {
   const router = useRouter();
   const { lock, connecting } = useEscrowLock();
@@ -58,7 +62,7 @@ export function CompletePurchaseButton({
     try {
       let escrowLock: EscrowLock | undefined;
       try {
-        escrowLock = await lock(priceThb, sellerWalletAddress, `Confirm payment of ${priceThb} THB for this item`);
+        escrowLock = await lock(priceThb, sellerWalletAddress, `Confirm payment of ${priceThb} THB for this item`, feeTo);
       } catch (err) {
         toast.error(err instanceof Error ? err.message : t("Could not lock in your payment. Try again."));
         return;
@@ -107,10 +111,7 @@ export function CompletePurchaseButton({
           )}
 
           <div className="bg-muted/40 flex flex-col gap-2 rounded-lg border p-3 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">{t("Amount")}</span>
-              <span className="font-semibold">{formatThb(priceThb)}</span>
-            </div>
+            <PriceRows priceThb={priceThb} withFee={feeTo !== undefined} />
             <div className="flex justify-between">
               <span className="text-muted-foreground">{t("Delivery")}</span>
               <span>{t(vaulted ? "Instant Vault Transfer" : fulfillment === "SHIP" ? "Ship to Address" : "Deposit to Vault")}</span>
@@ -127,6 +128,32 @@ export function CompletePurchaseButton({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </>
+  );
+}
+
+/** Price, the buyer-protection fee and the total, for the checkout dialogs. */
+export function PriceRows({ priceThb, withFee }: { priceThb: number; withFee: boolean }) {
+  const t = useT();
+  const fee = withFee ? buyerFeeThb(priceThb) : 0;
+  return (
+    <>
+      <div className="flex justify-between">
+        <span className="text-muted-foreground">{t("Price")}</span>
+        <span>{formatThb(priceThb)}</span>
+      </div>
+      {withFee && (
+        <div className="flex justify-between">
+          <span className="text-muted-foreground" title={t("Covers escrow and our inspection of the card. Refunded if the sale is cancelled.")}>
+            {t("Buyer protection ({percent}%)", { percent: BUYER_FEE_PERCENT })}
+          </span>
+          <span>{formatThb(fee)}</span>
+        </div>
+      )}
+      <div className="flex justify-between border-t pt-2">
+        <span className="font-medium">{t("Total")}</span>
+        <span className="font-semibold">{formatThb(priceThb + fee)}</span>
+      </div>
     </>
   );
 }

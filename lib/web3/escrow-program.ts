@@ -14,8 +14,9 @@ import {
   address,
   getAddressEncoder,
   getProgramDerivedAddress,
-  appendTransactionMessageInstruction,
+  appendTransactionMessageInstructions,
   compileTransaction,
+  createNoopSigner,
   createSolanaRpc,
   createTransactionMessage,
   getTransactionEncoder,
@@ -26,6 +27,7 @@ import {
   type Address,
   type Instruction,
 } from "@solana/kit";
+import { getTransferSolInstruction } from "@solana-program/system";
 
 export const ESCROW_PROGRAM_ID = address(
   process.env.NEXT_PUBLIC_ESCROW_PROGRAM_ID ?? "11111111111111111111111111111111",
@@ -82,13 +84,13 @@ export async function deriveTradePda(buyer: Address, tradeId: bigint): Promise<A
   return pda;
 }
 
-async function buildTransaction(feePayer: Address, instruction: Instruction): Promise<Uint8Array> {
+async function buildTransaction(feePayer: Address, instructions: Instruction[]): Promise<Uint8Array> {
   const { value: latestBlockhash } = await rpc.getLatestBlockhash({ commitment: "confirmed" }).send();
   const message = pipe(
     createTransactionMessage({ version: 0 }),
     (m) => setTransactionMessageFeePayer(feePayer, m),
     (m) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, m),
-    (m) => appendTransactionMessageInstruction(instruction, m),
+    (m) => appendTransactionMessageInstructions(instructions, m),
   );
   return new Uint8Array(getTransactionEncoder().encode(compileTransaction(message)));
 }
@@ -121,15 +123,37 @@ export async function buildLockPaymentInstruction(opts: {
   return { instruction, tradeAccount: trade };
 }
 
-/** Buyer-signed: locks `lamports` into a fresh Trade PDA. Returns the unsigned transaction bytes and the derived trade account. */
+/**
+ * The buyer-protection fee as a plain SOL transfer to the platform wallet,
+ * sent in the same transaction as lock_payment so the two succeed or fail
+ * together (see BUYER_FEE_PERCENT in lib/pricing.ts).
+ */
+export function buildServiceFeeInstruction(opts: { buyer: string; platform: string; lamports: bigint }): Instruction {
+  return getTransferSolInstruction({
+    source: createNoopSigner(address(opts.buyer)),
+    destination: address(opts.platform),
+    amount: opts.lamports,
+  });
+}
+
+/**
+ * Buyer-signed: locks `lamports` into a fresh Trade PDA, plus the
+ * buyer-protection fee to the platform when `fee` is given. Returns the
+ * unsigned transaction bytes and the derived trade account.
+ */
 export async function buildLockPaymentTransaction(opts: {
   buyer: string;
   seller: string;
   tradeId: bigint;
   lamports: bigint;
+  fee?: { platform: string; lamports: bigint };
 }): Promise<{ transactionBytes: Uint8Array; tradeAccount: Address }> {
   const { instruction, tradeAccount } = await buildLockPaymentInstruction(opts);
-  const transactionBytes = await buildTransaction(address(opts.buyer), instruction);
+  const feeInstruction =
+    opts.fee && opts.fee.lamports > BigInt(0)
+      ? [buildServiceFeeInstruction({ buyer: opts.buyer, platform: opts.fee.platform, lamports: opts.fee.lamports })]
+      : [];
+  const transactionBytes = await buildTransaction(address(opts.buyer), [...feeInstruction, instruction]);
   return { transactionBytes, tradeAccount };
 }
 

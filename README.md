@@ -48,6 +48,20 @@ signature, so anyone can audit a card's history.
 - **Built for Thai collectors first:** prices in baht and a full Thai
   interface, with a local warehouse doing the inspections.
 
+## Business model
+
+- **Buyer protection, 3%** on every Buy Now, accepted offer and agent
+  purchase. It pays for escrow and the physical inspection, is sent to the
+  platform wallet in the same transaction as the escrow lock (verified
+  on-chain by the server), and is refunded if the sale is cancelled.
+- **Grading service:** the full-service package, where we send a raw card
+  to the grader, get it slabbed and list it for you. Listing your own
+  card is free.
+- **Buying-agent tasks:** a flat 50 THB per task, paid from the agent
+  wallet, which covers the AI cost of watching and judging listings.
+- **Vault:** cards kept in the vault can be resold instantly, with no
+  shipping, which keeps trading volume on CardMart.
+
 ## On-chain pieces
 
 | Piece | What it does | Code |
