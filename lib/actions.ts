@@ -16,6 +16,9 @@ import { releaseTradeToSeller, refundTradeToBuyer, getEscrowAuthorityAddress } f
 import { isDigitalTwinHeldBy, mintDigitalTwinToken, transferDigitalTwinToken } from "@/lib/web3/token-server";
 import { FULL_SERVICE_PACKAGE_PRICE_THB, THB_PER_USD, thbToLamports } from "@/lib/pricing";
 import { lookupEbayPrice } from "@/lib/ebay";
+import { verifyEscrowLock } from "@/lib/web3/escrow-verify";
+import { deriveTradePda } from "@/lib/web3/escrow-program";
+import { address } from "@solana/kit";
 import { photoUrlProblem, psaCertMismatch } from "@/lib/listing-checks";
 import { themeIndexForSerial } from "@/lib/theme";
 import { getVerificationChecklist } from "@/lib/verification-checklist";
@@ -579,6 +582,11 @@ async function completePurchase(opts: {
   // signature otherwise, same pattern as everywhere else real signing was
   // added this session.
   if (asset.redeemedAt) throw new Error("This item was redeemed and is no longer tradeable.");
+  if (escrowLock) {
+    const payer = payerWalletAddress ?? user.walletAddress;
+    if (!payer) throw new Error("Your account has no wallet to pay from.");
+    await verifyEscrowLock(escrowLock, { buyer: payer, seller: asset.owner.walletAddress, minLamports: thbToLamports(priceThb) });
+  }
   const onChain = Boolean(escrowLock);
   const lockSignature = escrowLock?.txSignature ?? (await mockEscrowInstruction("lock", assetId)).txSignature;
 
@@ -722,6 +730,9 @@ export async function buyListing(
   }
   if (asset.ownerId === user.id) {
     throw new Error("You already own this item.");
+  }
+  if (!escrowLock && (await realEscrowRequired(asset.owner.walletAddress, user.walletAddress))) {
+    throw new Error("Pay with your wallet to buy this card — the payment goes into escrow.");
   }
 
   await completePurchase({
@@ -894,6 +905,17 @@ export async function placeBid(auctionId: string, amountThb: number, bidLock?: E
   if (amount < minBid) return reject(`Bid at least ${minBid.toLocaleString()} THB.`);
   if (bidLock && BigInt(bidLock.lamports) !== thbToLamports(amount)) {
     return reject("The locked amount doesn't match your bid. Try again.");
+  }
+  const sellerWallet = (await prisma.user.findUnique({ where: { id: auction.asset.ownerId }, select: { walletAddress: true } }))?.walletAddress ?? null;
+  if (!bidLock && (await realEscrowRequired(sellerWallet, user.walletAddress))) {
+    return reject("Lock your bid with your wallet — every bid is held in escrow.");
+  }
+  if (bidLock) {
+    try {
+      await verifyEscrowLock(bidLock, { buyer: user.walletAddress!, seller: sellerWallet, minLamports: thbToLamports(amount) });
+    } catch (err) {
+      return reject(err instanceof Error ? err.message : "Your bid lock couldn't be verified.");
+    }
   }
 
   const shouldExtend = auction.endTime.getTime() - now.getTime() <= ANTI_SNIPING_WINDOW_MS;
@@ -1252,6 +1274,9 @@ export async function completeOfferPurchase(
   if (offer.status !== "ACCEPTED") throw new Error("This offer hasn't been accepted.");
   if (!offer.asset.forSale) throw new Error("This item is no longer for sale.");
   if (offer.asset.ownerId === user.id) throw new Error("You already own this item.");
+  if (!escrowLock && (await realEscrowRequired(offer.asset.owner.walletAddress, user.walletAddress))) {
+    throw new Error("Pay with your wallet to complete this purchase — the payment goes into escrow.");
+  }
 
   await completePurchase({
     asset: offer.asset,
@@ -2427,8 +2452,33 @@ function assertSwappable(
  * trade (the server refused the swap after the wallet already locked it), so
  * a rejected request can't strand real funds on-chain.
  */
+/**
+ * Whether a purchase between these two wallets has to be paid through the
+ * real escrow program: it's deployed and both sides have a wallet. Then a
+ * client that skips the lock is refused instead of falling back to the
+ * simulated flow (which would hand over the card unpaid).
+ */
+async function realEscrowRequired(sellerWallet: string | null, buyerWallet: string | null): Promise<boolean> {
+  return Boolean(sellerWallet && buyerWallet && (await getEscrowAuthorityAddress()));
+}
+
 async function refundUnrecordedLock(lock: EscrowLockInput | undefined, payerWallet: string | null, assetId: string) {
-  if (!lock) return;
+  if (!lock || !payerWallet) return;
+  // Only a lock nothing on CardMart relies on. Without this, a buyer could
+  // send the trade ID of one of their own live purchases, get rejected on
+  // purpose, and pull that purchase's escrow back while the sale goes on.
+  let pda: string;
+  try {
+    pda = await deriveTradePda(address(payerWallet), BigInt(lock.tradeId));
+  } catch {
+    return;
+  }
+  const [sale, bid, trade] = await Promise.all([
+    prisma.escrowTransaction.count({ where: { tradeAccount: pda } }),
+    prisma.bid.count({ where: { tradeAccount: pda } }),
+    prisma.tradeOffer.count({ where: { cashTradeAccount: pda } }),
+  ]);
+  if (sale + bid + trade > 0) return;
   await releaseOrRefundEscrow(
     "refund",
     {
@@ -2514,6 +2564,16 @@ async function createTradeProposal(
     where: { proposerId: user.id, requestedAssetId: requested.id, offeredAssetId: offered.id, status: "PENDING" },
   });
   if (duplicate) throw new Error("You already proposed this exact swap.");
+
+  if (cashThb > 0 && opts.cashLock) {
+    if (!user.walletAddress) throw new Error("Your account has no wallet to pay from.");
+    const recipient = await prisma.user.findUnique({ where: { id: requested.ownerId }, select: { walletAddress: true } });
+    await verifyEscrowLock(opts.cashLock, {
+      buyer: user.walletAddress,
+      seller: recipient?.walletAddress,
+      minLamports: thbToLamports(cashThb),
+    });
+  }
 
   if (offered.mintAddress && opts.approveTxSignature) {
     await prisma.asset.update({ where: { id: offered.id }, data: { transferApproved: true } });
@@ -2626,6 +2686,15 @@ async function acceptTrade(
     await prisma.tradeOffer.update({ where: { id: tradeId }, data: { status: "CANCELLED", respondedAt: new Date() } });
     revalidatePath("/portfolio");
     throw new Error("One of the cards is no longer available, so this swap was closed.");
+  }
+  // The recipient's own cash top-up (cashThb < 0) has to be really locked.
+  if (trade.cashThb < 0 && opts.cashLock) {
+    if (!user.walletAddress) throw new Error("Your account has no wallet to pay from.");
+    await verifyEscrowLock(opts.cashLock, {
+      buyer: user.walletAddress,
+      seller: proposer.walletAddress,
+      minLamports: thbToLamports(-trade.cashThb),
+    });
   }
 
   // Both cards move first; cash is only released once they have.
