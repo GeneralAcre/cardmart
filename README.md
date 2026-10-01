@@ -1,182 +1,141 @@
-# CardMart — Collectibles Marketplace & Digital Twin Vault
+# CardMart
 
-Phase 1 (Web2) implementation of a phygital TCG marketplace: a physical
-escrow + digital twin vault for certified trading cards (PSA / BGS / CGC).
-Ownership is reconciled by a warehouse team that inspects the physical
-item's serial number and slab authenticity against the grading company's
-official database.
+**A trading card marketplace where the payment and the card are both held until the card is proven real.**
 
-## Stack
+Live on Solana devnet: **[cardmarts.vercel.app](https://cardmarts.vercel.app)** · [@cardmartapp](https://x.com/cardmartapp)
 
-- Next.js 16 (App Router), TypeScript, Tailwind CSS v4
-- Prisma 7 + Postgres (`@prisma/adapter-pg` driver adapter) — works with Neon, Vercel Postgres, Supabase, or any hosted/local Postgres
-- **Auth.js v5** with the Google provider and database-backed sessions (`@auth/prisma-adapter`) — real sign-in, not mocked
-- Server Actions for mutations, Route Handlers for the marketplace read API
-- shadcn-style UI primitives (Radix UI + `class-variance-authority`), Framer Motion, sonner toasts, Zustand
-- Mock Web3 wallet + mock Solana transaction signatures (`lib/web3/`) — Phase 2 swaps these for real Anchor program calls behind the same interfaces
+---
 
-## Getting started
+## The problem
 
-Get a Postgres database — the easiest path is Vercel's dashboard:
-**Storage tab → Create Database → Postgres (Neon)**, then copy both
-connection strings it gives you (or `vercel env pull .env` if the project is
-already linked): the pooled one → `DATABASE_URL`, the direct/unpooled one →
-`DIRECT_URL` (see `.env.example`). Any other Postgres works too — for a
-single local instance, both vars can just point to the same URL.
+Graded Pokémon and One Piece cards change hands for hundreds to hundreds of
+thousands of baht, mostly through Facebook groups, LINE chats and bank
+transfers. Buyers pay first and hope. Fake slabs, a real cert number reused
+on a different card, and "sold, but never shipped" are everyday losses, and
+there is no neutral place to hold the money or the card in between.
+
+## What CardMart does
+
+1. **The seller lists a card** with live camera photos of every required
+   view. PSA cert numbers are checked against PSA's database: the grade,
+   the card name and the card number all have to match the cert.
+2. **The buyer pays into an on-chain escrow** (our own Anchor program). The
+   seller can't touch the money yet.
+3. **The card goes to our warehouse.** Staff inspect the slab against the
+   cert and the listing photos.
+4. **Pass:** escrow releases to the seller, and the card's on-chain token
+   moves to the buyer. The card is shipped, or kept in the vault and
+   resold later without moving it again.
+   **Fail:** escrow refunds the buyer in full.
+
+Every step is written to the item's provenance timeline with its transaction
+signature, so anyone can audit a card's history.
+
+## What makes it different
+
+- **Escrow that waits for physical proof.** Payment is released by
+  inspection, not by a promise to ship.
+- **An AI buying agent with hard limits.** Tell it "one PSA 10 Umbreon VMAX
+  alt art, up to 20,000 THB". It watches every new listing, checks it's the
+  exact card (not a look-alike from another set) at a fair price, and buys
+  from its own wallet, or sends the seller an offer. The AI only judges.
+  Every price, budget and count limit is enforced in code, and the agent
+  wallet's balance is the on-chain spending cap.
+- **Prices compared against the exact card.** Each item page compares the
+  listing with CardMart sales and eBay listings of the same card, set, card
+  number, grader and grade, and shows a "price by grade" ladder (raw,
+  PSA 9, PSA 10, and more).
+- **Built for Thai collectors first:** prices in baht and a full Thai
+  interface, with a local warehouse doing the inspections.
+
+## On-chain pieces
+
+| Piece | What it does | Code |
+|---|---|---|
+| **Escrow program** (Anchor, Rust) | `lock_payment` holds the buyer's SOL in a per-trade PDA; `release_to_seller` / `refund_to_buyer` are signed only by the escrow authority after inspection. The seller is re-checked at release, so payout can't be redirected. Program `FQwLbEBxKw5srEobsCw37c1B7QNkNaRACN5VBvUwWEuC` on devnet. | [`contracts/escrow`](contracts/escrow) |
+| **Digital twin token** | Each listed card is minted as a 1-of-1 SPL token (decimals 0, supply 1) to the seller. The seller approves a one-time transfer delegate; the token moves to the buyer when escrow releases. | [`lib/web3/token-server.ts`](lib/web3/token-server.ts) |
+| **Agent wallets** | One keypair per user (AES-256-GCM encrypted at rest). The user funds it; it signs `lock_payment` on its own, so the agent can buy while the user is away. The platform pays all transaction fees. | [`lib/agent/wallet.ts`](lib/agent/wallet.ts) |
+| **Embedded wallets** | Privy sign-in (Google, email, or an existing Phantom/Backpack wallet) creates a Solana wallet for new users, with no seed phrase to manage. | [`components/providers/privy-provider.tsx`](components/providers/privy-provider.tsx) |
+
+## Features
+
+- **Marketplace:** search by name, card number ("umbreon 215"), set, grader
+  or grade; filters; fixed-price listings, offers, auctions and card-for-card
+  trades.
+- **Selling:** guided listing with a live-camera checklist, PSA auto-fill,
+  card-number lookup, and a full-service option where we grade the card for
+  you.
+- **Trust:** duplicate-cert blocking, PSA name/number matching, photo-reuse
+  detection, staff alerts for unknown cards or far-below-market prices, ID
+  verification, reviews, disputes.
+- **Portfolio and vault:** cards in your hands vs. in our vault, relisting
+  without reshipping, redemption, price history, card alerts.
+- **Buying agent** (`/agent`): tasks, ask-first or auto-buy, offers, alerts →
+  tasks, a 50 THB task fee paid from the agent wallet.
+- **Back office** (`/admin`): warehouse inspection queue, grading, shipments,
+  disputes, ID review, alerts, on its own domain.
+
+## Try it
+
+1. Open [cardmarts.vercel.app](https://cardmarts.vercel.app) and sign in.
+2. Get devnet SOL from [faucet.solana.com](https://faucet.solana.com) (or
+   the "Test SOL" button on the agent page).
+3. Buy a card. Watch the `lock_payment` transaction on
+   [Solana Explorer (devnet)](https://explorer.solana.com/?cluster=devnet),
+   then follow it through inspection on the item page.
+4. Open **Agent**, pick a card, set a max price, and start a task.
+
+Everything runs on devnet. No real money moves.
+
+## Tech stack
+
+- **App:** Next.js 16 (App Router, Server Actions), React 19, TypeScript, Tailwind CSS v4
+- **Data:** Postgres (Neon) with Prisma 7, Vercel Blob for verification photos
+- **Solana:** Anchor 1.1 program, `@solana/kit`, SPL Token, Memo program, Privy embedded wallets
+- **AI:** OpenRouter (DeepSeek V4 Flash plans tasks, DeepSeek V4 Pro judges listings), structured JSON output validated with Zod
+- **Data sources:** PSA Public API (certs, population), eBay Browse API (exact-match asking prices), TCG API (card catalogue, images, card numbers)
+
+## Repository map
+
+| Path | What's there |
+|---|---|
+| `app/(app)` | User pages: marketplace, item, listing, portfolio, auctions, agent, market, messages |
+| `app/(backoffice)/admin` | Staff back office |
+| `lib/actions.ts` | Server Actions: listing, buying, escrow, warehouse, offers, auctions, agent purchases |
+| `lib/agent/` | Buying agent: AI planning/judging, matching engine, agent wallets |
+| `lib/web3/` | Escrow instructions, token minting, server-side signing |
+| `lib/ebay.ts`, `lib/psa.ts`, `lib/card-catalog.ts` | External data, with exact-card matching |
+| `lib/listing-checks.ts` | Anti-fraud checks on new listings |
+| `contracts/escrow` | The Anchor escrow program and its tests |
+| `prisma/schema.prisma` | Data model |
+
+## Running locally
 
 ```bash
 npm install
-# put DATABASE_URL and DIRECT_URL in .env (see .env.example)
-npx prisma migrate dev   # applies the schema
-npx prisma db seed       # seeds 4 demo marketplace participants and 9 assets
-```
-
-### Set up Vercel Blob (required — stores verification photo files)
-
-Verification photos (live-camera captures from the Self-Mint flow) upload
-directly from the browser to Vercel Blob storage; Postgres only stores the
-resulting URL. From the Vercel dashboard: **Storage tab → Create Database →
-Blob**, then copy the token it gives you into `.env` (or
-`vercel env pull .env` if the project is already linked):
-
-```
-BLOB_READ_WRITE_TOKEN="vercel_blob_rw_..."
-```
-
-### Set up the PSA Public API (optional — enables real cert verification)
-
-PSA listings can be checked against PSA's actual Cert Verification database
-instead of trusting the seller's self-declared data — both when a PSA item
-is listed (`/listing`) and when the warehouse inspects an inbound package
-(`/admin/warehouse`). Register at
-[psacard.com/publicapi](https://www.psacard.com/publicapi), agree to the API
-End User Agreement, and generate a bearer token, then add it to `.env`:
-
-```
-PSA_API_TOKEN="..."
-```
-
-Without this token, PSA verification is skipped entirely and the app falls
-back to mirroring the seller's declared data (the original Phase 1
-behavior) — nothing breaks either way.
-
-PSA's public API has no pricing/price-guide endpoint at all (confirmed
-against their live API spec), so it can never show a market value — see the
-next section for where that comes from instead.
-
-### Set up TCG API (optional — reference market price for trading cards)
-
-Item pages for TRADING_CARD listings show a reference market price sourced
-from [tcgapi.dev](https://tcgapi.dev) (TCGPlayer data via their free tier).
-Register with an email + password, verify the email, then create an API key
-and add it to `.env`:
-
-```
-TCG_API_KEY="tcg_live_..."
-```
-
-Two things worth knowing: it's Pokemon/TCG-specific (no sports cards or
-comics), and it prices the **raw/ungraded** card — there's no PSA/BGS
-grade-tier pricing in the data, so a graded slab is typically worth more
-than the number shown. The item page labels it as a reference price for
-exactly this reason. Free tier is 100 requests/day; lookups are cached for
-6 hours per query to stay well under that. Without this key, no reference
-price is shown — nothing else is affected.
-
-### Set up eBay's Browse API (optional — live market reference, every category)
-
-Every item page also shows an "eBay Market Reference" card, sourced from
-[eBay's Buy Browse API](https://developer.ebay.com/api-docs/buy/browse/overview.html).
-Unlike TCG API above, this covers sports cards and comics too, not just
-Pokemon, and the search query is grade-aware (e.g. searches "Charizard VMAX
-PSA 10", not just "Charizard VMAX"). Register a free **Production** keyset at
-[developer.ebay.com/my/keys](https://developer.ebay.com/my/keys) — this is
-self-serve, no approval wait like PSA — and add the App ID / Cert ID to `.env`:
-
-```
-EBAY_APP_ID="..."
-EBAY_CERT_ID="..."
-```
-
-One thing worth knowing: eBay's self-serve Browse API only returns **active
-listings**, not sold prices — real sold-comp data lives behind eBay's
-Marketplace Insights API, which is limited-release and needs a separate
-approval from eBay. So the median/low/high shown here are honestly labeled
-as current asking prices, not sold prices. The item page also always links
-straight to eBay's own sold/completed-listings search (`LH_Sold=1`) for a
-real, verifiable sold-price reference — that link needs no API key at all,
-so it shows up even without these two variables set.
-
-### Set up Google sign-in (required — the whole site is gated behind it)
-
-1. In the [Google Cloud Console](https://console.cloud.google.com/apis/credentials), create an OAuth 2.0 Client ID (application type **Web application**).
-2. Add an authorized redirect URI: `http://localhost:3000/api/auth/callback/google` (add your production URL's equivalent later).
-3. Copy the Client ID and Client Secret into `.env`:
-   ```
-   AUTH_GOOGLE_ID="your-client-id"
-   AUTH_GOOGLE_SECRET="your-client-secret"
-   ```
-   `AUTH_SECRET` is already generated for local dev in `.env` — replace it for production (`openssl rand -base64 32`).
-
-```bash
+cp .env.example .env      # fill in the values; each one is explained there
+npx prisma migrate deploy
+npx prisma db seed        # demo marketplace data
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) — you'll be redirected to
-`/login`. Sign in with Google, then `/onboarding` collects your display name,
-username, shipping address, and phone (needed for physical fulfillment)
-before you can use the site. The 4 seeded personas (Nattapong, Araya, Chalit,
-and "Kade Anuwat") are separate marketplace participants populating listings
-and history — your real Google account starts with an empty Portfolio, like
-any new user.
+`.env.example` documents every variable: Postgres, Privy, Vercel Blob, the
+escrow program and authority key, PSA, eBay, TCG API, OpenRouter and the
+agent-wallet secret. Optional integrations switch off cleanly when their key
+is missing. To deploy your own escrow program, follow
+[`contracts/escrow/README.md`](contracts/escrow/README.md).
 
-Re-run `npx prisma db seed` at any time to reset the demo marketplace data
-(it does **not** touch your own account/session — only the app-domain
-tables get wiped and recreated).
+## Security notes
 
-## Pages
+- No private keys are in this repository. The program's upgrade authority
+  and the escrow authority are separate keys, and the escrow authority lives
+  only in server environment variables.
+- Staff pages and every staff Server Action check for an admin server-side
+  (non-staff get a 404). Deployed builds refuse to run without sign-in
+  configured.
+- Agent wallet keys are encrypted with `AGENT_WALLET_SECRET` and only
+  decrypted server-side to sign purchases within the task's limits.
 
-- `/login`, `/onboarding` — Google sign-in and first-time profile setup (gated by `proxy.ts` for every other route)
-- `/` — marketplace grid with live search/filtering (grading company, grade, price range, vaulted status)
-- `/listing` — create a marketplace listing for a graded or ungraded collectible, add live camera captures, set a price, and publish it for sale
-- `/item/[id]` — product detail, live verification photo gallery, provenance timeline, buy-with-escrow flow (ship vs. keep-in-vault)
-- `/portfolio` — owned digital twins, split by "physical in my hands" vs. "physical in warehouse vault", plus Full-Service grading submission tracking, with relist/redeem actions
-- `/admin/warehouse` — inbound inspection queue comparing seller-declared vs. official certificate data, plus the Full-Service grading queue, with approve-ship / approve-vault / reject / complete-grading actions
+## License
 
-## Deploying to Vercel
-
-1. Import the repo in Vercel, then add a Postgres database from the
-   **Storage** tab and connect it to the project — this injects `DATABASE_URL`
-   and its unpooled counterpart into the project's environment automatically.
-   Make sure that unpooled one is also set as `DIRECT_URL` (Vercel's Neon
-   integration may name it `DATABASE_URL_UNPOOLED` — add a second env var
-   `DIRECT_URL` pointing at the same value).
-2. Add a Blob store from the **Storage** tab too and connect it to the
-   project — this injects `BLOB_READ_WRITE_TOKEN` automatically.
-3. Add `AUTH_SECRET` in the project's Environment Variables (generate one
-   with `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`).
-   Add `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` too once you have them (see
-   above) — until then Google sign-in stays a visible-but-inert button.
-4. Deploy. `npm run build` runs `prisma generate && prisma migrate deploy`
-   before `next build`, so pending migrations apply automatically on every
-   deploy. Seeding is **not** part of the build (it wipes app-domain tables)
-   — run `npx prisma db seed` once by hand against the production
-   `DATABASE_URL` after the first successful deploy.
-
-## Auth model
-
-`auth.ts` configures Auth.js (Google provider, Prisma adapter, database
-sessions). `proxy.ts` (Next.js 16's renamed `middleware.ts`) redirects
-unauthenticated requests to `/login` and profile-incomplete sessions to
-`/onboarding` for every route except those two. `lib/session.ts`'s
-`getCurrentUser()` re-checks the same conditions at the data-fetching layer
-as defense in depth, per Auth.js's own guidance not to rely on the proxy
-alone.
-
-## Data model
-
-See `prisma/schema.prisma`. `lib/queries.ts` holds read queries, `lib/actions.ts`
-holds the escrow/warehouse/vault Server Action mutations, `lib/profile-actions.ts`
-holds onboarding, and every asset mutation logs a `ProvenanceEvent` with a
-mock transaction signature so the full history is auditable from the item
-detail page.
+[MIT](LICENSE)
