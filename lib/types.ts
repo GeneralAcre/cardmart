@@ -4,6 +4,8 @@ export interface AssetSummary {
   id: string;
   name: string;
   subtitle: string;
+  /** Printed card number, e.g. "215/203" — see prisma/schema.prisma Asset.cardNumber. */
+  cardNumber?: string | null;
   category: AssetCategory;
   game: CardGame;
   gradingCompany: GradingCompany;

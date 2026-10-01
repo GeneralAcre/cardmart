@@ -76,9 +76,18 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
   const gradeTierName = gradeTier?.replace(/ \(Black Label\)$/, "").replace(/ \d+(\.\d+)?$/, "") ?? null;
   const psaCertNumber = asset.gradingCompany === "PSA" ? extractPsaCertNumber(asset.serial) : null;
 
-  // Grade-aware, e.g. "Charizard VMAX PSA 10" — narrows eBay's own fuzzy
-  // search to comps that are actually the same grading tier as this listing.
-  const ebayQuery = buildMarketQuery(asset.name, asset.gradingCompany, asset.grade);
+  // This exact card: name, set, grader + grade (+ Black Label), e.g.
+  // "Lugia Holo 1st Edition Neo Genesis PSA 10". Every price source below
+  // compares against the same card in the same grade, never a look-alike.
+  const marketCard = {
+    name: asset.name,
+    subtitle: asset.subtitle,
+    gradingCompany: asset.gradingCompany,
+    grade: asset.grade,
+    isBlackLabel: asset.isBlackLabel,
+    cardNumber: asset.cardNumber,
+  };
+  const ebayQuery = buildMarketQuery(marketCard);
 
   // These five are all independent of each other (only psaPopulation below
   // depends on one of them) — awaiting them one at a time was serializing
@@ -96,13 +105,11 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
     // exists in that data at all, so it's deliberately never shown as "the"
     // price for a graded slab — see the disclaimer rendered alongside it.
     asset.category === "TRADING_CARD" ? lookupCardPrice(asset.name) : Promise.resolve(null),
-    // Live current-asking-price reference from eBay's Browse API — covers
-    // every category (sports cards, comics too, not just Pokemon), and is
-    // grade-aware (with a bare-name fallback if the grade-qualified search
-    // finds nothing — see lib/ebay.ts). Best-effort: null whenever eBay
-    // isn't configured or nothing matched: ebaySoldListingsUrl below still
-    // gives a real, verifiable price reference either way.
-    lookupEbayPrice(asset.name, asset.gradingCompany, asset.grade),
+    // Live current-asking-price reference from eBay's Browse API, counting
+    // only listings of this exact card in this exact grade (see lib/ebay.ts).
+    // Best-effort: null whenever eBay isn't configured or nothing matched
+    // exactly; ebaySoldListingsUrl below still gives a verifiable reference.
+    lookupEbayPrice(marketCard),
     // Default range matches PriceHistoryChart's own default state (7d) — the
     // client re-fetches on range change, this is just the initial paint.
     getPriceHistory(asset.id, "7d"),
@@ -114,7 +121,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
       grade: asset.grade,
       priceThb: asset.priceThb,
     }),
-    getCardMarketStats({ name: asset.name, gradingCompany: asset.gradingCompany, grade: asset.grade }),
+    getCardMarketStats(marketCard, asset.id),
     getAssetInsightData(asset.id),
   ]);
 
@@ -268,7 +275,10 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
                 )}
               </span>
               <h1 className="text-2xl font-semibold">{asset.name}</h1>
-              <p className="text-muted-foreground text-sm">{asset.subtitle}</p>
+              <p className="text-muted-foreground text-sm">
+                {asset.subtitle}
+                {asset.cardNumber && <span className="font-mono"> · #{asset.cardNumber}</span>}
+              </p>
               {psaCertNumber && isPsaCertNumber(psaCertNumber) && (
                 <a
                   href={psaCertUrl(psaCertNumber)}
@@ -563,7 +573,8 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
         gradeLabel={gradeLabel}
         marketQuery={ebayQuery}
         cardMart={cardMarket}
-        tcg={priceQuote}
+        tcg={asset.gradingCompany === "RAW" ? priceQuote : null}
+        graded={asset.gradingCompany !== "RAW"}
         ebay={ebayQuote}
       />
 

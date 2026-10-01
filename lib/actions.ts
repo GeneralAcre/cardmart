@@ -30,7 +30,7 @@ import {
   packageReference,
   sellerShipByDeadline,
 } from "@/lib/shipping";
-import { findCatalogImage } from "@/lib/card-catalog";
+import { findCatalogCard } from "@/lib/card-catalog";
 import { checkKycPhoto, deleteKycPhotos, isKycPhotoStorageConfigured, saveKycPhoto } from "@/lib/kyc-storage";
 import { getPortfolioPriceHistory, getPriceHistory, type PriceHistoryRange } from "@/lib/queries";
 import {
@@ -220,6 +220,7 @@ const createListingSchema = z
       .optional()
       .transform((v) => v === "true"),
     serial: z.string().min(4).optional(),
+    cardNumber: z.string().trim().max(24).optional(),
     priceThb: z.coerce.number().int().min(100),
     photos: z.string().transform((raw, ctx) => {
       try {
@@ -299,6 +300,7 @@ export async function createListing(
     grade: formData.get("grade") || undefined,
     isBlackLabel: formData.get("isBlackLabel") || undefined,
     serial: formData.get("serial") || undefined,
+    cardNumber: formData.get("cardNumber") || undefined,
     priceThb: formData.get("priceThb"),
     photos: formData.get("photos"),
   });
@@ -377,6 +379,7 @@ export async function createListing(
     data: {
       name: data.name,
       subtitle: data.subtitle,
+      cardNumber: data.cardNumber || null,
       category: data.category as AssetCategory,
       game: data.game,
       gradingCompany: data.gradingCompany as GradingCompany,
@@ -431,11 +434,15 @@ export async function createListing(
     ],
   });
 
-  // Official reference image so buyers recognise the card at a glance —
-  // best-effort, one API call per listing; a miss just leaves the artwork.
-  const catalogImageUrl = await findCatalogImage({ name: data.name, subtitle: data.subtitle, game: data.game });
-  if (catalogImageUrl) {
-    await prisma.asset.update({ where: { id: asset.id }, data: { catalogImageUrl } });
+  // Official reference image so buyers recognise the card at a glance, and
+  // its card number if the seller left that blank — best-effort, one API
+  // call per listing; a miss just leaves the artwork.
+  const catalog = await findCatalogCard({ name: data.name, subtitle: data.subtitle, game: data.game });
+  if (catalog) {
+    await prisma.asset.update({
+      where: { id: asset.id },
+      data: { catalogImageUrl: catalog.imageUrl, ...(!data.cardNumber && catalog.number ? { cardNumber: catalog.number } : {}) },
+    });
   }
 
   await notifyWantedCardMatches(asset.id);

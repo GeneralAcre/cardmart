@@ -62,6 +62,7 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
   const [serial, setSerial] = useState("");
   const [name, setName] = useState("");
   const [subtitle, setSubtitle] = useState("");
+  const [cardNumber, setCardNumber] = useState("");
   const [grade, setGrade] = useState("");
   // BGS Black Label only applies at grade 10 — shown as a checkbox right
   // next to the grade field instead of a separate select option, since it's
@@ -80,7 +81,7 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
   // against the live serial below to derive "pending" instead of tracking
   // it as separate state, so there's no synchronous setState in the effect.
   const [psaLookupSerial, setPsaLookupSerial] = useState("");
-  const autofilledRef = useRef({ name: false, subtitle: false, grade: false });
+  const autofilledRef = useRef({ name: false, subtitle: false, grade: false, cardNumber: false });
 
   const psaEligible = !raw && gradingCompany === "PSA" && serial.trim().length >= 4;
   const psaLookupPending = psaEligible && psaLookupSerial !== serial.trim();
@@ -107,6 +108,10 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
         if (!autofilledRef.current.subtitle && (cert.year || cert.brand || cert.variety)) {
           setSubtitle([cert.year, cert.brand, cert.variety].filter(Boolean).join(" "));
           autofilledRef.current.subtitle = true;
+        }
+        if (!autofilledRef.current.cardNumber && cert.cardNumber) {
+          setCardNumber(cert.cardNumber);
+          autofilledRef.current.cardNumber = true;
         }
         if (!autofilledRef.current.grade && cert.gradeNumber != null) {
           setGrade(String(cert.gradeNumber));
@@ -147,6 +152,7 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
         const fd = new FormData();
         fd.set("name", name);
         fd.set("subtitle", subtitle);
+        if (cardNumber.trim()) fd.set("cardNumber", cardNumber.trim());
         fd.set("category", category);
         fd.set("game", game);
         fd.set("raw", String(raw));
@@ -294,6 +300,21 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
                 value={subtitle}
                 onChange={(e) => setSubtitle(e.target.value)}
               />
+            </div>
+            <div className="flex flex-col gap-2 sm:col-span-2">
+              <Label htmlFor="cardNumber">
+                {t("Card number")} <span className="text-muted-foreground font-normal">({t("optional")})</span>
+              </Label>
+              <Input
+                id="cardNumber"
+                className="sm:max-w-56"
+                placeholder={t("e.g. 215/203 or OP01-120")}
+                value={cardNumber}
+                onChange={(e) => setCardNumber(e.target.value)}
+              />
+              <span className="text-muted-foreground text-xs">
+                {t("Printed at the bottom of the card. Helps buyers find it — leave blank and we'll look it up.")}
+              </span>
             </div>
           </div>
 

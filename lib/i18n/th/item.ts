@@ -166,6 +166,7 @@ export const ITEM: Record<string, string> = {
   "{count} sale in {days} days": "ขาย {count} ครั้งใน {days} วัน",
   "{count} sales in {days} days": "ขาย {count} ครั้งใน {days} วัน",
   "No live eBay data": "ไม่มีข้อมูลสดจาก eBay",
+  "No exact match listed right now": "ตอนนี้ยังไม่มีรายการที่ตรงกันทุกอย่าง",
   "Ungraded (raw) card": "การ์ดดิบ (ยังไม่เกรด)",
   "eBay median asking price": "ราคาตั้งมัธยฐานบน eBay",
   "CardMart median sale": "ราคาขายมัธยฐานบน CardMart",
@@ -174,8 +175,8 @@ export const ITEM: Record<string, string> = {
   "{pct}% above": "สูงกว่า {pct}%",
   "eBay sold listings": "รายการที่ขายแล้วบน eBay",
   "Check sold prices elsewhere:": "เช็กราคาขายจริงที่อื่น:",
-  "Dots show each source's price and bars its low–high range, all on one baht scale; the dashed line is this listing. USD prices are converted at an approximate {rate} THB per USD. eBay figures are asking prices, not sold prices; TCGplayer prices are for ungraded cards.":
-    "จุดคือราคาของแต่ละแหล่ง แถบคือช่วงราคาต่ำสุด–สูงสุด ทั้งหมดอยู่บนสเกลเงินบาทเดียวกัน เส้นประคือรายการนี้ ราคา USD แปลงที่อัตราประมาณ {rate} บาทต่อดอลลาร์ ตัวเลขของ eBay เป็นราคาตั้ง ไม่ใช่ราคาที่ขายได้ ส่วนราคา TCGplayer เป็นของการ์ดที่ยังไม่เกรด",
+  "Every row compares the same card, set and grade as this listing. eBay figures are current asking prices, not sold prices, converted at about {rate} THB per USD.":
+    "ทุกแถวเทียบกับการ์ด ชุด และเกรดเดียวกับรายการนี้ ตัวเลขของ eBay เป็นราคาตั้งขายปัจจุบัน ไม่ใช่ราคาที่ขายได้ แปลงที่ประมาณ {rate} บาทต่อดอลลาร์",
 
   // Price history chart
   "Price History": "ประวัติราคา",

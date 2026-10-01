@@ -111,7 +111,7 @@ export function FilterBar({
         <Input
           value={filters.q}
           onChange={(e) => onChange({ ...filters, q: e.target.value })}
-          placeholder={t("Search by name, serial, or seller…")}
+          placeholder={t("Search name, card number (215/203), set or seller…")}
           className="pl-9"
         />
       </div>

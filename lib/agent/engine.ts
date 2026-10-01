@@ -52,7 +52,14 @@ function listingFilter(mandate: AgentMandate): Prisma.AssetWhereInput {
     ...(mandate.gradingCompanies.length ? { gradingCompany: { in: mandate.gradingCompanies } } : {}),
     ...(mandate.minGrade != null ? { grade: { gte: mandate.minGrade } } : {}),
     ...(mandate.blackLabelOnly ? { isBlackLabel: true } : {}),
-    ...(terms.length ? { OR: terms.map((t) => ({ name: { contains: t, mode: "insensitive" as const } })) } : {}),
+    ...(terms.length
+      ? {
+          OR: terms.flatMap((t) => [
+            { name: { contains: t, mode: "insensitive" as const } },
+            { cardNumber: { contains: t, mode: "insensitive" as const } },
+          ]),
+        }
+      : {}),
   };
 }
 
@@ -83,9 +90,24 @@ function isTrusted(t: { rating: number | null; idVerified: boolean }) {
   return t.idVerified || (t.rating != null && t.rating >= 4);
 }
 
-async function marketData(card: { name: string; gradingCompany: GradingCompany; grade: number | null; id: string }) {
+async function marketData(card: {
+  id: string;
+  name: string;
+  subtitle: string;
+  gradingCompany: GradingCompany;
+  grade: number | null;
+  isBlackLabel: boolean;
+  cardNumber: string | null;
+}) {
   const since = new Date(Date.now() - SALE_LOOKBACK_DAYS * 86_400_000);
-  const same = { name: card.name, gradingCompany: card.gradingCompany, grade: card.grade };
+  const same = {
+    name: card.name,
+    subtitle: card.subtitle,
+    gradingCompany: card.gradingCompany,
+    grade: card.grade,
+    isBlackLabel: card.isBlackLabel,
+    ...(card.cardNumber ? { OR: [{ cardNumber: card.cardNumber }, { cardNumber: null }] } : {}),
+  } satisfies Prisma.AssetWhereInput;
   const [sales, others, ebay] = await Promise.all([
     prisma.escrowTransaction.findMany({
       where: { status: "RELEASED", releasedAt: { gte: since }, asset: same },
@@ -96,7 +118,7 @@ async function marketData(card: { name: string; gradingCompany: GradingCompany; 
       orderBy: { priceThb: "asc" },
       select: { priceThb: true },
     }),
-    isEbayConfigured() ? lookupEbayPrice(card.name, card.gradingCompany, card.grade).catch(() => null) : null,
+    isEbayConfigured() ? lookupEbayPrice(card).catch(() => null) : null,
   ]);
   const prices = sales.map((s) => s.amountThb).sort((a, b) => a - b);
   const median = prices.length ? prices[Math.floor((prices.length - 1) / 2)] : null;

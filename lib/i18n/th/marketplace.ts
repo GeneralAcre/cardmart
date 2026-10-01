@@ -10,7 +10,7 @@ export const MARKETPLACE: Record<string, string> = {
   "Compare asking prices across cards and grading institutes.": "เปรียบเทียบราคาขายของการ์ดแต่ละใบและแต่ละบริษัทเกรด",
   "No items match your filters. Try widening your search.": "ไม่มีรายการที่ตรงกับตัวกรอง ลองขยายการค้นหาดู",
   "Clear filters": "ล้างตัวกรอง",
-  "Search by name, serial, or seller…": "ค้นหาด้วยชื่อ หมายเลขซีเรียล หรือผู้ขาย…",
+  "Search name, card number (215/203), set or seller…": "ค้นหาชื่อ หมายเลขการ์ด (215/203) ชุด หรือผู้ขาย…",
   Shipping: "จัดส่ง",
   Game: "เกม",
   "Grading Company": "บริษัทเกรด",

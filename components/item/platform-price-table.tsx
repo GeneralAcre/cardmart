@@ -69,6 +69,7 @@ export async function PlatformPriceTable({
   cardMart,
   tcg,
   ebay,
+  graded,
 }: {
   priceThb: number | null;
   forSale: boolean;
@@ -85,6 +86,8 @@ export async function PlatformPriceTable({
   };
   tcg: CardPriceQuote | null;
   ebay: EbayPriceQuote | null;
+  // TCGplayer only prices raw cards, so its row is left out for a graded slab.
+  graded: boolean;
 }) {
   const t = await getT();
   const listingThb = forSale ? priceThb : null;
@@ -149,10 +152,10 @@ export async function PlatformPriceTable({
       approx: ebay ? `≈ ${formatThb(usdToThb(ebay.medianPriceUsd))}` : undefined,
       note: ebay
         ? `${t("Median of {count} active listings", { count: ebay.itemCount })} · ${formatUsd(ebay.lowPriceUsd)}–${formatUsd(ebay.highPriceUsd)}`
-        : t("No live eBay data"),
+        : t("No exact match listed right now"),
       href: searchUrl("https://www.ebay.com/sch/i.html", "_nkw", marketQuery),
     },
-    {
+    ...(graded ? [] : [{
       key: "tcg",
       name: "TCGplayer",
       mono: "TCG",
@@ -162,7 +165,7 @@ export async function PlatformPriceTable({
       approx: tcg?.marketPriceUsd != null ? `≈ ${formatThb(usdToThb(tcg.marketPriceUsd))}` : undefined,
       note: tcg?.marketPriceUsd != null ? `${t("Ungraded (raw) card")} · ${tcg.matchedName}` : t("Ungraded card prices"),
       href: searchUrl("https://www.tcgplayer.com/search/all/product", "q", tcg?.matchedName ?? marketQuery),
-    },
+    } satisfies Lane]),
   ];
 
   const values = lanes.flatMap((l) => [l.pointThb, ...(l.rangeThb ?? [])]).filter((v): v is number => v != null && v > 0);
@@ -344,7 +347,7 @@ export async function PlatformPriceTable({
       </div>
 
       <p className="text-muted-foreground text-[11px]">
-        {t("Dots show each source's price and bars its low–high range, all on one baht scale; the dashed line is this listing. USD prices are converted at an approximate {rate} THB per USD. eBay figures are asking prices, not sold prices; TCGplayer prices are for ungraded cards.", { rate: THB_PER_USD })}
+        {t("Every row compares the same card, set and grade as this listing. eBay figures are current asking prices, not sold prices, converted at about {rate} THB per USD.", { rate: THB_PER_USD })}
       </p>
     </section>
   );

@@ -228,6 +228,10 @@ model Asset {
   id                  String              @id @default(cuid())
   name                String
   subtitle            String
+  // The printed card number, e.g. "215/203" or "OP01-120" — what tells two
+  // same-named cards in one set apart. From the seller, their PSA cert, or
+  // the card catalogue; null when none of those knew it.
+  cardNumber          String?
   category            AssetCategory
   game                CardGame            @default(POKEMON)
   gradingCompany      GradingCompany

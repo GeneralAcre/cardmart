@@ -40,6 +40,7 @@ interface SearchResult {
   game_slug?: string;
   image_url?: string;
   product_type?: string;
+  number?: string;
 }
 
 /**
@@ -49,6 +50,19 @@ interface SearchResult {
  * printing's picture is never shown just because the name matched.
  */
 export async function findCatalogImage(card: { name: string; subtitle: string; game: CardGame }): Promise<string | null> {
+  return (await findCatalogCard(card))?.imageUrl ?? null;
+}
+
+/**
+ * The catalogue's best match for one card — its reference image and printed
+ * number (e.g. "215/203") — or null when there's no confident match. Same
+ * matching rules as findCatalogImage, from one API call.
+ */
+export async function findCatalogCard(card: {
+  name: string;
+  subtitle: string;
+  game: CardGame;
+}): Promise<{ imageUrl: string; number: string | null } | null> {
   const key = process.env.TCG_API_KEY?.trim();
   if (!key) return null;
 
@@ -74,7 +88,7 @@ export async function findCatalogImage(card: { name: string; subtitle: string; g
 
   const subtitleTokens = tokens(card.subtitle);
   const hints = VARIANT_HINTS.filter((h) => h.pattern.test(card.name));
-  let best: { score: number; url: string } | null = null;
+  let best: { score: number; url: string; number: string | null } | null = null;
 
   for (const r of results) {
     if (r.game_slug !== GAME_SLUGS[card.game] || !r.image_url || (r.product_type && r.product_type !== "Cards")) continue;
@@ -86,7 +100,25 @@ export async function findCatalogImage(card: { name: string; subtitle: string; g
     // A variant the listing didn't ask for (e.g. "(Secret)") is a worse match.
     const unaskedVariant = /\(/.test(name) && hints.length === 0 ? 1 : 0;
     const score = setScore * 3 + hintScore * 4 - unaskedVariant;
-    if (!best || score > best.score) best = { score, url: r.image_url };
+    const number = r.number?.trim() && numberFits(card.subtitle, r.set_name ?? "", r.number.trim()) ? r.number.trim() : null;
+    if (!best || score > best.score) best = { score, url: r.image_url, number };
   }
-  return best?.url ?? null;
+  return best ? { imageUrl: best.url, number: best.number } : null;
+}
+
+const setWords = (text: string) => text.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w && !/^(19|20)\d\d$/.test(w));
+
+/**
+ * A close-enough picture is fine, but a card number has to be exact: the
+ * catalogue set must BE one of the subtitle's sets ("Base Set 2" is not
+ * "Base Set"), ignoring its code prefix ("SWSH07: Evolving Skies"), and a
+ * One Piece set code in the subtitle (OP05) must match the number's prefix.
+ */
+function numberFits(subtitle: string, catalogSet: string, number: string): boolean {
+  const catalog = setWords(catalogSet.replace(/^[^:]*:\s*/, "")).join(" ");
+  const parts = subtitle.split(/[—–|]/).map((p) => setWords(p).join(" ")).filter(Boolean);
+  if (!parts.includes(catalog)) return false;
+  const code = subtitle.match(/\b([A-Z]{2,4}\d{2})\b/)?.[1];
+  const prefix = number.match(/^([A-Z]{2,4}\d{2})-/i)?.[1];
+  return !code || !prefix || code.toUpperCase() === prefix.toUpperCase();
 }

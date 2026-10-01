@@ -70,7 +70,10 @@ export function ListingCard({ asset }: { asset: AssetSummary }) {
           <div className="flex flex-col gap-1">
             <span className="text-muted-foreground text-xs">{t(CARD_GAME_LABELS[asset.game])}</span>
             <h3 className="line-clamp-1 text-sm font-semibold">{asset.name}</h3>
-            <p className="text-muted-foreground line-clamp-1 text-xs">{asset.subtitle}</p>
+            <p className="text-muted-foreground line-clamp-1 text-xs">
+              {asset.subtitle}
+              {asset.cardNumber && <span className="font-mono"> · #{asset.cardNumber}</span>}
+            </p>
             <p className="text-foreground line-clamp-1 text-xs font-medium">
               <span className="text-muted-foreground">{t("Grade:")} </span>
               {asset.gradingCompany === "RAW" ? t("Raw / Ungraded") : `${asset.gradingCompany} ${formatGrade(asset.grade)}`}

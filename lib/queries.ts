@@ -50,15 +50,32 @@ export async function getMarketplaceListings(filters: MarketplaceFilters = {}) {
   };
 
   if (filters.q) {
-    where.OR = [
-      { name: { contains: filters.q, mode: "insensitive" } },
-      { subtitle: { contains: filters.q, mode: "insensitive" } },
-      { serial: { contains: filters.q, mode: "insensitive" } },
-      { seller: { name: { contains: filters.q, mode: "insensitive" } } },
-      { seller: { handle: { contains: filters.q, mode: "insensitive" } } },
-      { owner: { name: { contains: filters.q, mode: "insensitive" } } },
-      { owner: { handle: { contains: filters.q, mode: "insensitive" } } },
-    ];
+    // Every word has to match something, in any order — so "umbreon 215",
+    // "luffy op05" and "charizard psa 10" all find the card. A word can hit
+    // the name, set, card number, serial, seller, or the grader / grade.
+    const searchWords = filters.q
+      .split(/\s+/)
+      .map((w) => w.replace(/^#/, ""))
+      .filter(Boolean)
+      .slice(0, 6);
+    where.AND = searchWords.map((w) => {
+      const grader = (["PSA", "BGS", "CGC", "RAW"] as const).find((g) => g === w.toUpperCase());
+      const grade = /^\d+(\.5)?$/.test(w) && Number(w) <= 10 ? Number(w) : null;
+      return {
+        OR: [
+          { name: { contains: w, mode: "insensitive" } },
+          { subtitle: { contains: w, mode: "insensitive" } },
+          { cardNumber: { contains: w, mode: "insensitive" } },
+          { serial: { contains: w, mode: "insensitive" } },
+          { seller: { name: { contains: w, mode: "insensitive" } } },
+          { seller: { handle: { contains: w, mode: "insensitive" } } },
+          { owner: { name: { contains: w, mode: "insensitive" } } },
+          { owner: { handle: { contains: w, mode: "insensitive" } } },
+          ...(grader ? [{ gradingCompany: grader }] : []),
+          ...(grade != null ? [{ grade }] : []),
+        ],
+      } satisfies Prisma.AssetWhereInput;
+    });
   }
   if (filters.games?.length) {
     where.game = { in: filters.games };
@@ -693,14 +710,34 @@ export function median(values: number[]): number | null {
 const SALE_LOOKBACK_DAYS = 90;
 
 /**
- * Real CardMart price stats for one exact card (same name + grading company +
- * grade): the median of completed sale prices over the last 90 days — the
+ * Real CardMart price stats for one exact card (same name, set, grading
+ * company, grade and Black Label status), not counting `excludeAssetId` —
+ * the listing being compared: the median of completed sale prices over the last 90 days — the
  * median, not the mean, so one outlier or wash sale can't drag it — plus the
  * live asking range across every current listing of the same card.
  */
-export async function getCardMarketStats(card: { name: string; gradingCompany: GradingCompany; grade: number | null }) {
+export async function getCardMarketStats(
+  card: {
+    name: string;
+    subtitle: string;
+    gradingCompany: GradingCompany;
+    grade: number | null;
+    isBlackLabel: boolean;
+    cardNumber?: string | null;
+  },
+  excludeAssetId?: string,
+) {
   const since = new Date(Date.now() - SALE_LOOKBACK_DAYS * 86_400_000);
-  const sameCard = { name: card.name, gradingCompany: card.gradingCompany, grade: card.grade };
+  const sameCard = {
+    name: card.name,
+    subtitle: card.subtitle,
+    gradingCompany: card.gradingCompany,
+    grade: card.grade,
+    isBlackLabel: card.isBlackLabel,
+    // A listing without a number may still be this card; one with a
+    // different number isn't.
+    ...(card.cardNumber ? { OR: [{ cardNumber: card.cardNumber }, { cardNumber: null }] } : {}),
+  } satisfies Prisma.AssetWhereInput;
   const [sales, listings] = await Promise.all([
     prisma.escrowTransaction.findMany({
       where: { status: "RELEASED", releasedAt: { gte: since }, asset: sameCard },
@@ -708,7 +745,13 @@ export async function getCardMarketStats(card: { name: string; gradingCompany: G
       select: { amountThb: true, releasedAt: true },
     }),
     prisma.asset.findMany({
-      where: { ...sameCard, forSale: true, priceThb: { not: null }, marketStatus: MARKETPLACE_VISIBLE_STATUSES },
+      where: {
+        ...sameCard,
+        ...(excludeAssetId ? { id: { not: excludeAssetId } } : {}),
+        forSale: true,
+        priceThb: { not: null },
+        marketStatus: MARKETPLACE_VISIBLE_STATUSES,
+      },
       select: { priceThb: true },
     }),
   ]);
