@@ -277,6 +277,12 @@ function flagUnusualListing(
 // Below this share of the exact card's eBay median, a price is worth a look.
 const SUSPICIOUS_PRICE_RATIO = 0.4;
 
+/** A twin's on-chain NFT name, grade first so it survives the 32-byte cut: "PSA 10 · Lugia Holo 1st Edition". */
+function nftName(cardName: string, gradingCompany: string, grade: number | null): string {
+  const tier = gradingCompany === "RAW" || grade == null ? "Raw" : `${gradingCompany} ${Number.isInteger(grade) ? grade : grade.toFixed(1)}`;
+  return `${tier} · ${cardName}`;
+}
+
 function generateRawSerial(): string {
   return `RAW-${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
 }
@@ -424,7 +430,10 @@ export async function createListing(
   let isOnChain: boolean;
   let mintAddress: string | null = null;
   if (authorityAddress && user.walletAddress) {
-    const minted = await mintDigitalTwinToken({ ownerAddress: user.walletAddress });
+    const minted = await mintDigitalTwinToken({
+      ownerAddress: user.walletAddress,
+      name: nftName(data.name, data.raw ? "RAW" : data.gradingCompany, data.raw ? null : (data.grade ?? null)),
+    });
     mintTxSignature = minted.txSignature;
     mintAddress = minted.mintAddress;
     isOnChain = true;
@@ -1921,7 +1930,10 @@ export async function adminCompleteGrading(
   let isOnChain: boolean;
   let mintAddress: string | null = null;
   if (authorityAddress && submission.seller.walletAddress) {
-    const minted = await mintDigitalTwinToken({ ownerAddress: submission.seller.walletAddress });
+    const minted = await mintDigitalTwinToken({
+      ownerAddress: submission.seller.walletAddress,
+      name: nftName(submission.itemName, submission.gradingCompany, parsed.data.grade),
+    });
     mintTxSignature = minted.txSignature;
     mintAddress = minted.mintAddress;
     isOnChain = true;

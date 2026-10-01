@@ -18,31 +18,32 @@ import { generateKeyPair } from "@solana/keys";
 import { getAddressFromPublicKey } from "@solana/addresses";
 import { getCreateAccountInstruction } from "@solana-program/system";
 import {
-  AuthorityType,
   TOKEN_PROGRAM_ADDRESS,
   findAssociatedTokenPda,
   getMintSize,
   getInitializeMint2Instruction,
   getCreateAssociatedTokenIdempotentInstructionAsync,
   getMintToInstruction,
-  getSetAuthorityInstruction,
   getTransferCheckedInstruction,
 } from "@solana-program/token";
 
 import { getEscrowAuthorityAddress, rpc, signAndSend } from "@/lib/web3/authority-server";
+import { getCreateNftMetadataInstructions, nftMetadataUri } from "@/lib/web3/token-metadata";
 
 const DECIMALS = 0;
 const SUPPLY = BigInt(1);
 
 /**
  * Mints a brand-new 1-of-1 digital twin token directly into `ownerAddress`'s
- * associated token account. Entirely authority-signed — the owner (seller)
- * doesn't need to be present or sign anything at mint time. Mint authority
- * is permanently revoked in the same transaction, so the supply of 1 is
- * fixed forever, not just true right now.
+ * associated token account, as a Metaplex NFT named `name` (see
+ * lib/web3/token-metadata.ts) so wallets show the card. Entirely
+ * authority-signed — the owner (seller) doesn't need to be present or sign
+ * anything at mint time. The master edition takes over the mint authority in
+ * the same transaction, so the supply of 1 is fixed forever.
  */
 export async function mintDigitalTwinToken(opts: {
   ownerAddress: string;
+  name: string;
 }): Promise<{ mintAddress: string; txSignature: string }> {
   const authorityAddress = await getEscrowAuthorityAddress();
   if (!authorityAddress) throw new Error("Escrow authority is not configured.");
@@ -70,6 +71,9 @@ export async function mintDigitalTwinToken(opts: {
       mint,
       decimals: DECIMALS,
       mintAuthority: authority,
+      // Metaplex requires one to create a master edition, which then takes it
+      // over along with the mint authority; nothing ever freezes a twin.
+      freezeAuthority: authority,
     }),
     await getCreateAssociatedTokenIdempotentInstructionAsync({
       payer: createNoopSigner(authority),
@@ -82,12 +86,12 @@ export async function mintDigitalTwinToken(opts: {
       mintAuthority: createNoopSigner(authority),
       amount: SUPPLY,
     }),
-    getSetAuthorityInstruction({
-      owned: mint,
-      owner: createNoopSigner(authority),
-      authorityType: AuthorityType.MintTokens,
-      newAuthority: null,
-    }),
+    ...(await getCreateNftMetadataInstructions({
+      mint,
+      authority,
+      name: opts.name,
+      uri: nftMetadataUri(mintAddress),
+    })),
   ];
 
   const txSignature = await signAndSend(instructions, authorityAddress, [mintKeyPair]);

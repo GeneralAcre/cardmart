@@ -53,7 +53,7 @@ signature, so anyone can audit a card's history.
 | Piece | What it does | Code |
 |---|---|---|
 | **Escrow program** (Anchor, Rust) | `lock_payment` holds the buyer's SOL in a per-trade PDA; `release_to_seller` / `refund_to_buyer` are signed only by the escrow authority after inspection. The seller is re-checked at release, so payout can't be redirected. Program `FQwLbEBxKw5srEobsCw37c1B7QNkNaRACN5VBvUwWEuC` on devnet. | [`contracts/escrow`](contracts/escrow) |
-| **Digital twin token** | Each listed card is minted as a 1-of-1 SPL token (decimals 0, supply 1) to the seller. The seller approves a one-time transfer delegate; the token moves to the buyer when escrow releases. | [`lib/web3/token-server.ts`](lib/web3/token-server.ts) |
+| **Digital twin NFT** | Each listed card is minted to the seller as a 1-of-1 Metaplex NFT (Token Metadata + master edition, supply fixed at 1). Its name, image, grade, cert, set and card number show in Phantom and other wallets, served from [`/api/nft/[mint]`](app/api/nft/[mint]/route.ts). The seller approves a one-time transfer delegate; the NFT moves to the buyer when escrow releases. | [`lib/web3/token-server.ts`](lib/web3/token-server.ts), [`lib/web3/token-metadata.ts`](lib/web3/token-metadata.ts) |
 | **Agent wallets** | One keypair per user (AES-256-GCM encrypted at rest). The user funds it; it signs `lock_payment` on its own, so the agent can buy while the user is away. The platform pays all transaction fees. | [`lib/agent/wallet.ts`](lib/agent/wallet.ts) |
 | **Embedded wallets** | Privy sign-in (Google, email, or an existing Phantom/Backpack wallet) creates a Solana wallet for new users, with no seed phrase to manage. | [`components/providers/privy-provider.tsx`](components/providers/privy-provider.tsx) |
 
@@ -91,7 +91,7 @@ Everything runs on devnet. No real money moves.
 
 - **App:** Next.js 16 (App Router, Server Actions), React 19, TypeScript, Tailwind CSS v4
 - **Data:** Postgres (Neon) with Prisma 7, Vercel Blob for verification photos
-- **Solana:** Anchor 1.1 program, `@solana/kit`, SPL Token, Memo program, Privy embedded wallets
+- **Solana:** Anchor 1.1 program, `@solana/kit`, SPL Token, Metaplex Token Metadata, Memo program, Privy embedded wallets
 - **AI:** OpenRouter (DeepSeek V4 Flash plans tasks, DeepSeek V4 Pro judges listings), structured JSON output validated with Zod
 - **Data sources:** PSA Public API (certs, population), eBay Browse API (exact-match asking prices), TCG API (card catalogue, images, card numbers)
 
