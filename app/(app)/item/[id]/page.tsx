@@ -8,6 +8,7 @@ import {
   getAssetById,
   getAssetInsightData,
   getCardMarketStats,
+  getCardAcrossGrades,
   getMySwappableAssets,
   getPriceHistory,
   getSellerRating,
@@ -58,6 +59,7 @@ import {
 import { extractPsaCertNumber, isPsaCertNumber, lookupPsaCert, lookupPsaPopulation, psaCertUrl } from "@/lib/psa";
 import { lookupCardPrice } from "@/lib/tcg-price";
 import { buildMarketQuery, lookupEbayPrice } from "@/lib/ebay";
+import { GradeLadder, ladderTiers, tierKey } from "@/components/item/grade-ladder";
 import { cn } from "@/lib/utils";
 import { realPhotos } from "@/lib/card-image";
 
@@ -88,6 +90,10 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
     cardNumber: asset.cardNumber,
   };
   const ebayQuery = buildMarketQuery(marketCard);
+  // The other grades on the "Price by grade" ladder; this listing's own
+  // grade reuses ebayQuote below instead of a second lookup.
+  const currentTier = { gradingCompany: asset.gradingCompany, grade: asset.grade, isBlackLabel: asset.isBlackLabel };
+  const otherTiers = ladderTiers(currentTier).filter((tier) => tierKey(tier) !== tierKey(currentTier));
 
   // These five are all independent of each other (only psaPopulation below
   // depends on one of them) — awaiting them one at a time was serializing
@@ -95,7 +101,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
   // page load, which is what was pushing this page to 5-10s and occasionally
   // outrunning the client's patience ("destination stream closed early").
   // Running them concurrently caps the wait at the slowest single call.
-  const [psaCert, priceQuote, ebayQuote, priceHistory, sellerRating, similarAssets, cardMarket, insightData] = await Promise.all([
+  const [psaCert, priceQuote, ebayQuote, priceHistory, sellerRating, similarAssets, cardMarket, insightData, gradeData, otherTierEbay] = await Promise.all([
     // Live PSA cert lookup for display — best-effort, and never blocks the
     // page: it silently returns null whenever PSA isn't configured, the
     // account isn't approved for live access yet, or the request fails.
@@ -123,6 +129,12 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
     }),
     getCardMarketStats(marketCard, asset.id),
     getAssetInsightData(asset.id),
+    getCardAcrossGrades(marketCard),
+    Promise.all(otherTiers.map((tier) => lookupEbayPrice({ ...marketCard, ...tier }).catch(() => null))),
+  ]);
+  const ladderEbay = Object.fromEntries([
+    [tierKey(currentTier), ebayQuote],
+    ...otherTiers.map((tier, i) => [tierKey(tier), otherTierEbay[i]] as const),
   ]);
 
   const psaPopulation = psaCert?.specId != null ? await lookupPsaPopulation(psaCert.specId) : null;
@@ -175,7 +187,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
     asset.marketStatus === "IN_AUCTION" ? getActiveAuctionForAsset(asset.id) : Promise.resolve(null),
     !isOwner ? getAcceptedOfferForViewer(asset.id, user.id) : Promise.resolve(null),
     swappable ? getMySwappableAssets(user.id) : Promise.resolve([]),
-    swappable ? getEscrowAuthorityAddress() : Promise.resolve(null),
+    getEscrowAuthorityAddress(),
     isOwner ? getShipmentForRecipient(asset.id, user.id) : Promise.resolve(null),
   ]);
 
@@ -428,6 +440,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
                   amountThb={acceptedOffer.amountThb}
                   vaulted={asset.vaulted}
                   sellerWalletAddress={asset.owner.walletAddress}
+                  platformWalletAddress={escrowAuthorityAddress}
                 />
               )}
               <BuyPanel
@@ -439,6 +452,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
                 marketStatus={asset.marketStatus}
                 isOwner={isOwner}
                 sellerWalletAddress={asset.owner.walletAddress}
+                platformWalletAddress={escrowAuthorityAddress}
               />
               {!isOwner && asset.forSale && (
                 <MakeOfferButton
@@ -577,6 +591,10 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
         graded={asset.gradingCompany !== "RAW"}
         ebay={ebayQuote}
       />
+
+      <Separator className="my-10" />
+
+      <GradeLadder current={currentTier} listings={gradeData.listings} sales={gradeData.sales} ebay={ladderEbay} />
 
       <div className="mt-10 grid grid-cols-1 items-start gap-10 md:grid-cols-2">
         <div className="flex flex-col gap-5">

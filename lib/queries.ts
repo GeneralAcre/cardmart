@@ -770,6 +770,40 @@ export async function getCardMarketStats(
   };
 }
 
+/**
+ * One card across every grade it's listed or sold in on CardMart — same name
+ * and set (and card number, when known) — for the item page's "Price by
+ * grade" ladder and recent-sales list.
+ */
+export async function getCardAcrossGrades(card: { name: string; subtitle: string; cardNumber?: string | null }) {
+  const sameCard: Prisma.AssetWhereInput = {
+    name: card.name,
+    subtitle: card.subtitle,
+    ...(card.cardNumber ? { OR: [{ cardNumber: card.cardNumber }, { cardNumber: null }] } : {}),
+  };
+  const [listings, sales] = await Promise.all([
+    prisma.asset.findMany({
+      where: { ...sameCard, forSale: true, priceThb: { not: null }, marketStatus: MARKETPLACE_VISIBLE_STATUSES },
+      select: { gradingCompany: true, grade: true, isBlackLabel: true, priceThb: true },
+    }),
+    prisma.escrowTransaction.findMany({
+      where: { status: "RELEASED", releasedAt: { not: null }, asset: sameCard },
+      orderBy: { releasedAt: "desc" },
+      take: 30,
+      select: {
+        id: true,
+        amountThb: true,
+        releasedAt: true,
+        asset: { select: { gradingCompany: true, grade: true, isBlackLabel: true } },
+      },
+    }),
+  ]);
+  return {
+    listings: listings.map((l) => ({ ...l, priceThb: l.priceThb! })),
+    sales: sales.map((s) => ({ id: s.id, amountThb: s.amountThb, soldAt: s.releasedAt!, ...s.asset })),
+  };
+}
+
 /** Raw inputs for an item's price insights (see lib/insights.ts). */
 export async function getAssetInsightData(assetId: string) {
   const [snapshots, watcherCount, pendingOffers] = await Promise.all([
