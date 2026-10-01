@@ -35,6 +35,8 @@ export const metadata: Metadata = {
   title: "CardMart — Collectibles Marketplace & Digital Certificate Vault",
   description:
     "Trade real, certified collectibles protected by secure payments and digital certificates.",
+  // Links shared on X credit the account in the preview card.
+  twitter: { card: "summary_large_image", site: "@cardmartapp", creator: "@cardmartapp" },
 };
 
 // Every page here depends on live session/DB state anyway (via

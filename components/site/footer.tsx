@@ -19,7 +19,7 @@ const LEGAL_LINKS = [
 ];
 
 const SOCIAL_LINKS = [
-  { label: "X", href: "#", image: "/X-logo.png" },
+  { label: "CardMart on X (@cardmartapp)", href: "https://x.com/cardmartapp", image: "/X-logo.png" },
   // Hidden for now — uncomment to show the GitHub link again.
   // { label: "GitHub", href: "https://github.com/GeneralAcre/id-thesis", image: "/Github-logo.png" },
 ];
