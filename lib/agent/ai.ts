@@ -1,32 +1,69 @@
 import "server-only";
-// Claude's two jobs in the buying agent:
+// The AI's two jobs in the buying agent:
 //   1. planMandate — turn "find me a PSA 10 Charizard under 20k" into
 //      structured search criteria and limits the user then confirms.
 //   2. judgeListings — for listings that already pass the hard filters, decide
 //      whether each one is really the card the user asked for and a fair
 //      price, with a short reason the user can read.
-// Claude never sets or overrides a limit: every price/budget/count check runs
+// The AI never sets or overrides a limit: every price/budget/count check runs
 // in code before and after it (see lib/agent/engine.ts).
-import Anthropic from "@anthropic-ai/sdk";
-import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
+//
+// Both go through OpenRouter (https://openrouter.ai), so the model is just an
+// env var. Planning is simple extraction and runs on the cheapest model;
+// judging needs real judgement about card variants and prices.
 import { z } from "zod";
 
-const MODEL = "claude-opus-5-5";
-
-let client: Anthropic | null = null;
-function anthropic(): Anthropic {
-  client ??= new Anthropic();
-  return client;
-}
+const PLAN_MODEL = process.env.OPENROUTER_PLAN_MODEL || "deepseek/deepseek-v4-flash";
+const JUDGE_MODEL = process.env.OPENROUTER_JUDGE_MODEL || "deepseek/deepseek-v4-pro";
 
 export function isAgentAiConfigured(): boolean {
-  return Boolean(process.env.ANTHROPIC_API_KEY);
+  return Boolean(process.env.OPENROUTER_API_KEY);
 }
 
-// Refusal fallbacks are on by default: if a request is declined by a safety
-// classifier, the API re-runs it on a fallback model inside the same call.
-function withFallback() {
-  return { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const };
+/**
+ * One chat completion that must return JSON matching `schema`. Returns null
+ * if the model refused, got cut off, or returned something that doesn't fit.
+ */
+async function completeJson<T extends z.ZodType>(opts: {
+  model: string;
+  maxTokens: number;
+  system: string;
+  user: string;
+  name: string;
+  schema: T;
+}): Promise<z.infer<T> | null> {
+  const jsonSchema = z.toJSONSchema(opts.schema, { target: "draft-7" });
+  delete jsonSchema.$schema;
+  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+      "Content-Type": "application/json",
+      "X-Title": "CardMart buying agent",
+    },
+    body: JSON.stringify({
+      model: opts.model,
+      max_tokens: opts.maxTokens,
+      messages: [
+        { role: "system", content: opts.system },
+        { role: "user", content: opts.user },
+      ],
+      response_format: { type: "json_schema", json_schema: { name: opts.name, strict: true, schema: jsonSchema } },
+      // Only route to providers that actually enforce the JSON schema.
+      provider: { require_parameters: true },
+    }),
+  });
+  if (!res.ok) throw new Error(`OpenRouter ${res.status}: ${(await res.text()).slice(0, 300)}`);
+
+  const data = await res.json();
+  const choice = data.choices?.[0];
+  if (!choice || choice.finish_reason !== "stop" || typeof choice.message?.content !== "string") return null;
+  try {
+    const parsed = opts.schema.safeParse(JSON.parse(choice.message.content));
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -56,18 +93,18 @@ const PLAN_SYSTEM = `You set up a buying agent on CardMart, a Thai marketplace f
 Turn the user's request into search criteria and spending limits. Read "k" as thousands (20k = 20000). If the user gives one price, it is the maximum per card, and the budget is that price times the number of cards unless they say otherwise. Never invent a price the user didn't give — leave it null and list it in "missing". Grades run 1–10 (BGS also has half grades); "gem mint" means 10. Always write the summary and the "missing" items in English.`;
 
 export async function planMandate(instruction: string): Promise<MandatePlan> {
-  const response = await anthropic().beta.messages.parse({
-    model: MODEL,
-    max_tokens: 4000,
-    ...withFallback(),
-    output_config: { effort: "low", format: betaZodOutputFormat(MandatePlan) },
+  const plan = await completeJson({
+    model: PLAN_MODEL,
+    maxTokens: 4000,
     system: PLAN_SYSTEM,
-    messages: [{ role: "user", content: instruction }],
+    user: instruction,
+    name: "mandate_plan",
+    schema: MandatePlan,
   });
-  if (response.stop_reason === "refusal" || !response.parsed_output) {
+  if (!plan) {
     throw new Error("The agent couldn't understand that request. Try describing the card and your maximum price.");
   }
-  return response.parsed_output;
+  return plan;
 }
 
 // ---------------------------------------------------------------------------
@@ -82,6 +119,8 @@ export interface CandidateListing {
   grade: number | null;
   isBlackLabel: boolean;
   priceThb: number;
+  // Priced over the collector's maximum — the agent can only make an offer.
+  askingAboveMax: boolean;
   vaulted: boolean;
   seller: { rating: number | null; reviewCount: number; idVerified: boolean; completedSales: number };
   market: {
@@ -109,7 +148,7 @@ export type ListingJudgement = z.infer<typeof Judgement>["decisions"][number];
 const JUDGE_SYSTEM = `You are a careful buying agent for a trading-card collector on CardMart, a Thai marketplace (prices in THB). For each candidate listing, decide:
 1. isMatch — is it really the card the collector asked for? Watch for different sets, numbers, languages, promos, reprints or illustration variants with similar names. A grade above the minimum is fine.
 2. buy — is it worth buying now? Compare the price with the market data given. Recommend buying when it's at or below a fair price; skip when it's clearly overpriced. With no market data at all, judge from the collector's own maximum and say so with low confidence.
-Every candidate is already within the collector's price limit, so don't reject a listing only for being close to it.
+Candidates without askingAboveMax are already within the collector's price limit, so don't reject one only for being close to it. Candidates with askingAboveMax are priced a little above it: the agent can only offer the seller the collector's maximum or less, so set buy to true when it's the right card and worth that offer, and give a fairValueThb whenever there's any basis for one.
 
 Write reasoning for the collector, not for a developer: short, concrete, always in English, with amounts written as "20,000 THB" (never the ฿ sign).`;
 
@@ -118,16 +157,11 @@ export async function judgeListings(
   candidates: CandidateListing[],
 ): Promise<ListingJudgement[]> {
   if (candidates.length === 0) return [];
-  const response = await anthropic().beta.messages.parse({
-    model: MODEL,
-    max_tokens: 16000,
-    ...withFallback(),
-    output_config: { effort: "medium", format: betaZodOutputFormat(Judgement) },
+  const result = await completeJson({
+    model: JUDGE_MODEL,
+    maxTokens: 16000,
     system: JUDGE_SYSTEM,
-    messages: [
-      {
-        role: "user",
-        content: `The collector asked: "${mandate.instruction}"
+    user: `The collector asked: "${mandate.instruction}"
 Agent goal: ${mandate.summary}
 Maximum per card: ${mandate.maxPriceThb.toLocaleString()} THB
 
@@ -135,10 +169,10 @@ Candidate listings (JSON):
 ${JSON.stringify(candidates, null, 2)}
 
 Return one decision per candidate, using its assetId.`,
-      },
-    ],
+    name: "listing_judgement",
+    schema: Judgement,
   });
-  if (response.stop_reason === "refusal" || !response.parsed_output) return [];
+  if (!result) return [];
   const known = new Set(candidates.map((c) => c.assetId));
-  return response.parsed_output.decisions.filter((d) => known.has(d.assetId));
+  return result.decisions.filter((d) => known.has(d.assetId));
 }

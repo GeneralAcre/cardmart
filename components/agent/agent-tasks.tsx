@@ -33,8 +33,10 @@ export interface AgentTaskRow {
 
 export interface AgentDecisionRow {
   id: string;
-  status: "PROPOSED" | "EXECUTED" | "SKIPPED" | "DECLINED" | "FAILED";
+  status: "PROPOSED" | "OFFERED" | "EXECUTED" | "SKIPPED" | "DECLINED" | "FAILED";
   priceThb: number;
+  // What the agent offered, when the listing was priced above the task's max.
+  offerThb: number | null;
   fairValueThb: number | null;
   confidence: string | null;
   reasoning: string;
@@ -166,6 +168,7 @@ export function AgentTaskList({ tasks }: { tasks: AgentTaskRow[] }) {
 
 const DECISION_BADGE: Record<AgentDecisionRow["status"], { label: string; className: string }> = {
   PROPOSED: { label: "Needs your OK", className: "bg-highlight text-highlight-foreground border-0" },
+  OFFERED: { label: "Offer sent", className: "bg-muted border-0" },
   EXECUTED: { label: "Bought", className: "bg-success/15 text-success border-0" },
   SKIPPED: { label: "Passed", className: "" },
   DECLINED: { label: "You declined", className: "" },
@@ -178,7 +181,8 @@ function DecisionCard({ d }: { d: AgentDecisionRow }) {
   const [, startTransition] = useTransition();
   const t = useT();
   const badge = DECISION_BADGE[d.status];
-  const deal = d.fairValueThb != null && d.fairValueThb > 0 ? Math.round(((d.fairValueThb - d.priceThb) / d.fairValueThb) * 100) : null;
+  const paying = d.offerThb ?? d.priceThb;
+  const deal = d.fairValueThb != null && d.fairValueThb > 0 ? Math.round(((d.fairValueThb - paying) / d.fairValueThb) * 100) : null;
 
   function approve() {
     setBusy("approve");
@@ -213,7 +217,10 @@ function DecisionCard({ d }: { d: AgentDecisionRow }) {
             </Link>
             <span className="text-muted-foreground text-xs">
               {d.asset.gradingCompany === "RAW" ? t("Raw") : `${d.asset.gradingCompany} ${formatGrade(d.asset.grade)}`}
-              {d.asset.isBlackLabel ? " · Black Label" : ""} · {formatThb(d.priceThb)}
+              {d.asset.isBlackLabel ? " · Black Label" : ""} ·{" "}
+              {d.offerThb != null
+                ? t("offered {offer} (asking {price})", { offer: formatThb(d.offerThb), price: formatThb(d.priceThb) })
+                : formatThb(d.priceThb)}
               {deal != null && (
                 <span className={cn("ml-1", deal >= 0 ? "text-success" : "text-destructive")}>
                   ({deal >= 0 ? t("{pct}% under fair value", { pct: deal }) : t("{pct}% over fair value", { pct: -deal })})

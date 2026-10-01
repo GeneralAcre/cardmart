@@ -15,6 +15,12 @@ import { PRIVY_ENFORCED, getPrivyUserProfile, primarySolanaWallet, verifyPrivySe
 // there. Everything else should call getCurrentUser() below instead.
 export const getSessionUser = cache(async () => {
   if (!PRIVY_ENFORCED) {
+    // The demo user is an admin, so a deployment missing the Privy keys (a
+    // Vercel preview with Production-only env vars, say) must not quietly
+    // sign every visitor in as it. Only local dev falls back.
+    if (process.env.NODE_ENV === "production" && process.env.ALLOW_DEMO_USER !== "true") {
+      throw new Error("Sign-in isn't configured on this deployment: set NEXT_PUBLIC_PRIVY_APP_ID and PRIVY_APP_SECRET.");
+    }
     return prisma.user.findUniqueOrThrow({ where: { handle: "you" } });
   }
 

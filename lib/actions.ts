@@ -19,7 +19,7 @@ import { themeIndexForSerial } from "@/lib/theme";
 import { getVerificationChecklist } from "@/lib/verification-checklist";
 import { BGS_BLACK_LABEL_GRADE, gradeTierLabel } from "@/lib/labels";
 import { requestDevnetAirdrop } from "@/lib/solana";
-import { runMandate, runMandatesForListing } from "@/lib/agent/engine";
+import { runMandate, runMandatesForListing, withdrawAgentOffers } from "@/lib/agent/engine";
 import { agentLockPayment, isAgentChainEnabled } from "@/lib/agent/wallet";
 import { EMAILED_NOTIFICATION_TYPES, isEmailConfigured, sendEmail } from "@/lib/email";
 import { checkAllIntegrations } from "@/lib/integrations";
@@ -1113,10 +1113,13 @@ export async function respondToOffer(offerId: string, action: "accept" | "reject
   if (offer.sellerId !== user.id) throw new Error("You do not own this item.");
   if (offer.status !== "PENDING") throw new Error("This offer has already been resolved.");
 
+  // An offer the buyer's agent sent is followed up by the agent, not by hand.
+  const fromAgent = await prisma.agentDecision.findUnique({ where: { offerId }, select: { id: true } });
+
   if (action === "accept") {
     if (!offer.asset.forSale) throw new Error("This item is no longer for sale.");
     await prisma.offer.update({ where: { id: offerId }, data: { status: "ACCEPTED", respondedAt: new Date() } });
-    await notifyUser(
+    if (!fromAgent) await notifyUser(
       offer.buyerId,
       "OFFER_ACCEPTED",
       "Offer accepted",
@@ -1134,6 +1137,8 @@ export async function respondToOffer(offerId: string, action: "accept" | "reject
     );
   }
 
+  if (fromAgent) await handleAgentOfferResponse(offerId, action);
+
   revalidatePath("/portfolio");
 }
 
@@ -1145,6 +1150,10 @@ export async function withdrawOffer(offerId: string) {
   if (offer.status !== "PENDING") throw new Error("This offer has already been resolved.");
 
   await prisma.offer.update({ where: { id: offerId }, data: { status: "WITHDRAWN", respondedAt: new Date() } });
+  await prisma.agentDecision.updateMany({
+    where: { offerId, status: "OFFERED" },
+    data: { status: "DECLINED", error: "You withdrew this offer.", resolvedAt: new Date() },
+  });
   revalidatePath("/portfolio");
 }
 
@@ -3133,17 +3142,26 @@ async function failAgentDecision(decisionId: string, userId: string, assetName: 
 async function executeAgentDecision(decisionId: string): Promise<void> {
   const decision = await prisma.agentDecision.findUnique({
     where: { id: decisionId },
-    include: { mandate: { include: { user: { include: { agentWallet: true } } } }, asset: { include: { owner: true } } },
+    include: {
+      mandate: { include: { user: { include: { agentWallet: true } } } },
+      asset: { include: { owner: true } },
+      offer: true,
+    },
   });
   if (!decision || decision.status !== "PROPOSED") return;
   const { mandate, asset } = decision;
   const buyer = mandate.user;
-  const price = decision.priceThb;
+  // An accepted offer is paid at the offer; otherwise at the asking price.
+  const asking = decision.priceThb;
+  const price = decision.offerThb ?? asking;
 
   if (buyer.isBanned) return failAgentDecision(decisionId, buyer.id, asset.name, "Your account is suspended.");
   if (mandate.status !== "ACTIVE") return failAgentDecision(decisionId, buyer.id, asset.name, "This agent task is paused or finished.");
   if (price > mandate.maxPriceThb) return failAgentDecision(decisionId, buyer.id, asset.name, "Over your maximum price.");
-  if (!asset.forSale || asset.priceThb !== price || asset.redeemedAt || asset.ownerId === buyer.id) {
+  if (decision.offerId && decision.offer?.status !== "ACCEPTED") {
+    return failAgentDecision(decisionId, buyer.id, asset.name, "The seller hasn't accepted the offer.");
+  }
+  if (!asset.forSale || asset.priceThb !== asking || asset.redeemedAt || asset.ownerId === buyer.id) {
     return failAgentDecision(decisionId, buyer.id, asset.name, "It's no longer for sale at that price.");
   }
 
@@ -3167,7 +3185,7 @@ async function executeAgentDecision(decisionId: string): Promise<void> {
 
   // Claim the listing itself.
   const listing = await prisma.asset.updateMany({
-    where: { id: asset.id, forSale: true, priceThb: price, marketStatus: { in: ["READY_TO_SHIP", "IN_VAULT"] } },
+    where: { id: asset.id, forSale: true, priceThb: asking, marketStatus: { in: ["READY_TO_SHIP", "IN_VAULT"] } },
     data: { forSale: false },
   });
   if (listing.count === 0) {
@@ -3206,6 +3224,7 @@ async function executeAgentDecision(decisionId: string): Promise<void> {
     const updated = await prisma.agentMandate.findUniqueOrThrow({ where: { id: mandate.id } });
     if (updated.boughtCount >= updated.maxCards) {
       await prisma.agentMandate.update({ where: { id: mandate.id }, data: { status: "DONE" } });
+      await withdrawAgentOffers(mandate.id);
     }
     await notifyUser(
       buyer.id,
@@ -3225,6 +3244,72 @@ async function executeAgentDecision(decisionId: string): Promise<void> {
   }
 }
 
+/** Sends the seller the offer the engine decided on (a match priced above the task's max). */
+async function sendAgentOffer(decisionId: string): Promise<void> {
+  const decision = await prisma.agentDecision.findUnique({
+    where: { id: decisionId },
+    include: { mandate: true, asset: true },
+  });
+  if (!decision || decision.status !== "OFFERED" || decision.offerThb == null) return;
+  const { asset, mandate } = decision;
+  const pending = await prisma.offer.findFirst({ where: { assetId: asset.id, buyerId: mandate.userId, status: "PENDING" } });
+  if (!asset.forSale || asset.ownerId === mandate.userId || pending) {
+    await prisma.agentDecision.update({
+      where: { id: decisionId },
+      data: { status: "SKIPPED", error: "Couldn't send an offer on this listing.", resolvedAt: new Date() },
+    });
+    return;
+  }
+  const offer = await prisma.offer.create({
+    data: {
+      assetId: asset.id,
+      buyerId: mandate.userId,
+      sellerId: asset.ownerId,
+      amountThb: decision.offerThb,
+      message: "Sent by the buyer's buying agent.",
+    },
+  });
+  await prisma.agentDecision.update({ where: { id: decisionId }, data: { offerId: offer.id } });
+  await notifyUser(
+    asset.ownerId,
+    "OFFER_RECEIVED",
+    "New offer received",
+    `A buyer offered ${decision.offerThb.toLocaleString()} THB for ${asset.name}.`,
+    "/portfolio",
+  );
+}
+
+/** The seller answered an offer the buying agent sent: buy (or ask the owner), or record the no. */
+async function handleAgentOfferResponse(offerId: string, action: "accept" | "reject") {
+  const decision = await prisma.agentDecision.findUnique({
+    where: { offerId },
+    include: { mandate: true, asset: true },
+  });
+  if (!decision || decision.status !== "OFFERED" || decision.offerThb == null) return;
+  const amount = `${decision.offerThb.toLocaleString()} THB`;
+
+  if (action === "reject") {
+    await prisma.agentDecision.update({
+      where: { id: decision.id },
+      data: { status: "FAILED", error: `The seller declined the ${amount} offer.`, resolvedAt: new Date() },
+    });
+    return;
+  }
+
+  await prisma.agentDecision.update({ where: { id: decision.id }, data: { status: "PROPOSED" } });
+  if (decision.mandate.autoBuy) {
+    after(() => executeAgentDecision(decision.id).catch((err) => console.error("Agent offer purchase failed", err)));
+  } else {
+    await notifyUser(
+      decision.mandate.userId,
+      "AGENT_PROPOSAL",
+      "The seller accepted your agent's offer",
+      `${decision.asset.name} for ${amount}. Approve it to buy.`,
+      "/agent",
+    );
+  }
+}
+
 /** When an agent-bought sale is refunded (inspection rejected, seller didn't ship), give the task its budget back. */
 async function returnAgentBudget(escrowTxId: string) {
   const decision = await prisma.agentDecision.findUnique({ where: { escrowTxId } });
@@ -3235,14 +3320,14 @@ async function returnAgentBudget(escrowTxId: string) {
   });
   await prisma.agentMandate.update({
     where: { id: decision.mandateId },
-    data: { spentThb: { decrement: decision.priceThb }, boughtCount: { decrement: 1 }, status: "ACTIVE" },
+    data: { spentThb: { decrement: decision.offerThb ?? decision.priceThb }, boughtCount: { decrement: 1 }, status: "ACTIVE" },
   });
 }
 
 /** Lets any active buying agent look at a card that just went on sale (runs after the response). */
 function triggerAgentsForListing(assetId: string) {
   after(() =>
-    runMandatesForListing(assetId, { execute: executeAgentDecision, notify: notifyAgentOwner }).catch((err) =>
+    runMandatesForListing(assetId, { execute: executeAgentDecision, notify: notifyAgentOwner, offer: sendAgentOffer }).catch((err) =>
       console.error("Agent run failed", err),
     ),
   );
@@ -3260,7 +3345,7 @@ export async function scanAgentMandate(mandateId: string): Promise<{ recorded: n
   const mandate = await loadOwnMandate(mandateId);
   if (mandate.status !== "ACTIVE") return { recorded: 0, error: "Resume this task to scan." };
   try {
-    const recorded = await runMandate(mandateId, { execute: executeAgentDecision, notify: notifyAgentOwner });
+    const recorded = await runMandate(mandateId, { execute: executeAgentDecision, notify: notifyAgentOwner, offer: sendAgentOffer });
     revalidatePath("/agent");
     return { recorded };
   } catch (err) {

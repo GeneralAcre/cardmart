@@ -117,6 +117,33 @@ export async function agentLockPayment(opts: {
   return { tradeId: tradeId.toString(), txSignature, lamports: opts.lamports.toString(), tradeAccount };
 }
 
+/**
+ * Pays a buying-agent task's flat fee from the agent wallet to the platform
+ * authority. Throws if the wallet can't cover it and still stay usable.
+ */
+export async function payAgentTaskFee(
+  wallet: { address: string; encryptedSecret: string },
+  lamports: bigint,
+): Promise<string> {
+  const authority = await getEscrowAuthorityAddress();
+  if (!authority) throw new Error("The escrow authority isn't configured.");
+
+  const balance = await getAgentBalanceLamports(wallet.address);
+  // Leaves enough behind that the wallet stays rent-exempt.
+  if (balance < lamports + LOCK_HEADROOM_LAMPORTS) {
+    const short = lamportsToSol(lamports + LOCK_HEADROOM_LAMPORTS - balance);
+    throw new Error(`Add about ${short.toFixed(3)} more SOL to your agent wallet to pay the task fee.`);
+  }
+
+  const instruction = getTransferSolInstruction({
+    source: createNoopSigner(address(wallet.address)),
+    destination: address(authority),
+    amount: toLamports(lamports),
+  });
+  const keyPair = await loadAgentKeyPair(wallet);
+  return signAndSend([instruction], authority, [keyPair]);
+}
+
 /** Sends the agent wallet's whole balance back to the user's own wallet. */
 export async function withdrawAgentBalance(
   wallet: { address: string; encryptedSecret: string },

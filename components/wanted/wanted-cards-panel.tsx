@@ -4,7 +4,7 @@ import { useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { BellRing, Loader2, Trash2 } from "lucide-react";
+import { BellRing, Bot, Loader2, Trash2 } from "lucide-react";
 import type { GradingCompany } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
@@ -99,10 +99,16 @@ function WantedCardRow({ card }: { card: WantedCard }) {
           {card.lastMatchedAt ? t("Last match {date}", { date: formatDateTime(card.lastMatchedAt) }) : t("No matches yet")}
         </span>
       </div>
-      <Button size="sm" variant="outline" onClick={remove} disabled={pending}>
-        {pending ? <Loader2 className="animate-spin" /> : <Trash2 />}
-        {t("Remove")}
-      </Button>
+      <div className="flex gap-2">
+        <Button size="sm" variant="outline" asChild>
+          <Link href={`/agent?alert=${card.id}`}>
+            <Bot /> {t("Let the agent buy it")}
+          </Link>
+        </Button>
+        <Button size="sm" variant="ghost" onClick={remove} disabled={pending} aria-label={t("Remove")}>
+          {pending ? <Loader2 className="animate-spin" /> : <Trash2 />}
+        </Button>
+      </div>
     </div>
   );
 }

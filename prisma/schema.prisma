@@ -398,6 +398,9 @@ model Offer {
   sellerId String
   seller   User   @relation("OfferSeller", fields: [sellerId], references: [id])
 
+  // Set when a buying agent sent this offer.
+  agentDecision AgentDecision?
+
   @@index([assetId, status])
   @@index([sellerId, status])
   @@index([buyerId, status])
@@ -885,6 +888,15 @@ model AgentWallet {
   user   User   @relation(fields: [userId], references: [id])
 }
 
+// One row per "Plan it" request, to cap free AI planning calls per user per day.
+model AgentPlanRequest {
+  id        String   @id @default(cuid())
+  userId    String
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
 enum AgentMandateStatus {
   ACTIVE
   PAUSED
@@ -914,7 +926,15 @@ model AgentMandate {
   trustedSellersOnly Boolean           @default(false)
   // false = the agent proposes and the user approves each buy.
   autoBuy            Boolean           @default(false)
+  // true = a matching card priced a little above maxPriceThb gets an offer
+  // (never above maxPriceThb) instead of being skipped.
+  makeOffers         Boolean           @default(false)
   fulfillment        FulfillmentChoice @default(VAULT)
+
+  // The flat fee paid to start the task (AGENT_TASK_FEE_THB at the time), and
+  // its devnet transfer — null when agent wallets run in simulated mode.
+  feeThb         Int     @default(0)
+  feeTxSignature String?
 
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -931,6 +951,9 @@ model AgentMandate {
 enum AgentDecisionStatus {
   // Claude recommended buying; waiting for the user (ask-first mode).
   PROPOSED
+  // Priced above the task's max, so the agent sent the seller an offer;
+  // waiting on the seller.
+  OFFERED
   // Bought.
   EXECUTED
   // Claude judged it not a match / not worth it.
@@ -959,6 +982,11 @@ model AgentDecision {
   asset      Asset              @relation(fields: [assetId], references: [id])
   escrowTxId String?            @unique
   escrowTx   EscrowTransaction? @relation(fields: [escrowTxId], references: [id])
+  // Set when the agent made an offer instead of paying the asking price
+  // (priceThb stays the asking price; offerThb is what it offered).
+  offerThb   Int?
+  offerId    String?            @unique
+  offer      Offer?             @relation(fields: [offerId], references: [id], onDelete: SetNull)
 
   @@unique([mandateId, assetId, priceThb])
   @@index([mandateId, createdAt])

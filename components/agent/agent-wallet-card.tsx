@@ -100,8 +100,8 @@ export function AgentWalletCard({ address, balanceSol }: { address: string; bala
 
       {/* Always stacked: this card sits in a narrow column next to the task form. */}
       <div className="mt-auto flex flex-col gap-2">
-        <div className="flex gap-2">
-          <div className="relative w-28 shrink-0">
+        <div className="grid grid-cols-2 gap-2">
+          <div className="relative min-w-0">
             <Input
               inputMode="decimal"
               value={amount}
@@ -111,9 +111,9 @@ export function AgentWalletCard({ address, balanceSol }: { address: string; bala
             />
             <span className="text-muted-foreground pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-xs">SOL</span>
           </div>
-          <Button className="min-w-0 flex-1" onClick={fund} disabled={!connected || busy !== null}>
+          <Button onClick={fund} disabled={!connected || busy !== null}>
             {busy === "fund" ? <Loader2 className="animate-spin" /> : <ArrowDownToLine />}
-            {t("Fund from my wallet")}
+            {t("Add funds")}
           </Button>
         </div>
         <div className="grid grid-cols-2 gap-2">

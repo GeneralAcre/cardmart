@@ -10,6 +10,19 @@ export const FULL_SERVICE_PACKAGE_PRICE_THB = Object.values(
   FULL_SERVICE_COST_BREAKDOWN,
 ).reduce((sum, n) => sum + n, 0);
 
+/**
+ * What starting one buying-agent task costs, paid from the agent wallet to the
+ * platform. It covers the AI calls the task makes, which is why one task only
+ * reviews up to AGENT_TASK_MAX_REVIEWS listings before it finishes.
+ */
+export const AGENT_TASK_FEE_THB = 50;
+// Worst case is one judging call per review. On the default DeepSeek V4 Pro
+// that's well under $0.002, so 300 keeps a task's AI cost far below its fee
+// (≈ $1.50). Lower it if OPENROUTER_JUDGE_MODEL is set to a pricier model.
+export const AGENT_TASK_MAX_REVIEWS = 300;
+/** Free "Plan it" requests per user per day (each one is an AI call). */
+export const AGENT_PLANS_PER_DAY = 30;
+
 /** Flat mock domestic shipping cost the seller bears when their self-minted item sells and ships. */
 export const SELLER_SHIPPING_COST_THB = 150;
 
