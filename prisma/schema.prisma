@@ -823,6 +823,8 @@ enum NotificationType {
   PRICE_DROP_WATCHED
   NEW_SUBMISSION
   DUPLICATE_CERT_ATTEMPT
+  // A new listing that looks off (unknown card, far-below-market price, reused photos).
+  SUSPICIOUS_LISTING
   OUTBID
   AUCTION_STARTING
   AUCTION_WON

@@ -14,7 +14,9 @@ import {
 } from "@/lib/web3/mock-chain";
 import { releaseTradeToSeller, refundTradeToBuyer, getEscrowAuthorityAddress } from "@/lib/web3/escrow-server";
 import { isDigitalTwinHeldBy, mintDigitalTwinToken, transferDigitalTwinToken } from "@/lib/web3/token-server";
-import { FULL_SERVICE_PACKAGE_PRICE_THB, thbToLamports } from "@/lib/pricing";
+import { FULL_SERVICE_PACKAGE_PRICE_THB, THB_PER_USD, thbToLamports } from "@/lib/pricing";
+import { lookupEbayPrice } from "@/lib/ebay";
+import { photoUrlProblem, psaCertMismatch } from "@/lib/listing-checks";
 import { themeIndexForSerial } from "@/lib/theme";
 import { getVerificationChecklist } from "@/lib/verification-checklist";
 import { BGS_BLACK_LABEL_GRADE, gradeTierLabel } from "@/lib/labels";
@@ -238,6 +240,43 @@ const createListingSchema = z
     }
   });
 
+/**
+ * Tells staff about a listing that's live but looks off: a card the catalogue
+ * doesn't recognise, or a price far below what the exact same card asks on
+ * eBay (a classic too-good-to-be-true scam). Runs after the response, and
+ * only flags — the warehouse inspection is still what releases any payment.
+ */
+function flagUnusualListing(
+  asset: { id: string; name: string; subtitle: string; cardNumber: string | null; gradingCompany: GradingCompany; grade: number | null; isBlackLabel: boolean; priceThb: number | null },
+  inCatalog: boolean,
+  sellerName: string,
+) {
+  after(async () => {
+    const reasons: string[] = [];
+    // Raw cards can be anything — promos, misprints, odd sets — and their
+    // price swings with condition, so only graded slabs get flagged.
+    if (asset.gradingCompany === "RAW") return;
+    if (!inCatalog) reasons.push("the card catalogue doesn't recognise this card and set");
+    const ebay = await lookupEbayPrice(asset).catch(() => null);
+    if (ebay && ebay.itemCount >= 3 && asset.priceThb != null) {
+      const marketThb = Math.round(ebay.medianPriceUsd * THB_PER_USD);
+      if (asset.priceThb < marketThb * SUSPICIOUS_PRICE_RATIO) {
+        reasons.push(`it's priced at ${asset.priceThb.toLocaleString()} THB, far below the ${marketThb.toLocaleString()} THB the same card asks on eBay`);
+      }
+    }
+    if (reasons.length === 0) return;
+    await notifyAdmins(
+      "SUSPICIOUS_LISTING",
+      "Listing worth a look",
+      `${sellerName} listed "${asset.name}" — ${reasons.join("; and ")}.`,
+      `/item/${asset.id}`,
+    );
+  });
+}
+
+// Below this share of the exact card's eBay median, a price is worth a look.
+const SUSPICIOUS_PRICE_RATIO = 0.4;
+
 function generateRawSerial(): string {
   return `RAW-${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
 }
@@ -320,6 +359,22 @@ export async function createListing(
     };
   }
 
+  // Photos must be fresh captures uploaded here — not outside links, and not
+  // lifted from another listing.
+  const photoUrls = data.photos.map((p) => p.url);
+  const photoProblem = photoUrlProblem(photoUrls);
+  if (photoProblem) return { error: photoProblem };
+  const reused = await prisma.verificationPhoto.findFirst({ where: { url: { in: photoUrls } }, select: { assetId: true } });
+  if (reused) {
+    await notifyAdmins(
+      "SUSPICIOUS_LISTING",
+      "Reused verification photos",
+      `${user.name ?? user.handle ?? "A user"} tried to list "${data.name}" with photos already used on another listing.`,
+      `/item/${reused.assetId}`,
+    );
+    return { error: "These photos are already used on another listing. Take new ones of this card." };
+  }
+
   if (!data.raw) {
     const existing = await prisma.asset.findUnique({ where: { serial } });
     if (existing) {
@@ -347,6 +402,12 @@ export async function createListing(
       return {
         error: `PSA's records show cert ${serial} as a ${result.cert.cardGrade}, not the grade ${data.grade} you entered.`,
       };
+    }
+    // A real cert has to be THIS card, or a cheap slab's cert could sell a pricier card.
+    if (result.ok) {
+      const mismatch = psaCertMismatch(result.cert, data);
+      if (mismatch) return { error: mismatch };
+      if (!data.cardNumber && result.cert.cardNumber) data.cardNumber = result.cert.cardNumber;
     }
   }
 
@@ -445,6 +506,7 @@ export async function createListing(
     });
   }
 
+  flagUnusualListing(asset, Boolean(catalog), user.name ?? user.handle ?? "A user");
   await notifyWantedCardMatches(asset.id);
   triggerAgentsForListing(asset.id);
 
