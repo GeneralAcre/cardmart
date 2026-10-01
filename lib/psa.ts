@@ -22,7 +22,7 @@ import "server-only";
 // — they're pure string helpers used by client components (e.g. the "View
 // on PSA" link), and this file's "server-only" import would break any
 // client component that imported anything from it.
-export { extractPsaCertNumber, psaCertUrl } from "@/lib/psa-client";
+export { extractPsaCertNumber, isPsaCertNumber, psaCertUrl } from "@/lib/psa-client";
 
 const PSA_API_BASE = "https://api.psacard.com/publicapi";
 

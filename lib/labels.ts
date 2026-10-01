@@ -144,12 +144,12 @@ export const ESCROW_STATUS_LABELS: Record<EscrowStatus, string> = {
 };
 
 export const VERIFICATION_PACKAGE_LABELS: Record<VerificationPackage, string> = {
-  SELF_MINT: "Self Listing",
+  SELF_MINT: "Seller-verified",
   FULL_SERVICE: "Full-Service Grading",
 };
 
 export const VERIFICATION_PACKAGE_BADGE_CLASS: Record<VerificationPackage, string> = {
-  SELF_MINT: "bg-muted text-muted-foreground",
+  SELF_MINT: "bg-muted text-foreground",
   FULL_SERVICE: "border border-foreground/50 text-foreground bg-transparent",
 };
 

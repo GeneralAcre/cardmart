@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2, ShieldCheck, Tag, Truck, Vault } from "lucide-react";
+import { Landmark, Loader2, ShieldCheck, Tag, Truck } from "lucide-react";
 import type { MarketStatus } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
@@ -35,6 +35,10 @@ interface BuyPanelProps {
   /** The current owner's real wallet address — null for demo/mock wallets, in which case escrow stays simulated. */
   sellerWalletAddress: string | null;
 }
+
+// The default active tab (bg-background) is almost the same black as the
+// track in dark mode, so the chosen delivery option gets a solid fill.
+const ACTIVE_TAB_CLASS = "data-[state=active]:bg-foreground data-[state=active]:text-background";
 
 export function BuyPanel({
   assetId,
@@ -121,7 +125,7 @@ export function BuyPanel({
     <div className="flex flex-col gap-4">
       {vaulted ? (
         <div className="flex items-start gap-3 rounded-lg border bg-indigo-500/5 p-4 text-sm">
-          <Vault className="mt-0.5 size-4 shrink-0 text-indigo-500" />
+          <Landmark className="mt-0.5 size-4 shrink-0 text-indigo-500" />
           <p>{t("Already in our vault — ownership transfers instantly, no shipping. Redeem it anytime.")}</p>
         </div>
       ) : (
@@ -129,11 +133,11 @@ export function BuyPanel({
           <span className="text-sm font-medium">{t("How do you want to receive it?")}</span>
           <Tabs value={fulfillment} onValueChange={(v) => setFulfillment(v as "SHIP" | "VAULT")}>
             <TabsList className="w-full">
-              <TabsTrigger value="SHIP">
+              <TabsTrigger value="SHIP" className={ACTIVE_TAB_CLASS}>
                 <Truck className="size-4" /> {t("Ship to My Address")}
               </TabsTrigger>
-              <TabsTrigger value="VAULT">
-                <Vault className="size-4" /> {t("Keep in Vault")}
+              <TabsTrigger value="VAULT" className={ACTIVE_TAB_CLASS}>
+                <Landmark className="size-4" /> {t("Keep in Vault")}
               </TabsTrigger>
             </TabsList>
           </Tabs>

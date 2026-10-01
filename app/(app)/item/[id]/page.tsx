@@ -42,9 +42,9 @@ import { ShipToWarehouseTask } from "@/components/portfolio/ship-to-warehouse";
 import { RatingStars } from "@/components/store/rating-stars";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { ActionButton } from "@/components/ui/action-button";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, ChevronDown, ExternalLink, Flame, Gavel, History } from "lucide-react";
+import { ChevronDown, ChevronLeft, ExternalLink, Flame, Gavel, History } from "lucide-react";
 
 import { formatDate, formatGrade, formatThb } from "@/lib/format";
 import {
@@ -55,7 +55,7 @@ import {
   VERIFICATION_PACKAGE_LABELS,
   gradeTierLabel,
 } from "@/lib/labels";
-import { extractPsaCertNumber, lookupPsaCert, lookupPsaPopulation, psaCertUrl } from "@/lib/psa";
+import { extractPsaCertNumber, isPsaCertNumber, lookupPsaCert, lookupPsaPopulation, psaCertUrl } from "@/lib/psa";
 import { lookupCardPrice } from "@/lib/tcg-price";
 import { buildMarketQuery, lookupEbayPrice } from "@/lib/ebay";
 import { cn } from "@/lib/utils";
@@ -71,6 +71,10 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
   if (!asset) notFound();
 
   const gradeTier = gradeTierLabel(asset.gradingCompany, asset.grade, asset.isBlackLabel);
+  // The tier name without its number, which the caption already shows
+  // ("PSA 9 · Mint", not "PSA 9 · Mint 9"). Black Label has its own pill.
+  const gradeTierName = gradeTier?.replace(/ \(Black Label\)$/, "").replace(/ \d+(\.\d+)?$/, "") ?? null;
+  const psaCertNumber = asset.gradingCompany === "PSA" ? extractPsaCertNumber(asset.serial) : null;
 
   // Grade-aware, e.g. "Charizard VMAX PSA 10" — narrows eBay's own fuzzy
   // search to comps that are actually the same grading tier as this listing.
@@ -199,12 +203,9 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
 
   return (
     <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6">
-      <Button asChild variant="outline" className="mb-6">
-        <Link href="/marketplace">
-          <ArrowLeft />
-          {t("Back to Marketplace")}
-        </Link>
-      </Button>
+      <ActionButton href="/marketplace" icon={ChevronLeft} title={t("Back to Marketplace")} className="mb-6 w-fit">
+        {t("Back")}
+      </ActionButton>
 
       {/* items-start — without it, CSS Grid stretches the shorter info
           column to match the (usually much taller) image column's height,
@@ -238,7 +239,16 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
                 {t(VERIFICATION_PACKAGE_LABELS[asset.verificationPackage])}
               </Badge>
             </div>
-            {!isOwner && <WatchButton assetId={asset.id} initialWatching={isWatching} />}
+            {!isOwner && (
+              <div className="flex items-center gap-2">
+                <WantedCardButton
+                  defaults={wantedDefaults}
+                  label={asset.forSale ? t("Notify me about other copies") : t("Notify me when listed")}
+                  size="sm"
+                />
+                <WatchButton assetId={asset.id} initialWatching={isWatching} />
+              </div>
+            )}
           </div>
 
           {/* Title block — small certification caption above the name, price
@@ -250,7 +260,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
               <span className="text-muted-foreground flex flex-wrap items-center gap-1.5 text-xs font-semibold tracking-wide uppercase">
                 {asset.gradingCompany === "RAW"
                   ? t("Raw / Ungraded — verified by camera")
-                  : `${asset.gradingCompany} ${formatGrade(asset.grade)}${gradeTier ? ` · ${gradeTier}` : ""}`}
+                  : `${asset.gradingCompany} ${formatGrade(asset.grade)}${gradeTierName ? ` · ${gradeTierName}` : ""}`}
                 {asset.isBlackLabel && (
                   <span className="rounded bg-amber-400 px-1 py-0.5 text-[9px] font-bold normal-case tracking-wide text-neutral-900">
                     Black Label
@@ -259,9 +269,9 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
               </span>
               <h1 className="text-2xl font-semibold">{asset.name}</h1>
               <p className="text-muted-foreground text-sm">{asset.subtitle}</p>
-              {asset.gradingCompany === "PSA" && (
+              {psaCertNumber && isPsaCertNumber(psaCertNumber) && (
                 <a
-                  href={psaCertUrl(extractPsaCertNumber(asset.serial))}
+                  href={psaCertUrl(psaCertNumber)}
                   target="_blank"
                   rel="noreferrer"
                   className="text-muted-foreground hover:text-foreground mt-1 inline-flex w-fit items-center gap-1 text-xs underline underline-offset-2"
@@ -270,20 +280,22 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
                 </a>
               )}
             </div>
-            <div className="flex shrink-0 flex-col items-end gap-1.5">
-              <Badge className={cn("border-0", MARKET_STATUS_BADGE_CLASS[asset.marketStatus])}>
-                {t(MARKET_STATUS_LABELS[asset.marketStatus])}
-              </Badge>
-              {asset.priceThb != null && (
-                <span className="text-xl leading-none font-bold tabular-nums">{formatThb(asset.priceThb)}</span>
-              )}
-            </div>
+            {/* The price lives in the Listing Price box below (and on the Buy
+                button), so only the status sits up here. */}
+            <Badge className={cn("shrink-0 border-0", MARKET_STATUS_BADGE_CLASS[asset.marketStatus])}>
+              {t(MARKET_STATUS_LABELS[asset.marketStatus])}
+            </Badge>
           </div>
 
           {/* Owner / serial / on-chain mint — the same three facts a
               blockchain-native marketplace leads with (owner, address,
               token id), backed by this platform's own real SPL mint. */}
-          <div className="detail-panel grid grid-cols-3 divide-x rounded-xl border text-sm">
+          <div
+            className={cn(
+              "detail-panel grid divide-x rounded-xl border text-sm",
+              asset.mintAddress ? "grid-cols-3" : "grid-cols-2",
+            )}
+          >
             <div className="flex min-w-0 flex-col gap-0.5 p-3">
               <span className="text-muted-foreground text-xs">{t("Owned by")}</span>
               <Link href={`/store/${asset.owner.id}`} className="truncate font-medium hover:underline">
@@ -294,9 +306,9 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
               <span className="text-muted-foreground text-xs">{t("Serial")}</span>
               <span className="truncate font-mono">{asset.serial}</span>
             </div>
-            <div className="flex min-w-0 flex-col gap-0.5 p-3">
-              <span className="text-muted-foreground text-xs">{t("Mint Address")}</span>
-              {asset.mintAddress ? (
+            {asset.mintAddress && (
+              <div className="flex min-w-0 flex-col gap-0.5 p-3">
+                <span className="text-muted-foreground text-xs">{t("Mint Address")}</span>
                 <a
                   href={`https://explorer.solana.com/address/${asset.mintAddress}?cluster=devnet`}
                   target="_blank"
@@ -305,29 +317,71 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
                 >
                   {asset.mintAddress.slice(0, 4)}…{asset.mintAddress.slice(-4)}
                 </a>
-              ) : (
-                <span className="text-muted-foreground">—</span>
-              )}
-            </div>
+              </div>
+            )}
           </div>
 
           {/* Price stat box, same shape as the owner/serial row above — the
               second figure comes from a real prior PriceSnapshot, not a
               fabricated "last sale". Auctions/offers are a separate sale
               channel (see below) and don't feed into this fixed-price figure. */}
-          <div className="detail-panel grid grid-cols-2 divide-x rounded-xl border">
+          <div
+            className={cn(
+              "detail-panel grid divide-x rounded-xl border",
+              previousPriceThb != null ? "grid-cols-2" : "grid-cols-1",
+            )}
+          >
             <div className="flex flex-col gap-0.5 p-3">
               <span className="text-muted-foreground text-xs">{t("Listing Price")}</span>
               <span className="text-lg leading-none font-bold tabular-nums">
                 {asset.priceThb != null ? formatThb(asset.priceThb) : "—"}
               </span>
             </div>
-            <div className="flex flex-col gap-0.5 p-3">
-              <span className="text-muted-foreground text-xs">{t("Previous Price")}</span>
-              <span className="text-lg leading-none font-bold tabular-nums">
-                {previousPriceThb != null ? formatThb(previousPriceThb) : "—"}
-              </span>
+            {previousPriceThb != null && (
+              <div className="flex flex-col gap-0.5 p-3">
+                <span className="text-muted-foreground text-xs">{t("Previous Price")}</span>
+                <span className="text-lg leading-none font-bold tabular-nums">{formatThb(previousPriceThb)}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Seller card, kept above the buy actions since who you're buying
+              from matters before you pay: the name links to their store, and
+              messaging sits right on the card. Messages go to the current
+              owner — the person who can actually accept an offer or change
+              the price. */}
+          <div className="flex flex-col gap-2">
+            <div className="detail-panel flex items-center gap-3 rounded-xl border p-3">
+              <Link href={`/store/${asset.seller.id}`} className="group flex min-w-0 flex-1 items-center gap-3">
+                <Avatar className="size-10 shrink-0">
+                  {asset.seller.image && <AvatarImage src={asset.seller.image} alt={asset.seller.name ?? ""} />}
+                  <AvatarFallback className="text-sm font-medium">{sellerInitials}</AvatarFallback>
+                </Avatar>
+                <div className="flex min-w-0 flex-col gap-0.5">
+                  <span className="text-muted-foreground text-xs">{t("Listed by")}</span>
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span className="truncate text-sm font-semibold group-hover:underline">{asset.seller.name}</span>
+                    <VerifiedBadge status={asset.seller.kycStatus} />
+                  </span>
+                  <RatingStars average={sellerRating.average} count={sellerRating.count} />
+                </div>
+              </Link>
+              {!isOwner && (
+                <MessageSellerButton
+                  sellerId={asset.owner.id}
+                  variant="default"
+                  className="bg-highlight text-highlight-foreground hover:bg-highlight/85 shrink-0"
+                />
+              )}
             </div>
+            {asset.owner.id !== asset.seller.id && (
+              <p className="text-muted-foreground text-xs">
+                {t("Currently owned by")}{" "}
+                <Link href={`/store/${asset.owner.id}`} className="text-foreground font-medium hover:underline">
+                  {asset.owner.name}
+                </Link>
+              </p>
+            )}
           </div>
 
           {asset.redeemedAt ? (
@@ -396,55 +450,12 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
               )}
             </>
           )}
-          {!isOwner && (
-            <WantedCardButton
-              defaults={wantedDefaults}
-              label={asset.forSale ? t("Notify me about other copies") : t("Notify me when listed")}
-              className="w-full"
-              variant="outline"
-            />
-          )}
 
           <PriceHistoryChart
             assetId={asset.id}
             initialHistory={priceHistory.map((p) => ({ priceThb: p.priceThb, createdAt: p.createdAt.toISOString() }))}
             currentPriceThb={asset.priceThb}
           />
-
-          {/* Seller card: the name links to their store, and messaging sits
-              right on the card. Messages go to the current owner — the person
-              who can actually accept an offer or change the price. */}
-          <div className="detail-panel flex items-center gap-3 rounded-xl border p-3">
-            <Link href={`/store/${asset.seller.id}`} className="group flex min-w-0 flex-1 items-center gap-3">
-              <Avatar className="size-10 shrink-0">
-                {asset.seller.image && <AvatarImage src={asset.seller.image} alt={asset.seller.name ?? ""} />}
-                <AvatarFallback className="text-sm font-medium">{sellerInitials}</AvatarFallback>
-              </Avatar>
-              <div className="flex min-w-0 flex-col gap-0.5">
-                <span className="text-muted-foreground text-xs">{t("Listed by")}</span>
-                <span className="flex min-w-0 items-center gap-2">
-                  <span className="truncate text-sm font-semibold group-hover:underline">{asset.seller.name}</span>
-                  <VerifiedBadge status={asset.seller.kycStatus} />
-                </span>
-                <RatingStars average={sellerRating.average} count={sellerRating.count} />
-              </div>
-            </Link>
-            {!isOwner && (
-              <MessageSellerButton
-                sellerId={asset.owner.id}
-                variant="default"
-                className="bg-highlight text-highlight-foreground hover:bg-highlight/85 shrink-0"
-              />
-            )}
-          </div>
-          {asset.owner.id !== asset.seller.id && (
-            <p className="text-muted-foreground text-xs">
-              {t("Currently owned by")}{" "}
-              <Link href={`/store/${asset.owner.id}`} className="text-foreground font-medium hover:underline">
-                {asset.owner.name}
-              </Link>
-            </p>
-          )}
 
           {myOpenOrder?.inboundPackage && (
             <OrderProgress
@@ -472,96 +483,72 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
             />
           )}
 
-          {/* Collapsible key-value spec sheet — every field the old grade
-              seal + PSA panel showed, just laid out as rows instead of a
-              separate solid badge and a separate card. */}
-          <details className="detail-panel group rounded-xl border" open>
-            <summary className="flex cursor-pointer list-none items-center justify-between p-4 text-sm font-semibold">
-              {t("Card Details")}
-              <ChevronDown className="text-muted-foreground size-4 transition-transform group-open:rotate-180" />
-            </summary>
-            <dl className="grid grid-cols-2 gap-x-4 gap-y-3 border-t p-4 text-sm sm:grid-cols-3">
-              <div>
-                <dt className="text-muted-foreground text-xs">{t("Game")}</dt>
-                <dd className="font-medium">{t(CARD_GAME_LABELS[asset.game])}</dd>
-              </div>
-              {asset.gradingCompany !== "RAW" && (
-                <>
+          {/* Grader detail from the live PSA lookup — year, set, population.
+              Game, grade and serial are already shown above, so this only
+              appears when PSA returned something new. */}
+          {psaCert && (
+            <details className="detail-panel group rounded-xl border" open>
+              <summary className="flex cursor-pointer list-none items-center justify-between p-4 text-sm font-semibold">
+                {t("Card Details")}
+                <ChevronDown className="text-muted-foreground size-4 transition-transform group-open:rotate-180" />
+              </summary>
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-3 border-t p-4 text-sm sm:grid-cols-3">
+                {psaCert.year && (
                   <div>
-                    <dt className="text-muted-foreground text-xs">{t("Grader")}</dt>
-                    <dd className="font-medium">{asset.gradingCompany}</dd>
+                    <dt className="text-muted-foreground text-xs">{t("Year")}</dt>
+                    <dd className="font-medium">{psaCert.year}</dd>
                   </div>
+                )}
+                {psaCert.brand && (
                   <div>
-                    <dt className="text-muted-foreground text-xs">{t("Grade")}</dt>
-                    <dd className="font-medium">
-                      {formatGrade(asset.grade)}
-                      {gradeTier ? ` — ${gradeTier}` : ""}
-                      {asset.isBlackLabel ? " (Black Label)" : ""}
-                    </dd>
+                    <dt className="text-muted-foreground text-xs">{t("Brand / Set")}</dt>
+                    <dd className="font-medium">{psaCert.brand}</dd>
                   </div>
+                )}
+                {psaCert.cardNumber && (
                   <div>
-                    <dt className="text-muted-foreground text-xs">{t("Serial")}</dt>
-                    <dd className="font-mono font-medium">{asset.serial}</dd>
+                    <dt className="text-muted-foreground text-xs">{t("Card # (PSA)")}</dt>
+                    <dd className="font-mono font-medium">{psaCert.cardNumber}</dd>
                   </div>
-                </>
-              )}
-              {psaCert?.year && (
-                <div>
-                  <dt className="text-muted-foreground text-xs">{t("Year")}</dt>
-                  <dd className="font-medium">{psaCert.year}</dd>
-                </div>
-              )}
-              {psaCert?.brand && (
-                <div>
-                  <dt className="text-muted-foreground text-xs">{t("Brand / Set")}</dt>
-                  <dd className="font-medium">{psaCert.brand}</dd>
-                </div>
-              )}
-              {psaCert?.cardNumber && (
-                <div>
-                  <dt className="text-muted-foreground text-xs">{t("Card # (PSA)")}</dt>
-                  <dd className="font-mono font-medium">{psaCert.cardNumber}</dd>
-                </div>
-              )}
-              {psaCert?.variety && (
-                <div>
-                  <dt className="text-muted-foreground text-xs">{t("Variety")}</dt>
-                  <dd className="font-medium">{psaCert.variety}</dd>
-                </div>
-              )}
-              {psaCert?.gradeDescription && (
-                <div>
-                  <dt className="text-muted-foreground text-xs">{t("Grade Description")}</dt>
-                  <dd className="font-medium">{psaCert.gradeDescription}</dd>
-                </div>
-              )}
-              {psaCert?.totalPopulation != null && (
-                <div>
-                  <dt className="text-muted-foreground text-xs">{t("Population at Grade")}</dt>
-                  <dd className="font-medium">{psaCert.totalPopulation.toLocaleString()}</dd>
-                </div>
-              )}
-              {psaCert?.populationHigher != null && (
-                <div>
-                  <dt className="text-muted-foreground text-xs">{t("Population Higher")}</dt>
-                  <dd className="font-medium">{psaCert.populationHigher.toLocaleString()}</dd>
-                </div>
-              )}
-              {psaPopulation?.total != null && (
-                <div>
-                  <dt className="text-muted-foreground text-xs">{t("Total Pop. (All Grades)")}</dt>
-                  <dd className="font-medium">{psaPopulation.total.toLocaleString()}</dd>
-                </div>
-              )}
-            </dl>
-            {psaCert && (
+                )}
+                {psaCert.variety && (
+                  <div>
+                    <dt className="text-muted-foreground text-xs">{t("Variety")}</dt>
+                    <dd className="font-medium">{psaCert.variety}</dd>
+                  </div>
+                )}
+                {psaCert.gradeDescription && (
+                  <div>
+                    <dt className="text-muted-foreground text-xs">{t("Grade Description")}</dt>
+                    <dd className="font-medium">{psaCert.gradeDescription}</dd>
+                  </div>
+                )}
+                {psaCert.totalPopulation != null && (
+                  <div>
+                    <dt className="text-muted-foreground text-xs">{t("Population at Grade")}</dt>
+                    <dd className="font-medium">{psaCert.totalPopulation.toLocaleString()}</dd>
+                  </div>
+                )}
+                {psaCert.populationHigher != null && (
+                  <div>
+                    <dt className="text-muted-foreground text-xs">{t("Population Higher")}</dt>
+                    <dd className="font-medium">{psaCert.populationHigher.toLocaleString()}</dd>
+                  </div>
+                )}
+                {psaPopulation?.total != null && (
+                  <div>
+                    <dt className="text-muted-foreground text-xs">{t("Total Pop. (All Grades)")}</dt>
+                    <dd className="font-medium">{psaPopulation.total.toLocaleString()}</dd>
+                  </div>
+                )}
+              </dl>
               <p className="text-muted-foreground border-t px-4 py-3 text-[11px]">
                 {t("Grader detail sourced live from PSA's public Cert Verification API")}
                 {psaCert.itemStatus ? ` — ${t("status:")} ${psaCert.itemStatus}.` : "."}{" "}
                 {t("PSA does not publish a price guide through this API, so no market value is shown here — see Price Comparison below.")}
               </p>
-            )}
-          </details>
+            </details>
+          )}
         </div>
       </div>
 

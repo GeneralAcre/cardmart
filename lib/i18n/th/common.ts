@@ -100,7 +100,8 @@ export const COMMON: Record<string, string> = {
   "Payment Refunded": "คืนเงินแล้ว",
 
   // Verification packages / grading submissions
-  "Self Listing": "ลงขายเอง",
+  "Seller-verified": "ผู้ขายยืนยันเอง",
+  "Back": "กลับ",
   "Full-Service Grading": "บริการส่งเกรดครบวงจร",
   "Awaiting Shipment to Grading Co.": "รอส่งไปบริษัทเกรด",
   "At Grading Company": "อยู่ที่บริษัทเกรด",

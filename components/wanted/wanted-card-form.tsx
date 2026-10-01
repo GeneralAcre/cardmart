@@ -181,17 +181,19 @@ export function WantedCardButton({
   label,
   className,
   variant = "outline",
+  size = "default",
 }: {
   defaults?: WantedCardDefaults;
   label?: string;
   className?: string;
   variant?: "outline" | "secondary" | "default";
+  size?: "default" | "sm";
 }) {
   const [open, setOpen] = useState(false);
   const t = useT();
   return (
     <>
-      <Button variant={variant} className={className} onClick={() => setOpen(true)}>
+      <Button variant={variant} size={size} className={className} onClick={() => setOpen(true)}>
         <BellPlus /> {label ?? t("Notify me when listed")}
       </Button>
       {open && <WantedCardDialog open={open} onOpenChange={setOpen} defaults={defaults} />}
