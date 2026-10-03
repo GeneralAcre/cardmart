@@ -30,12 +30,11 @@ export function PrivyProvider({ children }: { children: React.ReactNode }) {
       appId={appId}
       config={{
         // "wallet" lets someone log in with an existing Solana wallet
-        // (Phantom, Backpack, etc.) instead of Google/email/social. Twitter
-        // and Discord also need to be turned on in the Privy Dashboard
-        // (Settings -> Login Methods) — listing them here alone doesn't
-        // enable them, this only controls which of the dashboard-enabled
-        // methods actually render in the modal.
-        loginMethods: ["email", "google", "twitter", "discord", "wallet"],
+        // (Phantom, Backpack, etc.) instead of Google/email. Each method also
+        // needs to be turned on in the Privy Dashboard (Settings -> Login
+        // Methods) — listing it here alone doesn't enable it, this only
+        // controls which of the dashboard-enabled methods render in the modal.
+        loginMethods: ["email", "google", "wallet"],
         appearance: {
           theme: "dark",
           accentColor: "#ffffff",
