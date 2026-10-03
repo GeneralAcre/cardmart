@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { ShieldCheck } from "lucide-react";
 
 import { LoginButton } from "@/components/onboarding/login-button";
+import { WalletLoginButton } from "@/components/onboarding/wallet-login-button";
 import { StaffSignOut } from "@/components/backoffice/staff-sign-out";
 import { prisma } from "@/lib/prisma";
 import { PRIVY_ENFORCED, verifyPrivySession } from "@/lib/privy-server";
@@ -51,6 +52,7 @@ export default async function StaffLoginPage() {
           <>
             <p className="text-muted-foreground text-sm">{t("Staff only. Sign in with your CardMart account.")}</p>
             <LoginButton redirectTo="/admin" />
+            <WalletLoginButton redirectTo="/admin" />
           </>
         )}
       </div>

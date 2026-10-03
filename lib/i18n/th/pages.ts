@@ -113,4 +113,10 @@ export const PAGES: Record<string, string> = {
   "Saving…": "กำลังบันทึก…",
   "Complete Profile & Continue": "บันทึกโปรไฟล์และดำเนินการต่อ",
   "Sign-in failed": "เข้าสู่ระบบไม่สำเร็จ",
+  "Log in with Solana wallet": "เข้าสู่ระบบด้วยกระเป๋า Solana",
+  "Sign in with {wallet}": "เข้าสู่ระบบด้วย {wallet}",
+  "your wallet": "กระเป๋าของคุณ",
+  "Your wallet will ask you to sign a message to prove it's yours. It's free and doesn't send a transaction.":
+    "กระเป๋าของคุณจะขอให้เซ็นข้อความเพื่อยืนยันว่าเป็นเจ้าของ ไม่มีค่าใช้จ่ายและไม่มีการส่งธุรกรรม",
+  "Sign in": "เข้าสู่ระบบ",
 };

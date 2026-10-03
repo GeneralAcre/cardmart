@@ -29,12 +29,13 @@ export function PrivyProvider({ children }: { children: React.ReactNode }) {
     <PrivyProviderBase
       appId={appId}
       config={{
-        // "wallet" lets someone log in with an existing Solana wallet
-        // (Phantom, Backpack, etc.) instead of Google/email. Each method also
-        // needs to be turned on in the Privy Dashboard (Settings -> Login
-        // Methods) — listing it here alone doesn't enable it, this only
-        // controls which of the dashboard-enabled methods render in the modal.
-        loginMethods: ["email", "google", "wallet"],
+        // No "wallet" here on purpose: Privy's modal sends the sign request
+        // the moment a wallet connects and Phantom rejects it on its own, so
+        // wallet login goes through WalletLoginButton (connect, then a
+        // separate Sign click) instead. Each method also needs to be turned
+        // on in the Privy Dashboard (Settings -> Login Methods) — listing it
+        // here only controls which dashboard-enabled methods render.
+        loginMethods: ["email", "google"],
         appearance: {
           theme: "dark",
           accentColor: "#ffffff",
