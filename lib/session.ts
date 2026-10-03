@@ -36,7 +36,17 @@ export const getSessionUser = cache(async () => {
   // used, which meant every page paid for a Privy API round trip it didn't
   // need.
   const existing = await prisma.user.findUnique({ where: { privyUserId: session.userId } });
-  if (existing) return existing;
+  if (existing?.walletAddress) return existing;
+  if (existing) {
+    // Privy creates the embedded Solana wallet in the browser just after
+    // sign-in, so it often didn't exist yet when this row was created. Keep
+    // checking until it shows up — without it, listings can't mint a real
+    // NFT and purchases can't receive one.
+    const privyUser = await getPrivyUserProfile(session.userId);
+    const walletAddress = privyUser ? primarySolanaWallet(privyUser) : null;
+    if (!walletAddress) return existing;
+    return prisma.user.update({ where: { id: existing.id }, data: { walletAddress } });
+  }
 
   // First time we've seen this Privy identity — this is the one case that
   // actually needs the full profile (name/email/wallet) to seed our row.

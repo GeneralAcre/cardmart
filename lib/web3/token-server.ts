@@ -160,8 +160,10 @@ export async function isTransferDelegated(opts: { mintAddress: string; ownerAddr
       const info = (account.account.data as { parsed?: { info?: TokenAccountInfo } }).parsed?.info;
       return (
         info?.tokenAmount?.amount === SUPPLY.toString() &&
-        info.delegate === authority &&
-        BigInt(info.delegatedAmount?.amount ?? "0") >= SUPPLY
+        // A twin held in the platform's own wallet (custody, e.g. the demo
+        // sellers' cards) needs no delegation: the authority signs as owner.
+        (opts.ownerAddress === authority ||
+          (info.delegate === authority && BigInt(info.delegatedAmount?.amount ?? "0") >= SUPPLY))
       );
     });
   } catch {

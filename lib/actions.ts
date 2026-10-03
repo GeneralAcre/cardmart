@@ -424,24 +424,32 @@ export async function createListing(
   }
 
   // Real, server-signed mint (a genuine SPL Token, decimals 0, fixed supply
-  // of 1 — see lib/web3/token-server.ts) whenever the escrow/platform
-  // authority is configured and the seller has a real wallet on file;
-  // otherwise falls back to the old fully-simulated mint, same
-  // degrade-gracefully pattern used everywhere else real signing is
-  // optional. No client wallet interaction needed for minting itself
-  // anymore — the seller signs afterward, once, to approve a future
-  // transfer (see confirmListingApproval + self-mint-form.tsx).
+  // of 1 — see lib/web3/token-server.ts). Whenever the escrow/platform
+  // authority is configured, every listing gets a real NFT in the seller's
+  // wallet or isn't created at all — never a silent simulated mint. Only a
+  // local setup with no authority key falls back to the simulated mint. No
+  // client wallet interaction is needed for minting itself — the seller
+  // signs afterward, once, to approve a future transfer (see
+  // confirmListingApproval + self-mint-form.tsx).
   const authorityAddress = await getEscrowAuthorityAddress();
   let mintTxSignature: string;
   let isOnChain: boolean;
   let mintAddress: string | null = null;
-  if (authorityAddress && user.walletAddress) {
-    const minted = await mintDigitalTwinToken({
-      ownerAddress: user.walletAddress,
-      name: nftName(data.name, data.raw ? "RAW" : data.gradingCompany, data.raw ? null : (data.grade ?? null)),
-    });
-    mintTxSignature = minted.txSignature;
-    mintAddress = minted.mintAddress;
+  if (authorityAddress) {
+    if (!user.walletAddress) {
+      return { error: "Your Solana wallet isn't ready yet. Refresh the page in a few seconds and try again." };
+    }
+    try {
+      const minted = await mintDigitalTwinToken({
+        ownerAddress: user.walletAddress,
+        name: nftName(data.name, data.raw ? "RAW" : data.gradingCompany, data.raw ? null : (data.grade ?? null)),
+      });
+      mintTxSignature = minted.txSignature;
+      mintAddress = minted.mintAddress;
+    } catch (err) {
+      console.error("Digital twin mint failed", err);
+      return { error: "We couldn't mint this card's NFT on Solana just now. Nothing was charged — please try again." };
+    }
     isOnChain = true;
   } else {
     mintTxSignature = (await mockMintDigitalTwin(serial)).txSignature;
@@ -2067,13 +2075,22 @@ export async function adminCompleteGrading(
   let mintTxSignature: string;
   let isOnChain: boolean;
   let mintAddress: string | null = null;
-  if (authorityAddress && submission.seller.walletAddress) {
-    const minted = await mintDigitalTwinToken({
-      ownerAddress: submission.seller.walletAddress,
-      name: nftName(submission.itemName, submission.gradingCompany, parsed.data.grade),
-    });
-    mintTxSignature = minted.txSignature;
-    mintAddress = minted.mintAddress;
+  if (authorityAddress) {
+    // Same rule as createListing: a real NFT or nothing, never a silent mock.
+    if (!submission.seller.walletAddress) {
+      return { error: "This seller has no Solana wallet on file yet. Try again after they next sign in." };
+    }
+    try {
+      const minted = await mintDigitalTwinToken({
+        ownerAddress: submission.seller.walletAddress,
+        name: nftName(submission.itemName, submission.gradingCompany, parsed.data.grade),
+      });
+      mintTxSignature = minted.txSignature;
+      mintAddress = minted.mintAddress;
+    } catch (err) {
+      console.error("Digital twin mint failed", err);
+      return { error: "Couldn't mint the NFT on Solana just now. Try again in a moment." };
+    }
     isOnChain = true;
   } else {
     mintTxSignature = (await mockMintDigitalTwin(serial)).txSignature;
