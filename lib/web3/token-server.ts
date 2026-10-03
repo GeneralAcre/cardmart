@@ -140,6 +140,42 @@ export async function transferDigitalTwinToken(opts: {
 }
 
 /**
+ * Whether the platform can move this twin out of `ownerAddress`'s wallet: the
+ * owner holds it and has approved the escrow authority as delegate for it
+ * (the seller's listing approval). Read from the chain, so a client can't
+ * just claim it. Returns null when the RPC can't answer.
+ */
+export async function isTransferDelegated(opts: { mintAddress: string; ownerAddress: string }): Promise<boolean | null> {
+  const authority = await getEscrowAuthorityAddress();
+  if (!authority) return false;
+  try {
+    const { value } = await rpc
+      .getTokenAccountsByOwner(
+        address(opts.ownerAddress),
+        { mint: address(opts.mintAddress) },
+        { encoding: "jsonParsed", commitment: "confirmed" },
+      )
+      .send();
+    return value.some((account) => {
+      const info = (account.account.data as { parsed?: { info?: TokenAccountInfo } }).parsed?.info;
+      return (
+        info?.tokenAmount?.amount === SUPPLY.toString() &&
+        info.delegate === authority &&
+        BigInt(info.delegatedAmount?.amount ?? "0") >= SUPPLY
+      );
+    });
+  } catch {
+    return null;
+  }
+}
+
+type TokenAccountInfo = {
+  tokenAmount?: { amount?: string };
+  delegate?: string;
+  delegatedAmount?: { amount?: string };
+};
+
+/**
  * Whether `ownerAddress` currently holds this 1-of-1 digital twin on-chain.
  * Redeem uses it to tell apart "the owner must sign a real burn" (the token
  * is in their wallet) from legacy assets whose earlier transfer was only

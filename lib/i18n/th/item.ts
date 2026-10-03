@@ -181,6 +181,8 @@ export const ITEM: Record<string, string> = {
   "Buyer protection ({percent}%)": "ค่าคุ้มครองผู้ซื้อ ({percent}%)",
   "Total": "รวม",
   "Covers escrow and our inspection of the card. Refunded if the sale is cancelled.": "ครอบคลุมเอสโครว์และการตรวจสอบการ์ด คืนเงินให้หากการขายถูกยกเลิก",
+  "Almost ready: the seller still needs to approve this card's NFT transfer before it can be bought.":
+    "ใกล้พร้อมแล้ว: ผู้ขายต้องอนุมัติการโอน NFT ของการ์ดใบนี้ก่อน จึงจะซื้อได้",
   "No exact match listed right now": "ตอนนี้ยังไม่มีรายการที่ตรงกันทุกอย่าง",
   "Ungraded (raw) card": "การ์ดดิบ (ยังไม่เกรด)",
   "eBay median asking price": "ราคาตั้งมัธยฐานบน eBay",

@@ -37,6 +37,8 @@ interface BuyPanelProps {
   sellerWalletAddress: string | null;
   /** The platform wallet the buyer-protection fee is paid to. */
   platformWalletAddress: string | null;
+  /** The card's NFT exists but its owner hasn't approved the transfer yet, so it can't be bought. */
+  awaitingSellerApproval?: boolean;
 }
 
 // The default active tab (bg-background) is almost the same black as the
@@ -53,6 +55,7 @@ export function BuyPanel({
   isOwner,
   sellerWalletAddress,
   platformWalletAddress,
+  awaitingSellerApproval = false,
 }: BuyPanelProps) {
   const router = useRouter();
   const { lock, connecting } = useEscrowLock();
@@ -78,6 +81,14 @@ export function BuyPanel({
           {t("Portfolio")}
         </a>
         .
+      </p>
+    );
+  }
+
+  if (forSale && awaitingSellerApproval) {
+    return (
+      <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
+        {t("Almost ready: the seller still needs to approve this card's NFT transfer before it can be bought.")}
       </p>
     );
   }

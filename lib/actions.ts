@@ -13,7 +13,7 @@ import {
   mockEscrowInstruction,
 } from "@/lib/web3/mock-chain";
 import { releaseTradeToSeller, refundTradeToBuyer, getEscrowAuthorityAddress } from "@/lib/web3/escrow-server";
-import { isDigitalTwinHeldBy, mintDigitalTwinToken, transferDigitalTwinToken } from "@/lib/web3/token-server";
+import { isDigitalTwinHeldBy, isTransferDelegated, mintDigitalTwinToken, transferDigitalTwinToken } from "@/lib/web3/token-server";
 import { FULL_SERVICE_PACKAGE_PRICE_THB, THB_PER_USD, buyerFeeThb, thbToLamports } from "@/lib/pricing";
 import { lookupEbayPrice } from "@/lib/ebay";
 import { verifyEscrowLock, verifyServiceFee } from "@/lib/web3/escrow-verify";
@@ -540,6 +540,9 @@ export async function confirmListingApproval(assetId: string, approveTxSignature
   const user = await getCurrentUser();
   const asset = await prisma.asset.findUniqueOrThrow({ where: { id: assetId } });
   if (asset.ownerId !== user.id) throw new Error("You do not own this item.");
+  if (!(await onChainTransferApproved(asset, user.walletAddress))) {
+    throw new Error("We can't see your approval on-chain yet. Wait a few seconds and try again.");
+  }
 
   await prisma.asset.update({ where: { id: assetId }, data: { transferApproved: true } });
   await prisma.provenanceEvent.create({
@@ -737,6 +740,20 @@ export async function buyListing(
   escrowLock?: { tradeId: string; txSignature: string; lamports: string; tradeAccount: string },
 ) {
   const user = await getCurrentUser();
+  try {
+    await buyListingAs(user, assetId, fulfillmentChoice, escrowLock);
+  } catch (err) {
+    await refundRejectedPurchase(escrowLock, user.walletAddress, assetId);
+    throw err;
+  }
+}
+
+async function buyListingAs(
+  user: Awaited<ReturnType<typeof getCurrentUser>>,
+  assetId: string,
+  fulfillmentChoice: "SHIP" | "VAULT",
+  escrowLock?: EscrowLockInput,
+) {
   if (user.isBanned) throw new Error("Your account is suspended and can't make purchases.");
   const asset = await prisma.asset.findUniqueOrThrow({ where: { id: assetId }, include: { owner: true } });
 
@@ -749,6 +766,7 @@ export async function buyListing(
   if (!escrowLock && (await realEscrowRequired(asset.owner.walletAddress, user.walletAddress))) {
     throw new Error("Pay with your wallet to buy this card — the payment goes into escrow.");
   }
+  await assertNftCanMove(asset, asset.owner.walletAddress);
 
   await completePurchase({
     asset,
@@ -1280,6 +1298,20 @@ export async function completeOfferPurchase(
   escrowLock?: { tradeId: string; txSignature: string; lamports: string; tradeAccount: string },
 ) {
   const user = await getCurrentUser();
+  try {
+    await completeOfferPurchaseAs(user, offerId, fulfillmentChoice, escrowLock);
+  } catch (err) {
+    await refundRejectedPurchase(escrowLock, user.walletAddress, offerId);
+    throw err;
+  }
+}
+
+async function completeOfferPurchaseAs(
+  user: Awaited<ReturnType<typeof getCurrentUser>>,
+  offerId: string,
+  fulfillmentChoice: "SHIP" | "VAULT",
+  escrowLock?: EscrowLockInput,
+) {
   if (user.isBanned) throw new Error("Your account is suspended and can't make purchases.");
 
   const offer = await prisma.offer.findUniqueOrThrow({
@@ -1293,6 +1325,7 @@ export async function completeOfferPurchase(
   if (!escrowLock && (await realEscrowRequired(offer.asset.owner.walletAddress, user.walletAddress))) {
     throw new Error("Pay with your wallet to complete this purchase — the payment goes into escrow.");
   }
+  await assertNftCanMove(offer.asset, offer.asset.owner.walletAddress);
 
   await completePurchase({
     asset: offer.asset,
@@ -1737,7 +1770,7 @@ export async function vaultRelist(assetId: string, priceThb: number, txSignature
       priceThb,
       // A real Approve grants a fresh, one-time delegate approval — needs
       // redoing on every relist (a prior transfer would have consumed it).
-      transferApproved: Boolean(asset.mintAddress) && Boolean(txSignature),
+      transferApproved: await onChainTransferApproved(asset, user.walletAddress),
       priceSnapshots: { create: { priceThb } },
     },
   });
@@ -1786,7 +1819,7 @@ export async function updateListingPrice(assetId: string, priceThb: number, txSi
       forSale: true,
       marketStatus: "READY_TO_SHIP",
       // See vaultRelist — a real Approve needs redoing on every (re)listing.
-      transferApproved: Boolean(asset.mintAddress) && Boolean(txSignature),
+      transferApproved: await onChainTransferApproved(asset, user.walletAddress),
       priceSnapshots: { create: { priceThb } },
     },
   });
@@ -2520,8 +2553,8 @@ async function refundUnrecordedLock(lock: EscrowLockInput | undefined, payerWall
     prisma.bid.count({ where: { tradeAccount: pda } }),
     prisma.tradeOffer.count({ where: { cashTradeAccount: pda } }),
   ]);
-  if (sale + bid + trade > 0) return;
-  await releaseOrRefundEscrow(
+  if (sale + bid + trade > 0) return false;
+  return releaseOrRefundEscrow(
     "refund",
     {
       onChain: true,
@@ -2530,9 +2563,52 @@ async function refundUnrecordedLock(lock: EscrowLockInput | undefined, payerWall
       seller: { walletAddress: null },
     },
     assetId,
-  ).catch(() => {
+  ).then(
+    () => true,
     // Best-effort: the original error is what the user needs to see.
-  });
+    () => false,
+  );
+}
+
+/**
+ * A purchase was refused after the buyer's browser already locked payment
+ * (sold a moment earlier, NFT not approved, lock didn't verify…): give the
+ * escrow back, and the buyer-protection fee paid in the same transaction.
+ * The fee goes back only when this call actually refunded the escrow, so a
+ * retry can't pay it twice.
+ */
+async function refundRejectedPurchase(lock: EscrowLockInput | undefined, payerWallet: string | null, assetId: string) {
+  if (!lock || !payerWallet) return;
+  if (!(await refundUnrecordedLock(lock, payerWallet, assetId))) return;
+  const platform = await getEscrowAuthorityAddress();
+  if (!platform) return;
+  const paid = await verifyServiceFee(lock, { buyer: payerWallet, platform, minLamports: BigInt(1) }).catch(() => BigInt(0));
+  if (paid > BigInt(0)) {
+    await sendFromPlatform(payerWallet, paid).catch((err) =>
+      console.error(`Fee refund for rejected lock ${lock.tradeAccount} failed.`, err),
+    );
+  }
+}
+
+/** Whether the platform is approved on-chain to move this card's NFT out of its owner's wallet. */
+async function onChainTransferApproved(asset: { mintAddress: string | null }, ownerWallet: string | null): Promise<boolean> {
+  if (!asset.mintAddress || !ownerWallet) return false;
+  return (await isTransferDelegated({ mintAddress: asset.mintAddress, ownerAddress: ownerWallet })) === true;
+}
+
+/**
+ * A card with a real NFT can only be sold once its owner has approved the
+ * platform to move it; otherwise the sale would complete while the NFT
+ * stayed in the seller's wallet. Legacy cards whose NFT never reached this
+ * owner (an earlier simulated transfer) have nothing to move and pass.
+ */
+async function assertNftCanMove(asset: { mintAddress: string | null }, sellerWallet: string | null) {
+  if (!asset.mintAddress || !sellerWallet || !(await getEscrowAuthorityAddress())) return;
+  const held = await isDigitalTwinHeldBy({ mintAddress: asset.mintAddress, ownerAddress: sellerWallet });
+  if (held === false) return;
+  if (!(await onChainTransferApproved(asset, sellerWallet))) {
+    throw new Error("The seller hasn't approved this card's NFT transfer yet, so it can't be bought right now.");
+  }
 }
 
 /**
@@ -2617,7 +2693,7 @@ async function createTradeProposal(
     });
   }
 
-  if (offered.mintAddress && opts.approveTxSignature) {
+  if (offered.mintAddress && opts.approveTxSignature && (await onChainTransferApproved(offered, user.walletAddress))) {
     await prisma.asset.update({ where: { id: offered.id }, data: { transferApproved: true } });
   }
 
@@ -3356,6 +3432,11 @@ async function executeAgentDecision(decisionId: string): Promise<void> {
   }
   if (!asset.forSale || asset.priceThb !== asking || asset.redeemedAt || asset.ownerId === buyer.id) {
     return failAgentDecision(decisionId, buyer.id, asset.name, "It's no longer for sale at that price.");
+  }
+  try {
+    await assertNftCanMove(asset, asset.owner.walletAddress);
+  } catch (err) {
+    return failAgentDecision(decisionId, buyer.id, asset.name, err instanceof Error ? err.message : "The card can't be bought yet.");
   }
 
   // Claim budget and a card slot.

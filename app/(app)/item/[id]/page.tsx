@@ -453,6 +453,9 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
                 isOwner={isOwner}
                 sellerWalletAddress={asset.owner.walletAddress}
                 platformWalletAddress={escrowAuthorityAddress}
+                awaitingSellerApproval={Boolean(
+                  asset.mintAddress && !asset.transferApproved && asset.owner.walletAddress && escrowAuthorityAddress,
+                )}
               />
               {!isOwner && asset.forSale && (
                 <MakeOfferButton
