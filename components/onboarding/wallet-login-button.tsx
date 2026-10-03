@@ -36,7 +36,7 @@ export function WalletLoginButton({
   const { tr } = useLanguage();
   const { ready, authenticated } = usePrivy();
   const { wallets } = useWallets();
-  const { generateSiwsMessage, loginWithSiws } = useLoginWithSiws();
+  const { generateSiwsMessage, generateSiwsOffchainMessage, loginWithSiws } = useLoginWithSiws();
   const [address, setAddress] = useState<string | null>(null);
   const [signing, setSigning] = useState(false);
   // Privy fires connectWallet callbacks on every mounted hook, and the
@@ -73,12 +73,28 @@ export function WalletLoginButton({
     setSigning(true);
     try {
       const message = await generateSiwsMessage({ address: wallet.address });
-      const { signature } = await wallet.signMessage({ message: new TextEncoder().encode(message) });
+      // Privy's SIWS text always says "Chain ID: mainnet" (its server
+      // rejects anything else), and Phantom in testnet mode — which this
+      // devnet app needs — refuses to show a SIWS message for another chain.
+      // Wrapped as a Solana off-chain message, Phantom doesn't run that
+      // chain check and Privy still verifies it. Plain text is the fallback
+      // for a wallet that can't sign the off-chain format.
+      let signed: Uint8Array;
+      let messageType: "offchain-message" | "plain" = "offchain-message";
+      try {
+        const offchain = generateSiwsOffchainMessage({ message, address: wallet.address });
+        signed = (await wallet.signMessage({ message: offchain })).signature;
+      } catch (e) {
+        if ((e as { code?: number })?.code === 4001 && !/chain/i.test(String((e as Error).message))) throw e;
+        messageType = "plain";
+        signed = (await wallet.signMessage({ message: new TextEncoder().encode(message) })).signature;
+      }
       await loginWithSiws({
         message,
-        signature: btoa(String.fromCharCode(...signature)),
+        signature: btoa(String.fromCharCode(...signed)),
         walletClientType: wallet.standardWallet.name.toLowerCase(),
         connectorType: "solana_adapter",
+        messageType,
       });
       // Hard navigation for the same cookie-timing reason as LoginButton.
       window.location.href = redirectTo;
