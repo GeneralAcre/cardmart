@@ -6,7 +6,7 @@ import type { CardGame } from "@prisma/client";
 
 import { FilterBar } from "@/components/marketplace/filter-bar";
 import { ListingCard } from "@/components/marketplace/listing-card";
-import { TrendingStrip, type TrendingListing } from "@/components/marketplace/trending-strip";
+import { MarketPulse } from "@/components/marketplace/market-pulse";
 import { PriceCompareTable } from "@/components/marketplace/price-compare-table";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -17,6 +17,7 @@ import { CARD_GAME_LABELS } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 import { useT } from "@/components/landing/language-provider";
 import { EMPTY_FILTERS, type AssetSummary, type MarketplaceFilterState } from "@/lib/types";
+import type { LeaderboardRow } from "@/lib/queries";
 
 const CATEGORY_TILES: { category: CardGame | "ALL" | "VAULT"; label: string; icon: typeof LayoutGrid }[] = [
   { category: "ALL", label: "All", icon: LayoutGrid },
@@ -76,12 +77,11 @@ function sortListings(listings: AssetSummary[], sort: SortKey): AssetSummary[] {
 
 export function MarketplaceExplorer({
   initialListings,
-  trendingWeek,
-  trendingMonth,
+  pulseRows,
 }: {
   initialListings: AssetSummary[];
-  trendingWeek: TrendingListing[];
-  trendingMonth: TrendingListing[];
+  /** Cards with their price moves, for the Market pulse panel above the grid. */
+  pulseRows?: LeaderboardRow[];
 }) {
   const [filters, setFilters] = useState<MarketplaceFilterState>(EMPTY_FILTERS);
   const [listings, setListings] = useState<AssetSummary[]>(initialListings);
@@ -300,7 +300,7 @@ export function MarketplaceExplorer({
         )}
 
         <div className={cn("flex min-w-0 flex-col gap-6 py-5", sidebarOpen && "lg:pl-5")}>
-          <TrendingStrip week={trendingWeek} month={trendingMonth} />
+          {pulseRows && <MarketPulse rows={pulseRows} />}
 
           {/* A storefront-style "pick what you're into" row — the sidebar/sheet
               filters still cover everything in depth. */}

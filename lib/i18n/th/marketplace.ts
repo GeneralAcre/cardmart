@@ -61,6 +61,15 @@ export const MARKETPLACE: Record<string, string> = {
   "Clear search": "ล้างคำค้นหา",
   "Price went up": "ราคาขึ้น",
   "Price went down": "ราคาลง",
+  // Community (Leaderboard + News)
+  Community: "คอมมูนิตี้",
+  News: "ข่าว",
+  "What's moving on CardMart, and the new sets on the way.": "ความเคลื่อนไหวบน CardMart และชุดการ์ดใหม่ที่กำลังจะออก",
+  // Market pulse panel
+  "Market pulse": "ภาพรวมตลาด",
+  Movers: "การ์ดที่ราคาเปลี่ยน",
+  "No price moves in this period yet.": "ยังไม่มีการเปลี่ยนแปลงราคาในช่วงนี้",
+  "Top traders on CardMart, ranked by their gains.": "นักเทรดอันดับต้นของ CardMart จัดอันดับตามกำไร",
   Language: "ภาษา",
   English: "อังกฤษ",
   Japanese: "ญี่ปุ่น",

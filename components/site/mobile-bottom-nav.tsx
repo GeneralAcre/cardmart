@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 
 import { cn } from "@/lib/utils";
 import { useT } from "@/components/landing/language-provider";
-import { NAV_LINKS as links, isNavLinkActive } from "@/lib/nav-links";
+import { NAV_LINKS as links, isNavEntryActive } from "@/lib/nav-links";
 
 // Primary mobile navigation — fixed to the bottom of the viewport instead of
 // tucked behind a hamburger menu in the header, so it's reachable one-handed
@@ -22,7 +22,7 @@ export function MobileBottomNav() {
       <div className="grid h-14" style={{ gridTemplateColumns: `repeat(${links.length}, minmax(0, 1fr))` }}>
         {links.map((l) => {
           const Icon = l.icon;
-          const active = isNavLinkActive(pathname, l.href);
+          const active = isNavEntryActive(pathname, l);
           return (
             <Link
               key={l.href}

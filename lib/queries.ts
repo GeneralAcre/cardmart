@@ -116,61 +116,6 @@ export async function getMarketplaceListings(filters: MarketplaceFilters = {}) {
   return assets.map(withPriceDirection);
 }
 
-export type TrendingWindow = 7 | 30;
-
-/**
- * Real "biggest gainers" — compares each for-sale asset's current price
- * against its earliest real PriceSnapshot within the lookback window (or
- * its very first snapshot, if it's younger than that window). Assets with
- * only one snapshot ever (never repriced) have nothing to compare against
- * and are excluded — there's no real trend to report for them, so nothing
- * is fabricated to fill the section. Only genuine increases are returned;
- * if none exist right now, the caller gets an empty array and should just
- * not render the section, rather than show a padded-out or fake list.
- */
-export async function getTrendingListings(limit = 8, lookbackDays: TrendingWindow = 7) {
-  const since = new Date(Date.now() - lookbackDays * 86_400_000);
-
-  const assets = await prisma.asset.findMany({
-    where: { forSale: true, marketStatus: { in: ["READY_TO_SHIP", "IN_VAULT"] } },
-    include: {
-      seller: true,
-      owner: true,
-      verificationPhotos: { orderBy: { createdAt: "asc" } },
-      priceSnapshots: { orderBy: { createdAt: "asc" }, select: { priceThb: true, createdAt: true } },
-    },
-  });
-
-  return assets
-    .map((asset) => {
-      const snapshots = asset.priceSnapshots;
-      if (snapshots.length < 2) return null;
-
-      const latest = snapshots[snapshots.length - 1];
-      // If nothing was actually repriced within the lookback window, this
-      // isn't a "this week" trend at all — without this check, the ??
-      // fallback below could pair a current price against the asset's very
-      // first-ever snapshot from months ago and mislabel that ancient,
-      // unrelated gain as recent.
-      if (latest.createdAt < since) return null;
-      const baseline = snapshots.find((s) => s.createdAt >= since) ?? snapshots[0];
-      if (baseline === latest || baseline.priceThb <= 0) return null;
-
-      const gainPct = ((latest.priceThb - baseline.priceThb) / baseline.priceThb) * 100;
-      if (gainPct <= 0) return null;
-
-      return {
-        asset: { ...asset, priceDirection: "up" as const }, // only gainers reach this point (gainPct > 0)
-        previousPriceThb: baseline.priceThb,
-        currentPriceThb: latest.priceThb,
-        gainPct,
-      };
-    })
-    .filter((x): x is NonNullable<typeof x> => x !== null)
-    .sort((a, b) => b.gainPct - a.gainPct)
-    .slice(0, limit);
-}
-
 export async function getSellerProfile(sellerId: string) {
   const seller = await prisma.user.findUnique({
     where: { id: sellerId },

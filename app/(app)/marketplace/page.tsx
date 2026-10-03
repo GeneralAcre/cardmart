@@ -2,16 +2,13 @@ import { Plus } from "lucide-react";
 
 import { MarketplaceExplorer } from "@/components/marketplace/marketplace-explorer";
 import { ActionButton } from "@/components/ui/action-button";
-import { getMarketplaceListings, getTrendingListings } from "@/lib/queries";
+import { getLeaderboard, getMarketplaceListings } from "@/lib/queries";
+import { getCurrentUser } from "@/lib/session";
 import { getT } from "@/lib/i18n/server";
 
 export default async function MarketplacePage() {
-  const [listings, trendingWeek, trendingMonth, t] = await Promise.all([
-    getMarketplaceListings(),
-    getTrendingListings(8, 7),
-    getTrendingListings(8, 30),
-    getT(),
-  ]);
+  const user = await getCurrentUser();
+  const [listings, movers, t] = await Promise.all([getMarketplaceListings(), getLeaderboard(user.id), getT()]);
 
   return (
     <div className="mx-auto w-full max-w-screen-2xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
@@ -26,7 +23,7 @@ export default async function MarketplacePage() {
           {t("Sell a card")}
         </ActionButton>
       </div>
-      <MarketplaceExplorer initialListings={listings} trendingWeek={trendingWeek} trendingMonth={trendingMonth} />
+      <MarketplaceExplorer initialListings={listings} pulseRows={movers} />
     </div>
   );
 }

@@ -130,7 +130,8 @@ function formatChange(change: number | null) {
   return `${change > 0 ? "+" : ""}${change.toFixed(2)}%`;
 }
 
-export function MarketHeatmap({ rows }: { rows: LeaderboardRow[] }) {
+/** `compact` gives a shorter map for sitting inside another page's panel. */
+export function MarketHeatmap({ rows, compact = false }: { rows: LeaderboardRow[]; compact?: boolean }) {
   const router = useRouter();
   const [period, setPeriod] = useState<LeaderboardPeriod>("7d");
   const [group, setGroup] = useState<Group>("series");
@@ -147,7 +148,7 @@ export function MarketHeatmap({ rows }: { rows: LeaderboardRow[] }) {
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
-  const height = width < 640 ? 440 : 580;
+  const height = width < 640 ? (compact ? 360 : 440) : compact ? 440 : 580;
 
   const tiles: Tile[] = useMemo(() => {
     const cardTiles = (list: LeaderboardRow[]): Tile[] =>
@@ -311,7 +312,7 @@ function Segmented({
   options: { value: string; label: string }[];
 }) {
   return (
-    <div className="bg-muted flex shrink-0 rounded-lg p-0.5 text-xs font-medium">
+    <div className="bg-card flex shrink-0 rounded-lg border p-0.5 text-xs font-medium">
       {options.map((o) => (
         <button
           key={o.value}
@@ -320,7 +321,7 @@ function Segmented({
           aria-pressed={value === o.value}
           className={cn(
             "rounded-md px-2.5 py-1.5 whitespace-nowrap transition-colors",
-            value === o.value ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+            value === o.value ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground",
           )}
         >
           {o.label}

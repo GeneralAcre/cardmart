@@ -8,6 +8,7 @@ const NAV_LINKS = [
   { href: "/", label: "Home" },
   { href: "/marketplace", label: "Market" },
   { href: "/leaderboard", label: "Leaderboard" },
+  { href: "/news", label: "News" },
   { href: "/guide", label: "Getting Started" },
   { href: "/marketplace/sell", label: "Sell a card" },
   { href: "/portfolio", label: "Portfolio" },
