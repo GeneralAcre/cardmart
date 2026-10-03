@@ -156,8 +156,11 @@ export const PORTFOLIO: Record<string, string> = {
   "Confirm Relist": "ยืนยันการลงขายใหม่",
   Redeem: "ถอนของจริง",
   "Redeem Physical Item": "ถอนของจริงออกจากห้องนิรภัย",
-  "The warehouse ships the physical card to your address on file, and its digital twin is burned for good.":
-    "คลังสินค้าจะส่งการ์ดจริงไปยังที่อยู่ของคุณ และใบรับรองดิจิทัลจะถูกเผาถาวร",
+  "The warehouse ships the physical card to the address below, and its digital twin is burned for good.":
+    "คลังสินค้าจะส่งการ์ดจริงไปยังที่อยู่ด้านล่าง และใบรับรองดิจิทัลจะถูกเผาถาวร",
+  "Redeeming is final — there's no refund once the token is burned.": "การถอนเป็นการตัดสินใจถาวร — ไม่มีการคืนเงินเมื่อเผาโทเคนแล้ว",
+  "Enter a full address — we ship real items here.": "กรอกที่อยู่ให้ครบถ้วน — เราจะส่งของจริงไปที่นี่",
+  "Enter a phone number the courier can reach you on.": "กรอกเบอร์โทรที่พนักงานส่งของติดต่อได้",
   "You'll sign one wallet transaction that burns the token.": "คุณจะลงนามธุรกรรมหนึ่งครั้งเพื่อเผาโทเคน",
   "The card can't be listed, auctioned or swapped on CardMart afterwards.": "หลังจากนั้นการ์ดจะลงขาย ประมูล หรือแลกบน CardMart ไม่ได้อีก",
   "Any open swap proposals for it are closed and refunded.": "ข้อเสนอแลกที่เปิดอยู่จะถูกปิดและคืนเงิน",

@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -28,7 +29,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { auctionApprovalNeeded, delistAsset, startAuction, updateListingPrice, vaultRedeem, vaultRelist } from "@/lib/actions";
+import { auctionApprovalNeeded, delistAsset, startAuction, updateListingPrice, prepareVaultRedeem, vaultRedeem, vaultRelist } from "@/lib/actions";
 import { useWalletStore } from "@/lib/web3/wallet-store";
 import { formatGrade, formatThb } from "@/lib/format";
 import { CARD_GAME_LABELS } from "@/lib/labels";
@@ -40,14 +41,20 @@ import { useT } from "@/components/landing/language-provider";
 export function PortfolioItemCard({
   asset,
   escrowAuthorityAddress,
+  shipping,
 }: {
   asset: AssetSummary;
   escrowAuthorityAddress: string | null;
+  /** The owner's saved shipping details, pre-filled into the redeem dialog. */
+  shipping: { address: string | null; phone: string | null };
 }) {
   const router = useRouter();
   const { connected, connect, sendMemo, approveDelegate, revokeDelegate, burnDigitalTwin } = useWalletStore();
   const [relistOpen, setRelistOpen] = useState(false);
   const [redeemOpen, setRedeemOpen] = useState(false);
+  const [redeemAddress, setRedeemAddress] = useState(shipping.address ?? "");
+  const [redeemPhone, setRedeemPhone] = useState(shipping.phone ?? "");
+  const redeemShippingValid = redeemAddress.trim().length >= 10 && redeemPhone.trim().length >= 6;
   const [priceEditOpen, setPriceEditOpen] = useState(false);
   const [auctionOpen, setAuctionOpen] = useState(false);
   const [price, setPrice] = useState(asset.priceThb ? String(asset.priceThb) : "");
@@ -112,6 +119,9 @@ export function PortfolioItemCard({
   function handleRedeem() {
     startTransition(async () => {
       try {
+        // Saves the address and re-checks the item BEFORE the burn — the
+        // burn can't be undone, so nothing may fail after it.
+        await prepareVaultRedeem(asset.id, { shippingAddress: redeemAddress, phone: redeemPhone });
         let burnTx: string | undefined;
         if (asset.mintAddress) {
           try {
@@ -361,19 +371,41 @@ export function PortfolioItemCard({
                 <DialogHeader>
                   <DialogTitle>{t("Redeem Physical Item")}</DialogTitle>
                   <DialogDescription>
-                    {t("The warehouse ships the physical card to your address on file, and its digital twin is burned for good.")}
+                    {t("The warehouse ships the physical card to the address below, and its digital twin is burned for good.")}
                   </DialogDescription>
                 </DialogHeader>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor={`redeem-address-${asset.id}`}>{t("Shipping Address")}</Label>
+                  <Textarea
+                    id={`redeem-address-${asset.id}`}
+                    value={redeemAddress}
+                    onChange={(e) => setRedeemAddress(e.target.value)}
+                    placeholder={t("Street, city, postal code — where we'll send physical items")}
+                    disabled={pending}
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor={`redeem-phone-${asset.id}`}>{t("Phone Number")}</Label>
+                  <Input
+                    id={`redeem-phone-${asset.id}`}
+                    type="tel"
+                    value={redeemPhone}
+                    onChange={(e) => setRedeemPhone(e.target.value)}
+                    placeholder={t("For the courier to reach you")}
+                    disabled={pending}
+                  />
+                </div>
                 <ul className="text-muted-foreground flex list-disc flex-col gap-1 pl-5 text-sm">
                   <li>{t("You'll sign one wallet transaction that burns the token.")}</li>
                   <li>{t("The card can't be listed, auctioned or swapped on CardMart afterwards.")}</li>
+                  <li>{t("Redeeming is final — there's no refund once the token is burned.")}</li>
                   <li>{t("Any open swap proposals for it are closed and refunded.")}</li>
                 </ul>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setRedeemOpen(false)} disabled={pending}>
                     {t("Cancel")}
                   </Button>
-                  <Button onClick={handleRedeem} disabled={pending}>
+                  <Button onClick={handleRedeem} disabled={pending || !redeemShippingValid}>
                     {pending ? <Loader2 className="animate-spin" /> : <Flame />}
                     {t("Burn & Redeem")}
                   </Button>

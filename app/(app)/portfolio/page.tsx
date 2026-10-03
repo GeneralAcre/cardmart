@@ -42,6 +42,7 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
   const [user, t] = await Promise.all([getCurrentUser(), getT()]);
   await expireOverdueSellerShipments({ revalidate: false });
   const walletAddress = user.walletAddress ?? user.walletMock;
+  const shipping = { address: user.shippingAddress, phone: user.phone };
   const [
     assets,
     solBalance,
@@ -134,13 +135,13 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
         </TabsList>
 
         <TabsContent value="all" className="pt-6">
-          <PortfolioGrid assets={assets} escrowAuthorityAddress={escrowAuthorityAddress} />
+          <PortfolioGrid assets={assets} escrowAuthorityAddress={escrowAuthorityAddress} shipping={shipping} />
         </TabsContent>
         <TabsContent value="hand" className="pt-6">
-          <PortfolioGrid assets={inHand} escrowAuthorityAddress={escrowAuthorityAddress} />
+          <PortfolioGrid assets={inHand} escrowAuthorityAddress={escrowAuthorityAddress} shipping={shipping} />
         </TabsContent>
         <TabsContent value="vault" className="pt-6">
-          <PortfolioGrid assets={inVault} escrowAuthorityAddress={escrowAuthorityAddress} />
+          <PortfolioGrid assets={inVault} escrowAuthorityAddress={escrowAuthorityAddress} shipping={shipping} />
           {redeemed.length > 0 && (
             <div className="mt-10">
               <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
@@ -205,9 +206,11 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
 async function PortfolioGrid({
   assets,
   escrowAuthorityAddress,
+  shipping,
 }: {
   assets: Awaited<ReturnType<typeof getVaultAssets>>;
   escrowAuthorityAddress: string | null;
+  shipping: { address: string | null; phone: string | null };
 }) {
   if (assets.length === 0) {
     const t = await getT();
@@ -221,7 +224,7 @@ async function PortfolioGrid({
   return (
     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4">
       {assets.map((asset) => (
-        <PortfolioItemCard key={asset.id} asset={asset} escrowAuthorityAddress={escrowAuthorityAddress} />
+        <PortfolioItemCard key={asset.id} asset={asset} escrowAuthorityAddress={escrowAuthorityAddress} shipping={shipping} />
       ))}
     </div>
   );

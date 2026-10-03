@@ -2178,14 +2178,44 @@ export async function adminRejectGradingSubmission(submissionId: string) {
  * recorded instead. Either way the asset is marked redeemed and can never be
  * listed, auctioned or swapped again.
  */
-export async function vaultRedeem(assetId: string, burnTxSignature?: string) {
-  const user = await getCurrentUser();
-  const asset = await prisma.asset.findUniqueOrThrow({ where: { id: assetId } });
-  if (asset.ownerId !== user.id) throw new Error("You do not own this item.");
+function assertRedeemable(
+  asset: { ownerId: string | null; vaulted: boolean; redeemedAt: Date | null; marketStatus: string },
+  userId: string,
+) {
+  if (asset.ownerId !== userId) throw new Error("You do not own this item.");
   if (!asset.vaulted) throw new Error("This item is not in the vault.");
   if (asset.redeemedAt) throw new Error("This item was already redeemed.");
   if (asset.marketStatus === "IN_AUCTION") throw new Error("End the auction before redeeming this item.");
   if (asset.marketStatus === "IN_ESCROW") throw new Error("This item is locked in an active sale.");
+}
+
+const redeemShippingSchema = z.object({
+  shippingAddress: z.string().trim().min(10, "Enter a full address — we ship real items here."),
+  phone: z.string().trim().min(6, "Enter a phone number the courier can reach you on."),
+});
+
+/**
+ * Step 1 of redeeming, run BEFORE the owner signs the burn: checks the item
+ * can be redeemed and saves where to ship it. The burn can't be undone, so
+ * anything that would make vaultRedeem refuse has to fail here, while the
+ * token still exists.
+ */
+export async function prepareVaultRedeem(assetId: string, shipping: { shippingAddress: string; phone: string }) {
+  const user = await getCurrentUser();
+  const asset = await prisma.asset.findUniqueOrThrow({ where: { id: assetId } });
+  assertRedeemable(asset, user.id);
+  const parsed = redeemShippingSchema.safeParse(shipping);
+  if (!parsed.success) throw new Error(parsed.error.issues[0]?.message ?? "Enter a shipping address and phone number.");
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { shippingAddress: parsed.data.shippingAddress, phone: parsed.data.phone },
+  });
+}
+
+export async function vaultRedeem(assetId: string, burnTxSignature?: string) {
+  const user = await getCurrentUser();
+  const asset = await prisma.asset.findUniqueOrThrow({ where: { id: assetId } });
+  assertRedeemable(asset, user.id);
   if (!user.shippingAddress) throw new Error("Add a shipping address in Portfolio before redeeming.");
 
   let burn: { signature: string; onChain: boolean };
