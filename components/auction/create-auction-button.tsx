@@ -25,7 +25,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { startAuction } from "@/lib/actions";
+import { auctionApprovalNeeded, startAuction } from "@/lib/actions";
+import { useWalletStore } from "@/lib/web3/wallet-store";
 import { formatThb } from "@/lib/format";
 import { useT } from "@/components/landing/language-provider";
 
@@ -48,6 +49,7 @@ export function CreateAuctionButton({ eligibleAssets }: { eligibleAssets: Eligib
   const [durationDays, setDurationDays] = useState("3");
   const [startTime, setStartTime] = useState("");
   const [pending, startTransition] = useTransition();
+  const { connected, connect, approveDelegate } = useWalletStore();
   const t = useT();
 
   function handleOpenChange(next: boolean) {
@@ -68,6 +70,12 @@ export function CreateAuctionButton({ eligibleAssets }: { eligibleAssets: Eligib
   function handleSubmit() {
     startTransition(async () => {
       try {
+        // The winner's NFT must be movable when the auction ends: approve it first.
+        const approval = await auctionApprovalNeeded(assetId);
+        if (approval) {
+          if (!connected) await connect();
+          await approveDelegate(approval.mintAddress, approval.delegate);
+        }
         await startAuction(
           assetId,
           Number(startPrice),

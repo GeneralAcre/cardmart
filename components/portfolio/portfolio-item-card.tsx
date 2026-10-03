@@ -28,7 +28,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { delistAsset, startAuction, updateListingPrice, vaultRedeem, vaultRelist } from "@/lib/actions";
+import { auctionApprovalNeeded, delistAsset, startAuction, updateListingPrice, vaultRedeem, vaultRelist } from "@/lib/actions";
 import { useWalletStore } from "@/lib/web3/wallet-store";
 import { formatGrade, formatThb } from "@/lib/format";
 import { CARD_GAME_LABELS } from "@/lib/labels";
@@ -161,6 +161,8 @@ export function PortfolioItemCard({
   function handleStartAuction() {
     startTransition(async () => {
       try {
+        // The winner's NFT must be movable when the auction ends.
+        if (await auctionApprovalNeeded(asset.id)) await signApprove(`CardMart auction: ${asset.name}`);
         await startAuction(
           asset.id,
           Number(auctionStartPrice),

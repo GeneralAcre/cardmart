@@ -579,6 +579,12 @@ async function completePurchase(opts: {
   payerWalletAddress?: string;
   /** Charge the buyer-protection fee (BUYER_FEE_PERCENT) — Buy Now, accepted offers, agent buys. */
   chargeFee?: boolean;
+  /**
+   * The lock was already verified and recorded (an auction's winning bid,
+   * checked in placeBid), so skip verifyEscrowLock — its "not already used"
+   * check would otherwise refuse the bid's own lock.
+   */
+  lockAlreadyVerified?: boolean;
 }): Promise<{ escrowTxId: string }> {
   const { asset, user, priceThb, fulfillmentChoice, escrowLock, soldNote, purchasedNote, payerWalletAddress } = opts;
   const serviceFeeThb = opts.chargeFee ? buyerFeeThb(priceThb) : 0;
@@ -590,7 +596,7 @@ async function completePurchase(opts: {
   // signature otherwise, same pattern as everywhere else real signing was
   // added this session.
   if (asset.redeemedAt) throw new Error("This item was redeemed and is no longer tradeable.");
-  if (escrowLock) {
+  if (escrowLock && !opts.lockAlreadyVerified) {
     const payer = payerWalletAddress ?? user.walletAddress;
     if (!payer) throw new Error("Your account has no wallet to pay from.");
     await verifyEscrowLock(escrowLock, { buyer: payer, seller: asset.owner.walletAddress, minLamports: thbToLamports(priceThb) });
@@ -800,6 +806,24 @@ const startAuctionSchema = z.object({
   startTime: z.string().datetime().optional(),
 });
 
+/**
+ * What the seller's wallet must approve before this card can be auctioned:
+ * the platform as delegate for its NFT, so the winner's NFT can move when
+ * the auction ends. Null when nothing is needed (no real NFT, escrow not
+ * configured, a legacy card whose NFT isn't in this wallet, or already
+ * approved).
+ */
+export async function auctionApprovalNeeded(assetId: string): Promise<{ mintAddress: string; delegate: string } | null> {
+  const user = await getCurrentUser();
+  const asset = await prisma.asset.findUnique({ where: { id: assetId }, select: { ownerId: true, mintAddress: true } });
+  if (!asset || asset.ownerId !== user.id || !asset.mintAddress || !user.walletAddress) return null;
+  const delegate = await getEscrowAuthorityAddress();
+  if (!delegate) return null;
+  if ((await isDigitalTwinHeldBy({ mintAddress: asset.mintAddress, ownerAddress: user.walletAddress })) === false) return null;
+  if (await onChainTransferApproved(asset, user.walletAddress, { retry: false })) return null;
+  return { mintAddress: asset.mintAddress, delegate };
+}
+
 /** Seller puts an item up for auction — supersedes any fixed-price listing (forSale is cleared). */
 export async function startAuction(assetId: string, startPriceThb: number, durationDays: number, startTime?: string) {
   const user = await getCurrentUser();
@@ -813,6 +837,13 @@ export async function startAuction(assetId: string, startPriceThb: number, durat
   if (asset.marketStatus === "IN_AUCTION") throw new Error("This item is already up for auction.");
   if (asset.redeemedAt) throw new Error("This item was redeemed and can't be auctioned.");
 
+  // The winner's NFT has to be movable when the auction ends, so a card with
+  // a real NFT needs its owner's on-chain approval before bidding opens.
+  const transferApproved = await onChainTransferApproved(asset, user.walletAddress);
+  if (!transferApproved && (await auctionApprovalNeeded(assetId))) {
+    throw new Error("Approve the card's NFT transfer in your wallet to start the auction.");
+  }
+
   const auctionStartTime = parsed.data.startTime ? new Date(parsed.data.startTime) : new Date();
   if (auctionStartTime.getTime() < Date.now() - 60_000) throw new Error("Choose a future auction start time.");
   if (auctionStartTime.getTime() > Date.now() + 30 * 86_400_000) throw new Error("Auctions can be scheduled up to 30 days ahead.");
@@ -824,7 +855,7 @@ export async function startAuction(assetId: string, startPriceThb: number, durat
     }),
     prisma.asset.update({
       where: { id: assetId },
-      data: { forSale: false, marketStatus: "IN_AUCTION", transferApproved: false },
+      data: { forSale: false, marketStatus: "IN_AUCTION", transferApproved },
     }),
   ]);
   await cancelTradesInvolving(assetId);
@@ -1058,6 +1089,7 @@ async function finalizeAuctionSale(
       priceThb: top.amountThb,
       fulfillmentChoice,
       escrowLock,
+      lockAlreadyVerified: top.lockStatus === "HELD",
       soldNote: `${auction.asset.name} sold at auction for ${top.amountThb.toLocaleString()} THB.`,
       purchasedNote: `You won the auction for ${auction.asset.name} at ${top.amountThb.toLocaleString()} THB.`,
     });
@@ -2591,9 +2623,20 @@ async function refundRejectedPurchase(lock: EscrowLockInput | undefined, payerWa
 }
 
 /** Whether the platform is approved on-chain to move this card's NFT out of its owner's wallet. */
-async function onChainTransferApproved(asset: { mintAddress: string | null }, ownerWallet: string | null): Promise<boolean> {
+async function onChainTransferApproved(
+  asset: { mintAddress: string | null },
+  ownerWallet: string | null,
+  opts: { retry?: boolean } = {},
+): Promise<boolean> {
   if (!asset.mintAddress || !ownerWallet) return false;
-  return (await isTransferDelegated({ mintAddress: asset.mintAddress, ownerAddress: ownerWallet })) === true;
+  // A wallet returns as soon as it sends the approval, so a fresh one can
+  // take a few seconds to show up; check a few times before saying no.
+  const attempts = opts.retry === false ? 1 : 5;
+  for (let i = 0; i < attempts; i++) {
+    if ((await isTransferDelegated({ mintAddress: asset.mintAddress, ownerAddress: ownerWallet })) === true) return true;
+    if (i < attempts - 1) await new Promise((r) => setTimeout(r, 1500));
+  }
+  return false;
 }
 
 /**
@@ -2606,7 +2649,7 @@ async function assertNftCanMove(asset: { mintAddress: string | null }, sellerWal
   if (!asset.mintAddress || !sellerWallet || !(await getEscrowAuthorityAddress())) return;
   const held = await isDigitalTwinHeldBy({ mintAddress: asset.mintAddress, ownerAddress: sellerWallet });
   if (held === false) return;
-  if (!(await onChainTransferApproved(asset, sellerWallet))) {
+  if (!(await onChainTransferApproved(asset, sellerWallet, { retry: false }))) {
     throw new Error("The seller hasn't approved this card's NFT transfer yet, so it can't be bought right now.");
   }
 }
