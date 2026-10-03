@@ -45,6 +45,10 @@ export function PrivyProvider({ children }: { children: React.ReactNode }) {
           // row) is Privy's own template and already follows automatically
           // from loginMethods having 2+ social providers, as set above.
           landingHeader: "Log in to CardMart",
+          // Privy defaults this to 'ethereum-only', which makes Phantom get
+          // an Ethereum connect request and reject it ("Unsupported
+          // account") when the user's Phantom account is Solana-only.
+          walletChainType: "solana-only",
         },
         embeddedWallets: {
           solana: { createOnLogin: "users-without-wallets" },
