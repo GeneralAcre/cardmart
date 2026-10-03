@@ -2,7 +2,6 @@ import Link from "next/link";
 import { Bookmark, Flame, PackageOpen } from "lucide-react";
 
 import {
-  getMyGradingSubmissions,
   getMyRedeemedAssets,
   getMySalesToShip,
   getMyTradeOffers,
@@ -27,14 +26,13 @@ import { ProfileHeader } from "@/components/portfolio/profile-header";
 import { IdentityCard } from "@/components/portfolio/identity-card";
 import { WantedCardsPanel } from "@/components/wanted/wanted-cards-panel";
 import { TradesPanel } from "@/components/trade/trades-panel";
-import { GradingSubmissionsPanel } from "@/components/portfolio/grading-submissions-panel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SalesToShipPanel } from "@/components/portfolio/ship-to-warehouse";
 import { expireOverdueSellerShipments } from "@/lib/actions";
 import { toSaleToShip } from "@/lib/shipping";
 import { formatDate, formatGrade } from "@/lib/format";
 
-const TABS = ["all", "hand", "vault", "watchlist", "offers", "trades", "alerts", "grading"] as const;
+const TABS = ["all", "hand", "vault", "watchlist", "offers", "trades", "alerts"] as const;
 
 export default async function PortfolioPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const { tab } = await searchParams;
@@ -56,7 +54,6 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
     redeemed,
     rating,
     completedSales,
-    gradingSubmissions,
     salesToShip,
   ] = await Promise.all([
     getVaultAssets(user.id),
@@ -71,10 +68,8 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
     getMyRedeemedAssets(user.id),
     getSellerRating(user.id),
     prisma.escrowTransaction.count({ where: { sellerId: user.id, status: "RELEASED" } }),
-    getMyGradingSubmissions(user.id),
     getMySalesToShip(user.id),
   ]);
-  const gradingInProgress = gradingSubmissions.filter((s) => s.status !== "GRADED" && s.status !== "REJECTED").length;
   const pendingTradesForMe = trades.received.filter((t) => t.status === "PENDING").length;
 
   const inHand = assets.filter((a) => !a.vaulted);
@@ -131,7 +126,6 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
           <TabsTrigger value="offers">{t("Offers")} ({offersReceived.length})</TabsTrigger>
           <TabsTrigger value="trades">{t("Trades")} ({pendingTradesForMe})</TabsTrigger>
           <TabsTrigger value="alerts">{t("Alerts")} ({wantedCards.length})</TabsTrigger>
-          <TabsTrigger value="grading">{t("Grading")} ({gradingInProgress})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="all" className="pt-6">
@@ -194,9 +188,6 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
         </TabsContent>
         <TabsContent value="alerts" className="pt-6">
           <WantedCardsPanel cards={wantedCards} />
-        </TabsContent>
-        <TabsContent value="grading" className="pt-6">
-          <GradingSubmissionsPanel submissions={gradingSubmissions} />
         </TabsContent>
       </Tabs>
     </div>

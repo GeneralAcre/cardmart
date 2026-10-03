@@ -18,7 +18,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FULL_SERVICE_PACKAGE_PRICE_THB, SELF_MINT_FEE_THB, SELLER_SHIPPING_COST_THB, THB_PER_SOL } from "@/lib/pricing";
+import { SELF_MINT_FEE_THB, SELLER_SHIPPING_COST_THB, THB_PER_SOL } from "@/lib/pricing";
 import { formatThb } from "@/lib/format";
 import { getT } from "@/lib/i18n/server";
 import type { Translate, TranslateVars } from "@/lib/i18n/translate";
@@ -66,12 +66,6 @@ const SELL_STEPS: Step[] = [
     title: "List with Instant Verify",
     body: "Open Listing and follow the live-camera checklist (front, back, label, corners). Type a PSA cert number and the card details fill in automatically. Listing costs a flat {fee}.",
     vars: { fee: formatThb(SELF_MINT_FEE_THB) },
-  },
-  {
-    icon: Sparkles,
-    title: "Or send a raw card for grading",
-    body: "Choose “Get it graded first” on Listing. We ship the card to PSA, BGS or CGC, pay their fee and mint it when it comes back — {price} all-in. Track it from the Grading tab on Portfolio.",
-    vars: { price: formatThb(FULL_SERVICE_PACKAGE_PRICE_THB) },
   },
   {
     icon: Sparkles,
