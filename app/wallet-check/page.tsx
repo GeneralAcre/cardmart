@@ -7,6 +7,8 @@
 // to any server; the signed test message is only displayed.
 
 import { useEffect, useState } from "react";
+import { useConnectWallet, VERSION } from "@privy-io/react-auth";
+import { useWallets as usePrivySolanaWallets } from "@privy-io/react-auth/solana";
 
 type StdAccount = { address: string; chains: readonly string[] };
 type StdWallet = {
@@ -33,6 +35,25 @@ export default function WalletCheckPage() {
   const [wallets, setWallets] = useState<StdWallet[]>([]);
   const [log, setLog] = useState<string[]>([]);
   const add = (line: string) => setLog((l) => [...l, line]);
+  const { connectWallet } = useConnectWallet({
+    onSuccess: ({ wallet }) => add(`Privy connect OK: ${wallet.address}`),
+    onError: (err) => add(`Privy connect ERROR: ${err}`),
+  });
+  const { wallets: privyWallets } = usePrivySolanaWallets();
+
+  // Same sign call Privy's login makes, but with the real error shown.
+  async function testPrivySign() {
+    add(`--- Privy ${VERSION} signMessage ---`);
+    add(`Privy Solana wallets: ${privyWallets.map((w) => `${w.standardWallet.name} ${w.address}`).join(", ") || "(none — click 'Privy connect' first)"}`);
+    const w = privyWallets[0];
+    if (!w) return;
+    try {
+      const out = await w.signMessage({ message: new TextEncoder().encode("CardMart wallet check") });
+      add(`Privy signMessage OK, signature bytes: ${out.signature.length}`);
+    } catch (e) {
+      add(`Privy signMessage ERROR:\n${describeError(e)}`);
+    }
+  }
 
   useEffect(() => {
     const found: StdWallet[] = [];
@@ -97,6 +118,14 @@ export default function WalletCheckPage() {
           ))}
         <button onClick={testPhantomLegacy} className="rounded border px-3 py-2">
           Phantom (legacy)
+        </button>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <button onClick={() => connectWallet({ walletChainType: "solana-only" })} className="rounded border px-3 py-2">
+          1. Privy connect
+        </button>
+        <button onClick={testPrivySign} className="rounded border px-3 py-2">
+          2. Privy sign
         </button>
       </div>
       <p>All wallets detected: {wallets.map((w) => w.name).join(", ") || "(none yet)"}</p>
