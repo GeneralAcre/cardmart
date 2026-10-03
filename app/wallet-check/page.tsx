@@ -7,7 +7,7 @@
 // to any server; the signed test message is only displayed.
 
 import { useEffect, useState } from "react";
-import { useConnectWallet, VERSION } from "@privy-io/react-auth";
+import { useConnectWallet, useLoginWithSiws, VERSION } from "@privy-io/react-auth";
 import { useWallets as usePrivySolanaWallets } from "@privy-io/react-auth/solana";
 
 type StdAccount = { address: string; chains: readonly string[] };
@@ -40,6 +40,32 @@ export default function WalletCheckPage() {
     onError: (err) => add(`Privy connect ERROR: ${err}`),
   });
   const { wallets: privyWallets } = usePrivySolanaWallets();
+  const { generateSiwsMessage, generateSiwsOffchainMessage } = useLoginWithSiws();
+
+  // Signs the real login message in both formats WITHOUT logging in, to see
+  // which one Phantom (in testnet mode) will show.
+  async function testLoginFormats() {
+    const w = privyWallets[0];
+    add("--- Login message formats ---");
+    if (!w) return add("(click '1. Privy connect' first)");
+    let message: string;
+    try {
+      message = await generateSiwsMessage({ address: w.address });
+    } catch (e) {
+      return add(`generateSiwsMessage ERROR:\n${describeError(e)}`);
+    }
+    for (const [label, bytes] of [
+      ["off-chain", () => generateSiwsOffchainMessage({ message, address: w.address })],
+      ["plain", () => new TextEncoder().encode(message)],
+    ] as const) {
+      try {
+        const out = await w.signMessage({ message: bytes() });
+        add(`${label}: OK, signature bytes: ${out.signature.length}`);
+      } catch (e) {
+        add(`${label}: ERROR\n${describeError(e)}`);
+      }
+    }
+  }
 
   // Same sign call Privy's login makes, but with the real error shown.
   async function testPrivySign() {
@@ -126,6 +152,9 @@ export default function WalletCheckPage() {
         </button>
         <button onClick={testPrivySign} className="rounded border px-3 py-2">
           2. Privy sign
+        </button>
+        <button onClick={testLoginFormats} className="rounded border px-3 py-2">
+          3. Login formats
         </button>
       </div>
       <p>All wallets detected: {wallets.map((w) => w.name).join(", ") || "(none yet)"}</p>

@@ -86,8 +86,14 @@ export function WalletLoginButton({
         signed = (await wallet.signMessage({ message: offchain })).signature;
       } catch (e) {
         if ((e as { code?: number })?.code === 4001 && !/chain/i.test(String((e as Error).message))) throw e;
+        const offchainError = e instanceof Error ? e.message : String(e);
         messageType = "plain";
-        signed = (await wallet.signMessage({ message: new TextEncoder().encode(message) })).signature;
+        try {
+          signed = (await wallet.signMessage({ message: new TextEncoder().encode(message) })).signature;
+        } catch (plainError) {
+          const plain = plainError instanceof Error ? plainError.message : String(plainError);
+          throw new Error(`${plain} (off-chain format: ${offchainError})`);
+        }
       }
       await loginWithSiws({
         message,
