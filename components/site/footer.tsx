@@ -6,7 +6,7 @@ import { getT } from "@/lib/i18n/server";
 
 const NAV_LINKS = [
   { href: "/", label: "Home" },
-  { href: "/marketplace", label: "Marketplace" },
+  { href: "/marketplace", label: "Market" },
   { href: "/leaderboard", label: "Leaderboard" },
   { href: "/guide", label: "Getting Started" },
   { href: "/marketplace/sell", label: "Sell a card" },

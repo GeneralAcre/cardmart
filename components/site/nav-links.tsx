@@ -14,16 +14,16 @@ export function NavLinks() {
   const t = useT();
 
   return (
-    <nav className="hidden items-center gap-1 sm:flex">
+    <nav className="hidden items-center gap-1 md:flex">
       {links.map((l) => (
         <Link
           key={l.href}
           href={l.href}
           className={cn(
-            "rounded-md px-3 py-1.5 text-xs font-semibold tracking-wide uppercase transition-colors",
+            "eyebrow rounded-full px-3.5 py-2 transition-colors lg:text-[13px]",
             isNavLinkActive(pathname, l.href)
-              ? "bg-accent text-accent-foreground"
-              : "text-muted-foreground hover:text-foreground hover:bg-accent/50",
+              ? "bg-secondary text-foreground"
+              : "text-muted-foreground hover:text-foreground",
           )}
         >
           {t(l.label)}

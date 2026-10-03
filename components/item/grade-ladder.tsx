@@ -75,13 +75,13 @@ export async function GradeLadder({
   return (
     <section className="flex flex-col gap-4">
       <div className="flex items-center gap-2">
-        <div className="bg-foreground text-background flex size-7 items-center justify-center rounded-lg">
+        <div className="bg-secondary text-foreground flex size-7 items-center justify-center rounded-md">
           <Layers className="size-3.5" />
         </div>
-        <h2 className="text-lg font-semibold">{t("Price by grade")}</h2>
+        <h2 className="eyebrow text-foreground text-sm">{t("Price by grade")}</h2>
       </div>
 
-      <div className="bg-card overflow-hidden rounded-xl border">
+      <div className="bg-card overflow-hidden rounded-2xl border">
         <div className="text-muted-foreground hidden grid-cols-[1fr_repeat(3,minmax(0,1fr))_4.5rem] gap-3 border-b px-4 py-2.5 text-xs sm:grid">
           <span>{t("Grade")}</span>
           <span className="text-right">{t("CardMart · lowest")}</span>

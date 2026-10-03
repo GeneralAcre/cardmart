@@ -43,13 +43,13 @@ import { ShipToWarehouseTask } from "@/components/portfolio/ship-to-warehouse";
 import { RatingStars } from "@/components/store/rating-stars";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { ActionButton } from "@/components/ui/action-button";
 import { Separator } from "@/components/ui/separator";
 import { ChevronDown, ChevronLeft, ExternalLink, Flame, Gavel, History } from "lucide-react";
 
 import { formatDate, formatGrade, formatThb } from "@/lib/format";
 import {
   CARD_GAME_LABELS,
+  CARD_LANGUAGE_LABELS,
   MARKET_STATUS_BADGE_CLASS,
   MARKET_STATUS_LABELS,
   VERIFICATION_PACKAGE_BADGE_CLASS,
@@ -221,16 +221,29 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
     priceHistory.length >= 2 ? priceHistory[priceHistory.length - 2].priceThb : null;
 
   return (
-    <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6">
-      <ActionButton href="/marketplace" icon={ChevronLeft} title={t("Back to Marketplace")} className="mb-6 w-fit">
-        {t("Back")}
-      </ActionButton>
+    <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
+      {/* Breadcrumb back link — where you came from, then this card. */}
+      <nav className="text-muted-foreground mb-6 flex min-w-0 items-center gap-1.5 text-sm">
+        <Link
+          href="/marketplace"
+          title={t("Back to Market")}
+          className="hover:text-foreground inline-flex shrink-0 items-center gap-1 transition-colors"
+        >
+          <ChevronLeft className="size-4" />
+          {t("Market")}
+        </Link>
+        <span>/</span>
+        <span className="shrink-0">{t(CARD_GAME_LABELS[asset.game])}</span>
+        <span>/</span>
+        <span className="text-foreground truncate">{asset.name}</span>
+      </nav>
 
       {/* items-start — without it, CSS Grid stretches the shorter info
           column to match the (usually much taller) image column's height,
           which just left a dead black gap below the last card on the right. */}
-      <div className="grid grid-cols-1 items-start gap-10 md:grid-cols-2">
-        <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:gap-12">
+        {/* The image stays in view while the info column scrolls past it. */}
+        <div className="flex flex-col gap-4 lg:sticky lg:top-24">
           <ItemGallery
             themeIndex={asset.themeIndex}
             category={asset.category}
@@ -246,15 +259,18 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
           {/* Top pill row — category / vault / verification package, plus watch */}
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="outline" className="rounded-full">
+              <Badge variant="outline" className="rounded-md">
                 {t(CARD_GAME_LABELS[asset.game])}
               </Badge>
+              <Badge variant="outline" className="rounded-md">
+                {t(CARD_LANGUAGE_LABELS[asset.language])}
+              </Badge>
               {asset.vaulted && (
-                <Badge variant="secondary" className="rounded-full">
+                <Badge variant="secondary" className="rounded-md">
                   {t("In Platform Vault")}
                 </Badge>
               )}
-              <Badge className={cn("rounded-full border-0", VERIFICATION_PACKAGE_BADGE_CLASS[asset.verificationPackage])}>
+              <Badge className={cn("rounded-md border-0", VERIFICATION_PACKAGE_BADGE_CLASS[asset.verificationPackage])}>
                 {t(VERIFICATION_PACKAGE_LABELS[asset.verificationPackage])}
               </Badge>
             </div>
@@ -276,7 +292,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
               costs, all in one glance. */}
           <div className="flex items-start justify-between gap-3">
             <div className="flex min-w-0 flex-col gap-1">
-              <span className="text-muted-foreground flex flex-wrap items-center gap-1.5 text-xs font-semibold tracking-wide uppercase">
+              <span className="eyebrow text-muted-foreground flex flex-wrap items-center gap-1.5">
                 {asset.gradingCompany === "RAW"
                   ? t("Raw / Ungraded — verified by camera")
                   : `${asset.gradingCompany} ${formatGrade(asset.grade)}${gradeTierName ? ` · ${gradeTierName}` : ""}`}
@@ -286,7 +302,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
                   </span>
                 )}
               </span>
-              <h1 className="text-2xl font-semibold">{asset.name}</h1>
+              <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{asset.name}</h1>
               <p className="text-muted-foreground text-sm">
                 {asset.subtitle}
                 {asset.cardNumber && <span className="font-mono"> · #{asset.cardNumber}</span>}
@@ -304,7 +320,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
             </div>
             {/* The price lives in the Listing Price box below (and on the Buy
                 button), so only the status sits up here. */}
-            <Badge className={cn("shrink-0 border-0", MARKET_STATUS_BADGE_CLASS[asset.marketStatus])}>
+            <Badge className={cn("shrink-0 rounded-md border-0", MARKET_STATUS_BADGE_CLASS[asset.marketStatus])}>
               {t(MARKET_STATUS_LABELS[asset.marketStatus])}
             </Badge>
           </div>
@@ -314,7 +330,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
               token id), backed by this platform's own real SPL mint. */}
           <div
             className={cn(
-              "detail-panel grid divide-x rounded-xl border text-sm",
+              "detail-panel grid divide-x rounded-2xl border text-sm",
               asset.mintAddress ? "grid-cols-3" : "grid-cols-2",
             )}
           >
@@ -349,20 +365,20 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
               channel (see below) and don't feed into this fixed-price figure. */}
           <div
             className={cn(
-              "detail-panel grid divide-x rounded-xl border",
+              "detail-panel grid divide-x rounded-2xl border",
               previousPriceThb != null ? "grid-cols-2" : "grid-cols-1",
             )}
           >
-            <div className="flex flex-col gap-0.5 p-3">
-              <span className="text-muted-foreground text-xs">{t("Listing Price")}</span>
-              <span className="text-lg leading-none font-bold tabular-nums">
+            <div className="flex flex-col gap-1.5 p-4">
+              <span className="eyebrow text-muted-foreground">{t("Listing Price")}</span>
+              <span className="text-3xl leading-none font-bold tabular-nums">
                 {asset.priceThb != null ? formatThb(asset.priceThb) : "—"}
               </span>
             </div>
             {previousPriceThb != null && (
-              <div className="flex flex-col gap-0.5 p-3">
-                <span className="text-muted-foreground text-xs">{t("Previous Price")}</span>
-                <span className="text-lg leading-none font-bold tabular-nums">{formatThb(previousPriceThb)}</span>
+              <div className="flex flex-col gap-1.5 p-4">
+                <span className="eyebrow text-muted-foreground">{t("Previous Price")}</span>
+                <span className="text-muted-foreground text-3xl leading-none font-bold tabular-nums">{formatThb(previousPriceThb)}</span>
               </div>
             )}
           </div>
@@ -373,7 +389,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
               owner — the person who can actually accept an offer or change
               the price. */}
           <div className="flex flex-col gap-2">
-            <div className="detail-panel flex items-center gap-3 rounded-xl border p-3">
+            <div className="detail-panel flex items-center gap-3 rounded-2xl border p-4">
               <Link href={`/store/${asset.seller.id}`} className="group flex min-w-0 flex-1 items-center gap-3">
                 <Avatar className="size-10 shrink-0">
                   {asset.seller.image && <AvatarImage src={asset.seller.image} alt={asset.seller.name ?? ""} />}
@@ -419,7 +435,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
           ) : activeAuction ? (
             <Link
               href={`/auctions/${activeAuction.id}`}
-              className="bg-foreground text-background flex items-center gap-3 rounded-xl p-4 transition-opacity hover:opacity-90"
+              className="bg-foreground text-background flex items-center gap-3 rounded-2xl p-4 transition-opacity hover:opacity-90"
             >
               <Gavel className="size-5 shrink-0" />
               <div className="flex flex-col">
@@ -514,8 +530,8 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
               Game, grade and serial are already shown above, so this only
               appears when PSA returned something new. */}
           {psaCert && (
-            <details className="detail-panel group rounded-xl border" open>
-              <summary className="flex cursor-pointer list-none items-center justify-between p-4 text-sm font-semibold">
+            <details className="detail-panel group rounded-2xl border" open>
+              <summary className="eyebrow flex cursor-pointer list-none items-center justify-between p-4">
                 {t("Card Details")}
                 <ChevronDown className="text-muted-foreground size-4 transition-transform group-open:rotate-180" />
               </summary>
@@ -582,7 +598,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
       {/* Everything below is supporting evidence for the decision already
           made above — verification detail and price data a buyer can dig
           into, not required reading before they can act. */}
-      <Separator className="my-10" />
+      <Separator className="my-12" />
 
       <PlatformPriceTable
         priceThb={asset.priceThb}
@@ -595,7 +611,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
         ebay={ebayQuote}
       />
 
-      <Separator className="my-10" />
+      <Separator className="my-12" />
 
       <GradeLadder current={currentTier} listings={gradeData.listings} sales={gradeData.sales} ebay={ladderEbay} />
 
@@ -606,10 +622,10 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
 
         <div>
           <div className="mb-5 flex items-center gap-2">
-            <div className="bg-foreground text-background flex size-7 items-center justify-center rounded-lg">
+            <div className="bg-secondary text-foreground flex size-7 items-center justify-center rounded-md">
               <History className="size-3.5" />
             </div>
-            <h2 className="text-lg font-semibold">{t("Item History")}</h2>
+            <h2 className="eyebrow text-foreground text-sm">{t("Item History")}</h2>
           </div>
           <ProvenanceTimeline events={asset.provenance} />
         </div>
@@ -617,7 +633,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
 
       {similarAssets.length > 0 && (
         <>
-          <Separator className="my-10" />
+          <Separator className="my-12" />
           <SimilarListings currentPriceThb={asset.priceThb} listings={similarAssets} />
         </>
       )}

@@ -1,4 +1,4 @@
-import type { AssetCategory, CardGame, GradingCompany, MarketStatus } from "@prisma/client";
+import type { AssetCategory, CardGame, CardLanguage, GradingCompany, MarketStatus } from "@prisma/client";
 
 export interface AssetSummary {
   id: string;
@@ -8,6 +8,8 @@ export interface AssetSummary {
   cardNumber?: string | null;
   category: AssetCategory;
   game: CardGame;
+  /** Print language of the card (English or Japanese). */
+  language: CardLanguage;
   gradingCompany: GradingCompany;
   grade: number | null;
   /** BGS Black Label only — see prisma/schema.prisma Asset.isBlackLabel. */
@@ -35,6 +37,7 @@ export interface AssetSummary {
 export interface MarketplaceFilterState {
   q: string;
   games: CardGame[];
+  languages: CardLanguage[];
   gradingCompanies: GradingCompany[];
   grades: number[];
   /** BGS Black Label only — a separate toggle since it's not a distinct numeric grade (see Asset.isBlackLabel). */
@@ -47,6 +50,7 @@ export interface MarketplaceFilterState {
 export const EMPTY_FILTERS: MarketplaceFilterState = {
   q: "",
   games: [],
+  languages: [],
   gradingCompanies: [],
   grades: [],
   blackLabelOnly: false,

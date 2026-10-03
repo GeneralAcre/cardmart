@@ -4,6 +4,7 @@ import { getSessionUser } from "@/lib/session";
 import { OnboardingForm } from "@/components/onboarding/onboarding-form";
 import { suggestHandle } from "@/lib/profile-utils";
 import { getT } from "@/lib/i18n/server";
+import { Logo } from "@/components/site/logo";
 
 export default async function OnboardingPage() {
   const [user, t] = await Promise.all([getSessionUser(), getT()]);
@@ -15,8 +16,8 @@ export default async function OnboardingPage() {
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-16">
       <div className="flex w-full max-w-md flex-col gap-6 rounded-xl border p-8 shadow-sm">
-        <div className="flex items-center gap-2 font-semibold tracking-tight">
-          <span>CardMart</span>
+        <div className="flex items-center gap-2">
+          <Logo />
         </div>
         <div className="flex flex-col gap-1">
           <h1 className="text-xl font-semibold">{t("Set up your profile")}</h1>

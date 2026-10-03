@@ -19,7 +19,7 @@ export default async function SellPage() {
         <ActionButton
           href="/marketplace"
           icon={ChevronLeft}
-          title={t("Back to Marketplace")}
+          title={t("Back to Market")}
           className="mb-2 w-fit min-[1200px]:absolute min-[1200px]:-top-1 min-[1200px]:right-full min-[1200px]:mr-6 min-[1200px]:mb-0"
         >
           {t("Back")}

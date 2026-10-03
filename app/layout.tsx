@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Epilogue, Geist_Mono, Noto_Sans_Thai } from "next/font/google";
+import { Geist, Geist_Mono, Noto_Sans_Thai } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
@@ -8,8 +8,8 @@ import { PrivyProvider } from "@/components/providers/privy-provider";
 import { LanguageProvider } from "@/components/landing/language-provider";
 import { getLocale } from "@/lib/i18n/server";
 
-const epilogue = Epilogue({
-  variable: "--font-epilogue",
+const geist = Geist({
+  variable: "--font-geist",
   subsets: ["latin"],
 });
 
@@ -53,7 +53,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang={locale}
-      className={`${epilogue.variable} ${notoSansThai.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geist.variable} ${notoSansThai.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <LanguageProvider initialLocale={locale}>

@@ -62,47 +62,50 @@ export function ItemGallery({
       <motion.button
         type="button"
         onClick={() => setZoomOpen(true)}
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-        className="group relative aspect-[3/4] w-full"
+        whileTap={{ scale: 0.99 }}
+        className="card-stage group relative aspect-[4/5] w-full overflow-hidden rounded-2xl border"
       >
+        {/* Shown whole on the dark stage (contain), never cropped. */}
         {selectedPhoto ? (
           <Image
             src={selectedPhoto.url}
             alt={selectedPhoto.viewLabel}
             fill
-            sizes="(max-width: 1024px) 100vw, 50vw"
+            sizes="(max-width: 1024px) 100vw, 55vw"
             priority
-            className={cn("rounded-lg border", selectedPhoto.reference ? "bg-muted object-contain p-3" : "object-cover")}
+            className="object-contain p-6 drop-shadow-[0_24px_48px_rgba(0,0,0,0.65)] transition-transform duration-300 group-hover:scale-[1.03] sm:p-10"
           />
         ) : (
-          <CardArt
-            themeIndex={themeIndex}
-            category={category}
-            gradingCompany={gradingCompany}
-            grade={grade}
-            isBlackLabel={isBlackLabel}
-            size="lg"
-          />
+          <div className="absolute inset-0 flex items-center justify-center p-6 sm:p-10">
+            <CardArt
+              themeIndex={themeIndex}
+              category={category}
+              gradingCompany={gradingCompany}
+              grade={grade}
+              isBlackLabel={isBlackLabel}
+              size="lg"
+              className="h-full w-auto rounded-xl"
+            />
+          </div>
         )}
         {selectedPhoto?.reference && (
-          <span className="absolute bottom-2 left-2 rounded-full bg-black/70 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur-sm">
+          <span className="absolute bottom-3 left-3 rounded-md bg-black/70 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur-sm">
             {t("Reference image")}
           </span>
         )}
-        <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/0 opacity-0 transition-all group-hover:bg-black/20 group-hover:opacity-100">
-          <ZoomIn className="size-8 text-white drop-shadow" />
-        </div>
+        <span className="absolute right-3 top-3 flex size-9 items-center justify-center rounded-md bg-black/70 text-white opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100">
+          <ZoomIn className="size-4" />
+        </span>
       </motion.button>
 
       {photos.length > 0 && (
-        <div className="grid grid-cols-5 gap-2">
+        <div className="grid grid-cols-5 gap-2 sm:grid-cols-6">
           <button
             type="button"
             onClick={() => setSelectedId("twin")}
             className={cn(
-              "overflow-hidden rounded-md border-2 transition-colors",
-              selectedId === "twin" ? "border-foreground" : "border-transparent hover:border-muted-foreground/30",
+              "card-stage overflow-hidden rounded-lg border-2 p-1 transition-colors",
+              selectedId === "twin" ? "border-foreground" : "border-border hover:border-foreground/30",
             )}
           >
             <CardArt
@@ -112,7 +115,7 @@ export function ItemGallery({
               grade={grade}
               isBlackLabel={isBlackLabel}
               bordered={false}
-              className="aspect-square"
+              className="aspect-square rounded"
             />
           </button>
           {photos.map((photo) => (
@@ -121,10 +124,10 @@ export function ItemGallery({
               type="button"
               onClick={() => setSelectedId(photo.id)}
               className={cn(
-                "relative aspect-square overflow-hidden rounded-md border-2 transition-colors",
+                "card-stage relative aspect-square overflow-hidden rounded-lg border-2 transition-colors",
                 selectedId === photo.id
                   ? "border-foreground"
-                  : "border-transparent hover:border-muted-foreground/30",
+                  : "border-border hover:border-foreground/30",
               )}
             >
               <Image
@@ -132,7 +135,7 @@ export function ItemGallery({
                 alt={photo.viewLabel}
                 fill
                 sizes="20vw"
-                className={photo.reference ? "bg-muted object-contain p-1" : "object-cover"}
+                className="object-contain p-1"
               />
             </button>
           ))}

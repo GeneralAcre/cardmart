@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { SiteFooter } from "@/components/site/footer";
+import { Logo } from "@/components/site/logo";
 
 export const metadata = {
   title: "Terms of Use — CardMart",
@@ -11,8 +12,8 @@ export default function TermsPage() {
     <div className="flex min-h-full flex-col">
       <header className="border-b">
         <div className="mx-auto flex h-16 max-w-7xl items-center px-4 sm:px-6">
-          <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
-            <span>CardMart</span>
+          <Link href="/" className="flex items-center gap-2">
+            <Logo />
           </Link>
         </div>
       </header>

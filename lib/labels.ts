@@ -14,6 +14,7 @@ import type {
   KycIdType,
   TradeOfferStatus,
   CardGame,
+  CardLanguage,
 } from "@prisma/client";
 
 /** The two games CardMart trades — what buyers see instead of the old category. */
@@ -23,6 +24,14 @@ export const CARD_GAME_LABELS: Record<CardGame, string> = {
 };
 
 export const CARD_GAMES: CardGame[] = ["POKEMON", "ONE_PIECE"];
+
+/** The print language of the card itself, not the site's UI language. */
+export const CARD_LANGUAGE_LABELS: Record<CardLanguage, string> = {
+  ENGLISH: "English",
+  JAPANESE: "Japanese",
+};
+
+export const CARD_LANGUAGES: CardLanguage[] = ["ENGLISH", "JAPANESE"];
 
 export const CATEGORY_LABELS: Record<AssetCategory, string> = {
   TRADING_CARD: "Trading Card",

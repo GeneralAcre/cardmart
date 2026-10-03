@@ -3,45 +3,42 @@
 @import "shadcn/tailwind.css";
 
 :root {
+  /* Traded-style surfaces: a near-black page, a slightly lifted #141414 card
+     and a quiet #262626 hairline border — separation comes from the card
+     surface and the image "stage" inside it, not from loud outlines. */
   --radius: 0.625rem;
-  /* A true near-black canvas with a clearly lighter elevated surface for
-     cards/popovers, plus a border with real visible contrast — a card that
-     only differs from the page by a few percent of lightness reads as one
-     undivided black mass, not as separate, boxed items. */
-  --background: oklch(0.06 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.16 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.16 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  /* Primary stays a solid white chip/button with black text — the
-     strongest possible contrast, kept monochrome (no accent hue). */
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.06 0 0);
-  --secondary: oklch(0.24 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.24 0 0);
-  --muted-foreground: oklch(0.65 0 0);
-  --accent: oklch(0.24 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  /* Brand status colors: every "good / up / done" green and every
+  --background: #0a0a0a;
+  --foreground: #ffffff;
+  --card: #141414;
+  --card-foreground: #ffffff;
+  --popover: #141414;
+  --popover-foreground: #ffffff;
+  /* Primary stays a solid white chip/button with black text. */
+  --primary: #ffffff;
+  --primary-foreground: #0a0a0a;
+  --secondary: #1f1f1f;
+  --secondary-foreground: #ffffff;
+  --muted: #1f1f1f;
+  --muted-foreground: #a1a1a1;
+  --accent: #1f1f1f;
+  --accent-foreground: #ffffff;
+  /* Status colors: every "good / up / done" green and every
      "bad / down / error" red on the site comes from these two. */
-  --success: #aacc00;
-  --success-foreground: oklch(0.06 0 0);
-  --destructive: #bf0603;
-  --border: oklch(1 0 0 / 20%);
-  --input: oklch(1 0 0 / 22%);
-  --ring: oklch(0.6 0 0);
+  --success: #00c758;
+  --success-foreground: #0a0a0a;
+  --destructive: #fb2c36;
+  --border: #262626;
+  --input: #2e2e2e;
+  --ring: #737373;
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.708 0 0);
   --chart-3: oklch(0.556 0 0);
   --chart-4: oklch(0.439 0 0);
   --chart-5: oklch(0.371 0 0);
-  /* The one deliberate spot of color on an otherwise strict black-and-white
-     site — used sparingly, only where a number is genuinely about price
-     movement (the price chart line, the trending "gained value" badge). */
+  /* The one deliberate spot of color — used only where a number is about
+     price movement (the price chart line, the trending "gained value" badge). */
   --highlight: var(--success);
-  --highlight-foreground: oklch(0.145 0 0);
+  --highlight-foreground: #0a0a0a;
 }
 
 @theme inline {
@@ -71,9 +68,9 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --font-sans: var(--font-epilogue), var(--font-noto-sans-thai), sans-serif;
+  --font-sans: var(--font-geist), var(--font-noto-sans-thai), sans-serif;
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-epilogue), var(--font-noto-sans-thai), sans-serif;
+  --font-heading: var(--font-geist), var(--font-noto-sans-thai), sans-serif;
   --color-chart-5: var(--chart-5);
   --color-chart-4: var(--chart-4);
   --color-chart-3: var(--chart-3);
@@ -100,11 +97,22 @@
 
 @layer utilities {
   /* Shared surface for the info panels on card and auction detail pages:
-     the same dark card as the other panels, with a thin brand-green edge as
-     the accent, so they read as a set without a solid fill competing with
-     the card image and the buy buttons. */
+     the same dark card as the rest of the site, so they read as a set
+     without competing with the card image and the buy buttons. */
   .detail-panel {
-    @apply bg-card text-card-foreground border-highlight/40;
+    @apply bg-card text-card-foreground border-border;
+  }
+
+  /* The dark spotlight a card image sits on — a soft lift at the top fading
+     into the card surface, like a slab photographed on a black stage. */
+  .card-stage {
+    background: radial-gradient(120% 80% at 50% 0%, #2a2a2a 0%, #171717 45%, #0f0f0f 100%);
+  }
+
+  /* Small uppercase, letter-spaced label used for nav, sidebar sections and
+     section headings. */
+  .eyebrow {
+    @apply text-xs font-semibold uppercase tracking-[0.15em];
   }
 
   /* Keeps horizontal touch/swipe scrolling (e.g. an overflowing TabsList on

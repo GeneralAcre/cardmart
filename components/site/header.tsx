@@ -21,6 +21,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Logo } from "@/components/site/logo";
 
 export async function SiteHeader() {
   const [user, t] = await Promise.all([getCurrentUser(), getT()]);
@@ -39,11 +40,11 @@ export async function SiteHeader() {
 
   return (
     <>
-      <header className="bg-background/80 sticky top-0 z-40 border-b backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-2 px-4 sm:gap-4 sm:px-6">
-          <div className="flex min-w-0 items-center gap-2 sm:gap-6">
-            <Link href="/" className="flex shrink-0 items-center gap-2 text-base font-bold sm:text-lg tracking-wide uppercase">
-              <span>CardMart</span>
+      <header className="bg-background/90 sticky top-0 z-40 border-b backdrop-blur">
+        <div className="mx-auto flex h-16 max-w-screen-2xl items-center justify-between gap-2 px-4 sm:h-[72px] sm:gap-4 sm:px-6 lg:px-8">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-8">
+            <Link href="/" className="flex shrink-0 items-center gap-2">
+              <Logo />
             </Link>
             <NavLinks />
           </div>

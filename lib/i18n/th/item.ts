@@ -2,6 +2,7 @@
 // price comparison, insights, history, seller card and reviews.
 export const ITEM: Record<string, string> = {
   "Back to Marketplace": "กลับไปที่ตลาด",
+  "Back to Market": "กลับไปที่ตลาด",
   "In Platform Vault": "อยู่ในห้องนิรภัยของแพลตฟอร์ม",
   "Raw / Ungraded — verified by camera": "การ์ดดิบ / ยังไม่เกรด — ยืนยันด้วยกล้อง",
   "View on PSA": "ดูบน PSA",

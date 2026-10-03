@@ -16,7 +16,7 @@ export function MobileBottomNav() {
 
   return (
     <nav
-      className="bg-background/95 fixed inset-x-0 bottom-0 z-40 border-t backdrop-blur sm:hidden"
+      className="bg-background/95 fixed inset-x-0 bottom-0 z-40 border-t backdrop-blur md:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
     >
       <div className="grid h-14" style={{ gridTemplateColumns: `repeat(${links.length}, minmax(0, 1fr))` }}>

@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Loader2, Sparkles, Truck } from "lucide-react";
-import type { CardGame, GradingCompany } from "@prisma/client";
+import type { CardGame, CardLanguage, GradingCompany } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -23,7 +23,7 @@ import {
 import { StepHeading } from "@/components/listing/step-heading";
 import { submitForGrading } from "@/lib/actions";
 import { useWalletStore } from "@/lib/web3/wallet-store";
-import { CARD_GAMES, CARD_GAME_LABELS, CATEGORY_GRADING_COMPANIES, GRADING_COMPANY_LABELS } from "@/lib/labels";
+import { CARD_GAMES, CARD_GAME_LABELS, CARD_LANGUAGES, CARD_LANGUAGE_LABELS, CATEGORY_GRADING_COMPANIES, GRADING_COMPANY_LABELS } from "@/lib/labels";
 import { FULL_SERVICE_COST_BREAKDOWN, FULL_SERVICE_PACKAGE_PRICE_THB } from "@/lib/pricing";
 import { formatThb } from "@/lib/format";
 import { useT } from "@/components/landing/language-provider";
@@ -44,6 +44,7 @@ export function FullServiceForm() {
   const [itemName, setItemName] = useState("");
   const [itemSubtitle, setItemSubtitle] = useState("");
   const [game, setGame] = useState<CardGame>("POKEMON");
+  const [language, setLanguage] = useState<CardLanguage>("ENGLISH");
   const [gradingCompany, setGradingCompany] = useState<GradingCompany>("PSA");
 
   const [payOpen, setPayOpen] = useState(false);
@@ -68,6 +69,7 @@ export function FullServiceForm() {
     fd.set("itemName", itemName);
     fd.set("itemSubtitle", itemSubtitle);
     fd.set("game", game);
+    fd.set("language", language);
     fd.set("gradingCompany", gradingCompany);
 
     startSubmit(async () => {
@@ -104,6 +106,21 @@ export function FullServiceForm() {
                   {CARD_GAMES.map((g) => (
                     <SelectItem key={g} value={g}>
                       {t(CARD_GAME_LABELS[g])}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label>{t("Card language")}</Label>
+              <Select value={language} onValueChange={(v) => setLanguage(v as CardLanguage)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CARD_LANGUAGES.map((l) => (
+                    <SelectItem key={l} value={l}>
+                      {t(CARD_LANGUAGE_LABELS[l])}
                     </SelectItem>
                   ))}
                 </SelectContent>

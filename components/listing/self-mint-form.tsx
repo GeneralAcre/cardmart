@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { BadgeCheck, CheckCircle2, Loader2, SearchX } from "lucide-react";
-import type { AssetCategory, CardGame, GradingCompany } from "@prisma/client";
+import type { AssetCategory, CardGame, CardLanguage, GradingCompany } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -38,6 +38,8 @@ import {
   CATEGORY_GRADING_COMPANIES,
   CARD_GAMES,
   CARD_GAME_LABELS,
+  CARD_LANGUAGES,
+  CARD_LANGUAGE_LABELS,
   GRADING_COMPANY_LABELS,
   gradeTierLabel,
 } from "@/lib/labels";
@@ -57,6 +59,7 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
   const [raw, setRaw] = useState(false);
   const category = CATEGORY;
   const [game, setGame] = useState<CardGame>("POKEMON");
+  const [language, setLanguage] = useState<CardLanguage>("ENGLISH");
   const [gradingCompany, setGradingCompany] = useState<GradingCompany>("PSA");
   const gradingCompanies = CATEGORY_GRADING_COMPANIES[category];
   const [serial, setSerial] = useState("");
@@ -155,6 +158,7 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
         if (cardNumber.trim()) fd.set("cardNumber", cardNumber.trim());
         fd.set("category", category);
         fd.set("game", game);
+        fd.set("language", language);
         fd.set("raw", String(raw));
         fd.set("gradingCompany", raw ? "RAW" : gradingCompany);
         if (!raw) {
@@ -252,6 +256,21 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
                   {CARD_GAMES.map((g) => (
                     <SelectItem key={g} value={g}>
                       {t(CARD_GAME_LABELS[g])}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label>{t("Card language")}</Label>
+              <Select value={language} onValueChange={(v) => setLanguage(v as CardLanguage)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CARD_LANGUAGES.map((l) => (
+                    <SelectItem key={l} value={l}>
+                      {t(CARD_LANGUAGE_LABELS[l])}
                     </SelectItem>
                   ))}
                 </SelectContent>

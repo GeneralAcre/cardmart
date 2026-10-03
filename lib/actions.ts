@@ -216,6 +216,7 @@ const createListingSchema = z
     // Pokémon and One Piece only — both are trading cards.
     category: z.literal("TRADING_CARD"),
     game: z.enum(["POKEMON", "ONE_PIECE"]),
+    language: z.enum(["ENGLISH", "JAPANESE"]).default("ENGLISH"),
     raw: z.enum(["true", "false"]).transform((v) => v === "true"),
     gradingCompany: z.enum(["PSA", "BGS", "CGC", "RAW"]),
     grade: z.coerce.number().min(1).max(10).optional(),
@@ -344,6 +345,7 @@ export async function createListing(
     subtitle: formData.get("subtitle"),
     category: formData.get("category"),
     game: formData.get("game"),
+    language: formData.get("language") || undefined,
     raw: formData.get("raw"),
     gradingCompany: formData.get("gradingCompany"),
     grade: formData.get("grade") || undefined,
@@ -456,6 +458,7 @@ export async function createListing(
       cardNumber: data.cardNumber || null,
       category: data.category as AssetCategory,
       game: data.game,
+      language: data.language,
       gradingCompany: data.gradingCompany as GradingCompany,
       grade: data.raw ? null : data.grade,
       isBlackLabel,
@@ -1912,6 +1915,7 @@ const submitForGradingSchema = z.object({
   itemName: z.string().trim().min(2, "Enter the card's name."),
   itemSubtitle: z.string().trim().min(2, "Add the set or a short description."),
   game: z.enum(["POKEMON", "ONE_PIECE"]),
+  language: z.enum(["ENGLISH", "JAPANESE"]).default("ENGLISH"),
   gradingCompany: z.enum(["PSA", "BGS", "CGC"]),
 });
 
@@ -1936,6 +1940,7 @@ export async function submitForGrading(
     itemName: formData.get("itemName"),
     itemSubtitle: formData.get("itemSubtitle"),
     game: formData.get("game"),
+    language: formData.get("language") || undefined,
     gradingCompany: formData.get("gradingCompany"),
   });
   if (!parsed.success) {
@@ -1951,6 +1956,7 @@ export async function submitForGrading(
       // CardMart only trades Pokémon and One Piece — both trading cards.
       category: "TRADING_CARD",
       game: data.game,
+      language: data.language,
       gradingCompany: data.gradingCompany as GradingCompany,
       packagePriceThb: FULL_SERVICE_PACKAGE_PRICE_THB,
       status: "AWAITING_SHIPMENT_TO_GRADER",
@@ -2080,6 +2086,7 @@ export async function adminCompleteGrading(
       subtitle: submission.itemSubtitle,
       category: submission.category,
       game: submission.game,
+      language: submission.language,
       gradingCompany: submission.gradingCompany,
       grade: parsed.data.grade,
       isBlackLabel,

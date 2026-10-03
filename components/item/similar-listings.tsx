@@ -26,14 +26,14 @@ export async function SimilarListings({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-2">
-        <div className="bg-foreground text-background flex size-7 items-center justify-center rounded-lg">
+        <div className="bg-secondary text-foreground flex size-7 items-center justify-center rounded-md">
           <Scale className="size-3.5" />
         </div>
-        <h2 className="text-lg font-semibold">{t("Compare Prices")}</h2>
+        <h2 className="eyebrow text-foreground text-sm">{t("Compare Prices")}</h2>
         <span className="text-muted-foreground text-xs">{t("Same card, other sellers — cheapest first")}</span>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">
         {listings.map((asset) => {
           const photo = displayImage(asset);
           const deltaPct =
@@ -45,48 +45,50 @@ export async function SimilarListings({
             <Link
               key={asset.id}
               href={`/item/${asset.id}`}
-              className="group focus-visible:ring-ring rounded-xl outline-none focus-visible:ring-2"
+              className="group focus-visible:ring-ring rounded-2xl outline-none focus-visible:ring-2"
             >
-              <div className="bg-card flex flex-col gap-3 overflow-hidden rounded-xl border shadow-sm transition-shadow group-hover:shadow-md">
-                <div className="relative aspect-[3/4]">
+              <div className="bg-card flex flex-col overflow-hidden rounded-2xl border transition-colors group-hover:border-foreground/30">
+                <div className="card-stage relative aspect-[4/5] overflow-hidden">
                   {photo ? (
                     <Image
                       src={photo.url}
                       alt={asset.name}
                       fill
                       sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                      className="object-cover"
+                      className="object-contain p-4 drop-shadow-[0_12px_24px_rgba(0,0,0,0.6)] transition-transform duration-300 group-hover:scale-[1.04]"
                     />
                   ) : (
-                    <CardArt
-                      themeIndex={asset.themeIndex}
-                      category={asset.category}
-                      gradingCompany={asset.gradingCompany}
-                      grade={asset.grade}
-                      isBlackLabel={asset.isBlackLabel}
-                      bordered={false}
-                    />
+                    <div className="absolute inset-0 flex items-center justify-center p-4">
+                      <CardArt
+                        themeIndex={asset.themeIndex}
+                        category={asset.category}
+                        gradingCompany={asset.gradingCompany}
+                        grade={asset.grade}
+                        isBlackLabel={asset.isBlackLabel}
+                        bordered={false}
+                        className="h-full w-auto rounded-lg"
+                      />
+                    </div>
                   )}
                   {deltaPct != null && Math.abs(deltaPct) >= 1 && (
                     <span
                       className={cn(
-                        "absolute right-2 top-2 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold",
-                        deltaPct >= 0 ? "bg-success text-success-foreground" : "bg-destructive text-white",
+                        "absolute right-2.5 top-2.5 rounded-md bg-black/70 px-2 py-1 text-[11px] font-semibold leading-none backdrop-blur-sm",
+                        deltaPct >= 0 ? "text-success" : "text-destructive",
                       )}
                     >
-                      {deltaPct < 0 ? "" : "+"}
-                      {Math.round(deltaPct)}%
+                      {deltaPct < 0 ? "▼" : "▲"} {Math.abs(Math.round(deltaPct))}%
                     </span>
                   )}
                 </div>
-                <div className="flex flex-col gap-2 px-3 pb-3">
+                <div className="flex flex-col gap-1.5 p-3.5">
                   <div className="flex min-w-0 items-center gap-1.5">
                     <span className="text-muted-foreground text-[11px]">{t("Seller")}</span>
                     <span className="truncate text-xs font-medium">{asset.seller.name}</span>
                   </div>
                   <span
                     className={cn(
-                      "text-sm font-semibold tabular-nums",
+                      "text-base font-bold tabular-nums",
                       asset.priceDirection === "up" && "text-success",
                       asset.priceDirection === "down" && "text-destructive",
                     )}

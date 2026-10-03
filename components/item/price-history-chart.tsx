@@ -61,13 +61,13 @@ export function PriceHistoryChart({
   } satisfies ChartConfig;
 
   return (
-    <div className="bg-card rounded-xl border p-4">
+    <div className="bg-card rounded-2xl border p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <div className="bg-foreground text-background flex size-7 items-center justify-center rounded-lg">
+          <div className="bg-secondary text-foreground flex size-7 items-center justify-center rounded-md">
             <LineChart className="size-3.5" />
           </div>
-          <span className="text-sm font-semibold">{t("Price History")}</span>
+          <span className="eyebrow text-foreground">{t("Price History")}</span>
         </div>
         <Tabs value={range} onValueChange={(v) => handleRangeChange(v as PriceHistoryRange)}>
           <TabsList>

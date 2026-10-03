@@ -13,12 +13,12 @@ export function PriceInsights({ insights }: { insights: PriceInsight[] }) {
   if (insights.length === 0) return null;
 
   return (
-    <div className="bg-card overflow-hidden rounded-xl border border-success/60">
+    <div className="bg-card overflow-hidden rounded-2xl border">
       <div className="flex items-center gap-2 border-b p-4">
-        <div className="bg-foreground text-background flex size-7 items-center justify-center rounded-lg">
+        <div className="bg-secondary text-foreground flex size-7 items-center justify-center rounded-md">
           <Lightbulb className="size-3.5" />
         </div>
-        <span className="text-sm font-semibold">{t("Price Insights")}</span>
+        <span className="eyebrow text-foreground">{t("Price Insights")}</span>
       </div>
       <ul className="divide-y">
         {insights.map((insight) => {

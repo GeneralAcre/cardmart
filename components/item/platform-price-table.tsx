@@ -191,13 +191,13 @@ export async function PlatformPriceTable({
   return (
     <section className="flex flex-col gap-4">
       <div className="flex items-center gap-2">
-        <div className="bg-foreground text-background flex size-7 items-center justify-center rounded-lg">
+        <div className="bg-secondary text-foreground flex size-7 items-center justify-center rounded-md">
           <Scale className="size-3.5" />
         </div>
-        <h2 className="text-lg font-semibold">{t("Price Comparison")}</h2>
+        <h2 className="eyebrow text-foreground text-sm">{t("Price Comparison")}</h2>
       </div>
 
-      <div className="bg-card overflow-hidden rounded-xl border">
+      <div className="bg-card overflow-hidden rounded-2xl border">
         {/* Headline verdict */}
         <div className="flex flex-wrap items-end justify-between gap-3 border-b p-4">
           <div className="flex flex-col gap-0.5">

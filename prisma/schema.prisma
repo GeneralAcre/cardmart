@@ -24,6 +24,13 @@ enum CardGame {
   ONE_PIECE
 }
 
+// The language the card is printed in — English and Japanese prints of the
+// same card trade as different items with different prices.
+enum CardLanguage {
+  ENGLISH
+  JAPANESE
+}
+
 enum AssetCategory {
   TRADING_CARD
   SPORTS_CARD
@@ -234,6 +241,7 @@ model Asset {
   cardNumber          String?
   category            AssetCategory
   game                CardGame            @default(POKEMON)
+  language            CardLanguage        @default(ENGLISH)
   gradingCompany      GradingCompany
   grade               Float?
   // True only for a BGS "Black Label" 10 — a distinct top tier (every
@@ -546,6 +554,7 @@ model GradingSubmission {
   itemSubtitle    String
   category        AssetCategory
   game            CardGame                @default(POKEMON)
+  language        CardLanguage            @default(ENGLISH)
   gradingCompany  GradingCompany
   packagePriceThb Int
   status          GradingSubmissionStatus @default(AWAITING_SHIPMENT_TO_GRADER)

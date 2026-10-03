@@ -15,7 +15,7 @@ export interface NavLink {
 // own site at /admin (app/(backoffice)), reached by URL only. Selling lives
 // inside the Marketplace (/marketplace/sell), so it has no tab of its own.
 export const NAV_LINKS: NavLink[] = [
-  { href: "/marketplace", label: "Marketplace", shortLabel: "Market", icon: Store },
+  { href: "/marketplace", label: "Market", icon: Store },
   { href: "/leaderboard", label: "Leaderboard", shortLabel: "Ranking", icon: Trophy },
   { href: "/auctions", label: "Auctions", icon: Gavel },
   { href: "/agent", label: "Agent", icon: Bot },

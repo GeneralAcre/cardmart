@@ -32,14 +32,14 @@ export function TrendingStrip({ week, month }: { week: TrendingListing[]; month:
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-2">
-        <div className="bg-foreground text-background flex size-7 items-center justify-center rounded-lg">
+        <div className="bg-secondary text-foreground flex size-7 items-center justify-center rounded-md">
           <TrendingUp className="size-3.5" />
         </div>
-        <h2 className="text-lg font-semibold">{t("Trending")}</h2>
+        <h2 className="eyebrow text-foreground text-sm">{t("Trending")}</h2>
         <span className="text-muted-foreground hidden text-xs sm:inline">
           {t("Biggest price gains in the last {days} days", { days: range })}
         </span>
-        <div className="bg-muted ml-auto flex rounded-lg p-0.5 text-xs font-medium">
+        <div className="bg-card ml-auto flex rounded-lg border p-0.5 text-xs font-medium">
           {([7, 30] as const).map((days) => (
             <button
               key={days}
@@ -47,7 +47,7 @@ export function TrendingStrip({ week, month }: { week: TrendingListing[]; month:
               onClick={() => setRange(days)}
               aria-pressed={range === days}
               className={`rounded-md px-2.5 py-1 transition-colors ${
-                range === days ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                range === days ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground"
               }`}
             >
               {t("{days} days", { days })}
@@ -62,7 +62,9 @@ export function TrendingStrip({ week, month }: { week: TrendingListing[]; month:
         </p>
       )}
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+      {/* A compact, swipeable row so Trending previews the market without
+          pushing the main listings grid below the fold. */}
+      <div className="scrollbar-none -mx-4 flex gap-3 overflow-x-auto px-4 sm:mx-0 sm:px-0">
         {listings.map(({ asset, previousPriceThb, currentPriceThb, gainPct }) => {
           const photo = displayImage(asset);
           const isGain = gainPct >= 0;
@@ -70,19 +72,19 @@ export function TrendingStrip({ week, month }: { week: TrendingListing[]; month:
             <Link
               key={asset.id}
               href={`/item/${asset.id}`}
-              className="group focus-visible:ring-ring rounded-xl outline-none focus-visible:ring-2"
+              className="group bg-card focus-visible:ring-ring flex w-40 shrink-0 flex-col overflow-hidden rounded-2xl border outline-none transition-colors hover:border-foreground/30 focus-visible:ring-2 sm:w-44"
             >
-              <div className="bg-card flex flex-col gap-3 overflow-hidden rounded-xl border shadow-sm transition-shadow group-hover:shadow-md">
-                <div className="relative aspect-[3/4]">
-                  {photo ? (
-                    <Image
-                      src={photo.url}
-                      alt={asset.name}
-                      fill
-                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                      className="object-cover"
-                    />
-                  ) : (
+              <div className="card-stage relative aspect-[4/5] overflow-hidden">
+                {photo ? (
+                  <Image
+                    src={photo.url}
+                    alt={asset.name}
+                    fill
+                    sizes="176px"
+                    className="object-contain p-3 drop-shadow-[0_10px_20px_rgba(0,0,0,0.6)] transition-transform duration-300 group-hover:scale-[1.04]"
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center p-3">
                     <CardArt
                       themeIndex={asset.themeIndex}
                       category={asset.category}
@@ -90,30 +92,27 @@ export function TrendingStrip({ week, month }: { week: TrendingListing[]; month:
                       grade={asset.grade}
                       isBlackLabel={asset.isBlackLabel}
                       bordered={false}
+                      className="h-full w-auto rounded-md"
                     />
-                  )}
-                  <span
-                    className={`absolute right-2 top-2 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-sm font-bold ${
-                      isGain ? "bg-success text-success-foreground" : "bg-destructive text-white"
-                    }`}
-                  >
-                    {isGain ? <TrendingUp className="size-3.5" /> : <TrendingDown className="size-3.5" />}
-                    {isGain ? "+" : ""}
-                    {Math.round(gainPct)}%
-                  </span>
-                </div>
-                <div className="flex flex-col gap-3 px-3 pb-3">
-                  <div className="flex flex-col gap-1">
-                    <h3 className="line-clamp-1 text-sm font-semibold">{asset.name}</h3>
-                    <p className="text-muted-foreground line-clamp-1 text-xs">{asset.subtitle}</p>
                   </div>
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-muted-foreground text-xs line-through">{formatThb(previousPriceThb)}</span>
-                    <span className={`text-sm font-semibold ${isGain ? "text-success" : "text-destructive"}`}>
-                      {formatThb(currentPriceThb)}
-                    </span>
-                  </div>
-                </div>
+                )}
+                <span
+                  className={`absolute right-2 top-2 inline-flex items-center gap-1 rounded-md bg-black/70 px-1.5 py-1 text-[11px] font-semibold leading-none backdrop-blur-sm ${
+                    isGain ? "text-success" : "text-destructive"
+                  }`}
+                >
+                  {isGain ? <TrendingUp className="size-3" /> : <TrendingDown className="size-3" />}
+                  {isGain ? "+" : ""}
+                  {Math.round(gainPct)}%
+                </span>
+              </div>
+              <div className="flex flex-col gap-1 p-3">
+                <h3 className="line-clamp-1 text-sm font-semibold">{asset.name}</h3>
+                <p className="text-muted-foreground line-clamp-1 text-xs">{asset.subtitle}</p>
+                <span className={`mt-1 text-sm font-bold tabular-nums ${isGain ? "text-success" : "text-destructive"}`}>
+                  {formatThb(currentPriceThb)}
+                </span>
+                <span className="text-muted-foreground text-[11px] tabular-nums line-through">{formatThb(previousPriceThb)}</span>
               </div>
             </Link>
           );
