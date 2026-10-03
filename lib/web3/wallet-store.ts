@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { usePrivy } from "@privy-io/react-auth";
+import { useConnectWallet, usePrivy } from "@privy-io/react-auth";
 import { useCreateWallet, useSignAndSendTransaction, useSignMessage, useWallets } from "@privy-io/react-auth/solana";
 import { getBase58Decoder } from "@solana/kit";
 
@@ -49,14 +49,22 @@ function toHex(bytes: Uint8Array): string {
 }
 
 function usePrivyWalletStore(): WalletStore {
-  const { authenticated, login, logout } = usePrivy();
+  const { authenticated, login, logout, user } = usePrivy();
   const { wallets } = useWallets();
   const { createWallet } = useCreateWallet();
+  const { connectWallet } = useConnectWallet();
   const { signMessage: privySignMessage } = useSignMessage();
   const { signAndSendTransaction } = useSignAndSendTransaction();
   const [connecting, setConnecting] = useState(false);
 
-  const wallet = wallets[0] ?? null;
+  // Someone who signed in with Phantom etc. pays from THAT wallet — it's the
+  // address the server has on file (primarySolanaWallet). Prefer it over any
+  // other connected wallet.
+  const externalSolana = user?.linkedAccounts.find(
+    (a) => a.type === "wallet" && a.chainType === "solana" && a.walletClientType !== "privy",
+  );
+  const externalAddress = externalSolana && "address" in externalSolana ? externalSolana.address : null;
+  const wallet = (externalAddress ? wallets.find((w) => w.address === externalAddress) : wallets[0]) ?? null;
   const publicKey = wallet?.address ?? null;
   const connected = authenticated && Boolean(publicKey);
 
@@ -68,6 +76,13 @@ function usePrivyWalletStore(): WalletStore {
         login();
         throw new Error("Complete sign-in in the popup, then try again.");
       }
+      // A wallet-login user whose wallet isn't connected right now (e.g.
+      // Phantom was locked on page load): reconnect it rather than creating
+      // an empty embedded wallet with a different address.
+      if (externalAddress) {
+        connectWallet({ walletChainType: "solana-only" });
+        throw new Error("Approve the connection in your wallet, then try again.");
+      }
       // Should rarely hit this — embeddedWallets.solana.createOnLogin
       // already creates one automatically the moment someone signs in.
       const { wallet: created } = await createWallet();
@@ -75,7 +90,7 @@ function usePrivyWalletStore(): WalletStore {
     } finally {
       setConnecting(false);
     }
-  }, [wallet, authenticated, login, createWallet]);
+  }, [wallet, authenticated, login, createWallet, externalAddress, connectWallet]);
 
   const disconnect = useCallback(() => {
     void logout();
