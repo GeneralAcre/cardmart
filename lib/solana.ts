@@ -1,5 +1,6 @@
 import "server-only";
-import { address, createSolanaRpc, lamports as toLamports } from "@solana/kit";
+import { address, lamports as toLamports } from "@solana/kit";
+import { createServerRpc } from "@/lib/web3/rpc-url";
 
 const LAMPORTS_PER_SOL = 1_000_000_000;
 const MAX_AIRDROP_SOL = 2;
@@ -8,7 +9,7 @@ const MAX_AIRDROP_SOL = 2;
 // components/providers/privy-provider.tsx) — a Solana address itself isn't
 // network-specific, but the balance you get back absolutely is, so this
 // has to match wherever the user actually deposited funds.
-const rpc = createSolanaRpc("https://api.devnet.solana.com");
+const rpc = createServerRpc();
 
 /**
  * Real devnet SOL balance for a wallet address, in SOL (not lamports).

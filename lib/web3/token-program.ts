@@ -11,7 +11,6 @@ import {
   appendTransactionMessageInstructions,
   compileTransaction,
   createNoopSigner,
-  createSolanaRpc,
   createTransactionMessage,
   getTransactionEncoder,
   pipe,
@@ -27,12 +26,13 @@ import {
   getCreateAssociatedTokenIdempotentInstructionAsync,
   getRevokeInstruction,
 } from "@solana-program/token";
+import { createClientRpc } from "@/lib/web3/rpc-url";
 
 const DECIMALS = 0;
 const APPROVE_AMOUNT = BigInt(1);
 
 // Same devnet cluster as everywhere else (lib/web3/solana-memo.ts, lib/solana.ts).
-const rpc = createSolanaRpc("https://api.devnet.solana.com");
+const rpc = createClientRpc();
 
 /**
  * Owner-signed: delegates `delegate` (the platform's escrow authority) as a

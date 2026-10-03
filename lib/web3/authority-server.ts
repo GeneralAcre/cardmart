@@ -15,7 +15,6 @@ import {
   appendTransactionMessageInstruction,
   appendTransactionMessageInstructions,
   compileTransaction,
-  createSolanaRpc,
   createTransactionMessage,
   getBase64EncodedWireTransaction,
   getSignatureFromTransaction,
@@ -24,11 +23,13 @@ import {
   setTransactionMessageLifetimeUsingBlockhash,
   signTransaction,
   type Instruction,
+  type Signature,
 } from "@solana/kit";
 import { createKeyPairFromBytes } from "@solana/keys";
 import { getAddressFromPublicKey } from "@solana/addresses";
+import { createServerRpc } from "@/lib/web3/rpc-url";
 
-export const rpc = createSolanaRpc("https://api.devnet.solana.com");
+export const rpc = createServerRpc();
 
 let cachedKeyPair: Promise<CryptoKeyPair> | null = null;
 
@@ -81,5 +82,28 @@ export async function signAndSend(
   const wireTransaction = getBase64EncodedWireTransaction(signed);
 
   await rpc.sendTransaction(wireTransaction, { encoding: "base64", preflightCommitment: "confirmed" }).send();
-  return getSignatureFromTransaction(signed);
+  const signature = getSignatureFromTransaction(signed);
+  await waitForConfirmation(signature, latestBlockhash.lastValidBlockHeight);
+  return signature;
+}
+
+/**
+ * Waits until a sent transaction is confirmed, so callers never record a
+ * release, refund, mint or transfer that hasn't actually landed. Throws if it
+ * failed on-chain, or if its blockhash expires first (it can then never land,
+ * so it's safe to retry).
+ */
+async function waitForConfirmation(signature: Signature, lastValidBlockHeight: bigint): Promise<void> {
+  for (let attempt = 0; attempt < 90; attempt++) {
+    const { value } = await rpc.getSignatureStatuses([signature]).send();
+    const status = value[0];
+    if (status?.err) throw new Error(`Transaction ${signature} failed on-chain.`);
+    if (status?.confirmationStatus === "confirmed" || status?.confirmationStatus === "finalized") return;
+    if (attempt % 5 === 4) {
+      const height = await rpc.getBlockHeight({ commitment: "confirmed" }).send();
+      if (height > lastValidBlockHeight) throw new Error(`Transaction ${signature} expired before confirming. Try again.`);
+    }
+    await new Promise((r) => setTimeout(r, 700));
+  }
+  throw new Error(`Transaction ${signature} is taking too long to confirm. Check it on Solana Explorer.`);
 }

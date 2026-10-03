@@ -8,7 +8,6 @@ import {
   appendTransactionMessageInstruction,
   compileTransaction,
   createNoopSigner,
-  createSolanaRpc,
   createTransactionMessage,
   getTransactionEncoder,
   lamports,
@@ -17,11 +16,12 @@ import {
   setTransactionMessageLifetimeUsingBlockhash,
 } from "@solana/kit";
 import { getTransferSolInstruction } from "@solana-program/system";
+import { createClientRpc } from "@/lib/web3/rpc-url";
 
 const LAMPORTS_PER_SOL = 1_000_000_000;
 
 // Same devnet cluster as everywhere else (components/providers/privy-provider.tsx, lib/solana.ts).
-const rpc = createSolanaRpc("https://api.devnet.solana.com");
+const rpc = createClientRpc();
 
 export async function buildSolTransferTransaction(
   fromAddress: string,

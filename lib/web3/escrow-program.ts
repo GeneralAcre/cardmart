@@ -17,7 +17,6 @@ import {
   appendTransactionMessageInstructions,
   compileTransaction,
   createNoopSigner,
-  createSolanaRpc,
   createTransactionMessage,
   getTransactionEncoder,
   pipe,
@@ -28,6 +27,7 @@ import {
   type Instruction,
 } from "@solana/kit";
 import { getTransferSolInstruction } from "@solana-program/system";
+import { createClientRpc } from "@/lib/web3/rpc-url";
 
 export const ESCROW_PROGRAM_ID = address(
   process.env.NEXT_PUBLIC_ESCROW_PROGRAM_ID ?? "11111111111111111111111111111111",
@@ -35,7 +35,7 @@ export const ESCROW_PROGRAM_ID = address(
 const SYSTEM_PROGRAM_ID = address("11111111111111111111111111111111");
 
 // Same devnet cluster as everywhere else (lib/web3/solana-memo.ts, lib/solana.ts).
-const rpc = createSolanaRpc("https://api.devnet.solana.com");
+const rpc = createClientRpc();
 
 const addressEncoder = getAddressEncoder();
 

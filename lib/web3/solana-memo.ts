@@ -9,7 +9,6 @@ import {
   address,
   appendTransactionMessageInstruction,
   compileTransaction,
-  createSolanaRpc,
   createTransactionMessage,
   getTransactionEncoder,
   pipe,
@@ -17,9 +16,10 @@ import {
   setTransactionMessageLifetimeUsingBlockhash,
 } from "@solana/kit";
 import { getAddMemoInstruction } from "@solana-program/memo";
+import { createClientRpc } from "@/lib/web3/rpc-url";
 
 // Same devnet cluster as everywhere else (components/providers/privy-provider.tsx, lib/solana.ts).
-const rpc = createSolanaRpc("https://api.devnet.solana.com");
+const rpc = createClientRpc();
 
 export async function buildMemoTransaction(fromAddress: string, memo: string): Promise<Uint8Array> {
   const { value: latestBlockhash } = await rpc.getLatestBlockhash({ commitment: "confirmed" }).send();

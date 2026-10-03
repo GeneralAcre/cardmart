@@ -3,6 +3,7 @@
 import { PrivyProvider as PrivyProviderBase } from "@privy-io/react-auth";
 import { toSolanaWalletConnectors } from "@privy-io/react-auth/solana";
 import { createSolanaRpc, createSolanaRpcSubscriptions } from "@solana/kit";
+import { SOLANA_RPC_URL, SOLANA_WS_URL } from "@/lib/web3/rpc-url";
 
 // Only mount the real Privy provider when it's actually configured — in
 // demo mode (no NEXT_PUBLIC_PRIVY_APP_ID) the app keeps working as the
@@ -15,8 +16,8 @@ const appId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
 // cluster the funds were actually sent on, or it'll look empty.
 const solanaDevnetRpc = {
   "solana:devnet": {
-    rpc: createSolanaRpc("https://api.devnet.solana.com"),
-    rpcSubscriptions: createSolanaRpcSubscriptions("wss://api.devnet.solana.com"),
+    rpc: createSolanaRpc(SOLANA_RPC_URL),
+    rpcSubscriptions: createSolanaRpcSubscriptions(SOLANA_WS_URL),
     blockExplorerUrl: "https://explorer.solana.com/?cluster=devnet",
   },
 } as const;
