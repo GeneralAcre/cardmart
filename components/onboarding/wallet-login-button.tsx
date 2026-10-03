@@ -73,26 +73,24 @@ export function WalletLoginButton({
     setSigning(true);
     try {
       const message = await generateSiwsMessage({ address: wallet.address });
-      // Privy's SIWS text always says "Chain ID: mainnet" (its server
-      // rejects anything else), and Phantom in testnet mode — which this
-      // devnet app needs — refuses to show a SIWS message for another chain.
-      // Wrapped as a Solana off-chain message, Phantom doesn't run that
-      // chain check and Privy still verifies it. Plain text is the fallback
-      // for a wallet that can't sign the off-chain format.
+      // Plain text first — Phantom signs it (and refuses the off-chain
+      // format outright). The Solana off-chain message format is the
+      // fallback for hardware wallets (Ledger) that reject plain text; a
+      // user simply declining (4001) isn't retried.
       let signed: Uint8Array;
-      let messageType: "offchain-message" | "plain" = "offchain-message";
+      let messageType: "offchain-message" | "plain" = "plain";
       try {
-        const offchain = generateSiwsOffchainMessage({ message, address: wallet.address });
-        signed = (await wallet.signMessage({ message: offchain })).signature;
+        signed = (await wallet.signMessage({ message: new TextEncoder().encode(message) })).signature;
       } catch (e) {
         if ((e as { code?: number })?.code === 4001 && !/chain/i.test(String((e as Error).message))) throw e;
-        const offchainError = e instanceof Error ? e.message : String(e);
-        messageType = "plain";
+        const plainError = e instanceof Error ? e.message : String(e);
+        messageType = "offchain-message";
         try {
-          signed = (await wallet.signMessage({ message: new TextEncoder().encode(message) })).signature;
-        } catch (plainError) {
-          const plain = plainError instanceof Error ? plainError.message : String(plainError);
-          throw new Error(`${plain} (off-chain format: ${offchainError})`);
+          const offchain = generateSiwsOffchainMessage({ message, address: wallet.address });
+          signed = (await wallet.signMessage({ message: offchain })).signature;
+        } catch (offchainError) {
+          const offchain = offchainError instanceof Error ? offchainError.message : String(offchainError);
+          throw new Error(`${plainError} (off-chain format: ${offchain})`);
         }
       }
       await loginWithSiws({
