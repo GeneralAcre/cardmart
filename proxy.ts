@@ -5,8 +5,7 @@ import { NextResponse, type NextRequest } from "next/server";
 // /login route anymore: "/" IS the sign-in surface (it embeds the real
 // Privy login button directly), so anyone without a session gets sent
 // there instead of to a dedicated login page.
-// "/wallet-check" is a TEMPORARY wallet diagnostic page — remove with it.
-const PUBLIC_PATHS = ["/", "/terms", "/privacy", "/staff-login", "/wallet-check"];
+const PUBLIC_PATHS = ["/", "/terms", "/privacy", "/staff-login"];
 
 // Privy sign-in is wired up (see lib/session.ts, app/page.tsx) but
 // intentionally not enforced until both NEXT_PUBLIC_PRIVY_APP_ID and

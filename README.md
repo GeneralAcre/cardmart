@@ -54,9 +54,8 @@ signature, so anyone can audit a card's history.
   purchase. It pays for escrow and the physical inspection, is sent to the
   platform wallet in the same transaction as the escrow lock (verified
   on-chain by the server), and is refunded if the sale is cancelled.
-- **Grading service:** the full-service package, where we send a raw card
-  to the grader, get it slabbed and list it for you. Listing your own
-  card is free.
+- **Listing is free:** sellers pay nothing to list; the buyer fee covers
+  the inspection that protects both sides.
 - **Buying-agent tasks:** a flat 50 THB per task, paid from the agent
   wallet, which covers the AI cost of watching and judging listings.
 - **Vault:** cards kept in the vault can be resold instantly, with no
@@ -76,9 +75,8 @@ signature, so anyone can audit a card's history.
 - **Marketplace:** search by name, card number ("umbreon 215"), set, grader
   or grade; filters; fixed-price listings, offers, auctions and card-for-card
   trades.
-- **Selling:** guided listing with a live-camera checklist, PSA auto-fill,
-  card-number lookup, and a full-service option where we grade the card for
-  you.
+- **Selling:** guided listing with a live-camera checklist, PSA auto-fill
+  and card-number lookup.
 - **Trust:** duplicate-cert blocking, PSA name/number matching, photo-reuse
   detection, staff alerts for unknown cards or far-below-market prices, ID
   verification, reviews, disputes.
