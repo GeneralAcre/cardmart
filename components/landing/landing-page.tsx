@@ -6,7 +6,6 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { LandingNav } from "@/components/landing/landing-nav";
 import { LoginButton } from "@/components/onboarding/login-button";
-import { WalletLoginButton } from "@/components/onboarding/wallet-login-button";
 import { useLanguage } from "@/components/landing/language-provider";
 
 // One CTA, two states: a real Privy login for a guest, a plain link onward
@@ -26,12 +25,7 @@ function LandingCta({ authenticated, className }: { authenticated: boolean; clas
       </Button>
     );
   }
-  return (
-    <div className="flex w-full flex-col gap-2.5 sm:w-auto sm:flex-row">
-      <LoginButton className={className} label="Login" />
-      <WalletLoginButton className={className} />
-    </div>
-  );
+  return <LoginButton className={className} label="Login" />;
 }
 
 function LandingPageContent({ authenticated }: { authenticated: boolean }) {

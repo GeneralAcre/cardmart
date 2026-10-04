@@ -4,7 +4,6 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { LoginButton } from "@/components/onboarding/login-button";
-import { WalletLoginButton } from "@/components/onboarding/wallet-login-button";
 import { LanguageSwitcher } from "@/components/landing/language-switcher";
 import { useLanguage } from "@/components/landing/language-provider";
 import { Logo } from "@/components/site/logo";
@@ -27,10 +26,7 @@ export function LandingNav({ authenticated }: { authenticated: boolean }) {
               <Link href="/marketplace">{t.nav.goToMarketplace}</Link>
             </Button>
           ) : (
-            <>
-              <LoginButton size="sm" className="w-auto" label="Login" />
-              <WalletLoginButton size="sm" className="hidden w-auto sm:inline-flex" />
-            </>
+            <LoginButton size="sm" className="w-auto" label="Login" />
           )}
           <LanguageSwitcher />
         </div>
