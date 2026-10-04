@@ -41,7 +41,7 @@ import { RatingStars } from "@/components/store/rating-stars";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ChevronDown, ChevronLeft, ExternalLink, Flame, Gavel, History } from "lucide-react";
+import { ChevronDown, ChevronLeft, ExternalLink, Flame, Gavel } from "lucide-react";
 
 import { formatDate, formatGrade, formatThb } from "@/lib/format";
 import {
@@ -608,21 +608,13 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
         baseQuery={buildMarketQuery({ ...marketCard, gradingCompany: "RAW", grade: null, isBlackLabel: false })}
       />
 
-      <div className="mt-12 grid grid-cols-1 items-start gap-10 md:grid-cols-2">
-        <div className="flex flex-col gap-5">
-          <PriceInsights insights={insights} />
-        </div>
-
-        <div>
-          <div className="mb-5 flex items-center gap-2">
-            <div className="bg-secondary text-foreground flex size-7 items-center justify-center rounded-md">
-              <History className="size-3.5" />
-            </div>
-            <h2 className="eyebrow text-foreground text-sm">{t("Item History")}</h2>
-          </div>
-          <ProvenanceTimeline events={asset.provenance} />
-        </div>
+      <div className="mt-12">
+        <PriceInsights insights={insights} />
       </div>
+
+      <Separator className="my-12" />
+
+      <ProvenanceTimeline events={asset.provenance} />
 
       {similarAssets.length > 0 && (
         <>

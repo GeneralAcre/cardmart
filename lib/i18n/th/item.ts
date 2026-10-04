@@ -304,6 +304,16 @@ export const ITEM: Record<string, string> = {
   "90D": "90 วัน",
   "1Y": "1 ปี",
 
+  // Item history table
+  Sale: "ขาย",
+  Repriced: "เปลี่ยนราคา",
+  "{count} event": "{count} เหตุการณ์",
+  "{count} events": "{count} เหตุการณ์",
+  Event: "เหตุการณ์",
+  By: "โดย",
+  Tx: "ธุรกรรม",
+  Date: "วันที่",
+
   // Similar listings
   "Similar Listings": "รายการที่คล้ายกัน",
   "Best Deals": "ดีลที่ดีที่สุด",

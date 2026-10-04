@@ -50,7 +50,8 @@ function ChartContainer({
         {...props}
       >
         <ChartStyle id={chartId} config={config} />
-        <RechartsPrimitive.ResponsiveContainer>{children}</RechartsPrimitive.ResponsiveContainer>
+        {/* A 1×1 start instead of -1×-1 until it measures its box, so Recharts doesn't warn on first render. */}
+        <RechartsPrimitive.ResponsiveContainer initialDimension={{ width: 1, height: 1 }}>{children}</RechartsPrimitive.ResponsiveContainer>
       </div>
     </ChartContext.Provider>
   );
