@@ -19,7 +19,8 @@ export default async function MarketplacePage() {
             {t("Certified cards, paid through escrow and checked at our warehouse before the seller is paid.")}
           </p>
         </div>
-        <ActionButton href="/marketplace/sell" icon={Plus}>
+        {/* ml-auto keeps it on the right when it wraps below the intro on phones. */}
+        <ActionButton href="/marketplace/sell" icon={Plus} className="ml-auto">
           {t("Sell a card")}
         </ActionButton>
       </div>
