@@ -27,6 +27,8 @@
   --success: #00c758;
   --success-foreground: #0a0a0a;
   --destructive: #fb2c36;
+  /* Comparing against a different grade than the listing: informational, not a deal or a warning. */
+  --compare: #3b9eff;
   --border: #262626;
   --input: #2e2e2e;
   --ring: #737373;
@@ -57,6 +59,7 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-success: var(--success);
+  --color-compare: var(--compare);
   --color-success-foreground: var(--success-foreground);
   --color-destructive: var(--destructive);
   --color-highlight: var(--highlight);

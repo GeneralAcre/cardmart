@@ -1,14 +1,17 @@
 import { Bot, Check, ChevronDown, CircleAlert, ShieldCheck, X } from "lucide-react";
+import Link from "next/link";
 
 import { AgentWalletCard } from "@/components/agent/agent-wallet-card";
 import { NewTaskForm } from "@/components/agent/new-task-form";
-import { AgentActivity, AgentTaskList } from "@/components/agent/agent-tasks";
+import { AgentActivity, AgentDeals, AgentTaskList } from "@/components/agent/agent-tasks";
 import { getAgentDashboard, getMyWantedCards } from "@/lib/queries";
 import { getCurrentUser } from "@/lib/session";
 import { getT } from "@/lib/i18n/server";
 import { displayImage } from "@/lib/card-image";
 import { isAgentAiConfigured } from "@/lib/agent/ai";
 import { getAgentBalanceLamports, getOrCreateAgentWallet, lamportsToSol } from "@/lib/agent/wallet";
+import { getTaskReports } from "@/lib/agent/report";
+import { formatThb } from "@/lib/format";
 
 // A scan can wait on the AI for a while; give the Server Actions on this page room.
 export const maxDuration = 60;
@@ -43,17 +46,65 @@ export default async function AgentPage({ searchParams }: { searchParams: Promis
     : null;
   const aiReady = isAgentAiConfigured();
   const waiting = dashboard.decisions.filter((d) => d.status === "PROPOSED").length;
+  const decisions = dashboard.decisions.map((d) => ({
+    id: d.id,
+    status: d.status,
+    priceThb: d.priceThb,
+    offerThb: d.offerThb,
+    fairValueThb: d.fairValueThb,
+    confidence: d.confidence,
+    reasoning: d.reasoning,
+    error: d.error,
+    createdAt: d.createdAt.toISOString(),
+    taskSummary: d.mandate.summary,
+    asset: {
+      id: d.asset.id,
+      name: d.asset.name,
+      gradingCompany: d.asset.gradingCompany,
+      grade: d.asset.grade,
+      isBlackLabel: d.asset.isBlackLabel,
+      imageUrl: displayImage(d.asset)?.url ?? null,
+    },
+  }));
+  const reports = await getTaskReports(dashboard.mandates.map((m) => m.id));
+  const totals = [...reports.values()].reduce(
+    (sum, r) => ({ reviewed: sum.reviewed + r.reviewed, bought: sum.bought + r.bought, savedThb: sum.savedThb + r.savedThb }),
+    { reviewed: 0, bought: 0, savedThb: 0 },
+  );
+  const stats = [
+    { label: t("Tasks watching"), value: String(dashboard.mandates.filter((m) => m.status === "ACTIVE").length) },
+    { label: t("Listings reviewed"), value: totals.reviewed.toLocaleString() },
+    { label: t("Cards bought"), value: String(totals.bought) },
+    { label: t("Saved vs fair value"), value: formatThb(totals.savedThb), accent: totals.savedThb > 0 },
+  ];
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-8 px-4 py-10 sm:px-6">
-      <header className="flex flex-col gap-3">
-        <h1 className="flex items-center gap-2 text-2xl font-semibold">
-          <Bot className="size-6" /> {t("Buying agent")}
-        </h1>
-        <p className="text-muted-foreground max-w-2xl">
-          {t("Name a card and your max price. The agent watches every listing and buys the right one for you.")}
-        </p>
-        <details className="group w-fit text-sm">
+    <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-4 py-8 sm:px-6 sm:py-10">
+      <header className="relative overflow-hidden rounded-2xl border bg-[radial-gradient(120%_140%_at_0%_0%,rgba(0,199,88,0.14),transparent_55%)] p-5 sm:p-8">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex max-w-xl flex-col gap-3">
+            <span className="bg-background/60 text-muted-foreground flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs backdrop-blur">
+              <Bot className="size-3.5" /> {t("Buying agent")}
+            </span>
+            <h1 className="text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
+              {t("Your card hunter that never sleeps.")}
+            </h1>
+            <p className="text-muted-foreground">
+              {t("Name a card and your max price. The agent watches every listing and buys the right one for you.")}
+            </p>
+          </div>
+          <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:w-[30rem] lg:grid-cols-2">
+            {stats.map((s) => (
+              <div key={s.label} className="bg-background/60 flex flex-col gap-0.5 rounded-xl border px-3 py-2.5 backdrop-blur">
+                <dt className="text-muted-foreground text-[11px]">{s.label}</dt>
+                <dd className={s.accent ? "text-success text-lg font-semibold tabular-nums" : "text-lg font-semibold tabular-nums"}>
+                  {s.value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+        <details className="group mt-5 w-fit text-sm">
           <summary className="text-muted-foreground hover:text-foreground flex cursor-pointer list-none items-center gap-1.5 [&::-webkit-details-marker]:hidden">
             <ShieldCheck className="size-4" /> {t("What it can and can't do")}
             <ChevronDown className="size-4 transition-transform group-open:rotate-180" />
@@ -85,10 +136,15 @@ export default async function AgentPage({ searchParams }: { searchParams: Promis
       )}
 
       {waiting > 0 && (
-        <p className="bg-highlight text-highlight-foreground rounded-xl px-4 py-3 text-sm font-medium">
+        <Link
+          href="#waiting"
+          className="bg-highlight text-highlight-foreground rounded-xl px-4 py-3 text-sm font-medium hover:opacity-90"
+        >
           {t("Your agent found {count} card(s) waiting for your OK — see below.", { count: waiting })}
-        </p>
+        </Link>
       )}
+
+      <AgentDeals decisions={decisions} />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_20rem] lg:items-start">
         <NewTaskForm
@@ -127,31 +183,11 @@ export default async function AgentPage({ searchParams }: { searchParams: Promis
           trustedSellersOnly: m.trustedSellersOnly,
           lastScannedAt: m.lastScannedAt?.toISOString() ?? null,
           decisionCount: m._count.decisions,
+          report: reports.get(m.id)!,
         }))}
       />
 
-      <AgentActivity
-        decisions={dashboard.decisions.map((d) => ({
-          id: d.id,
-          status: d.status,
-          priceThb: d.priceThb,
-          offerThb: d.offerThb,
-          fairValueThb: d.fairValueThb,
-          confidence: d.confidence,
-          reasoning: d.reasoning,
-          error: d.error,
-          createdAt: d.createdAt.toISOString(),
-          taskSummary: d.mandate.summary,
-          asset: {
-            id: d.asset.id,
-            name: d.asset.name,
-            gradingCompany: d.asset.gradingCompany,
-            grade: d.asset.grade,
-            isBlackLabel: d.asset.isBlackLabel,
-            imageUrl: displayImage(d.asset)?.url ?? null,
-          },
-        }))}
-      />
+      <AgentActivity decisions={decisions} />
     </div>
   );
 }

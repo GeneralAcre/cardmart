@@ -189,23 +189,17 @@ export async function getAssetById(id: string) {
 }
 
 /**
- * Other live listings of the *same card* (same name, grading company and
- * grade) from different sellers, for the item page's "Compare Prices"
- * section — this is a same-item, different-seller comparison (who's asking
- * more or less for the identical card), not a "similar items" recommendation
- * across the category. Sorted cheapest-first so under/over-pricing relative
- * to this listing reads at a glance.
+ * Other live listings of the *same card* (same name and set) in any grade,
+ * for the item page's "Similar Listings" grid — the same card from other
+ * sellers, not a "similar items" recommendation across the category.
+ * Cheapest first.
  */
-export async function getSimilarAssets(
-  asset: { id: string; name: string; gradingCompany: GradingCompany; grade: number | null; priceThb: number | null },
-  limit = 6,
-) {
+export async function getSimilarAssets(asset: { id: string; name: string; subtitle: string }, limit = 12) {
   const assets = await prisma.asset.findMany({
     where: {
       id: { not: asset.id },
       name: asset.name,
-      gradingCompany: asset.gradingCompany,
-      grade: asset.grade,
+      subtitle: asset.subtitle,
       marketStatus: MARKETPLACE_VISIBLE_STATUSES,
       forSale: true,
       priceThb: { not: null },
@@ -733,7 +727,7 @@ export async function getCardAcrossGrades(card: { name: string; subtitle: string
   const [listings, sales] = await Promise.all([
     prisma.asset.findMany({
       where: { ...sameCard, forSale: true, priceThb: { not: null }, marketStatus: MARKETPLACE_VISIBLE_STATUSES },
-      select: { gradingCompany: true, grade: true, isBlackLabel: true, priceThb: true },
+      select: { id: true, gradingCompany: true, grade: true, isBlackLabel: true, priceThb: true },
     }),
     prisma.escrowTransaction.findMany({
       where: { status: "RELEASED", releasedAt: { not: null }, asset: sameCard },

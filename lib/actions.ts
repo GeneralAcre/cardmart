@@ -15,7 +15,7 @@ import {
 import { releaseTradeToSeller, refundTradeToBuyer, getEscrowAuthorityAddress } from "@/lib/web3/escrow-server";
 import { isDigitalTwinHeldBy, isTransferDelegated, mintDigitalTwinToken, transferDigitalTwinToken } from "@/lib/web3/token-server";
 import { FULL_SERVICE_PACKAGE_PRICE_THB, THB_PER_USD, buyerFeeThb, thbToLamports } from "@/lib/pricing";
-import { lookupEbayPrice } from "@/lib/ebay";
+import { lookupEbayPrice, type EbayPriceQuote } from "@/lib/ebay";
 import { verifyEscrowLock, verifyServiceFee } from "@/lib/web3/escrow-verify";
 import { sendFromPlatform } from "@/lib/web3/escrow-server";
 import { deriveTradePda } from "@/lib/web3/escrow-program";
@@ -26,6 +26,7 @@ import { getVerificationChecklist } from "@/lib/verification-checklist";
 import { BGS_BLACK_LABEL_GRADE, gradeTierLabel } from "@/lib/labels";
 import { requestDevnetAirdrop } from "@/lib/solana";
 import { runMandate, runMandatesForListing, withdrawAgentOffers } from "@/lib/agent/engine";
+import { taskReportText } from "@/lib/agent/report";
 import { agentLockPayment, isAgentChainEnabled } from "@/lib/agent/wallet";
 import { EMAILED_NOTIFICATION_TYPES, isEmailConfigured, sendEmail } from "@/lib/email";
 import { checkAllIntegrations } from "@/lib/integrations";
@@ -38,7 +39,7 @@ import {
 } from "@/lib/shipping";
 import { findCatalogCard } from "@/lib/card-catalog";
 import { checkKycPhoto, deleteKycPhotos, isKycPhotoStorageConfigured, saveKycPhoto } from "@/lib/kyc-storage";
-import { getPortfolioPriceHistory, getPriceHistory, type PriceHistoryRange } from "@/lib/queries";
+import { getPortfolioPriceHistory, type PriceHistoryRange } from "@/lib/queries";
 import {
   extractPsaCertNumber,
   isPsaConfigured,
@@ -2363,15 +2364,25 @@ export async function submitReview(escrowTxId: string, rating: number, comment: 
   return { success: true };
 }
 
-/** Thin server-action wrapper so the client-side range switcher (1d/7d/30d) on the price chart can re-fetch without a full page reload. */
-export async function getAssetPriceHistory(assetId: string, range: PriceHistoryRange) {
+/**
+ * eBay's exact-match asking price for this card in another grade, fetched
+ * when the item page's grade picker switches to a grade it didn't preload.
+ */
+export async function getEbayQuoteForGrade(
+  assetId: string,
+  tier: { gradingCompany: string; grade: number | null; isBlackLabel: boolean },
+): Promise<EbayPriceQuote | null> {
   await getCurrentUser();
-  const snapshots = await getPriceHistory(assetId, range);
-  return snapshots.map((s) => ({ priceThb: s.priceThb, createdAt: s.createdAt.toISOString() }));
+  const asset = await prisma.asset.findUnique({
+    where: { id: assetId },
+    select: { name: true, subtitle: true, cardNumber: true },
+  });
+  if (!asset) return null;
+  return lookupEbayPrice({ ...asset, ...tier }).catch(() => null);
 }
 
 /**
- * Same range-switcher pattern, but for the current user's own total
+ * Range-switcher re-fetch for the current user's own total
  * portfolio value across every asset they own — always the caller's own
  * portfolio, never an arbitrary userId passed from the client.
  */
@@ -3599,7 +3610,8 @@ async function executeAgentDecision(decisionId: string): Promise<void> {
       data: { status: "EXECUTED", escrowTxId, resolvedAt: new Date() },
     });
     const updated = await prisma.agentMandate.findUniqueOrThrow({ where: { id: mandate.id } });
-    if (updated.boughtCount >= updated.maxCards) {
+    const finished = updated.boughtCount >= updated.maxCards;
+    if (finished) {
       await prisma.agentMandate.update({ where: { id: mandate.id }, data: { status: "DONE" } });
       await withdrawAgentOffers(mandate.id);
     }
@@ -3610,6 +3622,13 @@ async function executeAgentDecision(decisionId: string): Promise<void> {
       `${asset.name} for ${price.toLocaleString()} THB. ${decision.reasoning}`,
       `/item/${asset.id}`,
     );
+    if (finished) {
+      // The card is bought by now: a failed summary must not reach the
+      // catch below, which would undo a purchase that went through.
+      await taskReportText(mandate.id)
+        .then((body) => notifyUser(buyer.id, "AGENT_REPORT", "Your agent task is done", body, "/agent"))
+        .catch((err) => console.error(`Agent task report for mandate ${mandate.id} failed`, err));
+    }
   } catch (err) {
     // Nothing was bought: put the listing and the budget back.
     await prisma.asset.updateMany({

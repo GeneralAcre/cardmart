@@ -1,42 +1,42 @@
-import { ArrowDownRight, ArrowUpRight, ExternalLink, Scale } from "lucide-react";
+"use client";
 
+import { ArrowDownRight, ArrowUpRight, ExternalLink, Loader2 } from "lucide-react";
+
+import type { EbayPriceQuote } from "@/lib/ebay";
 import { formatThb, formatUsd } from "@/lib/format";
-import { ebaySoldListingsUrl, type EbayPriceQuote } from "@/lib/ebay";
-import type { CardPriceQuote } from "@/lib/tcg-price";
 import { THB_PER_USD } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
-import { getT } from "@/lib/i18n/server";
+import { useLanguage } from "@/components/landing/language-provider";
 
-type Kind = "Asking" | "Sold" | "Market";
+// Fewer prices than this behind a verdict, and the panel says it's a rough guide.
+const MIN_RELIABLE_PRICES = 3;
 
-/** One source, drawn as a lane on the shared baht axis: a dot, optionally with a low–high band. */
-interface Lane {
-  key: string;
-  name: string;
-  mono: string;
-  kind: Kind;
-  pointThb: number | null;
-  rangeThb?: [number, number];
-  /** Main figure as the source reports it (THB, or USD for outside sources). */
-  price: string | null;
-  /** "≈ THB …" for USD sources, so they read on the same scale. */
-  approx?: string;
-  note: string;
-  href?: string;
-  highlight?: boolean;
-}
+const usdToThb = (usd: number) => Math.round(usd * THB_PER_USD);
 
 function searchUrl(base: string, param: string, query: string, extra: Record<string, string> = {}) {
   return `${base}?${new URLSearchParams({ [param]: query, ...extra }).toString()}`;
 }
-
-const usdToThb = (usd: number) => Math.round(usd * THB_PER_USD);
 
 /** A round axis maximum a little above the largest value, so ticks land on readable numbers. */
 function niceMax(value: number) {
   const padded = value * 1.08;
   const step = 10 ** Math.floor(Math.log10(padded));
   return Math.ceil(padded / (step / 2)) * (step / 2);
+}
+
+interface Lane {
+  key: string;
+  name: string;
+  mono: string;
+  kind: "Asking" | "Sold" | "Market";
+  pointThb: number | null;
+  rangeThb?: [number, number];
+  price: string | null;
+  approx?: string;
+  note: string;
+  href?: string;
+  highlight?: boolean;
+  loading?: boolean;
 }
 
 function Monogram({ text, strong }: { text: string; strong?: boolean }) {
@@ -54,48 +54,42 @@ function Monogram({ text, strong }: { text: string; strong?: boolean }) {
 }
 
 /**
- * Compares this listing with every price source we have, on one baht scale:
- * a headline verdict, then one lane per source (dot = price, band = low–high
- * range) with this listing's price drawn as a reference line through all of
- * them. Outside prices keep their original USD figure next to an approximate
- * baht conversion. Sources we can't query (Beckett, PriceCharting, eBay's
- * sold comps) are one-click searches pre-filled for this exact card.
+ * This listing against every price source for the grade picked above it, on
+ * one baht scale: CardMart asks and sales in that grade, eBay's exact-match
+ * asking price and, for raw cards, TCGplayer. Picking another grade answers
+ * "what would a PSA 10 of this card cost me instead?" in the same panel.
  */
-export async function PlatformPriceTable({
-  priceThb,
-  forSale,
-  gradeLabel,
-  marketQuery,
-  cardMart,
-  tcg,
+export function GradeCompare({
+  tierName,
+  isOwnGrade,
+  listingThb,
+  listingGradeName,
+  asks,
+  salePrices,
   ebay,
-  graded,
+  tcg,
+  query,
 }: {
-  priceThb: number | null;
-  forSale: boolean;
-  gradeLabel: string;
-  marketQuery: string;
-  cardMart: {
-    saleCount: number;
-    medianSaleThb: number | null;
-    lastSaleThb: number | null;
-    listingCount: number;
-    lowestAskThb: number | null;
-    highestAskThb: number | null;
-    saleLookbackDays: number;
-  };
-  tcg: CardPriceQuote | null;
-  ebay: EbayPriceQuote | null;
-  // TCGplayer only prices raw cards, so its row is left out for a graded slab.
-  graded: boolean;
+  tierName: string;
+  isOwnGrade: boolean;
+  listingThb: number | null;
+  listingGradeName: string;
+  // Other live CardMart listings of this card in the picked grade.
+  asks: number[];
+  // Completed CardMart sales of this card in the picked grade.
+  salePrices: number[];
+  // undefined while it's still loading.
+  ebay: EbayPriceQuote | null | undefined;
+  tcg: { marketPriceUsd: number; matchedName: string } | null;
+  query: string;
 }) {
-  const t = await getT();
-  const listingThb = forSale ? priceThb : null;
+  const { tr: t } = useLanguage();
 
-  const sameCardRange =
-    cardMart.lowestAskThb != null && cardMart.highestAskThb != null && cardMart.highestAskThb !== cardMart.lowestAskThb
-      ? ([cardMart.lowestAskThb, cardMart.highestAskThb] as [number, number])
-      : undefined;
+  const lowAsk = asks.length ? Math.min(...asks) : null;
+  const highAsk = asks.length ? Math.max(...asks) : null;
+  const askRange = lowAsk != null && highAsk != null && highAsk !== lowAsk ? ([lowAsk, highAsk] as [number, number]) : undefined;
+  const sorted = [...salePrices].sort((a, b) => a - b);
+  const medianSale = sorted.length ? sorted[Math.floor((sorted.length - 1) / 2)] : null;
 
   const lanes: Lane[] = [
     {
@@ -105,25 +99,20 @@ export async function PlatformPriceTable({
       kind: "Asking",
       pointThb: listingThb,
       price: listingThb != null ? formatThb(listingThb) : null,
-      note: forSale ? gradeLabel : t("Not listed for sale right now"),
+      note: listingThb != null ? listingGradeName : t("Not listed for sale right now"),
       highlight: true,
     },
     {
       key: "same",
-      name: t("CardMart — same card"),
+      name: t("CardMart — {grade}", { grade: tierName }),
       mono: "CM",
       kind: "Asking",
-      pointThb: sameCardRange ? null : cardMart.lowestAskThb,
-      rangeThb: sameCardRange,
-      price:
-        cardMart.lowestAskThb == null
-          ? null
-          : sameCardRange
-            ? `${formatThb(sameCardRange[0])} – ${formatThb(sameCardRange[1])}`
-            : formatThb(cardMart.lowestAskThb),
+      pointThb: askRange ? null : lowAsk,
+      rangeThb: askRange,
+      price: lowAsk == null ? null : askRange ? `${formatThb(askRange[0])} – ${formatThb(askRange[1])}` : formatThb(lowAsk),
       note:
-        cardMart.listingCount > 0
-          ? t(cardMart.listingCount === 1 ? "{count} live listing" : "{count} live listings", { count: cardMart.listingCount })
+        asks.length > 0
+          ? t(asks.length === 1 ? "{count} live listing" : "{count} live listings", { count: asks.length })
           : t("No live listings"),
     },
     {
@@ -131,15 +120,14 @@ export async function PlatformPriceTable({
       name: t("CardMart — median sale"),
       mono: "CM",
       kind: "Sold",
-      pointThb: cardMart.medianSaleThb,
-      price: cardMart.medianSaleThb != null ? formatThb(cardMart.medianSaleThb) : null,
+      pointThb: medianSale,
+      price: medianSale != null ? formatThb(medianSale) : null,
       note:
-        cardMart.saleCount > 0
-          ? t(cardMart.saleCount === 1 ? "{count} sale in {days} days" : "{count} sales in {days} days", {
-              count: cardMart.saleCount,
-              days: cardMart.saleLookbackDays,
+        sorted.length > 0
+          ? t(sorted.length === 1 ? "{count} sale" : "{count} sales", {
+              count: sorted.length,
             })
-          : t("No completed sales in {days} days", { days: cardMart.saleLookbackDays }),
+          : t("No completed sales yet"),
     },
     {
       key: "ebay",
@@ -150,22 +138,30 @@ export async function PlatformPriceTable({
       rangeThb: ebay && ebay.itemCount > 1 ? [usdToThb(ebay.lowPriceUsd), usdToThb(ebay.highPriceUsd)] : undefined,
       price: ebay ? formatUsd(ebay.medianPriceUsd) : null,
       approx: ebay ? `≈ ${formatThb(usdToThb(ebay.medianPriceUsd))}` : undefined,
-      note: ebay
-        ? `${t("Median of {count} active listings", { count: ebay.itemCount })} · ${formatUsd(ebay.lowPriceUsd)}–${formatUsd(ebay.highPriceUsd)}`
-        : t("No exact match listed right now"),
-      href: searchUrl("https://www.ebay.com/sch/i.html", "_nkw", marketQuery),
+      note:
+        ebay === undefined
+          ? t("Checking eBay…")
+          : ebay
+            ? `${t(ebay.itemCount === 1 ? "Median of {count} active listing" : "Median of {count} active listings", { count: ebay.itemCount })} · ${formatUsd(ebay.lowPriceUsd)}–${formatUsd(ebay.highPriceUsd)}`
+            : t("No exact match listed right now"),
+      href: searchUrl("https://www.ebay.com/sch/i.html", "_nkw", query),
+      loading: ebay === undefined,
     },
-    ...(graded ? [] : [{
-      key: "tcg",
-      name: "TCGplayer",
-      mono: "TCG",
-      kind: "Market",
-      pointThb: tcg?.marketPriceUsd != null ? usdToThb(tcg.marketPriceUsd) : null,
-      price: tcg?.marketPriceUsd != null ? formatUsd(tcg.marketPriceUsd) : null,
-      approx: tcg?.marketPriceUsd != null ? `≈ ${formatThb(usdToThb(tcg.marketPriceUsd))}` : undefined,
-      note: tcg?.marketPriceUsd != null ? `${t("Ungraded (raw) card")} · ${tcg.matchedName}` : t("Ungraded card prices"),
-      href: searchUrl("https://www.tcgplayer.com/search/all/product", "q", tcg?.matchedName ?? marketQuery),
-    } satisfies Lane]),
+    ...(tcg
+      ? [
+          {
+            key: "tcg",
+            name: "TCGplayer",
+            mono: "TCG",
+            kind: "Market",
+            pointThb: usdToThb(tcg.marketPriceUsd),
+            price: formatUsd(tcg.marketPriceUsd),
+            approx: `≈ ${formatThb(usdToThb(tcg.marketPriceUsd))}`,
+            note: `${t("Ungraded (raw) card")} · ${tcg.matchedName}`,
+            href: searchUrl("https://www.tcgplayer.com/search/all/product", "q", tcg.matchedName),
+          } satisfies Lane,
+        ]
+      : []),
   ];
 
   const values = lanes.flatMap((l) => [l.pointThb, ...(l.rangeThb ?? [])]).filter((v): v is number => v != null && v > 0);
@@ -173,59 +169,62 @@ export async function PlatformPriceTable({
   const pos = (v: number) => `${Math.min(100, (v / axisMax) * 100)}%`;
   const ticks = [0, axisMax / 2, axisMax];
 
-  // Headline: this listing against the best outside reference we have.
-  const reference =
-    ebay != null
-      ? { label: t("eBay median asking price"), thb: usdToThb(ebay.medianPriceUsd) }
-      : cardMart.medianSaleThb != null
-        ? { label: t("CardMart median sale"), thb: cardMart.medianSaleThb }
+  // Headline: this listing against the best reference for the picked grade.
+  // count = how many prices it rests on, so a verdict from one listing says so.
+  const reference = ebay
+    ? { label: t("eBay median asking price"), thb: usdToThb(ebay.medianPriceUsd), count: ebay.itemCount }
+    : medianSale != null
+      ? { label: t("CardMart median sale"), thb: medianSale, count: sorted.length }
+      : lowAsk != null
+        ? { label: t("the cheapest CardMart listing"), thb: lowAsk, count: asks.length }
         : null;
   const diffPct = listingThb != null && reference ? ((listingThb - reference.thb) / reference.thb) * 100 : null;
 
-  const searches = [
-    { name: t("eBay sold listings"), mono: "eB", href: ebaySoldListingsUrl(marketQuery) },
-    { name: "PriceCharting", mono: "PC", href: searchUrl("https://www.pricecharting.com/search-products", "q", marketQuery, { type: "prices" }) },
-    { name: "Beckett", mono: "B", href: searchUrl("https://www.beckett.com/search/", "term", marketQuery) },
-  ];
-
   return (
-    <section className="flex flex-col gap-4">
-      <div className="flex items-center gap-2">
-        <div className="bg-secondary text-foreground flex size-7 items-center justify-center rounded-md">
-          <Scale className="size-3.5" />
-        </div>
-        <h2 className="eyebrow text-foreground text-sm">{t("Price Comparison")}</h2>
-      </div>
-
+    <div className="flex flex-col gap-4">
       <div className="bg-card overflow-hidden rounded-2xl border">
-        {/* Headline verdict */}
         <div className="flex flex-wrap items-end justify-between gap-3 border-b p-4">
           <div className="flex flex-col gap-0.5">
-            <span className="text-muted-foreground text-xs">{t("This listing")}</span>
-            <span className="text-2xl leading-none font-bold tabular-nums">{listingThb != null ? formatThb(listingThb) : "—"}</span>
+            <span className="text-muted-foreground text-xs">
+              {isOwnGrade
+                ? t("This listing")
+                : t("This listing ({grade}) vs {other}", {
+                    grade: listingGradeName,
+                    other: tierName,
+                  })}
+            </span>
+            <span className="text-2xl leading-none font-bold tabular-nums">
+              {listingThb != null ? formatThb(listingThb) : "—"}
+            </span>
           </div>
           {diffPct != null && reference && (
             <div className="flex items-center gap-2 text-sm">
               {Math.abs(diffPct) < 1 ? null : diffPct < 0 ? (
-                <ArrowDownRight className="text-success size-4" />
+                <ArrowDownRight className={cn("size-4", isOwnGrade ? "text-success" : "text-compare")} />
               ) : (
-                <ArrowUpRight className="text-destructive size-4" />
+                <ArrowUpRight className={cn("size-4", isOwnGrade ? "text-destructive" : "text-compare")} />
               )}
               <span>
-                <span className="font-semibold">
+                <span className={cn("font-semibold", !isOwnGrade && "text-compare")}>
                   {Math.abs(diffPct) < 1
                     ? t("About the same as")
-                    : t(diffPct < 0 ? "{pct}% below" : "{pct}% above", { pct: Math.abs(diffPct).toFixed(0) })}
+                    : t(diffPct < 0 ? "{pct}% below" : "{pct}% above", {
+                        pct: Math.abs(diffPct).toFixed(0),
+                      })}
                 </span>{" "}
                 <span className="text-muted-foreground">
-                  {reference.label} ({formatThb(reference.thb)})
+                  {isOwnGrade ? reference.label : `${reference.label}, ${tierName}`} ({formatThb(reference.thb)})
                 </span>
+                {reference.count < MIN_RELIABLE_PRICES && (
+                  <span className="block text-right text-xs text-amber-400">
+                    {t(reference.count === 1 ? "Based on only {count} price — a rough guide." : "Based on only {count} prices — a rough guide.", { count: reference.count })}
+                  </span>
+                )}
               </span>
             </div>
           )}
         </div>
 
-        {/* One lane per source on a shared baht axis */}
         <ul className="divide-y">
           {lanes.map((lane) => {
             const hasData = lane.pointThb != null || lane.rangeThb != null;
@@ -270,7 +269,10 @@ export async function PlatformPriceTable({
                     <>
                       {lane.rangeThb && (
                         <div
-                          className="bg-foreground/15 absolute top-1/2 h-2 -translate-y-1/2 rounded-full"
+                          className={cn(
+                            "absolute top-1/2 h-2 -translate-y-1/2 rounded-full",
+                            isOwnGrade ? "bg-foreground/15" : "bg-compare/30",
+                          )}
                           style={{
                             left: pos(lane.rangeThb[0]),
                             width: `calc(${pos(lane.rangeThb[1])} - ${pos(lane.rangeThb[0])})`,
@@ -282,7 +284,11 @@ export async function PlatformPriceTable({
                         <div
                           className={cn(
                             "ring-card absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2",
-                            lane.highlight ? "bg-foreground size-3.5" : "bg-muted-foreground size-2.5",
+                            lane.highlight
+                              ? "bg-foreground size-3.5"
+                              : isOwnGrade
+                                ? "bg-muted-foreground size-2.5"
+                                : "bg-compare size-2.5",
                           )}
                           style={{ left: pos(lane.pointThb) }}
                           title={`${lane.name}: ${formatThb(lane.pointThb)}`}
@@ -293,7 +299,9 @@ export async function PlatformPriceTable({
                 </div>
 
                 <div className="col-start-3 row-start-1 flex flex-col items-end text-right sm:col-start-4">
-                  {lane.price ? (
+                  {lane.loading ? (
+                    <Loader2 className="text-muted-foreground size-4 animate-spin" />
+                  ) : lane.price ? (
                     <>
                       <span className="text-sm font-semibold tabular-nums">{lane.price}</span>
                       {lane.approx && <span className="text-muted-foreground text-[11px] tabular-nums">{lane.approx}</span>}
@@ -307,7 +315,6 @@ export async function PlatformPriceTable({
           })}
         </ul>
 
-        {/* Axis labels, aligned to the track column from sm up */}
         {axisMax > 0 && (
           <div className="text-muted-foreground hidden grid-cols-[auto_minmax(0,14rem)_1fr_7.5rem] gap-x-3 border-t px-4 py-2 text-[10px] tabular-nums sm:grid">
             <span className="w-8" />
@@ -328,7 +335,36 @@ export async function PlatformPriceTable({
         )}
       </div>
 
-      {/* Sources we can only search, not query */}
+      <CompareLinks query={query} />
+    </div>
+  );
+}
+
+/** Sources we can only search, not query, pre-filled for this card in the picked grade. */
+function CompareLinks({ query }: { query: string }) {
+  const { tr: t } = useLanguage();
+  const searches = [
+    {
+      name: t("eBay sold listings"),
+      mono: "eB",
+      href: searchUrl("https://www.ebay.com/sch/i.html", "_nkw", query, {
+        LH_Sold: "1",
+        LH_Complete: "1",
+      }),
+    },
+    {
+      name: "PriceCharting",
+      mono: "PC",
+      href: searchUrl("https://www.pricecharting.com/search-products", "q", query, { type: "prices" }),
+    },
+    {
+      name: "Beckett",
+      mono: "B",
+      href: searchUrl("https://www.beckett.com/search/", "term", query),
+    },
+  ];
+  return (
+    <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-muted-foreground text-xs">{t("Check sold prices elsewhere:")}</span>
         {searches.map((s) => (
@@ -347,8 +383,11 @@ export async function PlatformPriceTable({
       </div>
 
       <p className="text-muted-foreground text-[11px]">
-        {t("Every row compares the same card, set and grade as this listing. eBay figures are current asking prices, not sold prices, converted at about {rate} THB per USD.", { rate: THB_PER_USD })}
+        {t(
+          "Rows compare the same card and set in the grade picked above. eBay figures are current asking prices, not sold prices, converted at about {rate} THB per USD.",
+          { rate: THB_PER_USD },
+        )}
       </p>
-    </section>
+    </div>
   );
 }

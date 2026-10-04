@@ -8,6 +8,7 @@ import type { AgentMandate, GradingCompany, Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { judgeListings, isAgentAiConfigured, type CandidateListing } from "@/lib/agent/ai";
+import { taskReportText } from "@/lib/agent/report";
 import { isEbayConfigured, lookupEbayPrice } from "@/lib/ebay";
 import { AGENT_TASK_MAX_REVIEWS, THB_PER_USD } from "@/lib/pricing";
 
@@ -15,7 +16,7 @@ export type ExecuteAgentDecision = (decisionId: string) => Promise<void>;
 export type SendAgentOffer = (decisionId: string) => Promise<void>;
 export type NotifyAgentOwner = (
   userId: string,
-  type: "AGENT_PROPOSAL" | "AGENT_FAILED",
+  type: "AGENT_PROPOSAL" | "AGENT_FAILED" | "AGENT_REPORT",
   title: string,
   body: string,
   href: string,
@@ -150,13 +151,17 @@ export async function runMandate(
   // The task fee covers this many AI reviews; after that the task finishes.
   if (decided.length >= AGENT_TASK_MAX_REVIEWS) {
     await prisma.agentMandate.update({ where: { id: mandateId }, data: { status: "DONE" } });
-    await opts.notify(
-      mandate.userId,
-      "AGENT_FAILED",
-      "Your agent task finished",
-      `It reviewed ${AGENT_TASK_MAX_REVIEWS} listings, the most one task covers. Start a new task to keep looking.`,
-      "/agent",
-    );
+    await taskReportText(mandateId)
+      .then((report) =>
+        opts.notify(
+          mandate.userId,
+          "AGENT_REPORT",
+          "Your agent task finished",
+          `${report} That's the most one task covers; start a new task to keep looking.`,
+          "/agent",
+        ),
+      )
+      .catch((err) => console.error(`Agent task report for mandate ${mandateId} failed`, err));
     return 0;
   }
   const seen = new Set(decided.map((d) => `${d.assetId}:${d.priceThb}`));

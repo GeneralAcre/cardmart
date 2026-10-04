@@ -865,6 +865,8 @@ enum NotificationType {
   AGENT_PROPOSAL
   AGENT_PURCHASE
   AGENT_FAILED
+  // A buying task finished: what it reviewed, bought and saved.
+  AGENT_REPORT
 }
 
 model Notification {

@@ -11,6 +11,21 @@ export const AGENT: Record<string, string> = {
   "You can already fund your agent wallet. Planning and buying start once the AI is connected.":
     "เติมเงินเข้ากระเป๋าเอเจนต์ได้แล้ว การวางแผนและการซื้อจะเริ่มเมื่อเชื่อมต่อ AI",
   "Agent wallets aren't configured on this server, so purchases run in simulated mode.": "ยังไม่ได้ตั้งค่ากระเป๋าเอเจนต์ การซื้อจึงทำงานแบบจำลอง",
+  "Your card hunter that never sleeps.": "นักล่าการ์ดที่ไม่เคยหลับ",
+  "Tasks watching": "งานที่กำลังเฝ้าดู",
+  "Listings reviewed": "รายการที่ตรวจแล้ว",
+  "Cards bought": "การ์ดที่ซื้อแล้ว",
+  "Saved vs fair value": "ประหยัดเทียบราคาที่เหมาะสม",
+  "Waiting for your OK": "รอคุณอนุมัติ",
+  "Fair {price}": "ราคาเหมาะสม {price}",
+
+  // Task report
+  "No listings reviewed yet. New listings that fit are checked as they appear.":
+    "ยังไม่ได้ตรวจรายการใด รายการใหม่ที่ตรงเงื่อนไขจะถูกตรวจทันทีที่ลงขาย",
+  Reviewed: "ตรวจแล้ว",
+  "Right card": "การ์ดที่ใช่",
+  "Best find: {name} at {price}, {pct}% under fair value.": "ดีลที่ดีที่สุด: {name} ราคา {price} ต่ำกว่าราคาที่เหมาะสม {pct}%",
+  "Saved {amount} against fair value.": "ประหยัดได้ {amount} เทียบกับราคาที่เหมาะสม",
 
   // Wallet
   "Agent wallet": "กระเป๋าเอเจนต์",

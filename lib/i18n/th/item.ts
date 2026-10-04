@@ -288,4 +288,41 @@ export const ITEM: Record<string, string> = {
   "This purchase isn't complete yet.": "การซื้อนี้ยังไม่เสร็จสมบูรณ์",
   "You already reported a problem with this purchase.": "คุณแจ้งปัญหาของการซื้อนี้ไปแล้ว",
   "Describe the problem in at least 20 characters.": "อธิบายปัญหาอย่างน้อย 20 ตัวอักษร",
+
+  // Market price history
+  "Recent Sales": "การขายล่าสุด",
+  "Market Price History": "ประวัติราคาตลาด",
+  Condition: "สภาพ",
+  "in range": "ในช่วงนี้",
+  "Completed CardMart sales of this card.": "การขายที่เสร็จสมบูรณ์ของการ์ดใบนี้บน CardMart",
+  "Completed CardMart sales of this card in this grade.": "การขายที่เสร็จสมบูรณ์ของการ์ดใบนี้ในเกรดนี้บน CardMart",
+  "This listing's price changes — not enough sales in this grade yet.": "การเปลี่ยนราคาของรายการนี้ — ยังมีการขายในเกรดนี้ไม่พอ",
+  "No price history in this grade yet": "ยังไม่มีประวัติราคาในเกรดนี้",
+  "It fills in as this card sells on CardMart.": "ข้อมูลจะเพิ่มขึ้นเมื่อการ์ดใบนี้ขายบน CardMart",
+  "No completed sales of this card in this grade yet.": "ยังไม่มีการขายการ์ดใบนี้ในเกรดนี้",
+  "30D": "30 วัน",
+  "90D": "90 วัน",
+  "1Y": "1 ปี",
+
+  // Similar listings
+  "Similar Listings": "รายการที่คล้ายกัน",
+  "Best Deals": "ดีลที่ดีที่สุด",
+  "{count} listing": "{count} รายการ",
+  Viewing: "กำลังดู",
+  Fair: "ราคาเหมาะสม",
+  "Est. {price}": "ประเมิน {price}",
+
+  // Grade comparison
+  "Median of {count} active listing": "มัธยฐานจาก {count} รายการที่ลงขายอยู่",
+  "Based on only {count} price — a rough guide.": "อิงจากราคาเพียง {count} รายการ — ใช้เป็นแนวทางคร่าว ๆ",
+  "Based on only {count} prices — a rough guide.": "อิงจากราคาเพียง {count} รายการ — ใช้เป็นแนวทางคร่าว ๆ",
+  "CardMart — {grade}": "CardMart — {grade}",
+  "{count} sale": "ขายแล้ว {count} ครั้ง",
+  "{count} sales": "ขายแล้ว {count} ครั้ง",
+  "No completed sales yet": "ยังไม่มีการขายที่เสร็จสมบูรณ์",
+  "Checking eBay…": "กำลังตรวจสอบ eBay…",
+  "the cheapest CardMart listing": "รายการที่ถูกที่สุดบน CardMart",
+  "This listing ({grade}) vs {other}": "รายการนี้ ({grade}) เทียบกับ {other}",
+  "Rows compare the same card and set in the grade picked above. eBay figures are current asking prices, not sold prices, converted at about {rate} THB per USD.":
+    "ทุกแถวเทียบการ์ดและชุดเดียวกันในเกรดที่เลือกด้านบน ตัวเลข eBay เป็นราคาที่ตั้งขายอยู่ ไม่ใช่ราคาที่ขายได้จริง แปลงที่ประมาณ {rate} บาทต่อ USD",
 };

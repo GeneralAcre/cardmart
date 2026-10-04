@@ -97,8 +97,12 @@ function SelectLabel({
 function SelectItem({
   className,
   children,
+  suffix,
   ...props
-}: React.ComponentProps<typeof SelectPrimitive.Item>) {
+}: React.ComponentProps<typeof SelectPrimitive.Item> & {
+  // Shown in the open list only, not copied into the trigger like children.
+  suffix?: React.ReactNode;
+}) {
   return (
     <SelectPrimitive.Item
       data-slot="select-item"
@@ -114,6 +118,7 @@ function SelectItem({
         </SelectPrimitive.ItemIndicator>
       </span>
       <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+      {suffix}
     </SelectPrimitive.Item>
   );
 }

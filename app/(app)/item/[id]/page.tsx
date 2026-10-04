@@ -9,7 +9,6 @@ import {
   getAssetInsightData,
   getCardMarketStats,
   getCardAcrossGrades,
-  getMySwappableAssets,
   getPriceHistory,
   getSellerRating,
   getSimilarAssets,
@@ -17,22 +16,20 @@ import {
 } from "@/lib/queries";
 import { getEscrowAuthorityAddress } from "@/lib/web3/escrow-server";
 import { buildPriceInsights } from "@/lib/insights";
-import { PlatformPriceTable } from "@/components/item/platform-price-table";
 import { PriceInsights } from "@/components/item/price-insights";
 import { WantedCardButton } from "@/components/wanted/wanted-card-form";
-import { ProposeSwapButton } from "@/components/trade/propose-swap-button";
 import { VerifiedBadge } from "@/components/store/verified-badge";
 import { getCurrentUser } from "@/lib/session";
 import { getT } from "@/lib/i18n/server";
 import { ItemGallery } from "@/components/item/item-gallery";
-import { PriceHistoryChart } from "@/components/item/price-history-chart";
+import { MarketPriceHistory } from "@/components/item/market-price-history";
 import { ProvenanceTimeline } from "@/components/item/provenance-timeline";
 import { BuyPanel } from "@/components/item/buy-panel";
 import { WatchButton } from "@/components/item/watch-button";
-import { MakeOfferButton } from "@/components/item/make-offer-button";
 import { MessageSellerButton } from "@/components/messages/message-seller-button";
 import { AcceptedOfferBanner } from "@/components/item/accepted-offer-banner";
-import { SimilarListings } from "@/components/item/similar-listings";
+import { SimilarListings, type SimilarListing } from "@/components/item/similar-listings";
+import { THB_PER_USD } from "@/lib/pricing";
 import { LeaveReviewForm } from "@/components/store/leave-review-form";
 import { ReportProblem } from "@/components/item/report-problem";
 import { ShipmentTracking } from "@/components/item/shipment-tracking";
@@ -59,9 +56,15 @@ import {
 import { extractPsaCertNumber, isPsaCertNumber, lookupPsaCert, lookupPsaPopulation, psaCertUrl } from "@/lib/psa";
 import { lookupCardPrice } from "@/lib/tcg-price";
 import { buildMarketQuery, lookupEbayPrice } from "@/lib/ebay";
-import { GradeLadder, ladderTiers, tierKey } from "@/components/item/grade-ladder";
+import { tierKey, type GradeTier } from "@/lib/grade-tier";
 import { cn } from "@/lib/utils";
-import { realPhotos } from "@/lib/card-image";
+import { displayImage, realPhotos } from "@/lib/card-image";
+
+const PRELOADED_EBAY_TIERS: GradeTier[] = [
+  { gradingCompany: "RAW", grade: null, isBlackLabel: false },
+  { gradingCompany: "PSA", grade: 9, isBlackLabel: false },
+  { gradingCompany: "PSA", grade: 10, isBlackLabel: false },
+];
 
 export default async function ItemDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -89,11 +92,10 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
     isBlackLabel: asset.isBlackLabel,
     cardNumber: asset.cardNumber,
   };
-  const ebayQuery = buildMarketQuery(marketCard);
-  // The other grades on the "Price by grade" ladder; this listing's own
-  // grade reuses ebayQuote below instead of a second lookup.
+  // eBay prices preloaded for the grade picker: raw, PSA 9 and PSA 10. This
+  // listing's own grade reuses ebayQuote below; any other grade loads when picked.
   const currentTier = { gradingCompany: asset.gradingCompany, grade: asset.grade, isBlackLabel: asset.isBlackLabel };
-  const otherTiers = ladderTiers(currentTier).filter((tier) => tierKey(tier) !== tierKey(currentTier));
+  const otherTiers = PRELOADED_EBAY_TIERS.filter((tier) => tierKey(tier) !== tierKey(currentTier));
 
   // These five are all independent of each other (only psaPopulation below
   // depends on one of them) — awaiting them one at a time was serializing
@@ -116,23 +118,16 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
     // Best-effort: null whenever eBay isn't configured or nothing matched
     // exactly; ebaySoldListingsUrl below still gives a verifiable reference.
     lookupEbayPrice(marketCard),
-    // Default range matches PriceHistoryChart's own default state (7d) — the
-    // client re-fetches on range change, this is just the initial paint.
+    // Only feeds the Previous Price box; the full history comes from insightData.
     getPriceHistory(asset.id, "7d"),
     getSellerRating(asset.seller.id),
-    getSimilarAssets({
-      id: asset.id,
-      name: asset.name,
-      gradingCompany: asset.gradingCompany,
-      grade: asset.grade,
-      priceThb: asset.priceThb,
-    }),
+    getSimilarAssets({ id: asset.id, name: asset.name, subtitle: asset.subtitle }),
     getCardMarketStats(marketCard, asset.id),
     getAssetInsightData(asset.id),
     getCardAcrossGrades(marketCard),
     Promise.all(otherTiers.map((tier) => lookupEbayPrice({ ...marketCard, ...tier }).catch(() => null))),
   ]);
-  const ladderEbay = Object.fromEntries([
+  const preloadedEbay: Record<string, Awaited<typeof ebayQuote>> = Object.fromEntries([
     [tierKey(currentTier), ebayQuote],
     ...otherTiers.map((tier, i) => [tierKey(tier), otherTierEbay[i]] as const),
   ]);
@@ -175,21 +170,49 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
       : null;
   const isWatching = !isOwner && (await isAssetWatched(user.id, asset.id));
 
-  // Card swaps are vault-to-vault only — see proposeTrade in lib/actions.ts.
-  const swappable =
-    !isOwner &&
-    asset.vaulted &&
-    !asset.redeemedAt &&
-    asset.marketStatus !== "IN_ESCROW" &&
-    asset.marketStatus !== "IN_AUCTION";
-
-  const [activeAuction, acceptedOffer, mySwappableCards, escrowAuthorityAddress, myShipment] = await Promise.all([
+  const [activeAuction, acceptedOffer, escrowAuthorityAddress, myShipment] = await Promise.all([
     asset.marketStatus === "IN_AUCTION" ? getActiveAuctionForAsset(asset.id) : Promise.resolve(null),
     !isOwner ? getAcceptedOfferForViewer(asset.id, user.id) : Promise.resolve(null),
-    swappable ? getMySwappableAssets(user.id) : Promise.resolve([]),
     getEscrowAuthorityAddress(),
     isOwner ? getShipmentForRecipient(asset.id, user.id) : Promise.resolve(null),
   ]);
+
+  // A fair price for this card in a grade, for the Similar Listings badges:
+  // eBay's median ask when we have it, else the CardMart median sale.
+  const estimateFor = (tier: GradeTier) => {
+    const quote = preloadedEbay[tierKey(tier)];
+    if (quote) return Math.round(quote.medianPriceUsd * THB_PER_USD);
+    const sold = gradeData.sales
+      .filter((sale) => tierKey(sale) === tierKey(tier))
+      .map((sale) => sale.amountThb)
+      .sort((a, b) => a - b);
+    return sold.length ? sold[Math.floor((sold.length - 1) / 2)] : null;
+  };
+  const toSimilar = (
+    a: Pick<typeof asset, "id" | "name" | "subtitle" | "themeIndex" | "category" | "gradingCompany" | "grade" | "isBlackLabel" | "verificationPhotos" | "catalogImageUrl"> & {
+      priceThb: number;
+      seller: { name: string | null };
+    },
+    viewing = false,
+  ): SimilarListing => ({
+    id: a.id,
+    name: a.name,
+    subtitle: a.subtitle,
+    priceThb: a.priceThb,
+    imageUrl: displayImage(a)?.url ?? null,
+    themeIndex: a.themeIndex,
+    category: a.category,
+    gradingCompany: a.gradingCompany,
+    grade: a.grade,
+    isBlackLabel: a.isBlackLabel,
+    sellerName: a.seller.name ?? "",
+    estimateThb: estimateFor(a),
+    viewing,
+  });
+  const similarListings = [
+    ...(asset.forSale && asset.priceThb != null ? [toSimilar({ ...asset, priceThb: asset.priceThb }, true)] : []),
+    ...similarAssets.map((a) => toSimilar({ ...a, priceThb: a.priceThb! })),
+  ];
 
   const insights = buildPriceInsights({
     priceThb: asset.priceThb,
@@ -203,10 +226,6 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
     market: cardMarket,
     psa: psaCert ? { totalPopulation: psaCert.totalPopulation, populationHigher: psaCert.populationHigher } : null,
   }, t);
-  const gradeLabel =
-    asset.gradingCompany === "RAW"
-      ? t("Raw / Ungraded")
-      : `${asset.gradingCompany} ${formatGrade(asset.grade)}${asset.isBlackLabel ? " Black Label" : ""}`;
   const wantedDefaults = {
     query: asset.name,
     gradingCompany: asset.gradingCompany,
@@ -473,32 +492,8 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
                   asset.mintAddress && !asset.transferApproved && asset.owner.walletAddress && escrowAuthorityAddress,
                 )}
               />
-              {!isOwner && asset.forSale && (
-                <MakeOfferButton
-                  assetId={asset.id}
-                  assetName={asset.name}
-                  listPriceThb={asset.priceThb}
-                  size="default"
-                  variant="secondary"
-                  className="w-full"
-                />
-              )}
-              {swappable && (
-                <ProposeSwapButton
-                  requestedAsset={{ id: asset.id, name: asset.name, priceThb: asset.forSale ? asset.priceThb : null }}
-                  recipientWalletAddress={asset.owner.walletAddress}
-                  myCards={mySwappableCards}
-                  escrowAuthorityAddress={escrowAuthorityAddress}
-                />
-              )}
             </>
           )}
-
-          <PriceHistoryChart
-            assetId={asset.id}
-            initialHistory={priceHistory.map((p) => ({ priceThb: p.priceThb, createdAt: p.createdAt.toISOString() }))}
-            currentPriceThb={asset.priceThb}
-          />
 
           {myOpenOrder?.inboundPackage && (
             <OrderProgress
@@ -600,22 +595,20 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
           into, not required reading before they can act. */}
       <Separator className="my-12" />
 
-      <PlatformPriceTable
-        priceThb={asset.priceThb}
-        forSale={asset.forSale}
-        gradeLabel={gradeLabel}
-        marketQuery={ebayQuery}
-        cardMart={cardMarket}
-        tcg={asset.gradingCompany === "RAW" ? priceQuote : null}
-        graded={asset.gradingCompany !== "RAW"}
-        ebay={ebayQuote}
+      <MarketPriceHistory
+        assetId={asset.id}
+        current={currentTier}
+        subtitle={asset.subtitle}
+        sales={gradeData.sales.map((s) => ({ ...s, soldAt: s.soldAt.toISOString() }))}
+        listingHistory={insightData.snapshots.map((p) => ({ priceThb: p.priceThb, createdAt: p.createdAt.toISOString() }))}
+        listingThb={asset.forSale ? asset.priceThb : null}
+        listings={gradeData.listings.filter((l) => l.id !== asset.id)}
+        initialEbay={preloadedEbay}
+        tcg={priceQuote?.marketPriceUsd != null ? { marketPriceUsd: priceQuote.marketPriceUsd, matchedName: priceQuote.matchedName } : null}
+        baseQuery={buildMarketQuery({ ...marketCard, gradingCompany: "RAW", grade: null, isBlackLabel: false })}
       />
 
-      <Separator className="my-12" />
-
-      <GradeLadder current={currentTier} listings={gradeData.listings} sales={gradeData.sales} ebay={ladderEbay} />
-
-      <div className="mt-10 grid grid-cols-1 items-start gap-10 md:grid-cols-2">
+      <div className="mt-12 grid grid-cols-1 items-start gap-10 md:grid-cols-2">
         <div className="flex flex-col gap-5">
           <PriceInsights insights={insights} />
         </div>
@@ -634,7 +627,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
       {similarAssets.length > 0 && (
         <>
           <Separator className="my-12" />
-          <SimilarListings currentPriceThb={asset.priceThb} listings={similarAssets} />
+          <SimilarListings listings={similarListings} />
         </>
       )}
     </div>
