@@ -54,7 +54,7 @@ export default async function MessagesPage() {
                       )}
                     >
                       {c.lastMessage
-                        ? `${c.lastMessage.senderId === user.id ? `${t("You:")} ` : ""}${c.lastMessage.body}`
+                        ? `${c.lastMessage.senderId === user.id ? `${t("You:")} ` : ""}${c.lastMessage.body || (c.lastMessage.imageUrls.length ? t("Sent a photo") : t("Shared a card"))}`
                         : t("No messages yet")}
                     </span>
                     {unread && <Badge className="shrink-0 rounded-full px-1.5 text-[10px]">{c.unreadCount}</Badge>}

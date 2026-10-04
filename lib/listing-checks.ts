@@ -71,3 +71,14 @@ export function photoUrlProblem(urls: string[]): string | null {
   if (new Set(urls).size !== urls.length) return "Each view needs its own photo. Retake the repeated one.";
   return null;
 }
+
+/** Whether a URL is an upload to our own Blob store (the same rule as listing photos). */
+export function isOwnUploadUrl(raw: string): boolean {
+  const host = ownBlobHost();
+  try {
+    const url = new URL(raw);
+    return url.protocol === "https:" && (host ? url.hostname === host : url.hostname.endsWith(".public.blob.vercel-storage.com"));
+  } catch {
+    return false;
+  }
+}

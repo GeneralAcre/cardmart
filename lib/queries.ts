@@ -451,18 +451,74 @@ export async function getMyConversations(userId: string) {
   }));
 }
 
-/** One thread, only if the user is a participant — null otherwise, so a guessed id can't read someone else's messages. */
+// A card as the chat shows it: enough to recognise it and its price.
+const CHAT_ASSET_SELECT = {
+  id: true,
+  name: true,
+  subtitle: true,
+  gradingCompany: true,
+  grade: true,
+  isBlackLabel: true,
+  priceThb: true,
+  forSale: true,
+  ownerId: true,
+  catalogImageUrl: true,
+  verificationPhotos: { orderBy: { createdAt: "asc" }, take: 1, select: { url: true } },
+} as const;
+
+function chatAsset(a: Prisma.AssetGetPayload<{ select: typeof CHAT_ASSET_SELECT }>) {
+  return {
+    id: a.id,
+    name: a.name,
+    subtitle: a.subtitle,
+    gradingCompany: a.gradingCompany,
+    grade: a.grade,
+    isBlackLabel: a.isBlackLabel,
+    priceThb: a.priceThb,
+    forSale: a.forSale,
+    ownerId: a.ownerId,
+    imageUrl: displayImage(a)?.url ?? null,
+  };
+}
+
+/**
+ * One thread, only if the user is a participant — null otherwise, so a
+ * guessed id can't read someone else's messages. Each message carries its
+ * photos, the card it's about and its offer's live status. Also returns the
+ * cards each of them has for sale, for attaching a card or making an offer.
+ */
 export async function getConversation(conversationId: string, userId: string) {
   const c = await prisma.conversation.findFirst({
     where: { id: conversationId, OR: [{ userAId: userId }, { userBId: userId }] },
     include: {
       userA: { select: CONVERSATION_USER_SELECT },
       userB: { select: CONVERSATION_USER_SELECT },
-      messages: { orderBy: { createdAt: "asc" } },
+      messages: {
+        orderBy: { createdAt: "asc" },
+        include: {
+          asset: { select: CHAT_ASSET_SELECT },
+          offer: { select: { id: true, amountThb: true, status: true, buyerId: true, sellerId: true, assetId: true } },
+        },
+      },
     },
   });
   if (!c) return null;
-  return { id: c.id, otherUser: c.userAId === userId ? c.userB : c.userA, messages: c.messages };
+  const otherUser = c.userAId === userId ? c.userB : c.userA;
+  const listingsOf = (ownerId: string) =>
+    prisma.asset.findMany({
+      where: { ownerId, forSale: true, priceThb: { not: null }, redeemedAt: null, marketStatus: MARKETPLACE_VISIBLE_STATUSES },
+      orderBy: { createdAt: "desc" },
+      take: 30,
+      select: CHAT_ASSET_SELECT,
+    });
+  const [theirListings, myListings] = await Promise.all([listingsOf(otherUser.id), listingsOf(userId)]);
+  return {
+    id: c.id,
+    otherUser,
+    messages: c.messages.map((m) => ({ ...m, asset: m.asset ? chatAsset(m.asset) : null })),
+    theirListings: theirListings.map(chatAsset),
+    myListings: myListings.map(chatAsset),
+  };
 }
 
 export async function getUnreadMessageCount(userId: string): Promise<number> {

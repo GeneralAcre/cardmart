@@ -426,6 +426,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
               {!isOwner && (
                 <MessageSellerButton
                   sellerId={asset.owner.id}
+                  assetId={asset.id}
                   variant="default"
                   className="bg-highlight text-highlight-foreground hover:bg-highlight/85 shrink-0"
                 />

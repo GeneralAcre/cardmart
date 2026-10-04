@@ -313,6 +313,8 @@ model Asset {
   // cancellation, so this is intentionally one-to-many, not one-to-one.
   auctions           Auction[]
   offers             Offer[]
+  // Chat messages that attached this card or carried an offer on it.
+  messages           Message[]
   tradeOffersFor     TradeOffer[]        @relation("TradeOfferRequested")
   tradeOffersWith    TradeOffer[]        @relation("TradeOfferOffered")
   shipments          Shipment[]
@@ -412,6 +414,8 @@ model Offer {
 
   // Set when a buying agent sent this offer.
   agentDecision AgentDecision?
+  // The chat message this offer was made in, when it was made from Messages.
+  chatMessage   Message?
 
   @@index([assetId, status])
   @@index([sellerId, status])
@@ -713,7 +717,10 @@ model Conversation {
 
 model Message {
   id        String    @id @default(cuid())
+  // May be empty when the message is only photos or an offer.
   body      String
+  // Photos sent in the chat (Vercel Blob URLs), up to 4 per message.
+  imageUrls String[]  @default([])
   createdAt DateTime  @default(now())
   // Set when the recipient opens the thread — drives the header unread badge.
   readAt    DateTime?
@@ -722,6 +729,12 @@ model Message {
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   senderId       String
   sender         User         @relation(fields: [senderId], references: [id])
+  // A listing the message is about, shown as a card in the chat.
+  assetId        String?
+  asset          Asset?       @relation(fields: [assetId], references: [id])
+  // An offer made in the chat; its live status drives the offer card.
+  offerId        String?      @unique
+  offer          Offer?       @relation(fields: [offerId], references: [id])
 
   @@index([conversationId, createdAt])
   @@index([conversationId, readAt])

@@ -10,15 +10,18 @@ import { startConversation } from "@/lib/actions";
 import { useT } from "@/components/landing/language-provider";
 
 // Opens (or reuses) the private thread with this user and jumps straight
-// into it — used on the seller's store profile and the item page.
+// into it — used on the seller's store profile and the item page. With
+// assetId, the chat opens with that listing attached.
 export function MessageSellerButton({
   sellerId,
+  assetId,
   label,
   size = "sm",
   variant = "outline",
   className,
 }: {
   sellerId: string;
+  assetId?: string;
   label?: string;
   size?: "sm" | "default" | "lg";
   variant?: "outline" | "secondary" | "default";
@@ -32,7 +35,7 @@ export function MessageSellerButton({
     startTransition(async () => {
       try {
         const conversationId = await startConversation(sellerId);
-        router.push(`/messages/${conversationId}`);
+        router.push(`/messages/${conversationId}${assetId ? `?asset=${assetId}` : ""}`);
       } catch (err) {
         toast.error(err instanceof Error ? err.message : t("Could not open the conversation."));
       }

@@ -20,7 +20,7 @@ import { verifyEscrowLock, verifyServiceFee } from "@/lib/web3/escrow-verify";
 import { sendFromPlatform } from "@/lib/web3/escrow-server";
 import { deriveTradePda } from "@/lib/web3/escrow-program";
 import { address } from "@solana/kit";
-import { photoUrlProblem, psaCertMismatch } from "@/lib/listing-checks";
+import { isOwnUploadUrl, photoUrlProblem, psaCertMismatch } from "@/lib/listing-checks";
 import { themeIndexForSerial } from "@/lib/theme";
 import { getVerificationChecklist } from "@/lib/verification-checklist";
 import { BGS_BLACK_LABEL_GRADE, gradeTierLabel } from "@/lib/labels";
@@ -1251,6 +1251,16 @@ const makeOfferSchema = z.object({
 
 export async function makeOffer(assetId: string, amountThb: number, message?: string) {
   const user = await getCurrentUser();
+  await createOffer(user, assetId, amountThb, message);
+}
+
+/** Validates and records a buyer's offer, and notifies the owner. Shared by makeOffer and sendOfferInChat. */
+async function createOffer(
+  user: Awaited<ReturnType<typeof getCurrentUser>>,
+  assetId: string,
+  amountThb: number,
+  message?: string,
+) {
   if (user.isBanned) throw new Error("Your account is suspended and can't make offers.");
   const parsed = makeOfferSchema.safeParse({ amountThb, message });
   if (!parsed.success) throw new Error(parsed.error.issues[0]?.message ?? "Enter a valid offer.");
@@ -1262,7 +1272,7 @@ export async function makeOffer(assetId: string, amountThb: number, message?: st
   const existing = await prisma.offer.findFirst({ where: { assetId, buyerId: user.id, status: "PENDING" } });
   if (existing) throw new Error("You already have a pending offer on this item.");
 
-  await prisma.offer.create({
+  const offer = await prisma.offer.create({
     data: {
       assetId,
       buyerId: user.id,
@@ -1282,6 +1292,7 @@ export async function makeOffer(assetId: string, amountThb: number, message?: st
 
   revalidatePath("/portfolio");
   revalidatePath(`/item/${assetId}`);
+  return { offer, asset };
 }
 
 /** Seller accepts or rejects a pending offer. */
@@ -1316,8 +1327,28 @@ export async function respondToOffer(offerId: string, action: "accept" | "reject
   }
 
   if (fromAgent) await handleAgentOfferResponse(offerId, action);
+  await postOfferReply(
+    offerId,
+    user.id,
+    action === "accept"
+      ? `Accepted your offer of ${offer.amountThb.toLocaleString()} THB for ${offer.asset.name}. You can complete the purchase now.`
+      : `Declined the offer of ${offer.amountThb.toLocaleString()} THB for ${offer.asset.name}.`,
+  );
 
   revalidatePath("/portfolio");
+}
+
+/** When an offer was made in Messages, posts the reply to it in the same thread. */
+async function postOfferReply(offerId: string, senderId: string, body: string) {
+  // The offer card above it already shows the card, so the reply is text only.
+  const chat = await prisma.message.findUnique({ where: { offerId }, select: { conversationId: true } });
+  if (!chat) return;
+  const now = new Date();
+  await prisma.$transaction([
+    prisma.message.create({ data: { conversationId: chat.conversationId, senderId, body, createdAt: now } }),
+    prisma.conversation.update({ where: { id: chat.conversationId }, data: { lastMessageAt: now } }),
+  ]);
+  revalidatePath(`/messages/${chat.conversationId}`);
 }
 
 /** Buyer withdraws their own still-pending offer. */
@@ -1332,6 +1363,7 @@ export async function withdrawOffer(offerId: string) {
     where: { offerId, status: "OFFERED" },
     data: { status: "DECLINED", error: "You withdrew this offer.", resolvedAt: new Date() },
   });
+  await postOfferReply(offerId, user.id, `Withdrew the offer of ${offer.amountThb.toLocaleString()} THB.`);
   revalidatePath("/portfolio");
 }
 
@@ -2507,39 +2539,103 @@ export async function startConversation(otherUserId: string) {
   return conversation.id;
 }
 
+const MAX_CHAT_PHOTOS = 4;
+
 const sendMessageSchema = z.object({
-  body: z.string().trim().min(1, "Message can't be empty.").max(2000, "Message is too long (2000 characters max)."),
+  body: z.string().trim().max(2000, "Message is too long (2000 characters max)."),
+  imageUrls: z.array(z.string()).max(MAX_CHAT_PHOTOS, `Up to ${MAX_CHAT_PHOTOS} photos per message.`),
 });
 
-export async function sendMessage(conversationId: string, body: string) {
-  const user = await getCurrentUser();
-  if (user.isBanned) throw new Error("Your account is suspended and can't send messages.");
-  const parsed = sendMessageSchema.safeParse({ body });
-  if (!parsed.success) throw new Error(parsed.error.issues[0]?.message ?? "Enter a message.");
-
+/** The thread, only if the user is in it. */
+async function myConversation(conversationId: string, userId: string) {
   const conversation = await prisma.conversation.findFirst({
-    where: { id: conversationId, OR: [{ userAId: user.id }, { userBId: user.id }] },
+    where: { id: conversationId, OR: [{ userAId: userId }, { userBId: userId }] },
   });
   if (!conversation) throw new Error("Conversation not found.");
+  return conversation;
+}
 
+/**
+ * Saves one chat message (text, photos, an attached card and/or an offer),
+ * bumps the thread, and emails the other person on the first unread message
+ * of a burst — one email per burst of chat, not one per line.
+ */
+async function postChatMessage(
+  user: Awaited<ReturnType<typeof getCurrentUser>>,
+  conversation: { id: string; userAId: string; userBId: string },
+  data: { body: string; imageUrls?: string[]; assetId?: string | null; offerId?: string | null },
+) {
   const now = new Date();
-  // Email the recipient only for the first message they haven't read yet —
-  // one email per burst of chat, not one per line.
   const alreadyUnread = await prisma.message.count({
-    where: { conversationId, senderId: user.id, readAt: null },
+    where: { conversationId: conversation.id, senderId: user.id, readAt: null },
   });
   await prisma.$transaction([
-    prisma.message.create({ data: { conversationId, senderId: user.id, body: parsed.data.body, createdAt: now } }),
-    prisma.conversation.update({ where: { id: conversationId }, data: { lastMessageAt: now } }),
+    prisma.message.create({
+      data: {
+        conversationId: conversation.id,
+        senderId: user.id,
+        body: data.body,
+        imageUrls: data.imageUrls ?? [],
+        assetId: data.assetId ?? null,
+        offerId: data.offerId ?? null,
+        createdAt: now,
+      },
+    }),
+    prisma.conversation.update({ where: { id: conversation.id }, data: { lastMessageAt: now } }),
   ]);
   if (alreadyUnread === 0) {
     const recipientId = conversation.userAId === user.id ? conversation.userBId : conversation.userAId;
-    const preview = parsed.data.body.length > 140 ? `${parsed.data.body.slice(0, 140)}…` : parsed.data.body;
-    emailUser(recipientId, `New message from ${user.name ?? user.handle ?? "a collector"}`, preview, `/messages/${conversationId}`);
+    const text = data.body || (data.imageUrls?.length ? "Sent a photo." : "");
+    const preview = text.length > 140 ? `${text.slice(0, 140)}…` : text;
+    emailUser(recipientId, `New message from ${user.name ?? user.handle ?? "a collector"}`, preview, `/messages/${conversation.id}`);
   }
-
   revalidatePath("/messages");
-  revalidatePath(`/messages/${conversationId}`);
+  revalidatePath(`/messages/${conversation.id}`);
+}
+
+export async function sendMessage(
+  conversationId: string,
+  body: string,
+  attachments: { imageUrls?: string[]; assetId?: string | null } = {},
+) {
+  const user = await getCurrentUser();
+  if (user.isBanned) throw new Error("Your account is suspended and can't send messages.");
+  const parsed = sendMessageSchema.safeParse({ body, imageUrls: attachments.imageUrls ?? [] });
+  if (!parsed.success) throw new Error(parsed.error.issues[0]?.message ?? "Enter a message.");
+  const { imageUrls } = parsed.data;
+  if (!parsed.data.body && imageUrls.length === 0 && !attachments.assetId) throw new Error("Message can't be empty.");
+  // Photos have to be fresh uploads to our own storage, never outside links.
+  if (!imageUrls.every(isOwnUploadUrl)) throw new Error("Photos must be uploaded here, not linked from elsewhere.");
+
+  const conversation = await myConversation(conversationId, user.id);
+  if (attachments.assetId) {
+    // Only a card one of the two people in this chat owns can be attached.
+    const asset = await prisma.asset.findUnique({ where: { id: attachments.assetId }, select: { ownerId: true } });
+    if (!asset || (asset.ownerId !== conversation.userAId && asset.ownerId !== conversation.userBId)) {
+      throw new Error("You can only attach a card one of you owns.");
+    }
+  }
+  await postChatMessage(user, conversation, { body: parsed.data.body, imageUrls, assetId: attachments.assetId });
+}
+
+/**
+ * Makes an offer on the other person's listing from inside the chat: the
+ * same offer as on the item page (they accept or decline it, and the buyer
+ * pays through escrow), shown as an offer card in the thread.
+ */
+export async function sendOfferInChat(conversationId: string, assetId: string, amountThb: number, note?: string) {
+  const user = await getCurrentUser();
+  const conversation = await myConversation(conversationId, user.id);
+  const otherId = conversation.userAId === user.id ? conversation.userBId : conversation.userAId;
+  const owner = await prisma.asset.findUnique({ where: { id: assetId }, select: { ownerId: true } });
+  if (owner?.ownerId !== otherId) throw new Error("You can only make an offer on a card the other person owns.");
+
+  const { offer, asset } = await createOffer(user, assetId, amountThb, note?.trim() || undefined);
+  await postChatMessage(user, conversation, {
+    body: `Offered ${offer.amountThb.toLocaleString()} THB for ${asset.name}.${note?.trim() ? ` ${note.trim()}` : ""}`,
+    assetId,
+    offerId: offer.id,
+  });
 }
 
 /** Marks every message the other person sent in this thread as read. */
