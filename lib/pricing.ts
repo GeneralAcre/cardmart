@@ -20,8 +20,8 @@ export const AGENT_TASK_FEE_THB = 50;
 // that's well under $0.002, so 300 keeps a task's AI cost far below its fee
 // (≈ $1.50). Lower it if OPENROUTER_JUDGE_MODEL is set to a pricier model.
 export const AGENT_TASK_MAX_REVIEWS = 300;
-/** Free "Plan it" requests per user per day (each one is an AI call). */
-export const AGENT_PLANS_PER_DAY = 30;
+/** Free messages to the agent chat per user per day (each one is a cheap AI call). */
+export const AGENT_CHAT_MESSAGES_PER_DAY = 150;
 
 /**
  * Buyer protection: what CardMart charges the buyer on top of the price for

@@ -69,14 +69,10 @@ export const AGENT: Record<string, string> = {
   "Agent started. It's checking what's listed now…": "เริ่มเอเจนต์แล้ว กำลังตรวจรายการที่ขายอยู่…",
   "Nothing matching is listed right now. Your agent will check every new listing.": "ตอนนี้ยังไม่มีรายการที่ตรง เอเจนต์จะตรวจทุกรายการใหม่ให้",
   "Your agent looked at {count} listing(s). See its picks below.": "เอเจนต์ตรวจ {count} รายการแล้ว ดูตัวเลือกด้านล่าง",
-  "Describe the card you want, and your maximum price.": "บอกการ์ดที่ต้องการและราคาสูงสุด",
-  "That doesn't look like a card to buy. Try naming the card and your maximum price.": "ดูเหมือนไม่ใช่การ์ดที่จะซื้อ ลองระบุชื่อการ์ดและราคาสูงสุด",
-  "The agent couldn't plan that. Try again.": "เอเจนต์วางแผนไม่ได้ ลองอีกครั้ง",
-  "You've planned a lot of tasks today. Try again tomorrow.": "วันนี้คุณวางแผนงานไปหลายครั้งแล้ว ลองใหม่พรุ่งนี้",
 
   // What the agent can do
-  "Name a card and your max price. The agent watches every listing and buys the right one for you.":
-    "ระบุการ์ดและราคาสูงสุด เอเจนต์จะเฝ้าดูทุกรายการและซื้อใบที่ใช่ให้คุณ",
+  "Chat with it like a shop assistant: name a card and your max price, and it watches every listing and buys the right one for you.":
+    "คุยกับเอเจนต์ได้เหมือนพนักงานร้าน บอกการ์ดและราคาสูงสุด แล้วเอเจนต์จะเฝ้าดูทุกรายการและซื้อใบที่ใช่ให้คุณ",
   "What it can and can't do": "เอเจนต์ทำอะไรได้บ้าง",
   "Finds Pokémon and One Piece cards, raw or graded": "หาการ์ดโปเกมอนและวันพีซ ทั้งแบบดิบและแบบเกรด",
   "Checks every new listing, day and night": "ตรวจทุกรายการใหม่ ตลอดทั้งวันทั้งคืน",
@@ -94,12 +90,35 @@ export const AGENT: Record<string, string> = {
 
   // New task form
   "New task": "งานใหม่",
-  "Describe it instead": "พิมพ์บอกแทน",
-  "e.g. One PSA 10 Charizard ex from 151, up to 20,000 THB, trusted sellers only":
-    "เช่น Charizard ex จากชุด 151 เกรด PSA 10 หนึ่งใบ ไม่เกิน 20,000 บาท เฉพาะผู้ขายที่เชื่อถือได้",
-  "Fill in the options": "กรอกตัวเลือกให้",
-  "Filled in. You still need to set: {missing}": "กรอกให้แล้ว ยังต้องระบุ: {missing}",
-  "Filled in. Check the options below, then start.": "กรอกให้แล้ว ตรวจตัวเลือกด้านล่างแล้วกดเริ่ม",
+  "Task details": "รายละเอียดงาน",
+
+  // Agent chat
+  "Chat with your agent": "คุยกับเอเจนต์",
+  "Use the form": "ใช้แบบฟอร์ม",
+  "Back to the chat": "กลับไปที่แชท",
+  "Start over": "เริ่มใหม่",
+  "Hi! I'm your buying agent. Tell me which card you're hunting for, or ask me anything about buying on CardMart.":
+    "สวัสดี! ฉันคือเอเจนต์ซื้อการ์ดของคุณ บอกได้เลยว่าตามหาการ์ดใบไหน หรือถามอะไรเกี่ยวกับการซื้อบน CardMart ก็ได้",
+  "Let's hunt for {card}. Here's a task from your alert — change anything, or just tell me.":
+    "มาตามหา {card} กัน นี่คืองานจากการแจ้งเตือนของคุณ — แก้ได้ทุกอย่าง หรือพิมพ์บอกฉันก็ได้",
+  "Fresh start. What are you hunting for?": "เริ่มใหม่แล้ว ตามหาการ์ดอะไรอยู่?",
+  "Hunt for my alert: {card}": "ตามหาการ์ดจากการแจ้งเตือน: {card}",
+  "Find me a PSA 10 Charizard": "หา Charizard PSA 10 ให้หน่อย",
+  "What can you do?": "ทำอะไรได้บ้าง?",
+  "How do fees work?": "ค่าธรรมเนียมคิดยังไง?",
+  "Thinking…": "กำลังคิด…",
+  "e.g. One PSA 10 Charizard ex from 151, up to 20,000 THB": "เช่น Charizard ex จากชุด 151 เกรด PSA 10 หนึ่งใบ ไม่เกิน 20,000 บาท",
+  "Message your agent": "พิมพ์ข้อความถึงเอเจนต์",
+  "Sold for {price} (median of {count})": "ขายไปที่ {price} (ค่ามัธยฐานจาก {count} รายการ)",
+  "Your task": "งานของคุณ",
+  "Send offers above max": "ยื่นข้อเสนอเมื่อราคาเกินสูงสุด",
+  "Note: {note}": "หมายเหตุ: {note}",
+  "Edit details": "แก้ไขรายละเอียด",
+  "Done — I'm on it.": "เรียบร้อย — ฉันเริ่มตามหาแล้ว",
+  "The agent couldn't answer. Try again.": "เอเจนต์ตอบไม่ได้ ลองอีกครั้ง",
+  "Keep messages under 1,200 characters.": "พิมพ์ข้อความไม่เกิน 1,200 ตัวอักษร",
+  "Say something to the agent first.": "พิมพ์ข้อความถึงเอเจนต์ก่อน",
+  "You've chatted with the agent a lot today. Try again tomorrow.": "วันนี้คุณคุยกับเอเจนต์ไปเยอะแล้ว ลองใหม่พรุ่งนี้",
   "Card name, e.g. Charizard ex 151 SIR": "ชื่อการ์ด เช่น Charizard ex 151 SIR",
   "Enter the card to look for.": "ใส่ชื่อการ์ดที่ต้องการ",
   "Set a maximum price of at least 100 THB.": "ตั้งราคาสูงสุดอย่างน้อย 100 บาท",

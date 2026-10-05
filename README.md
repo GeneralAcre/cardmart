@@ -114,7 +114,7 @@ Everything runs on devnet. No real money moves.
 | `app/(app)` | User pages: marketplace, item, listing, portfolio, auctions, agent, market, messages |
 | `app/(backoffice)/admin` | Staff back office |
 | `lib/actions.ts` | Server Actions: listing, buying, escrow, warehouse, offers, auctions, agent purchases |
-| `lib/agent/` | Buying agent: AI planning/judging, matching engine, agent wallets |
+| `lib/agent/` | Buying agent: AI chat/judging, matching engine, agent wallets |
 | `lib/web3/` | Escrow instructions, token minting, server-side signing |
 | `lib/ebay.ts`, `lib/psa.ts`, `lib/card-catalog.ts` | External data, with exact-card matching |
 | `lib/listing-checks.ts` | Anti-fraud checks on new listings |

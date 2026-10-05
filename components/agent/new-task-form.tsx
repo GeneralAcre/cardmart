@@ -1,60 +1,22 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { toast } from "sonner";
-import { Bot, Loader2, Play, Sparkles } from "lucide-react";
+import { Bot, Loader2, Play } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { createAgentTask, planAgentTask, type AgentTaskInput } from "@/lib/agent-actions";
-import { scanAgentMandate } from "@/lib/actions";
+import { EMPTY_DRAFT, GRADERS, draftBudget, draftProblem, summarizeDraft, type Grader, type TaskDraft } from "@/lib/agent/task";
 import { AGENT_TASK_FEE_THB } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
 import { useT } from "@/components/landing/language-provider";
 import { CardNameInput } from "@/components/agent/card-name-input";
+import { useStartTask } from "@/components/agent/use-start-task";
 
-const GRADERS = ["PSA", "BGS", "CGC", "RAW"] as const;
 const MIN_GRADES = [7, 8, 9, 9.5, 10];
 const CARD_COUNTS = [1, 2, 3, 5, 10];
-
-type Grader = (typeof GRADERS)[number];
-type Game = "POKEMON" | "ONE_PIECE";
-
-interface Options {
-  query: string;
-  game: Game | null;
-  gradingCompanies: Grader[];
-  minGrade: number | null;
-  blackLabelOnly: boolean;
-  maxPriceThb: number;
-  maxCards: number;
-  // null = follow max price × cards.
-  budgetThb: number | null;
-  trustedSellersOnly: boolean;
-  autoBuy: boolean;
-  makeOffers: boolean;
-  fulfillment: "VAULT" | "SHIP";
-  notes: string;
-}
-
-const EMPTY: Options = {
-  query: "",
-  game: null,
-  gradingCompanies: [],
-  minGrade: null,
-  blackLabelOnly: false,
-  maxPriceThb: 0,
-  maxCards: 1,
-  budgetThb: null,
-  trustedSellersOnly: false,
-  autoBuy: false,
-  makeOffers: false,
-  fulfillment: "VAULT",
-  notes: "",
-};
 
 /** A saved card alert (Portfolio → Alerts) the form can start from. */
 export interface AlertPreset {
@@ -67,9 +29,9 @@ export interface AlertPreset {
   trustedOnly: boolean;
 }
 
-function fromAlert(a: AlertPreset): Options {
+export function fromAlert(a: AlertPreset): TaskDraft {
   return {
-    ...EMPTY,
+    ...EMPTY_DRAFT,
     query: a.query,
     gradingCompanies: a.gradingCompany ? [a.gradingCompany] : [],
     minGrade: a.minGrade,
@@ -79,26 +41,7 @@ function fromAlert(a: AlertPreset): Options {
   };
 }
 
-const GAME_LABEL: Record<Game, string> = { POKEMON: "Pokémon", ONE_PIECE: "One Piece" };
-
-/** The one-line goal shown on the task card, and the brief the AI judges listings against. */
-function summarize(o: Options, budgetThb: number): string {
-  const grade = [
-    o.gradingCompanies.filter((g) => g !== "RAW").join("/") || null,
-    o.minGrade != null ? (o.minGrade === 10 ? "10" : `${o.minGrade}+`) : null,
-    o.blackLabelOnly ? "Black Label" : null,
-  ]
-    .filter(Boolean)
-    .join(" ");
-  const raw = o.gradingCompanies.length === 1 && o.gradingCompanies[0] === "RAW" ? "raw " : "";
-  const game = o.game ? ` (${GAME_LABEL[o.game]})` : "";
-  const count = o.maxCards === 1 ? "one" : String(o.maxCards);
-  const total = o.maxCards > 1 ? `, ${budgetThb.toLocaleString()} THB in total` : "";
-  const offers = o.makeOffers ? ", offering if it's priced higher" : "";
-  return `Buy ${count} ${raw}${grade ? `${grade} ` : ""}${o.query.trim()}${game} for up to ${o.maxPriceThb.toLocaleString()} THB each${total}${offers}`;
-}
-
-function Choice({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+export function Choice({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button
       type="button"
@@ -127,127 +70,47 @@ function Row({ label, htmlFor, children }: { label: string; htmlFor?: string; ch
 }
 
 const digits = (v: string) => Number(v.replace(/\D/g, ""));
-/** The preset choices, plus the current value if it came from "Describe it instead" and isn't one of them. */
+/** The preset choices, plus the current value if it came from the agent chat and isn't one of them. */
 const withValue = (presets: number[], value: number | null) =>
   value == null || presets.includes(value) ? presets : [...presets, value].sort((a, b) => a - b);
 
-export function NewTaskForm({ alerts = [], startFrom }: { alerts?: AlertPreset[]; startFrom?: string }) {
-  const router = useRouter();
+export function NewTaskForm({
+  alerts = [],
+  startFrom,
+  initial,
+  onStarted,
+  className,
+}: {
+  alerts?: AlertPreset[];
+  startFrom?: string;
+  // A draft to edit, e.g. one put together in the agent chat.
+  initial?: TaskDraft;
+  // Replaces the toast about the first scan, e.g. so the chat can say it instead.
+  onStarted?: (outcome: string) => void;
+  className?: string;
+}) {
   const t = useT();
-  const [o, setO] = useState<Options>(() => {
+  const [o, setO] = useState<TaskDraft>(() => {
     const preset = alerts.find((a) => a.id === startFrom);
-    return preset ? fromAlert(preset) : EMPTY;
+    return initial ?? (preset ? fromAlert(preset) : EMPTY_DRAFT);
   });
-  const [describe, setDescribe] = useState("");
-  const [showDescribe, setShowDescribe] = useState(false);
-  const [showNotes, setShowNotes] = useState(false);
-  const [filling, startFilling] = useTransition();
-  const [starting, startStarting] = useTransition();
+  const [showNotes, setShowNotes] = useState(Boolean(initial?.notes));
+  const { start, starting } = useStartTask((outcome) => {
+    setO(EMPTY_DRAFT);
+    setShowNotes(false);
+    if (onStarted) onStarted(outcome);
+    else toast(outcome);
+  });
 
-  const set = <K extends keyof Options>(key: K, value: Options[K]) => setO((prev) => ({ ...prev, [key]: value }));
-  const budget = o.budgetThb ?? o.maxPriceThb * o.maxCards;
-  const problem =
-    o.query.trim().length < 2
-      ? t("Enter the card to look for.")
-      : !(o.maxPriceThb >= 100)
-        ? t("Set a maximum price of at least 100 THB.")
-        : budget < o.maxPriceThb
-          ? t("The total budget has to cover at least one card at your maximum price.")
-          : null;
-
-  function fillFromDescription() {
-    startFilling(async () => {
-      const res = await planAgentTask(describe);
-      if (res.error || !res.plan) {
-        toast.error(t(res.error ?? "The agent couldn't plan that. Try again."));
-        return;
-      }
-      const p = res.plan;
-      setO((prev) => ({
-        ...prev,
-        query: p.query,
-        game: p.game,
-        gradingCompanies: p.gradingCompanies,
-        minGrade: p.minGrade,
-        blackLabelOnly: p.blackLabelOnly,
-        maxPriceThb: p.maxPriceThb ?? 0,
-        maxCards: Math.max(p.maxCards, 1),
-        budgetThb: p.budgetThb,
-        trustedSellersOnly: p.trustedSellersOnly,
-      }));
-      setShowDescribe(false);
-      toast.success(
-        p.missing.length
-          ? t("Filled in. You still need to set: {missing}", { missing: p.missing.join(", ") })
-          : t("Filled in. Check the options below, then start."),
-      );
-    });
-  }
-
-  function start() {
-    if (problem) return;
-    const summary = summarize(o, budget);
-    const notes = o.notes.trim();
-    const task: AgentTaskInput = {
-      instruction: notes ? `${summary}. ${notes}` : summary,
-      summary: summary.slice(0, 200),
-      query: o.query.trim(),
-      game: o.game,
-      gradingCompanies: o.gradingCompanies,
-      minGrade: o.minGrade,
-      blackLabelOnly: o.blackLabelOnly,
-      maxPriceThb: o.maxPriceThb,
-      budgetThb: budget,
-      maxCards: o.maxCards,
-      trustedSellersOnly: o.trustedSellersOnly,
-      autoBuy: o.autoBuy,
-      makeOffers: o.makeOffers,
-      fulfillment: o.fulfillment,
-    };
-    startStarting(async () => {
-      const res = await createAgentTask(task);
-      if (res.error || !res.id) {
-        toast.error(t(res.error ?? "Couldn't start the agent."));
-        return;
-      }
-      toast.success(t("Agent started. It's checking what's listed now…"));
-      setO(EMPTY);
-      setDescribe("");
-      setShowNotes(false);
-      router.refresh();
-      const scan = await scanAgentMandate(res.id);
-      if (scan.error) toast.error(t(scan.error));
-      else if (scan.recorded === 0) toast(t("Nothing matching is listed right now. Your agent will check every new listing."));
-      else toast.success(t("Your agent looked at {count} listing(s). See its picks below.", { count: scan.recorded }));
-      router.refresh();
-    });
-  }
+  const set = <K extends keyof TaskDraft>(key: K, value: TaskDraft[K]) => setO((prev) => ({ ...prev, [key]: value }));
+  const budget = draftBudget(o);
+  const problem = draftProblem(o);
 
   return (
-    <section className="bg-card flex flex-col gap-5 rounded-xl border p-4 sm:p-6">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="flex items-center gap-2 font-semibold">
-          <Bot className="size-5" /> {t("New task")}
-        </h2>
-        <Button variant="ghost" size="sm" onClick={() => setShowDescribe((v) => !v)}>
-          <Sparkles /> {t("Describe it instead")}
-        </Button>
-      </div>
-
-      {showDescribe && (
-        <div className="bg-muted/40 flex flex-col gap-2 rounded-lg border p-3">
-          <Textarea
-            rows={2}
-            value={describe}
-            onChange={(e) => setDescribe(e.target.value)}
-            placeholder={t("e.g. One PSA 10 Charizard ex from 151, up to 20,000 THB, trusted sellers only")}
-          />
-          <Button size="sm" className="w-fit" onClick={fillFromDescription} disabled={filling || describe.trim().length < 8}>
-            {filling ? <Loader2 className="animate-spin" /> : <Sparkles />}
-            {filling ? t("Reading your request…") : t("Fill in the options")}
-          </Button>
-        </div>
-      )}
+    <section className={cn("bg-card flex flex-col gap-5 rounded-xl border p-4 sm:p-6", className)}>
+      <h2 className="flex items-center gap-2 font-semibold">
+        <Bot className="size-5" /> {t(initial ? "Task details" : "New task")}
+      </h2>
 
       {alerts.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
@@ -379,12 +242,12 @@ export function NewTaskForm({ alerts = [], startFrom }: { alerts?: AlertPreset[]
 
       <div className="bg-muted/40 flex flex-col gap-3 rounded-lg p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 flex-col gap-0.5">
-          <span className="text-sm font-medium">{problem ?? summarize(o, budget)}</span>
+          <span className="text-sm font-medium">{problem ? t(problem) : summarizeDraft(o)}</span>
           <span className="text-muted-foreground text-xs">
             {t("{fee} THB to start, paid from your agent wallet", { fee: AGENT_TASK_FEE_THB.toLocaleString() })}
           </span>
         </div>
-        <Button className="shrink-0" onClick={start} disabled={starting || Boolean(problem)}>
+        <Button className="shrink-0" onClick={() => start(o)} disabled={starting || Boolean(problem)}>
           {starting ? <Loader2 className="animate-spin" /> : <Play />}
           {t("Start agent")}
         </Button>

@@ -2,6 +2,7 @@ import { Bot, Check, ChevronDown, CircleAlert, ShieldCheck, X } from "lucide-rea
 import Link from "next/link";
 
 import { AgentWalletCard } from "@/components/agent/agent-wallet-card";
+import { AgentChat } from "@/components/agent/agent-chat";
 import { NewTaskForm } from "@/components/agent/new-task-form";
 import { AgentActivity, AgentDeals, AgentTaskList } from "@/components/agent/agent-tasks";
 import { getAgentDashboard, getMyWantedCards } from "@/lib/queries";
@@ -33,7 +34,7 @@ const WONT_DO = [
   "Up to 5 tasks at once",
 ];
 
-// ?alert=<wanted card id> starts the form from that card alert (Portfolio → Alerts).
+// ?alert=<wanted card id> starts the chat (or form) from that card alert (Portfolio → Alerts).
 export default async function AgentPage({ searchParams }: { searchParams: Promise<{ alert?: string }> }) {
   const [user, t, { alert }] = await Promise.all([getCurrentUser(), getT(), searchParams]);
   const [wallet, dashboard, alerts] = await Promise.all([
@@ -45,6 +46,15 @@ export default async function AgentPage({ searchParams }: { searchParams: Promis
     ? await getAgentBalanceLamports(wallet.address).then(lamportsToSol, () => null)
     : null;
   const aiReady = isAgentAiConfigured();
+  const presets = alerts.map((a) => ({
+    id: a.id,
+    query: a.query,
+    gradingCompany: a.gradingCompany,
+    minGrade: a.minGrade,
+    blackLabelOnly: a.blackLabelOnly,
+    maxPriceThb: a.maxPriceThb,
+    trustedOnly: a.trustedOnly,
+  }));
   const waiting = dashboard.decisions.filter((d) => d.status === "PROPOSED").length;
   const decisions = dashboard.decisions.map((d) => ({
     id: d.id,
@@ -90,7 +100,7 @@ export default async function AgentPage({ searchParams }: { searchParams: Promis
               {t("Your card hunter that never sleeps.")}
             </h1>
             <p className="text-muted-foreground">
-              {t("Name a card and your max price. The agent watches every listing and buys the right one for you.")}
+              {t("Chat with it like a shop assistant: name a card and your max price, and it watches every listing and buys the right one for you.")}
             </p>
           </div>
           <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:w-[30rem] lg:grid-cols-2">
@@ -147,19 +157,12 @@ export default async function AgentPage({ searchParams }: { searchParams: Promis
       <AgentDeals decisions={decisions} />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_20rem] lg:items-start">
-        <NewTaskForm
-          key={alert}
-          startFrom={alert}
-          alerts={alerts.map((a) => ({
-            id: a.id,
-            query: a.query,
-            gradingCompany: a.gradingCompany,
-            minGrade: a.minGrade,
-            blackLabelOnly: a.blackLabelOnly,
-            maxPriceThb: a.maxPriceThb,
-            trustedOnly: a.trustedOnly,
-          }))}
-        />
+        {/* Without the AI there's no chat, but the form still sets tasks up. */}
+        {aiReady ? (
+          <AgentChat key={alert} startFrom={alert} alerts={presets} />
+        ) : (
+          <NewTaskForm key={alert} startFrom={alert} alerts={presets} />
+        )}
         {wallet ? (
           <AgentWalletCard address={wallet.address} balanceSol={balanceSol} />
         ) : (

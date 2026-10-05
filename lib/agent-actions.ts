@@ -1,40 +1,225 @@
 "use server";
 
-// Buying agent: setting up tasks and managing the agent wallet. Scanning and
+// Buying agent: the chat, setting up tasks and managing the agent wallet. Scanning and
 // buying live in lib/actions.ts (they reuse the escrow purchase code).
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
-import { isAgentAiConfigured, planMandate, type MandatePlan } from "@/lib/agent/ai";
+import { getLocale } from "@/lib/i18n/server";
+import { isAgentAiConfigured } from "@/lib/agent/ai";
+import { runChatTurn, SALE_LOOKBACK_DAYS, type ChatTurn, type MarketSnapshot } from "@/lib/agent/chat";
 import { withdrawAgentOffers } from "@/lib/agent/engine";
-import { getOrCreateAgentWallet, isAgentChainEnabled, payAgentTaskFee, withdrawAgentBalance } from "@/lib/agent/wallet";
-import { AGENT_PLANS_PER_DAY, AGENT_TASK_FEE_THB, thbToLamports } from "@/lib/pricing";
+import { GRADERS, type TaskDraft } from "@/lib/agent/task";
+import {
+  getAgentBalanceLamports,
+  getOrCreateAgentWallet,
+  isAgentChainEnabled,
+  lamportsToSol,
+  payAgentTaskFee,
+  withdrawAgentBalance,
+} from "@/lib/agent/wallet";
+import { getMarketplaceListings, getMyWantedCards, median } from "@/lib/queries";
+import { displayImage } from "@/lib/card-image";
+import {
+  AGENT_CHAT_MESSAGES_PER_DAY,
+  AGENT_TASK_FEE_THB,
+  BUYER_FEE_PERCENT,
+  SELF_MINT_FEE_THB,
+  SELLER_SHIPPING_COST_THB,
+  THB_PER_SOL,
+  thbToLamports,
+} from "@/lib/pricing";
 import { requestDevnetAirdrop } from "@/lib/solana";
 
-export async function planAgentTask(instruction: string): Promise<{ plan?: MandatePlan; error?: string }> {
+export type { MarketSnapshot };
+
+async function marketSnapshot(d: TaskDraft): Promise<MarketSnapshot | null> {
+  const q = d.query.trim();
+  if (q.length < 2) return null;
+  const graders = d.gradingCompanies.length ? d.gradingCompanies : undefined;
+  const meetsGrade = (grade: number | null, company: string) =>
+    d.minGrade == null || company === "RAW" || (grade != null && grade >= d.minGrade);
+  const words = q.split(/\s+/).filter(Boolean).slice(0, 6);
+
+  const [listings, sales] = await Promise.all([
+    getMarketplaceListings({
+      q,
+      games: d.game ? [d.game] : undefined,
+      gradingCompanies: graders,
+      blackLabelOnly: d.blackLabelOnly,
+    }),
+    prisma.escrowTransaction.findMany({
+      where: {
+        status: "RELEASED",
+        releasedAt: { gte: new Date(Date.now() - SALE_LOOKBACK_DAYS * 86_400_000) },
+        asset: {
+          // Every word has to match, like the market search.
+          AND: words.map((w) => ({
+            OR: [
+              { name: { contains: w, mode: "insensitive" as const } },
+              { subtitle: { contains: w, mode: "insensitive" as const } },
+              { cardNumber: { contains: w, mode: "insensitive" as const } },
+            ],
+          })),
+          ...(d.game ? { game: d.game } : {}),
+          ...(graders ? { gradingCompany: { in: graders } } : {}),
+          ...(d.blackLabelOnly ? { isBlackLabel: true } : {}),
+        },
+      },
+      select: { amountThb: true, asset: { select: { grade: true, gradingCompany: true } } },
+      take: 200,
+    }),
+  ]);
+  const matching = listings
+    .filter((l) => meetsGrade(l.grade, l.gradingCompany))
+    .sort((a, b) => a.priceThb! - b.priceThb!);
+  const salePrices = sales.filter((s) => meetsGrade(s.asset.grade, s.asset.gradingCompany)).map((s) => s.amountThb);
+  return {
+    query: q,
+    forSale: matching.length,
+    lowestThb: matching[0]?.priceThb ?? null,
+    medianAskThb: median(matching.map((l) => l.priceThb!)),
+    recentSales: salePrices.length,
+    medianSaleThb: median(salePrices),
+    cheapest: matching.slice(0, 3).map((l) => ({
+      id: l.id,
+      name: l.name,
+      subtitle: l.subtitle,
+      gradingCompany: l.gradingCompany,
+      grade: l.grade,
+      isBlackLabel: l.isBlackLabel,
+      priceThb: l.priceThb!,
+      imageUrl: displayImage(l)?.url ?? null,
+    })),
+  };
+}
+
+const chatSchema = z.object({
+  history: z
+    .array(z.object({ role: z.enum(["user", "assistant"]), content: z.string().trim().min(1).max(1200) }))
+    .min(1)
+    .max(40),
+  draft: z
+    .object({
+      query: z.string().max(120),
+      game: z.enum(["POKEMON", "ONE_PIECE"]).nullable(),
+      gradingCompanies: z.array(z.enum(GRADERS)).max(4),
+      minGrade: z.number().nullable(),
+      blackLabelOnly: z.boolean(),
+      maxPriceThb: z.number(),
+      maxCards: z.number(),
+      budgetThb: z.number().nullable(),
+      trustedSellersOnly: z.boolean(),
+      autoBuy: z.boolean(),
+      makeOffers: z.boolean(),
+      fulfillment: z.enum(["VAULT", "SHIP"]),
+      notes: z.string().max(300),
+    })
+    .nullable(),
+});
+
+export type AgentChatResult = Partial<ChatTurn> & { error?: string };
+
+/** One turn of the agent chat: the conversation so far in, the agent's reply and updated task draft out. */
+export async function agentChat(input: z.input<typeof chatSchema>): Promise<AgentChatResult> {
   const user = await getCurrentUser();
-  const text = instruction.trim();
-  if (text.length < 8) return { error: "Describe the card you want, and your maximum price." };
-  if (text.length > 600) return { error: "Keep it under 600 characters." };
+  const parsed = chatSchema.safeParse(input);
+  if (!parsed.success) return { error: "Keep messages under 1,200 characters." };
+  const { history, draft } = parsed.data;
+  if (history.at(-1)?.role !== "user") return { error: "Say something to the agent first." };
   if (!isAgentAiConfigured()) return { error: "The buying agent isn't switched on yet (OPENROUTER_API_KEY is missing)." };
 
   const today = await prisma.agentPlanRequest.count({
     where: { userId: user.id, createdAt: { gte: new Date(Date.now() - 86_400_000) } },
   });
-  if (today >= AGENT_PLANS_PER_DAY) return { error: "You've planned a lot of tasks today. Try again tomorrow." };
+  if (today >= AGENT_CHAT_MESSAGES_PER_DAY) return { error: "You've chatted with the agent a lot today. Try again tomorrow." };
   await prisma.agentPlanRequest.create({ data: { userId: user.id } });
 
+  const [tasks, decisions, alerts, wallet, market, locale] = await Promise.all([
+    prisma.agentMandate.findMany({
+      where: { userId: user.id, status: { in: ["ACTIVE", "PAUSED"] } },
+      select: {
+        summary: true,
+        status: true,
+        boughtCount: true,
+        _count: { select: { decisions: { where: { status: "PROPOSED" } } } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+    }),
+    prisma.agentDecision.findMany({
+      where: { mandate: { userId: user.id }, status: { not: "SKIPPED" } },
+      orderBy: { createdAt: "desc" },
+      take: 6,
+      select: { status: true, priceThb: true, offerThb: true, asset: { select: { name: true, gradingCompany: true, grade: true } } },
+    }),
+    getMyWantedCards(user.id),
+    getOrCreateAgentWallet(user.id),
+    draft ? marketSnapshot(draft).catch(() => null) : null,
+    getLocale(),
+  ]);
+  const balanceSol = wallet ? await getAgentBalanceLamports(wallet.address).then(lamportsToSol, () => null) : null;
+
+  // Everything the AI knows that didn't come from the user. Only numbers in here
+  // (or in the user's messages) may show up in its replies.
+  const known = [
+    "What you know right now (from CardMart, not from the user):",
+    tasks.length
+      ? `The user's tasks:\n${tasks
+          .map((t) => `- ${t.summary} (${t.status.toLowerCase()}, ${t.boughtCount} bought, ${t._count.decisions} waiting for their OK)`)
+          .join("\n")}`
+      : "The user has no tasks running.",
+    decisions.length
+      ? `The agent's latest finds:\n${decisions
+          .map(
+            (d) =>
+              `- ${d.asset.name} ${d.asset.gradingCompany === "RAW" ? "raw" : `${d.asset.gradingCompany} ${d.asset.grade ?? ""}`.trim()} at ${d.priceThb.toLocaleString()} THB: ${DECISION_LABEL[d.status]}${d.offerThb ? ` (offered ${d.offerThb.toLocaleString()} THB)` : ""}`,
+          )
+          .join("\n")}`
+      : null,
+    alerts.length
+      ? `Cards the user has alerts for: ${alerts
+          .slice(0, 8)
+          .map((a) => `${a.query}${a.maxPriceThb ? ` (up to ${a.maxPriceThb.toLocaleString()} THB)` : ""}`)
+          .join("; ")}`
+      : "The user has no card alerts.",
+    balanceSol != null
+      ? `Agent wallet: ${balanceSol.toFixed(3)} SOL (about ${Math.round(balanceSol * THB_PER_SOL).toLocaleString()} THB).`
+      : "The agent wallet balance isn't available right now.",
+  ]
+    .filter(Boolean)
+    .join("\n");
   try {
-    const plan = await planMandate(text);
-    if (!plan.understood) return { error: "That doesn't look like a card to buy. Try naming the card and your maximum price." };
-    return { plan };
+    return await runChatTurn({
+      history,
+      draft,
+      known,
+      market,
+      lookupMarket: marketSnapshot,
+      locale,
+      facts: {
+        feeThb: AGENT_TASK_FEE_THB,
+        thbPerSol: THB_PER_SOL,
+        buyerFeePercent: BUYER_FEE_PERCENT,
+        listingFeeThb: SELF_MINT_FEE_THB,
+        sellerShippingThb: SELLER_SHIPPING_COST_THB,
+      },
+    });
   } catch (err) {
-    console.error("planAgentTask failed", err);
-    return { error: err instanceof Error ? err.message : "The agent couldn't plan that. Try again." };
+    console.error("agentChat failed", err);
+    return { error: "The agent couldn't answer. Try again." };
   }
 }
+
+const DECISION_LABEL: Record<string, string> = {
+  PROPOSED: "waiting for the user's OK",
+  OFFERED: "offer sent, waiting on the seller",
+  EXECUTED: "bought",
+  SKIPPED: "skipped",
+  DECLINED: "declined",
+};
 
 export interface CardSuggestion {
   name: string;
