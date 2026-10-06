@@ -12,11 +12,6 @@ import { useT } from "@/components/landing/language-provider";
 const GRADING_COMPANIES: GradingCompany[] = ["PSA", "BGS", "CGC", "RAW"];
 const GRADES = [10, 9.5, 9, 8.5, 8, 7];
 const GAME_ICONS: Record<CardGame, typeof Sparkles> = { POKEMON: Sparkles, ONE_PIECE: Anchor };
-const VAULT_OPTIONS: { value: MarketplaceFilterState["vaultedStatus"]; label: string }[] = [
-  { value: "ALL", label: "All" },
-  { value: "IN_VAULT", label: "In Vault" },
-  { value: "SHIPPING", label: "Shipping" },
-];
 
 function FilterPill({
   active,
@@ -133,20 +128,6 @@ export function FilterBar({
               </button>
             );
           })}
-        </div>
-      </FilterSection>
-
-      <FilterSection label="Storage">
-        <div className="flex flex-wrap gap-2">
-          {VAULT_OPTIONS.map((option) => (
-            <FilterPill
-              key={option.value}
-              active={filters.vaultedStatus === option.value}
-              onClick={() => onChange({ ...filters, vaultedStatus: option.value })}
-            >
-              {t(option.label)}
-            </FilterPill>
-          ))}
         </div>
       </FilterSection>
 

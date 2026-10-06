@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Anchor, Grid3x3, LayoutGrid, PackageSearch, Scale, Sparkles, SlidersHorizontal, Vault as VaultIcon } from "lucide-react";
+import { Anchor, Grid3x3, LayoutGrid, PackageSearch, Scale, Sparkles, SlidersHorizontal } from "lucide-react";
 import type { CardGame } from "@prisma/client";
 
 import { FilterBar } from "@/components/marketplace/filter-bar";
@@ -19,11 +19,10 @@ import { useT } from "@/components/landing/language-provider";
 import { EMPTY_FILTERS, type AssetSummary, type MarketplaceFilterState } from "@/lib/types";
 import type { LeaderboardRow } from "@/lib/queries";
 
-const CATEGORY_TILES: { category: CardGame | "ALL" | "VAULT"; label: string; icon: typeof LayoutGrid }[] = [
+const CATEGORY_TILES: { category: CardGame | "ALL"; label: string; icon: typeof LayoutGrid }[] = [
   { category: "ALL", label: "All", icon: LayoutGrid },
   { category: "POKEMON", label: CARD_GAME_LABELS.POKEMON, icon: Sparkles },
   { category: "ONE_PIECE", label: CARD_GAME_LABELS.ONE_PIECE, icon: Anchor },
-  { category: "VAULT", label: "In Vault", icon: VaultIcon },
 ];
 
 type SortKey = "recent" | "price-asc" | "price-desc";
@@ -132,8 +131,6 @@ export function MarketplaceExplorer({
   function selectCategoryTile(tile: (typeof CATEGORY_TILES)[number]["category"]) {
     if (tile === "ALL") {
       setFilters({ ...filters, games: [] });
-    } else if (tile === "VAULT") {
-      setFilters({ ...filters, vaultedStatus: filters.vaultedStatus === "IN_VAULT" ? "ALL" : "IN_VAULT" });
     } else {
       const isActive = filters.games.includes(tile);
       setFilters({ ...filters, games: isActive ? [] : [tile] });
@@ -141,8 +138,7 @@ export function MarketplaceExplorer({
   }
 
   function isCategoryTileActive(tile: (typeof CATEGORY_TILES)[number]["category"]) {
-    if (tile === "ALL") return filters.games.length === 0 && filters.vaultedStatus !== "IN_VAULT";
-    if (tile === "VAULT") return filters.vaultedStatus === "IN_VAULT";
+    if (tile === "ALL") return filters.games.length === 0;
     return filters.games.includes(tile);
   }
 

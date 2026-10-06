@@ -51,8 +51,6 @@ import {
   CARD_LANGUAGE_LABELS,
   MARKET_STATUS_BADGE_CLASS,
   MARKET_STATUS_LABELS,
-  VERIFICATION_PACKAGE_BADGE_CLASS,
-  VERIFICATION_PACKAGE_LABELS,
   gradeTierLabel,
 } from "@/lib/labels";
 import { extractPsaCertNumber, isPsaCertNumber, lookupPsaCert, lookupPsaPopulation, psaCertUrl } from "@/lib/psa";
@@ -277,7 +275,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
         </div>
 
         <div className="flex flex-col gap-5">
-          {/* Top pill row — category / vault / verification package, plus watch */}
+          {/* Top pill row — game / language, plus watch */}
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap items-center gap-2">
               <Badge className={cn("rounded-md border-0", CARD_GAME_BADGE_CLASS[asset.game])}>
@@ -285,14 +283,6 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
               </Badge>
               <Badge className={cn("rounded-md border-0", CARD_LANGUAGE_BADGE_CLASS[asset.language])}>
                 {t(CARD_LANGUAGE_LABELS[asset.language])}
-              </Badge>
-              {asset.vaulted && (
-                <Badge variant="secondary" className="rounded-md">
-                  {t("In Platform Vault")}
-                </Badge>
-              )}
-              <Badge className={cn("rounded-md border-0", VERIFICATION_PACKAGE_BADGE_CLASS[asset.verificationPackage])}>
-                {t(VERIFICATION_PACKAGE_LABELS[asset.verificationPackage])}
               </Badge>
             </div>
             {!isOwner && (

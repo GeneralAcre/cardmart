@@ -70,18 +70,11 @@ export function ListingCard({ asset, compact = false }: { asset: AssetSummary; c
           </span>
         )}
 
-        {/* An official catalogue image is the card, not this copy — say so. */}
-        {image?.kind === "reference" && (
-          <span className={cn(CHIP, "absolute bottom-2.5 left-2.5 font-medium")}>{t("Reference image")}</span>
-        )}
         {photos.length > 1 && (
           <span className={cn(CHIP, "absolute bottom-2.5 left-2.5 inline-flex items-center gap-1 font-medium")}>
             <Images className="size-3" />
             {t("{count} views", { count: photos.length })}
           </span>
-        )}
-        {asset.vaulted && (
-          <span className={cn(CHIP, "absolute bottom-2.5 right-2.5")}>{t("In Vault")}</span>
         )}
       </div>
 
