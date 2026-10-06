@@ -45,7 +45,9 @@ import { ChevronDown, ChevronLeft, ExternalLink, Flame, Gavel } from "lucide-rea
 
 import { formatDate, formatGrade, formatThb } from "@/lib/format";
 import {
+  CARD_GAME_BADGE_CLASS,
   CARD_GAME_LABELS,
+  CARD_LANGUAGE_BADGE_CLASS,
   CARD_LANGUAGE_LABELS,
   MARKET_STATUS_BADGE_CLASS,
   MARKET_STATUS_LABELS,
@@ -278,10 +280,10 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
           {/* Top pill row — category / vault / verification package, plus watch */}
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="outline" className="rounded-md">
+              <Badge className={cn("rounded-md border-0", CARD_GAME_BADGE_CLASS[asset.game])}>
                 {t(CARD_GAME_LABELS[asset.game])}
               </Badge>
-              <Badge variant="outline" className="rounded-md">
+              <Badge className={cn("rounded-md border-0", CARD_LANGUAGE_BADGE_CLASS[asset.language])}>
                 {t(CARD_LANGUAGE_LABELS[asset.language])}
               </Badge>
               {asset.vaulted && (
@@ -347,10 +349,13 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
           {/* Owner / serial / on-chain mint — the same three facts a
               blockchain-native marketplace leads with (owner, address,
               token id), backed by this platform's own real SPL mint. */}
+          {/* A raw card has no grading company, so no cert serial to show. */}
           <div
             className={cn(
               "detail-panel grid divide-x rounded-2xl border text-sm",
-              asset.mintAddress ? "grid-cols-3" : "grid-cols-2",
+              ["grid-cols-1", "grid-cols-2", "grid-cols-3"][
+                (asset.gradingCompany === "RAW" ? 0 : 1) + (asset.mintAddress ? 1 : 0)
+              ],
             )}
           >
             <div className="flex min-w-0 flex-col gap-0.5 p-3">
@@ -359,10 +364,12 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
                 {asset.owner.name}
               </Link>
             </div>
-            <div className="flex min-w-0 flex-col gap-0.5 p-3">
-              <span className="text-muted-foreground text-xs">{t("Serial")}</span>
-              <span className="truncate font-mono">{asset.serial}</span>
-            </div>
+            {asset.gradingCompany !== "RAW" && (
+              <div className="flex min-w-0 flex-col gap-0.5 p-3">
+                <span className="text-muted-foreground text-xs">{t("Serial")}</span>
+                <span className="truncate font-mono">{asset.serial}</span>
+              </div>
+            )}
             {asset.mintAddress && (
               <div className="flex min-w-0 flex-col gap-0.5 p-3">
                 <span className="text-muted-foreground text-xs">{t("Mint Address")}</span>

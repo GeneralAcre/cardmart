@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Anchor, Grid3x3, LayoutGrid, PackageSearch, Scale, Search, Sparkles, SlidersHorizontal, Vault as VaultIcon, X } from "lucide-react";
+import { Anchor, Grid3x3, LayoutGrid, PackageSearch, Scale, Sparkles, SlidersHorizontal, Vault as VaultIcon } from "lucide-react";
 import type { CardGame } from "@prisma/client";
 
 import { FilterBar } from "@/components/marketplace/filter-bar";
@@ -166,7 +166,7 @@ export function MarketplaceExplorer({
 
   return (
     <div className="flex flex-col">
-      {/* Toolbar: filters toggle, search, result count, sort, density. */}
+      {/* Toolbar: filters toggle, result count, sort, density. */}
       <div className="flex flex-wrap items-center gap-2 border-b pb-4 sm:gap-3">
         <Button
           variant="outline"
@@ -179,26 +179,6 @@ export function MarketplaceExplorer({
         <Button variant="outline" className="h-10 rounded-lg lg:hidden" onClick={() => setFilterSheetOpen(true)}>
           <SlidersHorizontal /> {t("Filters")} {filterCountBadge}
         </Button>
-
-        <div className="relative order-last w-full sm:order-none sm:w-auto sm:flex-1 lg:max-w-xl">
-          <Search className="text-muted-foreground absolute left-3.5 top-1/2 size-4 -translate-y-1/2" />
-          <input
-            value={filters.q}
-            onChange={(e) => setFilters({ ...filters, q: e.target.value })}
-            placeholder={t("Search name, card number (215/203), set or seller…")}
-            className="bg-card placeholder:text-muted-foreground focus-visible:border-foreground/30 h-10 w-full rounded-lg border pl-10 pr-9 text-sm outline-none transition-colors"
-          />
-          {filters.q && (
-            <button
-              type="button"
-              onClick={() => setFilters({ ...filters, q: "" })}
-              className="text-muted-foreground hover:text-foreground absolute right-3 top-1/2 -translate-y-1/2"
-              aria-label={t("Clear search")}
-            >
-              <X className="size-4" />
-            </button>
-          )}
-        </div>
 
         <div className="ml-auto flex items-center gap-2 sm:gap-3">
           <p className="text-muted-foreground hidden text-sm whitespace-nowrap md:block">

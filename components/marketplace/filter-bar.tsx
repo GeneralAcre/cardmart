@@ -104,37 +104,37 @@ export function FilterBar({
     onChange({ ...filters, blackLabelOnly: !filters.blackLabelOnly });
   }
 
-  // Search lives in the marketplace toolbar, so it doesn't count as a
-  // sidebar filter for the "Clear filters" link here.
-  const hasSidebarFilters = JSON.stringify({ ...filters, q: "" }) !== JSON.stringify(EMPTY_FILTERS);
+  const hasSidebarFilters = JSON.stringify(filters) !== JSON.stringify(EMPTY_FILTERS);
 
   return (
     <div className={cn("flex flex-col", className)}>
       {/* Game switcher — the first thing you pick, like a storefront tab. */}
-      <div className="grid grid-cols-2 gap-2 border-b pb-5">
-        {CARD_GAMES.map((game) => {
-          const Icon = GAME_ICONS[game];
-          const active = filters.games.includes(game);
-          return (
-            <button
-              key={game}
-              type="button"
-              aria-pressed={active}
-              onClick={() => toggleGame(game)}
-              className={cn(
-                "flex items-center justify-center gap-2 rounded-full border px-3 py-2 text-sm font-medium outline-none transition-colors",
-                "focus-visible:ring-ring focus-visible:ring-2",
-                active
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "text-foreground hover:border-foreground/30",
-              )}
-            >
-              <Icon className="size-4" />
-              {t(CARD_GAME_LABELS[game])}
-            </button>
-          );
-        })}
-      </div>
+      <FilterSection label="Card">
+        <div className="grid grid-cols-2 gap-2">
+          {CARD_GAMES.map((game) => {
+            const Icon = GAME_ICONS[game];
+            const active = filters.games.includes(game);
+            return (
+              <button
+                key={game}
+                type="button"
+                aria-pressed={active}
+                onClick={() => toggleGame(game)}
+                className={cn(
+                  "flex items-center justify-center gap-2 rounded-full border px-3 py-2 text-sm font-medium outline-none transition-colors",
+                  "focus-visible:ring-ring focus-visible:ring-2",
+                  active
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "text-foreground hover:border-foreground/30",
+                )}
+              >
+                <Icon className="size-4" />
+                {t(CARD_GAME_LABELS[game])}
+              </button>
+            );
+          })}
+        </div>
+      </FilterSection>
 
       <FilterSection label="Storage">
         <div className="flex flex-wrap gap-2">
@@ -186,7 +186,7 @@ export function FilterBar({
                   {active && <span className="bg-primary size-2.5 rounded-full" />}
                 </span>
                 <span className={active ? "text-foreground" : "text-muted-foreground"}>
-                  {t(GRADING_COMPANY_LABELS[company])}
+                  {t(company === "RAW" ? "Ungraded" : GRADING_COMPANY_LABELS[company])}
                 </span>
               </button>
             );
@@ -246,7 +246,7 @@ export function FilterBar({
       {hasSidebarFilters && (
         <button
           type="button"
-          onClick={() => onChange({ ...EMPTY_FILTERS, q: filters.q })}
+          onClick={() => onChange(EMPTY_FILTERS)}
           className="text-muted-foreground hover:text-foreground w-fit pt-4 text-sm underline underline-offset-4"
         >
           {t("Clear filters")}

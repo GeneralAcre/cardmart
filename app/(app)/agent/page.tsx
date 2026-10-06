@@ -156,21 +156,12 @@ export default async function AgentPage({ searchParams }: { searchParams: Promis
 
       <AgentDeals decisions={decisions} />
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_20rem] lg:items-start">
-        {/* Without the AI there's no chat, but the form still sets tasks up. */}
-        {aiReady ? (
-          <AgentChat key={alert} startFrom={alert} alerts={presets} />
-        ) : (
-          <NewTaskForm key={alert} startFrom={alert} alerts={presets} />
-        )}
-        {wallet ? (
-          <AgentWalletCard address={wallet.address} balanceSol={balanceSol} />
-        ) : (
-          <p className="text-muted-foreground rounded-xl border border-dashed p-4 text-xs">
-            {t("Agent wallets aren't configured on this server, so purchases run in simulated mode.")}
-          </p>
-        )}
-      </div>
+      {/* Keep the conversation as the primary column; wallet controls live below the agent activity. */}
+      {aiReady ? (
+        <AgentChat key={alert} startFrom={alert} alerts={presets} />
+      ) : (
+        <NewTaskForm key={alert} startFrom={alert} alerts={presets} />
+      )}
 
       <AgentTaskList
         tasks={dashboard.mandates.map((m) => ({
@@ -191,6 +182,14 @@ export default async function AgentPage({ searchParams }: { searchParams: Promis
       />
 
       <AgentActivity decisions={decisions} />
+
+      {wallet ? (
+        <AgentWalletCard address={wallet.address} balanceSol={balanceSol} />
+      ) : (
+        <p className="text-muted-foreground rounded-xl border border-dashed p-4 text-xs">
+          {t("Agent wallets aren't configured on this server, so purchases run in simulated mode.")}
+        </p>
+      )}
     </div>
   );
 }

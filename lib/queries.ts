@@ -817,15 +817,25 @@ export async function getAssetInsightData(assetId: string) {
   return { snapshots, watcherCount, pendingOffers };
 }
 
-export type RankingTier = "black-label" | "grade-10" | "grade-9";
+export type ValueTier = "black-label" | "grade-10" | "grade-9";
+// Ranked by how many people bookmark the card (watchlist), not by price.
+export type PopularityTier = "trending" | "most-watched";
+export type RankingTier = PopularityTier | ValueTier;
 
 export const RANKING_TIERS: { key: RankingTier; label: string; description: string }[] = [
+  { key: "trending", label: "Trending", description: "Cards collectors bookmarked most in the last 7 days." },
+  { key: "most-watched", label: "Most watched", description: "Cards on the most watchlists right now." },
   { key: "black-label", label: "Black Label", description: "BGS Pristine 10 Black Label — every sub-grade a perfect 10." },
   { key: "grade-10", label: "Grade 10", description: "PSA Gem Mint 10, BGS Pristine / Gem Mint 10 and CGC 10." },
   { key: "grade-9", label: "Grade 9", description: "Mint 9 and Gem Mint 9.5 slabs." },
 ];
 
-function rankingWhere(tier: RankingTier): Prisma.AssetWhereInput {
+export const isPopularityTier = (tier: RankingTier): tier is PopularityTier =>
+  tier === "trending" || tier === "most-watched";
+
+const TRENDING_DAYS = 7;
+
+function rankingWhere(tier: ValueTier): Prisma.AssetWhereInput {
   switch (tier) {
     case "black-label":
       return { isBlackLabel: true };
@@ -836,55 +846,89 @@ function rankingWhere(tier: RankingTier): Prisma.AssetWhereInput {
   }
 }
 
+const rankingInclude = (since30: Date) =>
+  ({
+    owner: { select: { id: true, name: true, handle: true, kycStatus: true } },
+    verificationPhotos: { orderBy: { createdAt: "asc" } },
+    escrowTxs: { where: { status: "RELEASED" }, orderBy: { releasedAt: "desc" }, take: 1, select: { amountThb: true } },
+    priceSnapshots: {
+      where: { createdAt: { gte: since30 } },
+      orderBy: { createdAt: "asc" },
+      take: 1,
+      select: { priceThb: true },
+    },
+    _count: { select: { watchedBy: true } },
+  }) satisfies Prisma.AssetInclude;
+
+type RankingAsset = Prisma.AssetGetPayload<{ include: ReturnType<typeof rankingInclude> }>;
+
 /**
- * Cards in a grade tier ranked by value. Value is the live asking price when
- * listed, otherwise the card's most recent real sale price — cards with
- * neither have no real value to rank by and are left out.
+ * One ranking row. Value is the live asking price when listed, otherwise the
+ * card's most recent real sale price, or null when it has neither.
  */
-export async function getRankings(tier: RankingTier, limit = 25) {
+function toRankingRow(a: RankingAsset, watchersRecent = 0) {
+  const listed = a.forSale && a.priceThb != null && a.marketStatus !== "IN_ESCROW";
+  const valueThb = listed ? a.priceThb! : (a.escrowTxs[0]?.amountThb ?? null);
+  const baseline = a.priceSnapshots[0]?.priceThb ?? null;
+  const change30dPct = listed && baseline && baseline !== a.priceThb ? ((a.priceThb! - baseline) / baseline) * 100 : null;
+  return {
+    id: a.id,
+    name: a.name,
+    subtitle: a.subtitle,
+    category: a.category,
+    gradingCompany: a.gradingCompany,
+    grade: a.grade,
+    isBlackLabel: a.isBlackLabel,
+    themeIndex: a.themeIndex,
+    photoUrl: displayImage(a)?.url ?? null,
+    owner: a.owner,
+    valueThb,
+    valueSource: valueThb == null ? null : listed ? ("ask" as const) : ("last-sale" as const),
+    change30dPct,
+    watchers: a._count.watchedBy,
+    // Bookmarks added in the last TRENDING_DAYS days.
+    watchersRecent,
+  };
+}
+export type RankingRow = ReturnType<typeof toRankingRow>;
+
+/**
+ * Cards ranked for the Market page. Grade tiers rank by value, and leave out
+ * cards with no real price. Trending ranks by bookmarks added in the last
+ * week and Most watched by bookmarks overall — real watchlist counts, with
+ * value breaking ties.
+ */
+export async function getRankings(tier: RankingTier, limit = 25): Promise<RankingRow[]> {
   const since30 = new Date(Date.now() - 30 * 86_400_000);
+
+  if (isPopularityTier(tier)) {
+    const since = tier === "trending" ? new Date(Date.now() - TRENDING_DAYS * 86_400_000) : undefined;
+    const counts = await prisma.watchlistItem.groupBy({
+      by: ["assetId"],
+      where: { asset: { redeemedAt: null }, ...(since ? { createdAt: { gte: since } } : {}) },
+      _count: { assetId: true },
+      orderBy: { _count: { assetId: "desc" } },
+      take: limit,
+    });
+    const recent = new Map(counts.map((c) => [c.assetId, c._count.assetId]));
+    const assets = await prisma.asset.findMany({
+      where: { id: { in: [...recent.keys()] } },
+      include: rankingInclude(since30),
+    });
+    const score = (r: RankingRow) => (tier === "trending" ? r.watchersRecent : r.watchers);
+    return assets
+      .map((a) => toRankingRow(a, recent.get(a.id) ?? 0))
+      .sort((a, b) => score(b) - score(a) || b.watchers - a.watchers || (b.valueThb ?? 0) - (a.valueThb ?? 0));
+  }
+
   const assets = await prisma.asset.findMany({
     where: { ...rankingWhere(tier), redeemedAt: null },
-    include: {
-      owner: { select: { id: true, name: true, handle: true, kycStatus: true } },
-      verificationPhotos: { orderBy: { createdAt: "asc" } },
-      escrowTxs: { where: { status: "RELEASED" }, orderBy: { releasedAt: "desc" }, take: 1, select: { amountThb: true } },
-      priceSnapshots: {
-        where: { createdAt: { gte: since30 } },
-        orderBy: { createdAt: "asc" },
-        take: 1,
-        select: { priceThb: true },
-      },
-      _count: { select: { watchedBy: true } },
-    },
+    include: rankingInclude(since30),
   });
   return assets
-    .map((a) => {
-      const listed = a.forSale && a.priceThb != null && a.marketStatus !== "IN_ESCROW";
-      const valueThb = listed ? a.priceThb! : (a.escrowTxs[0]?.amountThb ?? null);
-      if (valueThb == null) return null;
-      const baseline = a.priceSnapshots[0]?.priceThb ?? null;
-      const change30dPct =
-        listed && baseline && baseline !== a.priceThb ? ((a.priceThb! - baseline) / baseline) * 100 : null;
-      return {
-        id: a.id,
-        name: a.name,
-        subtitle: a.subtitle,
-        category: a.category,
-        gradingCompany: a.gradingCompany,
-        grade: a.grade,
-        isBlackLabel: a.isBlackLabel,
-        themeIndex: a.themeIndex,
-        photoUrl: displayImage(a)?.url ?? null,
-        owner: a.owner,
-        valueThb,
-        valueSource: listed ? ("ask" as const) : ("last-sale" as const),
-        change30dPct,
-        watchers: a._count.watchedBy,
-      };
-    })
-    .filter((x): x is NonNullable<typeof x> => x !== null)
-    .sort((a, b) => b.valueThb - a.valueThb)
+    .map((a) => toRankingRow(a))
+    .filter((r) => r.valueThb != null)
+    .sort((a, b) => b.valueThb! - a.valueThb!)
     .slice(0, limit);
 }
 

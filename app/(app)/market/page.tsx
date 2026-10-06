@@ -1,11 +1,19 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowDownRight, ArrowUpRight, BarChart3, CircleDollarSign, Crown, Newspaper, Tag } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, BarChart3, Bookmark, CircleDollarSign, Crown, Flame, Newspaper, Tag } from "lucide-react";
 
 import { CardArt } from "@/components/asset/card-art";
 import { VerifiedBadge } from "@/components/store/verified-badge";
 import { Badge } from "@/components/ui/badge";
-import { getMarketOverview, getRankings, RANKING_TIERS, type MarketUpdate, type RankingTier } from "@/lib/queries";
+import {
+  getMarketOverview,
+  getRankings,
+  isPopularityTier,
+  RANKING_TIERS,
+  type MarketUpdate,
+  type RankingRow,
+  type RankingTier,
+} from "@/lib/queries";
 import { formatDateTime, formatGrade, formatThb } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { getT } from "@/lib/i18n/server";
@@ -20,6 +28,7 @@ export default async function MarketPage({ searchParams }: { searchParams: Promi
   const { tier: tierParam } = await searchParams;
   const tier: RankingTier = RANKING_TIERS.find((t) => t.key === tierParam)?.key ?? "grade-10";
   const tierInfo = RANKING_TIERS.find((t) => t.key === tier)!;
+  const byPopularity = isPopularityTier(tier);
 
   const [overview, rankings, t] = await Promise.all([getMarketOverview(), getRankings(tier), getT()]);
 
@@ -69,18 +78,34 @@ export default async function MarketPage({ searchParams }: { searchParams: Promi
                   item.key === tier ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                {t(item.label)}
+                <span className="flex items-center gap-1.5">
+                  {item.key === "trending" && <Flame className="size-3.5" />}
+                  {item.key === "most-watched" && <Bookmark className="size-3.5" />}
+                  {t(item.label)}
+                </span>
               </Link>
             ))}
           </div>
           <p className="text-muted-foreground text-xs">
-            {t(tierInfo.description)} {t("Ranked by value: the asking price if listed, otherwise the last real sale.")}
+            {t(tierInfo.description)}{" "}
+            {byPopularity
+              ? t("Ranked by bookmarks on CardMart's watchlists.")
+              : t("Ranked by value: the asking price if listed, otherwise the last real sale.")}
           </p>
 
           {rankings.length === 0 ? (
             <div className="text-muted-foreground flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed py-16 text-center">
-              <BarChart3 className="size-6" />
-              <p className="text-sm">{t("No {tier} cards with a price yet.", { tier: t(tierInfo.label) })}</p>
+              {byPopularity ? <Bookmark className="size-6" /> : <BarChart3 className="size-6" />}
+              <p className="text-sm">
+                {tier === "trending"
+                  ? t("No cards bookmarked this week yet.")
+                  : tier === "most-watched"
+                    ? t("No cards on anyone's watchlist yet.")
+                    : t("No {tier} cards with a price yet.", { tier: t(tierInfo.label) })}
+              </p>
+              {byPopularity && (
+                <p className="max-w-xs text-xs">{t("Tap the bookmark on any card page to add it to your watchlist.")}</p>
+              )}
             </div>
           ) : (
             <ol className="flex flex-col gap-2">
@@ -121,18 +146,7 @@ export default async function MarketPage({ searchParams }: { searchParams: Promi
                         <VerifiedBadge status={r.owner.kycStatus} className="hidden sm:inline-flex" />
                       </span>
                     </div>
-                    <div className="flex shrink-0 flex-col items-end gap-0.5">
-                      <span className="text-sm font-bold tabular-nums">{formatThb(r.valueThb)}</span>
-                      <span className="text-muted-foreground flex items-center gap-1.5 text-[11px]">
-                        {r.change30dPct != null && (
-                          <span className={r.change30dPct > 0 ? "text-success" : "text-destructive"}>
-                            {r.change30dPct > 0 ? "+" : ""}
-                            {r.change30dPct.toFixed(0)}% 30d
-                          </span>
-                        )}
-                        {r.valueSource === "ask" ? t("asking") : t("last sale")}
-                      </span>
-                    </div>
+                    {byPopularity ? <PopularityColumn row={r} tier={tier} t={t} /> : <ValueColumn row={r} t={t} />}
                   </Link>
                 </li>
               ))}
@@ -163,6 +177,44 @@ export default async function MarketPage({ searchParams }: { searchParams: Promi
           </Link>
         </section>
       </div>
+    </div>
+  );
+}
+
+/** Price, its 30-day change, and where it comes from. */
+function ValueColumn({ row, t }: { row: RankingRow; t: Translate }) {
+  return (
+    <div className="flex shrink-0 flex-col items-end gap-0.5">
+      <span className="text-sm font-bold tabular-nums">{row.valueThb != null ? formatThb(row.valueThb) : "—"}</span>
+      <span className="text-muted-foreground flex items-center gap-1.5 text-[11px]">
+        {row.change30dPct != null && (
+          <span className={row.change30dPct > 0 ? "text-success" : "text-destructive"}>
+            {row.change30dPct > 0 ? "+" : ""}
+            {row.change30dPct.toFixed(0)}% 30d
+          </span>
+        )}
+        {row.valueSource === "ask" ? t("asking") : row.valueSource === "last-sale" ? t("last sale") : t("Not for sale")}
+      </span>
+    </div>
+  );
+}
+
+/** How many people bookmarked it (this week, or overall), with the price underneath. */
+function PopularityColumn({ row, tier, t }: { row: RankingRow; tier: RankingTier; t: Translate }) {
+  const trending = tier === "trending";
+  return (
+    <div className="flex shrink-0 flex-col items-end gap-0.5">
+      <span className="flex items-center gap-1 text-sm font-bold tabular-nums">
+        {trending ? <Flame className="text-highlight size-3.5" /> : <Bookmark className="size-3.5" />}
+        {trending
+          ? t("+{count} this week", { count: row.watchersRecent })
+          : t("{count} watching", { count: row.watchers })}
+      </span>
+      <span className="text-muted-foreground text-[11px] tabular-nums">
+        {row.valueThb != null
+          ? `${formatThb(row.valueThb)} · ${row.valueSource === "ask" ? t("asking") : t("last sale")}`
+          : t("Not for sale")}
+      </span>
     </div>
   );
 }
