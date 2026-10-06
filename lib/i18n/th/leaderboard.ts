@@ -49,6 +49,16 @@ export const LEADERBOARD: Record<string, string> = {
   "Sold {price} on {date}": "ขาย {price} เมื่อ {date}",
   "Holding, now {price}": "ถืออยู่ ตอนนี้ {price}",
   Holding: "ถืออยู่",
+  "Now {price}": "ตอนนี้ {price}",
+  Rank: "อันดับ",
+  Trader: "เทรดเดอร์",
+  "Flips won": "ขายได้กำไร",
+  "Total gain": "กำไรรวม",
+  "Your standing": "อันดับของคุณ",
+  "Buy a card to get on the board": "ซื้อการ์ดเพื่อขึ้นกระดานอันดับ",
+  "{amount} to #{rank}": "อีก {amount} ถึงอันดับ {rank}",
+  "Top of the board": "อันดับหนึ่งของกระดาน",
+  "Top trader": "เทรดเดอร์อันดับหนึ่ง",
 
   // Market stats
   "Live listings": "รายการที่ลงขายอยู่",
