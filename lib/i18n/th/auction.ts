@@ -44,7 +44,10 @@ export const AUCTION: Record<string, string> = {
   Duration: "ระยะเวลา",
   "1 day": "1 วัน",
   "Start time": "เวลาเริ่ม",
-  "Leave blank to start immediately. You can schedule up to 30 days ahead.": "เว้นว่างไว้เพื่อเริ่มทันที ตั้งเวลาล่วงหน้าได้สูงสุด 30 วัน",
+  "You can schedule up to 30 days ahead.": "ตั้งเวลาล่วงหน้าได้สูงสุด 30 วัน",
+  "Start now": "เริ่มทันที",
+  "Start day": "วันเริ่ม",
+  Tomorrow: "พรุ่งนี้",
   "Current listing price:": "ราคาขายปัจจุบัน:",
   "Start Auction": "เริ่มการประมูล",
 

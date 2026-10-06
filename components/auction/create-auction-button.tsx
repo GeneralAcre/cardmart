@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Gavel, Loader2 } from "lucide-react";
 
+import { StartTimePicker } from "@/components/auction/start-time-picker";
 import { ActionButton } from "@/components/ui/action-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -150,16 +151,9 @@ export function CreateAuctionButton({ eligibleAssets }: { eligibleAssets: Eligib
               </Select>
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="create-auction-start-time">{t("Start time")}</Label>
-              <Input
-                id="create-auction-start-time"
-                type="datetime-local"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-              />
-              <p className="text-muted-foreground text-xs">
-                {t("Leave blank to start immediately. You can schedule up to 30 days ahead.")}
-              </p>
+              <Label>{t("Start time")}</Label>
+              <StartTimePicker value={startTime} onChange={setStartTime} />
+              <p className="text-muted-foreground text-xs">{t("You can schedule up to 30 days ahead.")}</p>
             </div>
             {eligibleAssets.find((a) => a.id === assetId)?.priceThb != null && (
               <p className="text-muted-foreground text-xs">

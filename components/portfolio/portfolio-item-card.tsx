@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Flame, Gavel, Loader2, Repeat, Tag, TagX, Truck } from "lucide-react";
 
 import { CardArt } from "@/components/asset/card-art";
+import { StartTimePicker } from "@/components/auction/start-time-picker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -228,14 +229,9 @@ export function PortfolioItemCard({
             </Select>
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="auction-start-time">{t("Start time")}</Label>
-            <Input
-              id="auction-start-time"
-              type="datetime-local"
-              value={auctionStartTime}
-              onChange={(e) => setAuctionStartTime(e.target.value)}
-            />
-            <p className="text-muted-foreground text-xs">{t("Leave blank to start immediately. You can schedule up to 30 days ahead.")}</p>
+            <Label>{t("Start time")}</Label>
+            <StartTimePicker value={auctionStartTime} onChange={setAuctionStartTime} />
+            <p className="text-muted-foreground text-xs">{t("You can schedule up to 30 days ahead.")}</p>
           </div>
         </div>
         <DialogFooter>
