@@ -108,3 +108,36 @@ configured and every buy/release/refund silently falls back to the old
 DB-only simulated flow (see `resolveTxSignature` / `onChain` flags in
 `lib/actions.ts`) — nothing breaks, you just don't get real fund custody
 until you finish setup.
+
+## Checking the live deployment yourself
+
+The program is deployed on **devnet** at
+[`FQwLbEBxKw5srEobsCw37c1B7QNkNaRACN5VBvUwWEuC`](https://explorer.solana.com/address/FQwLbEBxKw5srEobsCw37c1B7QNkNaRACN5VBvUwWEuC?cluster=devnet).
+
+- **Security contact.** The deployed binary embeds a
+  [security.txt](https://github.com/neodyme-labs/solana-security-txt), so
+  the Explorer page above shows where to report a vulnerability (this repo's
+  issues).
+- **Who can change it.** `solana program show -ud <program id>` prints the
+  upgrade authority. It's the deployer key from the security model above,
+  never the escrow authority.
+- **Each card is a real token.** Every card minted since real SPL mints
+  were added has a **Mint Address** on its item page that links to Explorer.
+  There you can check the supply is 1, that the mint authority has been
+  revoked, and which wallet holds the token.
+
+Explorer's green "Verified Build" badge comes from OtterSec's verification
+service, which only covers mainnet programs, so this devnet program shows
+"Not Verified" there. To confirm the onchain code matches this source
+yourself, run [`solana-verify`](https://github.com/Ellipsis-Labs/solana-verifiable-build)
+(needs Docker):
+
+```sh
+solana-verify verify-from-repo -ud \
+  --program-id FQwLbEBxKw5srEobsCw37c1B7QNkNaRACN5VBvUwWEuC \
+  --library-name escrow --mount-path contracts/escrow \
+  https://github.com/GeneralAcre/cardmart
+```
+
+It rebuilds the program in a pinned Docker image and compares the hash with
+the code that's actually deployed.

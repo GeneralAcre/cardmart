@@ -20,6 +20,20 @@ pub use state::*;
 
 declare_id!("FQwLbEBxKw5srEobsCw37c1B7QNkNaRACN5VBvUwWEuC");
 
+// Embedded in the deployed binary so explorers can show who to contact about
+// a vulnerability. Skipped for CPI builds so it never lands in another
+// program that depends on this crate.
+#[cfg(not(feature = "no-entrypoint"))]
+solana_security_txt::security_txt! {
+    name: "CardMart Escrow",
+    project_url: "https://github.com/GeneralAcre/cardmart",
+    contacts: "link:https://github.com/GeneralAcre/cardmart/issues",
+    policy: "https://github.com/GeneralAcre/cardmart/blob/main/contracts/escrow/README.md",
+    source_code: "https://github.com/GeneralAcre/cardmart",
+    source_release: "main",
+    auditors: "None"
+}
+
 #[program]
 pub mod escrow {
     use super::*;
