@@ -136,8 +136,11 @@ yourself, run [`solana-verify`](https://github.com/Ellipsis-Labs/solana-verifiab
 solana-verify verify-from-repo -ud \
   --program-id FQwLbEBxKw5srEobsCw37c1B7QNkNaRACN5VBvUwWEuC \
   --library-name escrow --mount-path contracts/escrow \
+  --base-image solanafoundation/solana-verifiable-build:3.1.10 \
   https://github.com/GeneralAcre/cardmart
 ```
 
-It rebuilds the program in a pinned Docker image and compares the hash with
-the code that's actually deployed.
+It rebuilds the program in a pinned Docker image (Solana 3.1.10, the version
+it was deployed with; the tool's default image is too old to build it) and
+compares the hash with the code that's actually deployed. The result is also
+recorded onchain with the hash `667106edd4eb7350be1c408d0c2f21bbfe474452b6b410b7a5295bd3fd4b90b2`.
