@@ -116,6 +116,39 @@ export async function getMarketplaceListings(filters: MarketplaceFilters = {}) {
   return assets.map(withPriceDirection);
 }
 
+// The moving card wall behind the landing hero: a slim slice of live
+// listings, only what a tile shows. Public page, so nothing about sellers.
+// Only cards with a real picture — a generated placeholder looks broken in
+// the wall — so it reads a few extra rows and drops the rest.
+export async function getLandingShowcase(limit = 30) {
+  const assets = await prisma.asset.findMany({
+    where: { marketStatus: { notIn: ["IN_ESCROW", "IN_AUCTION"] }, forSale: true, priceThb: { not: null } },
+    orderBy: { createdAt: "desc" },
+    take: limit * 3,
+    select: {
+      id: true,
+      name: true,
+      subtitle: true,
+      gradingCompany: true,
+      grade: true,
+      isBlackLabel: true,
+      priceThb: true,
+      catalogImageUrl: true,
+      verificationPhotos: { orderBy: { createdAt: "asc" }, select: { url: true } },
+      priceSnapshots: { orderBy: { createdAt: "desc" }, take: 2, select: { priceThb: true } },
+    },
+  });
+  return assets
+    .flatMap((asset) => {
+      const { verificationPhotos, catalogImageUrl, ...rest } = withPriceDirection(asset);
+      const imageUrl = displayImage({ verificationPhotos, catalogImageUrl })?.url;
+      return imageUrl ? [{ ...rest, imageUrl }] : [];
+    })
+    .slice(0, limit);
+}
+
+export type LandingShowcaseItem = Awaited<ReturnType<typeof getLandingShowcase>>[number];
+
 export async function getSellerProfile(sellerId: string) {
   const seller = await prisma.user.findUnique({
     where: { id: sellerId },

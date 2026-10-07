@@ -18,11 +18,32 @@ export const LANDING_DICTIONARY = {
     },
     hero: {
       badge: "Beta · Running on a Test Blockchain",
-      titleLine1: "Trade real collectibles.",
-      titleLine2: "Protected, verified, real.",
+      titleLine1: "Know the market",
+      titleLine2: "Trade cards with confidence",
       subtitle:
-        "List PSA, BGS, and CGC certified trading cards. Every sale is protected, verified at our warehouse, and backed by a real digital certificate on the blockchain.",
-      noWalletNote: "No wallet needed to start — one is created for you automatically.",
+        "CardMart is the data platform and secure global marketplace for trading cards. Market intelligence and safe peer-to-peer trading in one place, so collectors can trade smarter",
+      noWalletNote: "No wallet needed to start — one is created for you automatically",
+    },
+    cta: {
+      enterMarketplace: "Go to marketplace",
+    },
+    pillars: {
+      badge: "What CardMart does",
+      title: "Everything you need to trade cards, in one place.",
+      items: [
+        {
+          title: "See the market",
+          description: "Live prices, trends, and news for graded cards, so you know what a card is worth before you trade.",
+        },
+        {
+          title: "Trade safely",
+          description: "Buy and sell peer to peer. Payment is held until the card passes inspection at our warehouse.",
+        },
+        {
+          title: "Own it for real",
+          description: "Every card comes with a digital certificate on the blockchain, backed by the physical card in our vault.",
+        },
+      ],
     },
     features: {
       badge: "Why CardMart",
@@ -95,11 +116,32 @@ export const LANDING_DICTIONARY = {
     },
     hero: {
       badge: "เบต้า · ทำงานบนบล็อกเชนทดสอบ",
-      titleLine1: "ซื้อขายของสะสมของจริง",
-      titleLine2: "ปลอดภัย ตรวจสอบได้ ของแท้",
+      titleLine1: "รู้ทันตลาด",
+      titleLine2: "ซื้อขายการ์ดอย่างมั่นใจ",
       subtitle:
-        "ลงขายการ์ดสะสมที่ผ่านการรับรองจาก PSA, BGS และ CGC ทุกการซื้อขายได้รับความคุ้มครอง ตรวจสอบที่คลังสินค้าของเรา และมีใบรับรองดิจิทัลจริงบนบล็อกเชนรองรับ",
+        "CardMart คือแพลตฟอร์มข้อมูลและตลาดซื้อขายการ์ดสะสมระดับโลกที่ปลอดภัย รวมข้อมูลเชิงลึกของตลาดและการซื้อขายระหว่างผู้ใช้อย่างปลอดภัยไว้ในที่เดียว ช่วยให้นักสะสมซื้อขายได้อย่างชาญฉลาดยิ่งขึ้น",
       noWalletNote: "ไม่ต้องมีกระเป๋าเงินก่อนเริ่มใช้งาน ระบบจะสร้างให้อัตโนมัติ",
+    },
+    cta: {
+      enterMarketplace: "ไปที่ตลาดซื้อขาย",
+    },
+    pillars: {
+      badge: "CardMart ทำอะไร",
+      title: "ทุกอย่างที่ต้องใช้ในการซื้อขายการ์ด รวมไว้ในที่เดียว",
+      items: [
+        {
+          title: "รู้ราคาตลาด",
+          description: "ราคา เทรนด์ และข่าวสารของการ์ดเกรดแบบเรียลไทม์ รู้มูลค่าการ์ดก่อนซื้อขาย",
+        },
+        {
+          title: "ซื้อขายอย่างปลอดภัย",
+          description: "ซื้อขายระหว่างผู้ใช้โดยตรง เงินจะถูกพักไว้จนกว่าการ์ดจะผ่านการตรวจสอบที่คลังสินค้าของเรา",
+        },
+        {
+          title: "เป็นเจ้าของจริง",
+          description: "การ์ดทุกใบมีใบรับรองดิจิทัลบนบล็อกเชน พร้อมการ์ดจริงเก็บรักษาในวอลต์ของเรา",
+        },
+      ],
     },
     features: {
       badge: "ทำไมต้อง CardMart",

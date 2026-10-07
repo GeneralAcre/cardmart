@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { PRIVY_ENFORCED, verifyPrivySession } from "@/lib/privy-server";
 import { LandingPage } from "@/components/landing/landing-page";
+import { getLandingShowcase } from "@/lib/queries";
 
 export const metadata = {
   title: "CardMart — Collectibles Marketplace & Digital Certificate Vault",
@@ -16,6 +17,11 @@ export const metadata = {
 export default async function RootPage() {
   if (!PRIVY_ENFORCED) redirect("/marketplace"); // demo mode: no real signed-out state to show
 
-  const session = await verifyPrivySession();
-  return <LandingPage authenticated={Boolean(session)} />;
+  // The card wall is decoration — if the database is unreachable the hero
+  // still renders, just without cards behind it.
+  const [session, showcase] = await Promise.all([
+    verifyPrivySession(),
+    getLandingShowcase().catch(() => []),
+  ]);
+  return <LandingPage authenticated={Boolean(session)} showcase={showcase} />;
 }

@@ -82,6 +82,26 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Landing hero card wall (components/landing/card-wall.tsx). Each column
+     renders its tiles twice, so -50% lands exactly on the start again. */
+  --animate-wall-up: wall-up 60s linear infinite;
+  --animate-wall-down: wall-down 60s linear infinite;
+  @keyframes wall-up {
+    from { transform: translateY(0); }
+    to { transform: translateY(-50%); }
+  }
+  @keyframes wall-down {
+    from { transform: translateY(-50%); }
+    to { transform: translateY(0); }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-wall-up,
+  .animate-wall-down {
+    animation: none;
+  }
 }
 
 @layer base {
