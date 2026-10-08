@@ -23,7 +23,6 @@ const COLUMNS = [
       { href: "/leaderboard", label: "Leaderboard" },
       { href: "/news", label: "News" },
       { href: "/guide", label: "Getting Started" },
-      { href: X_URL, label: "X", external: true },
     ],
   },
   {

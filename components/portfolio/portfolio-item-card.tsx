@@ -320,11 +320,11 @@ export function PortfolioItemCard({
           </Link>
         </div>
       ) : asset.vaulted ? (
-        <div className="flex flex-col gap-2 pt-1">
-          <div className="grid grid-cols-1 gap-2">
+        <div className="grid grid-cols-2 gap-2 pt-1">
+          <div className="contents">
             <Dialog open={relistOpen} onOpenChange={setRelistOpen}>
               <DialogTrigger asChild>
-                <Button size="sm" variant="secondary" className="w-full">
+                <Button size="sm" variant="default" className="col-span-2 w-full font-semibold">
                   <Repeat /> {t("Relist")}
                 </Button>
               </DialogTrigger>

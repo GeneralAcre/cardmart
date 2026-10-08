@@ -1,8 +1,7 @@
 // Portfolio: profile header, wallet, KYC, item cards, offers, swaps, alerts, grading.
 export const PORTFOLIO: Record<string, string> = {
-  "In Hand": "อยู่กับฉัน",
-  "Physical in My Hands": "ของจริงอยู่กับฉัน",
-  "Physical in Warehouse Vault": "ของจริงอยู่ในห้องนิรภัยคลังสินค้า",
+  "My Cards": "การ์ดของฉัน",
+  "Listing Cards": "การ์ดที่ลงขาย",
   Watchlist: "รายการที่ติดตาม",
   Offers: "ข้อเสนอ",
   Trades: "แลกเปลี่ยน",

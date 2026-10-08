@@ -50,10 +50,19 @@ function Segmented<T extends string>({
 }
 
 function Thumb({ row }: { row: LeaderboardRow }) {
+  const [imageFailed, setImageFailed] = useState(false);
+
   return (
     <span className="card-stage relative block aspect-[3/4] w-8 shrink-0 overflow-hidden rounded-md border">
-      {row.photoUrl ? (
-        <Image src={row.photoUrl} alt="" fill sizes="32px" className="object-contain p-0.5" />
+      {row.photoUrl && !imageFailed ? (
+        <Image
+          src={row.photoUrl}
+          alt=""
+          fill
+          sizes="32px"
+          className="object-contain p-0.5"
+          onError={() => setImageFailed(true)}
+        />
       ) : (
         <CardArt
           themeIndex={row.themeIndex}

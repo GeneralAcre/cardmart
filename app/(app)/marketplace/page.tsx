@@ -16,7 +16,7 @@ export default async function MarketplacePage() {
         <div className="flex flex-col gap-1">
           <h1 className="eyebrow text-foreground text-sm">{t("Market")}</h1>
           <p className="text-muted-foreground max-w-2xl text-sm">
-            {t("Certified cards, paid through escrow and checked at our warehouse before the seller is paid.")}
+            {t("Graded and raw cards, paid through escrow and checked at our warehouse before the seller is paid.")}
           </p>
         </div>
         {/* ml-auto keeps it on the right when it wraps below the intro on phones. */}

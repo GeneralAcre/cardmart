@@ -6,13 +6,13 @@ import { Images } from "lucide-react";
 
 import { CardArt } from "@/components/asset/card-art";
 import { formatGrade, formatThb } from "@/lib/format";
-import { CARD_GAME_LABELS } from "@/lib/labels";
+import { CARD_GAME_BADGE_CLASS, CARD_GAME_LABELS } from "@/lib/labels";
 import type { AssetSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { displayImage, realPhotos } from "@/lib/card-image";
 import { useT } from "@/components/landing/language-provider";
 
-const CHIP = "rounded-md bg-black/70 px-2 py-1 text-[11px] font-semibold leading-none text-white backdrop-blur-sm";
+const CHIP = "rounded-md px-2 py-1 text-[11px] font-semibold leading-none text-white backdrop-blur-sm";
 
 export function ListingCard({ asset, compact = false }: { asset: AssetSummary; compact?: boolean }) {
   const photos = realPhotos(asset.verificationPhotos);
@@ -56,12 +56,14 @@ export function ListingCard({ asset, compact = false }: { asset: AssetSummary; c
         )}
 
         {/* Top corners: what game this is, and which way its price last moved. */}
-        <span className={cn(CHIP, "absolute left-2.5 top-2.5")}>{t(CARD_GAME_LABELS[asset.game])}</span>
+        <span className={cn(CHIP, "absolute left-2.5 top-2.5", CARD_GAME_BADGE_CLASS[asset.game])}>
+          {t(CARD_GAME_LABELS[asset.game])}
+        </span>
         {asset.priceDirection && (
           <span
             className={cn(
               CHIP,
-              "absolute right-2.5 top-2.5",
+              "absolute right-2.5 top-2.5 bg-black/70",
               asset.priceDirection === "up" ? "text-success" : "text-destructive",
             )}
             aria-label={asset.priceDirection === "up" ? t("Price went up") : t("Price went down")}
@@ -71,7 +73,7 @@ export function ListingCard({ asset, compact = false }: { asset: AssetSummary; c
         )}
 
         {photos.length > 1 && (
-          <span className={cn(CHIP, "absolute bottom-2.5 left-2.5 inline-flex items-center gap-1 font-medium")}>
+          <span className={cn(CHIP, "absolute bottom-2.5 left-2.5 inline-flex items-center gap-1 bg-black/70 font-medium")}>
             <Images className="size-3" />
             {t("{count} views", { count: photos.length })}
           </span>

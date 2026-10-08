@@ -4,10 +4,7 @@ import { Bookmark, Flame, PackageOpen } from "lucide-react";
 import {
   getMyRedeemedAssets,
   getMySalesToShip,
-  getMyTradeOffers,
   getMyWantedCards,
-  getOffersMade,
-  getOffersReceived,
   getPortfolioPriceHistory,
   getSellerRating,
   getVaultAssets,
@@ -21,22 +18,20 @@ import { getDevnetSolBalance } from "@/lib/solana";
 import { getEscrowAuthorityAddress } from "@/lib/web3/escrow-server";
 import { ListingCard } from "@/components/marketplace/listing-card";
 import { PortfolioItemCard } from "@/components/portfolio/portfolio-item-card";
-import { OffersPanel } from "@/components/portfolio/offers-panel";
 import { ProfileHeader } from "@/components/portfolio/profile-header";
 import { IdentityCard } from "@/components/portfolio/identity-card";
 import { WantedCardsPanel } from "@/components/wanted/wanted-cards-panel";
-import { TradesPanel } from "@/components/trade/trades-panel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SalesToShipPanel } from "@/components/portfolio/ship-to-warehouse";
 import { expireOverdueSellerShipments } from "@/lib/actions";
 import { toSaleToShip } from "@/lib/shipping";
 import { formatDate, formatGrade } from "@/lib/format";
 
-const TABS = ["all", "hand", "vault", "watchlist", "offers", "trades", "alerts"] as const;
+const TABS = ["hand", "vault", "watchlist", "alerts"] as const;
 
 export default async function PortfolioPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const { tab } = await searchParams;
-  const defaultTab = TABS.find((t) => t === tab) ?? "all";
+  const defaultTab = TABS.find((t) => t === tab) ?? "hand";
   const [user, t] = await Promise.all([getCurrentUser(), getT()]);
   await expireOverdueSellerShipments({ revalidate: false });
   const walletAddress = user.walletAddress ?? user.walletMock;
@@ -47,9 +42,6 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
     portfolioValueHistory,
     watchlist,
     escrowAuthorityAddress,
-    offersReceived,
-    offersMade,
-    trades,
     wantedCards,
     redeemed,
     rating,
@@ -61,17 +53,12 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
     getPortfolioPriceHistory(user.id, "7d"), // default range matches PortfolioValueChart's own initial state
     getWatchlist(user.id),
     getEscrowAuthorityAddress(),
-    getOffersReceived(user.id),
-    getOffersMade(user.id),
-    getMyTradeOffers(user.id),
     getMyWantedCards(user.id),
     getMyRedeemedAssets(user.id),
     getSellerRating(user.id),
     prisma.escrowTransaction.count({ where: { sellerId: user.id, status: "RELEASED" } }),
     getMySalesToShip(user.id),
   ]);
-  const pendingTradesForMe = trades.received.filter((t) => t.status === "PENDING").length;
-
   const inHand = assets.filter((a) => !a.vaulted);
   const inVault = assets.filter((a) => a.vaulted);
 
@@ -113,24 +100,16 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
 
       <Tabs defaultValue={defaultTab}>
         <TabsList>
-          <TabsTrigger value="all">{t("All")} ({assets.length})</TabsTrigger>
           <TabsTrigger value="hand">
-            <span className="sm:hidden">{t("In Hand")} ({inHand.length})</span>
-            <span className="hidden sm:inline">{t("Physical in My Hands")} ({inHand.length})</span>
+            {t("My Cards")} ({inHand.length})
           </TabsTrigger>
           <TabsTrigger value="vault">
-            <span className="sm:hidden">{t("In Vault")} ({inVault.length})</span>
-            <span className="hidden sm:inline">{t("Physical in Warehouse Vault")} ({inVault.length})</span>
+            {t("Listing Cards")} ({inVault.length})
           </TabsTrigger>
           <TabsTrigger value="watchlist">{t("Watchlist")} ({watchlist.length})</TabsTrigger>
-          <TabsTrigger value="offers">{t("Offers")} ({offersReceived.length})</TabsTrigger>
-          <TabsTrigger value="trades">{t("Trades")} ({pendingTradesForMe})</TabsTrigger>
           <TabsTrigger value="alerts">{t("Alerts")} ({wantedCards.length})</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="all" className="pt-6">
-          <PortfolioGrid assets={assets} escrowAuthorityAddress={escrowAuthorityAddress} shipping={shipping} />
-        </TabsContent>
         <TabsContent value="hand" className="pt-6">
           <PortfolioGrid assets={inHand} escrowAuthorityAddress={escrowAuthorityAddress} shipping={shipping} />
         </TabsContent>
@@ -179,12 +158,6 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
               ))}
             </div>
           )}
-        </TabsContent>
-        <TabsContent value="offers" className="pt-6">
-          <OffersPanel received={offersReceived} made={offersMade} />
-        </TabsContent>
-        <TabsContent value="trades" className="pt-6">
-          <TradesPanel received={trades.received} sent={trades.sent} escrowAuthorityAddress={escrowAuthorityAddress} />
         </TabsContent>
         <TabsContent value="alerts" className="pt-6">
           <WantedCardsPanel cards={wantedCards} />
