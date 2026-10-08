@@ -17,8 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { CARD_GAME_LABELS, gradeTierLabel } from "@/lib/labels";
 import { formatGrade, formatThb } from "@/lib/format";
-
-const MIN_BID_INCREMENT_THB = 50;
+import { bidStep, minNextBid } from "@/lib/auction-rules";
 
 export default async function AuctionDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -36,7 +35,7 @@ export default async function AuctionDetailPage({ params }: { params: Promise<{ 
   const awaitingSettlement = auction.status === "ACTIVE" && hasEnded && topBid != null;
   const isWinner = awaitingSettlement && topBid.bidderId === user.id;
   const myLockedBidThb = !hasEnded && topBid?.bidderId === user.id && topBid.lockStatus === "HELD" ? topBid.amountThb : null;
-  const minBid = (auction.currentBidThb ?? auction.startPriceThb - MIN_BID_INCREMENT_THB) + MIN_BID_INCREMENT_THB;
+  const minBid = minNextBid(auction);
 
   const sellerInitials = (asset.seller.name ?? "?")
     .split(" ")
@@ -152,6 +151,7 @@ export default async function AuctionDetailPage({ params }: { params: Promise<{ 
             <BidPanel
               auctionId={auction.id}
               minBid={minBid}
+              step={bidStep(auction)}
               sellerWalletAddress={asset.owner.walletAddress}
               myLockedBidThb={myLockedBidThb}
             />

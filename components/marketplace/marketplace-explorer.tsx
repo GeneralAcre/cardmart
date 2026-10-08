@@ -177,17 +177,6 @@ export function MarketplaceExplorer({
         </Button>
 
         <div className="ml-auto flex items-center gap-2 sm:gap-3">
-          <p className="text-muted-foreground hidden text-sm whitespace-nowrap md:block">
-            {loading ? (
-              t("Searching…")
-            ) : (
-              <>
-                {t("Latest")} <span className="text-foreground font-semibold">{listings.length}</span>{" "}
-                {t(listings.length === 1 ? "listing" : "listings")}
-              </>
-            )}
-          </p>
-
           <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
             <SelectTrigger className="bg-card !h-10 rounded-lg text-sm font-medium" aria-label={t("Sort by")}>
               <SelectValue />

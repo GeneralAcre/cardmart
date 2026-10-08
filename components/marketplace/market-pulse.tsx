@@ -156,7 +156,7 @@ export function MarketPulse({ rows }: { rows: LeaderboardRow[] }) {
           <div className="bg-secondary text-foreground flex size-7 items-center justify-center rounded-md">
             <Activity className="size-3.5" />
           </div>
-          <h2 className="eyebrow text-foreground text-sm">{t("Market pulse")}</h2>
+          <h2 className="eyebrow text-foreground text-sm">{t("Trending")}</h2>
         </div>
         <div className="ml-auto flex flex-wrap items-center gap-2">
           {view === "movers" && (

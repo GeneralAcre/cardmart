@@ -3,7 +3,7 @@ import { Gavel } from "lucide-react";
 import { getActiveAuctions, getVaultAssets } from "@/lib/queries";
 import { getCurrentUser } from "@/lib/session";
 import { getT } from "@/lib/i18n/server";
-import { AuctionCard } from "@/components/auction/auction-card";
+import { AuctionList } from "@/components/auction/auction-list";
 import { CreateAuctionButton } from "@/components/auction/create-auction-button";
 import { AutoSettle } from "@/components/auction/auto-settle";
 
@@ -35,11 +35,7 @@ export default async function AuctionsPage() {
           <p className="text-sm">{t("No live auctions right now.")}</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4">
-          {auctions.map((auction) => (
-            <AuctionCard key={auction.id} auction={auction} />
-          ))}
-        </div>
+        <AuctionList auctions={auctions} />
       )}
     </div>
   );

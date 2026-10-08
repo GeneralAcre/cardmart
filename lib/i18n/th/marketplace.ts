@@ -10,6 +10,7 @@ export const MARKETPLACE: Record<string, string> = {
   "Compare asking prices across cards and grading institutes.": "เปรียบเทียบราคาขายของการ์ดแต่ละใบและแต่ละบริษัทเกรด",
   "No items match your filters. Try widening your search.": "ไม่มีรายการที่ตรงกับตัวกรอง ลองขยายการค้นหาดู",
   "Clear filters": "ล้างตัวกรอง",
+  "Ungraded cards have no grade.": "การ์ดที่ยังไม่ได้เกรดจะไม่มีระดับเกรด",
   "Search name, card number (215/203), set or seller…": "ค้นหาชื่อ หมายเลขการ์ด (215/203) ชุด หรือผู้ขาย…",
   Shipping: "จัดส่ง",
   Game: "เกม",
@@ -66,7 +67,6 @@ export const MARKETPLACE: Record<string, string> = {
   News: "ข่าว",
   "What's moving on CardMart, and the new sets on the way.": "ความเคลื่อนไหวบน CardMart และชุดการ์ดใหม่ที่กำลังจะออก",
   // Market pulse panel
-  "Market pulse": "ภาพรวมตลาด",
   Movers: "การ์ดที่ราคาเปลี่ยน",
   "No price moves in this period yet.": "ยังไม่มีการเปลี่ยนแปลงราคาในช่วงนี้",
   "Top traders on CardMart, ranked by their gains.": "นักเทรดอันดับต้นของ CardMart จัดอันดับตามกำไร",

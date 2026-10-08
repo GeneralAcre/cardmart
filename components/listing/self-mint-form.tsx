@@ -195,8 +195,9 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
           }
         }
 
+        // Land on the new listing itself, so the seller sees exactly what buyers will.
         toast.success(t("Listing published on the marketplace."));
-        router.push("/marketplace");
+        router.push(`/item/${res.assetId}`);
       } catch (err) {
         toast.error(err instanceof Error ? err.message : t("Could not create the listing. Try again."));
       }

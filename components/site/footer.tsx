@@ -1,91 +1,109 @@
-import Image from "next/image";
 import Link from "next/link";
 
-import { ContactForm } from "@/components/site/contact-form";
+import { ContactDialog } from "@/components/site/contact-dialog";
+import { Logo } from "@/components/site/logo";
 import { getT } from "@/lib/i18n/server";
 
-const NAV_LINKS = [
-  { href: "/", label: "Home" },
-  { href: "/marketplace", label: "Market" },
-  { href: "/leaderboard", label: "Leaderboard" },
-  { href: "/news", label: "News" },
-  { href: "/guide", label: "Getting Started" },
-  { href: "/marketplace/sell", label: "Sell a card" },
-  { href: "/portfolio", label: "Portfolio" },
+const X_URL = "https://x.com/cardmartapp";
+
+const COLUMNS = [
+  {
+    heading: "Marketplace",
+    links: [
+      { href: "/marketplace", label: "Market" },
+      { href: "/auctions", label: "Auctions" },
+      { href: "/agent", label: "Buying agent" },
+      { href: "/marketplace/sell", label: "Sell a card" },
+      { href: "/portfolio", label: "Portfolio" },
+    ],
+  },
+  {
+    heading: "Community",
+    links: [
+      { href: "/leaderboard", label: "Leaderboard" },
+      { href: "/news", label: "News" },
+      { href: "/guide", label: "Getting Started" },
+      { href: X_URL, label: "X", external: true },
+    ],
+  },
+  {
+    heading: "Support",
+    links: [
+      { href: "/terms", label: "Terms of Use" },
+      { href: "/privacy", label: "Privacy Policy" },
+    ],
+  },
 ];
 
-const LEGAL_LINKS = [
-  { href: "/terms", label: "Terms of Use" },
-  { href: "/privacy", label: "Privacy Policy" },
-];
-
+// Round icon buttons under the tagline. Add Discord, GitHub, etc. here.
 const SOCIAL_LINKS = [
-  { label: "CardMart on X (@cardmartapp)", href: "https://x.com/cardmartapp", image: "/X-logo.png" },
-  // Hidden for now — uncomment to show the GitHub link again.
-  // { label: "GitHub", href: "https://github.com/GeneralAcre/id-thesis", image: "/Github-logo.png" },
+  {
+    label: "CardMart on X (@cardmartapp)",
+    href: X_URL,
+    icon: (
+      <svg viewBox="0 0 24 24" aria-hidden className="size-4 fill-current">
+        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+      </svg>
+    ),
+  },
 ];
 
-const COLUMN_HEADING = "text-xs font-semibold uppercase tracking-wide text-muted-foreground";
+const LINK = "text-muted-foreground hover:text-foreground w-fit text-sm transition-colors";
 
 export async function SiteFooter() {
   const t = await getT();
   return (
     <footer className="border-t pb-14 sm:pb-0">
-      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-10 px-4 py-12 sm:px-6 sm:grid-cols-2 md:grid-cols-4">
-        <div className="flex flex-col gap-4">
-          <h2 className={COLUMN_HEADING}>{t("Contact & Support")}</h2>
-          <ContactForm />
-        </div>
-
-        <div className="flex flex-col gap-4">
-          <h2 className={COLUMN_HEADING}>{t("Navigation")}</h2>
-          <nav className="flex flex-col gap-2.5">
-            {NAV_LINKS.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="text-muted-foreground hover:text-foreground w-fit text-sm transition-colors"
-              >
-                {t(link.label)}
-              </Link>
-            ))}
-          </nav>
-        </div>
-
-        <div className="flex flex-col gap-4">
-          <h2 className={COLUMN_HEADING}>{t("Legal & Compliance")}</h2>
-          <nav className="flex flex-col gap-2.5">
-            {LEGAL_LINKS.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="text-muted-foreground hover:text-foreground w-fit text-sm transition-colors"
-              >
-                {t(link.label)}
-              </Link>
-            ))}
-          </nav>
-        </div>
-
-        <div className="flex flex-col gap-4">
-          <h2 className={COLUMN_HEADING}>{t("Social")}</h2>
-          <div className="flex items-center gap-3">
-            {SOCIAL_LINKS.map(({ label, href, image }) => (
-              <Link
+      <div className="mx-auto grid max-w-7xl grid-cols-2 gap-x-6 gap-y-10 px-4 py-12 sm:px-6 sm:py-16 md:grid-cols-[minmax(0,2fr)_1fr_1fr_1fr]">
+        <div className="col-span-2 flex flex-col gap-5 md:col-span-1">
+          <Link href="/" className="w-fit">
+            <Logo />
+          </Link>
+          <p className="text-muted-foreground max-w-sm text-sm leading-relaxed">
+            {t("Real prices for every grade, and a safe place to buy and sell your cards.")}
+          </p>
+          <div className="flex items-center gap-2">
+            {SOCIAL_LINKS.map(({ label, href, icon }) => (
+              <a
                 key={label}
                 href={href}
                 target="_blank"
                 rel="noreferrer"
-                className="hover:border-foreground/30 relative flex size-9 items-center justify-center overflow-hidden rounded-md border transition-colors"
+                aria-label={label}
+                className="text-muted-foreground hover:text-foreground hover:border-foreground/30 flex size-10 items-center justify-center rounded-full border transition-colors"
               >
-                <Image src={image} alt={label} fill sizes="36px" className="object-cover" />
-                <span className="sr-only">{label}</span>
-              </Link>
+                {icon}
+              </a>
             ))}
           </div>
         </div>
-      </div>
 
+        {COLUMNS.map((column) => (
+          <nav key={column.heading} className="flex flex-col gap-4">
+            <h2 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">{t(column.heading)}</h2>
+            <ul className="flex flex-col gap-3">
+              {column.links.map((link) => (
+                <li key={link.href}>
+                  {"external" in link ? (
+                    <a href={link.href} target="_blank" rel="noreferrer" className={LINK}>
+                      {t(link.label)}
+                    </a>
+                  ) : (
+                    <Link href={link.href} className={LINK}>
+                      {t(link.label)}
+                    </Link>
+                  )}
+                </li>
+              ))}
+              {column.heading === "Support" && (
+                <li>
+                  <ContactDialog className={`${LINK} cursor-pointer text-left`} />
+                </li>
+              )}
+            </ul>
+          </nav>
+        ))}
+      </div>
     </footer>
   );
 }

@@ -98,7 +98,7 @@ export function AgentWalletCard({ address, balanceSol }: { address: string; bala
         {t("Your agent can only spend what's in this wallet, so its balance is your hard limit. Unused SOL can be moved back any time.")}
       </p>
 
-      {/* Always stacked: this card sits in a narrow column next to the task form. */}
+      {/* Always stacked: this card sits in a narrow column beside the agent intro. */}
       <div className="mt-auto flex flex-col gap-2">
         <div className="grid grid-cols-2 gap-2">
           <div className="relative min-w-0">

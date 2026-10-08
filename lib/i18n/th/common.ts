@@ -44,6 +44,10 @@ export const COMMON: Record<string, string> = {
 
   // Footer / contact
   "Contact & Support": "ติดต่อและช่วยเหลือ",
+  "Contact us": "ติดต่อเรา",
+  "Send us a message and we'll reply by email.": "ส่งข้อความถึงเรา แล้วเราจะตอบกลับทางอีเมล",
+  "Real prices for every grade, and a safe place to buy and sell your cards.":
+    "ราคาจริงในทุกเกรด และพื้นที่ปลอดภัยสำหรับซื้อขายการ์ดของคุณ",
   Navigation: "เมนู",
   "Legal & Compliance": "กฎหมายและการปฏิบัติตามข้อกำหนด",
   Social: "โซเชียล",

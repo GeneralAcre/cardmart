@@ -11,6 +11,21 @@ import { useT } from "@/components/landing/language-provider";
 
 const GRADING_COMPANIES: GradingCompany[] = ["PSA", "BGS", "CGC", "RAW"];
 const GRADES = [10, 9.5, 9, 8.5, 8, 7];
+// The grades each grader actually gives, within GRADES: PSA has no 9.5,
+// ungraded cards have none. Black Label is BGS only.
+const GRADES_BY_COMPANY: Record<GradingCompany, number[]> = {
+  PSA: [10, 9, 8.5, 8, 7],
+  BGS: GRADES,
+  CGC: GRADES,
+  RAW: [],
+};
+
+// The grade pills to offer for the picked graders; every grade when none are picked.
+function gradeOptions(companies: GradingCompany[]) {
+  if (companies.length === 0) return { grades: GRADES, blackLabel: true };
+  const offered = new Set(companies.flatMap((c) => GRADES_BY_COMPANY[c]));
+  return { grades: GRADES.filter((g) => offered.has(g)), blackLabel: companies.includes("BGS") };
+}
 const GAME_ICONS: Record<CardGame, typeof Sparkles> = { POKEMON: Sparkles, ONE_PIECE: Anchor };
 
 function FilterPill({
@@ -79,11 +94,16 @@ export function FilterBar({
 
   function toggleGradingCompany(company: GradingCompany) {
     const has = filters.gradingCompanies.includes(company);
+    const gradingCompanies = has
+      ? filters.gradingCompanies.filter((c) => c !== company)
+      : [...filters.gradingCompanies, company];
+    // Drop picked grades the new graders don't give, so a hidden pill can't keep filtering.
+    const options = gradeOptions(gradingCompanies);
     onChange({
       ...filters,
-      gradingCompanies: has
-        ? filters.gradingCompanies.filter((c) => c !== company)
-        : [...filters.gradingCompanies, company],
+      gradingCompanies,
+      grades: filters.grades.filter((g) => options.grades.includes(g)),
+      blackLabelOnly: filters.blackLabelOnly && options.blackLabel,
     });
   }
 
@@ -100,6 +120,7 @@ export function FilterBar({
   }
 
   const hasSidebarFilters = JSON.stringify(filters) !== JSON.stringify(EMPTY_FILTERS);
+  const options = gradeOptions(filters.gradingCompanies);
 
   return (
     <div className={cn("flex flex-col", className)}>
@@ -179,17 +200,24 @@ export function FilterBar({
         {/* BGS Black Label is a distinct top tier, not a numeric grade of its
             own (it shares grade 10 with a regular Pristine 10 — see
             Asset.isBlackLabel), so it's a separate toggle rather than one
-            more entry in GRADES. Listed first to match how it ranks. */}
-        <div className="flex flex-wrap gap-2">
-          <FilterPill active={filters.blackLabelOnly} onClick={toggleBlackLabel}>
-            Black Label
-          </FilterPill>
-          {GRADES.map((grade) => (
-            <FilterPill key={grade} active={filters.grades.includes(grade)} onClick={() => toggleGrade(grade)}>
-              {grade}
-            </FilterPill>
-          ))}
-        </div>
+            more entry in GRADES. Listed first to match how it ranks. Only the
+            picked graders' grades show (see gradeOptions). */}
+        {options.grades.length === 0 ? (
+          <p className="text-muted-foreground text-sm">{t("Ungraded cards have no grade.")}</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {options.blackLabel && (
+              <FilterPill active={filters.blackLabelOnly} onClick={toggleBlackLabel}>
+                Black Label
+              </FilterPill>
+            )}
+            {options.grades.map((grade) => (
+              <FilterPill key={grade} active={filters.grades.includes(grade)} onClick={() => toggleGrade(grade)}>
+                {grade}
+              </FilterPill>
+            ))}
+          </div>
+        )}
       </FilterSection>
 
       <FilterSection label="Price Range (THB)">

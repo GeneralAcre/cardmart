@@ -670,6 +670,13 @@ export async function getActiveAuctions() {
     orderBy: { endTime: "asc" },
     include: {
       asset: { include: { seller: true, owner: true, verificationPhotos: { orderBy: { createdAt: "asc" } } } },
+      _count: { select: { bids: true } },
+      // Highest few, for the list page's leader and recent-bids strip.
+      bids: {
+        orderBy: { amountThb: "desc" },
+        take: 3,
+        select: { id: true, amountThb: true, bidder: { select: { name: true, handle: true } } },
+      },
     },
   });
 }

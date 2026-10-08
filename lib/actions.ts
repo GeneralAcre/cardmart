@@ -24,6 +24,7 @@ import { isOwnUploadUrl, photoUrlProblem, psaCertMismatch } from "@/lib/listing-
 import { themeIndexForSerial } from "@/lib/theme";
 import { getVerificationChecklist } from "@/lib/verification-checklist";
 import { BGS_BLACK_LABEL_GRADE, gradeTierLabel } from "@/lib/labels";
+import { bidAmountProblem } from "@/lib/auction-rules";
 import { requestDevnetAirdrop } from "@/lib/solana";
 import { runMandate, runMandatesForListing, withdrawAgentOffers } from "@/lib/agent/engine";
 import { taskReportText } from "@/lib/agent/report";
@@ -808,7 +809,6 @@ async function buyListingAs(
 // winning bid is always backed by real money — see placeBid.
 // ---------------------------------------------------------------------------
 
-const MIN_BID_INCREMENT_THB = 50;
 const ANTI_SNIPING_WINDOW_MS = 5 * 60_000;
 const ANTI_SNIPING_EXTENSION_MS = 5 * 60_000;
 
@@ -954,8 +954,8 @@ async function refundBidLock(bid: BidWithBidder, assetId: string) {
 }
 
 /**
- * Buyer places a bid — must clear the current highest (or the start price,
- * if none yet) by at least MIN_BID_INCREMENT_THB. The bid's full amount is
+ * Buyer places a bid — at least the start price (first bid) or the current
+ * highest plus one step, and on a step (see lib/auction-rules.ts). The bid's full amount is
  * locked in escrow by the bidder's own wallet signature before this runs
  * (components/auction/bid-panel.tsx), so a winning bid is always backed by
  * real money. Any rejection below refunds that lock straight away.
@@ -978,8 +978,8 @@ export async function placeBid(auctionId: string, amountThb: number, bidLock?: E
   if (auction.startTime > now) return reject("This auction has not started yet.");
   if (auction.status !== "ACTIVE" || auction.endTime <= now) return reject("This auction has ended.");
 
-  const minBid = (auction.currentBidThb ?? auction.startPriceThb - MIN_BID_INCREMENT_THB) + MIN_BID_INCREMENT_THB;
-  if (amount < minBid) return reject(`Bid at least ${minBid.toLocaleString()} THB.`);
+  const amountProblem = bidAmountProblem(amount, auction);
+  if (amountProblem) return reject(amountProblem);
   if (bidLock && BigInt(bidLock.lamports) !== thbToLamports(amount)) {
     return reject("The locked amount doesn't match your bid. Try again.");
   }
