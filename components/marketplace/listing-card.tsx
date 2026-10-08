@@ -112,7 +112,7 @@ export function ListingCard({ asset, compact = false }: { asset: AssetSummary; c
               </span>
             )}
             {asset.gradingCompany === "RAW" ? (
-              <span className="font-semibold">{t("Raw / Ungraded")}</span>
+              <span className="font-semibold">{t("Ungraded")}</span>
             ) : (
               <>
                 <span className="sr-only">{t("Grade:")} </span>

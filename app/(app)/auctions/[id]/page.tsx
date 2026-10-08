@@ -73,7 +73,7 @@ export default async function AuctionDetailPage({ params }: { params: Promise<{ 
               </Badge>
               <span className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
                 {asset.gradingCompany === "RAW"
-                  ? t("Raw / Ungraded")
+                  ? t("Ungraded")
                   : `${asset.gradingCompany} ${formatGrade(asset.grade)}${gradeTier ? ` · ${gradeTier}` : ""}`}
               </span>
               <h1 className="text-2xl font-semibold">{asset.name}</h1>

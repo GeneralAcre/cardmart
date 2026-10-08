@@ -21,7 +21,7 @@ const INSTITUTE_LABELS: Record<GradingCompany, string> = {
   PSA: "PSA",
   BGS: "BGS (Beckett)",
   CGC: "CGC",
-  RAW: "Raw / Ungraded",
+  RAW: "Ungraded",
 };
 
 interface CompareRow {

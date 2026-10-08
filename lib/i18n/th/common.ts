@@ -64,7 +64,6 @@ export const COMMON: Record<string, string> = {
   "Trading Card": "การ์ดสะสม",
   "Sports Card": "การ์ดกีฬา",
   "Graded Comic": "คอมิกที่ผ่านการเกรด",
-  "Raw / Ungraded": "การ์ดดิบ / ยังไม่เกรด",
   Ungraded: "ยังไม่เกรด",
 
   // Market status

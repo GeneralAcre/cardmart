@@ -234,7 +234,7 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
             <Tabs value={raw ? "raw" : "graded"} onValueChange={(v) => handleModeChange(v === "raw")}>
               <TabsList className="w-full">
                 <TabsTrigger value="graded">{t("Already Graded")}</TabsTrigger>
-                <TabsTrigger value="raw">{t("Raw / Ungraded")}</TabsTrigger>
+                <TabsTrigger value="raw">{t("Ungraded")}</TabsTrigger>
               </TabsList>
             </Tabs>
             <p className="text-muted-foreground text-xs">

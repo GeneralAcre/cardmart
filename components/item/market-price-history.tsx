@@ -105,7 +105,7 @@ export function MarketPriceHistory({
   const dateLocale = locale === "th" ? "th-TH" : "en-US";
   const tierName = (tier: Tier) =>
     tier.gradingCompany === "RAW"
-      ? t("Raw / Ungraded")
+      ? t("Ungraded")
       : `${tier.gradingCompany} ${formatGrade(tier.grade)}${tier.isBlackLabel ? " Black Label" : ""}`;
 
   const conditions = useMemo(() => {

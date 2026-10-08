@@ -112,7 +112,7 @@ export function WantedCardDialog({
                   <SelectItem value="PSA">PSA</SelectItem>
                   <SelectItem value="BGS">BGS (Beckett)</SelectItem>
                   <SelectItem value="CGC">CGC</SelectItem>
-                  <SelectItem value="RAW">{t("Raw / Ungraded")}</SelectItem>
+                  <SelectItem value="RAW">{t("Ungraded")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>

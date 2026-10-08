@@ -53,7 +53,7 @@ export const GRADING_COMPANY_LABELS: Record<GradingCompany, string> = {
   PSA: "PSA",
   BGS: "BGS",
   CGC: "CGC",
-  RAW: "Raw / Ungraded",
+  RAW: "Ungraded",
 };
 
 // Which grading institutes are actually relevant to each category — PSA/BGS

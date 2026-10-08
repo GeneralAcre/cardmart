@@ -305,7 +305,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
             <div className="flex min-w-0 flex-col gap-1">
               <span className="eyebrow text-muted-foreground flex flex-wrap items-center gap-1.5">
                 {asset.gradingCompany === "RAW"
-                  ? t("Raw / Ungraded — verified by camera")
+                  ? t("Ungraded — verified by camera")
                   : `${asset.gradingCompany} ${formatGrade(asset.grade)}${gradeTierName ? ` · ${gradeTierName}` : ""}`}
                 {asset.isBlackLabel && (
                   <span className="rounded bg-amber-400 px-1 py-0.5 text-[9px] font-bold normal-case tracking-wide text-neutral-900">

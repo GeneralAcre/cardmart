@@ -61,7 +61,7 @@ function WantedCardRow({ card }: { card: WantedCard }) {
   const t = useT();
 
   const filters = [
-    card.gradingCompany === "RAW" ? t("Raw / Ungraded") : card.gradingCompany,
+    card.gradingCompany === "RAW" ? t("Ungraded") : card.gradingCompany,
     card.minGrade != null && t("Grade {grade}+", { grade: card.minGrade }),
     card.blackLabelOnly && "Black Label",
     card.maxPriceThb != null && t("Up to {price}", { price: formatThb(card.maxPriceThb) }),
