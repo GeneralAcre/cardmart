@@ -18,10 +18,9 @@ export const LANDING_DICTIONARY = {
     },
     hero: {
       badge: "Beta · Running on a Test Blockchain",
-      titleLine1: "Know the market",
-      titleLine2: "Trade cards with confidence",
-      subtitle:
-        "CardMart is the data platform and secure global marketplace for trading cards. Market intelligence and safe peer-to-peer trading in one place, so collectors can trade smarter",
+      titleLine1: "What's your card",
+      titleLine2: "really worth?",
+      subtitle: "See real prices for every grade. Then buy and sell safely, right here.",
       noWalletNote: "No wallet needed to start — one is created for you automatically",
     },
     cta: {
@@ -44,6 +43,57 @@ export const LANDING_DICTIONARY = {
           description: "Every card comes with a digital certificate on the blockchain, backed by the physical card in our vault.",
         },
       ],
+    },
+    showcase: {
+      badge: "Inside CardMart",
+      title: "See it before you sign in.",
+      subtitle: "Price data, protected payments, live auctions and an agent that shops for you — here's what each looks like.",
+      sample: "Sample data",
+      market: {
+        eyebrow: "Market data",
+        title: "Know what a card is worth, grade by grade.",
+        description:
+          "Price history from completed CardMart sales, checked against eBay and TCGplayer. Switch grades to see what a PSA 10 is worth next to a raw copy before you set a price or make an offer.",
+        points: ["Sale history in every grade", "eBay and TCGplayer prices side by side", "Rankings and price moves across the market"],
+        chartLabel: "Market price",
+        inRange: "in range",
+        gradeTitle: "Same card, by grade",
+      },
+      escrow: {
+        eyebrow: "Protected payments",
+        title: "Your money waits until the card checks out.",
+        description:
+          "The buyer pays into escrow on the blockchain. Our warehouse inspects the card, and only then is the seller paid. If it isn't what was listed, the buyer gets the money back.",
+        points: ["Payment held in an on-chain escrow", "Every card inspected at our warehouse", "Ship it home or keep it in the vault"],
+        orderTitle: "Order #4821",
+        held: "Held in escrow",
+        steps: ["Paid into escrow", "Seller shipped", "Inspected at warehouse", "Payment released to seller"],
+        stepDetails: ["Oct 3, 14:02", "Tracking EX 7712 0934 TH", "In progress", "After inspection"],
+      },
+      auction: {
+        eyebrow: "Live auctions",
+        title: "Bid in real time, settle on-chain.",
+        description:
+          "Run an auction with a start time and reserve, or bid on someone else's. Every bid shows up live, and the winner pays through the same escrow as any other sale.",
+        points: ["Live bids and countdown", "Start time and reserve price", "Winner pays through escrow"],
+        live: "Live",
+        currentBid: "Current bid",
+        endsIn: "Ends in",
+        bids: "Bids",
+        placeBid: "Place bid",
+      },
+      agent: {
+        eyebrow: "Buying agent",
+        title: "Tell the agent what you want. It watches the market for you.",
+        description:
+          "Name a card, a grade and your max price. The agent checks every new listing day and night, compares it with recent sales, and asks you first or buys for you.",
+        points: ["Never pays over your max price", "Skips look-alikes from other sets", "Pays through escrow like any purchase"],
+        you: "Find me an Umbreon VMAX alt art, PSA 10, under THB 26,000.",
+        working: "Checked 214 new listings",
+        found: "Found one at THB 24,900 — 6% under the 30-day median sale.",
+        approve: "Buy it",
+        skip: "Skip",
+      },
     },
     features: {
       badge: "Why CardMart",
@@ -116,10 +166,9 @@ export const LANDING_DICTIONARY = {
     },
     hero: {
       badge: "เบต้า · ทำงานบนบล็อกเชนทดสอบ",
-      titleLine1: "รู้ทันตลาด",
-      titleLine2: "ซื้อขายการ์ดอย่างมั่นใจ",
-      subtitle:
-        "CardMart คือแพลตฟอร์มข้อมูลและตลาดซื้อขายการ์ดสะสมระดับโลกที่ปลอดภัย รวมข้อมูลเชิงลึกของตลาดและการซื้อขายระหว่างผู้ใช้อย่างปลอดภัยไว้ในที่เดียว ช่วยให้นักสะสมซื้อขายได้อย่างชาญฉลาดยิ่งขึ้น",
+      titleLine1: "การ์ดของคุณ",
+      titleLine2: "มีมูลค่าเท่าไรกันแน่?",
+      subtitle: "ดูราคาจริงในทุกเกรด แล้วซื้อขายได้อย่างปลอดภัยที่นี่",
       noWalletNote: "ไม่ต้องมีกระเป๋าเงินก่อนเริ่มใช้งาน ระบบจะสร้างให้อัตโนมัติ",
     },
     cta: {
@@ -142,6 +191,57 @@ export const LANDING_DICTIONARY = {
           description: "การ์ดทุกใบมีใบรับรองดิจิทัลบนบล็อกเชน พร้อมการ์ดจริงเก็บรักษาในวอลต์ของเรา",
         },
       ],
+    },
+    showcase: {
+      badge: "ภายใน CardMart",
+      title: "ดูก่อนเข้าสู่ระบบ",
+      subtitle: "ข้อมูลราคา การชำระเงินที่ได้รับการคุ้มครอง การประมูลสด และเอเจนต์ที่ช่วยซื้อการ์ดให้คุณ — หน้าตาเป็นแบบนี้",
+      sample: "ข้อมูลตัวอย่าง",
+      market: {
+        eyebrow: "ข้อมูลตลาด",
+        title: "รู้มูลค่าการ์ดในทุกเกรด",
+        description:
+          "ประวัติราคาจากการขายที่สำเร็จบน CardMart เทียบกับ eBay และ TCGplayer สลับเกรดเพื่อดูว่า PSA 10 มีมูลค่าเท่าไรเทียบกับการ์ดดิบ ก่อนตั้งราคาหรือยื่นข้อเสนอ",
+        points: ["ประวัติการขายในทุกเกรด", "ราคา eBay และ TCGplayer เทียบกันได้ทันที", "อันดับและการเคลื่อนไหวของราคาทั้งตลาด"],
+        chartLabel: "ราคาตลาด",
+        inRange: "ในช่วงเวลานี้",
+        gradeTitle: "การ์ดใบเดียวกัน แยกตามเกรด",
+      },
+      escrow: {
+        eyebrow: "การชำระเงินที่ได้รับการคุ้มครอง",
+        title: "เงินของคุณจะรอจนกว่าการ์ดผ่านการตรวจสอบ",
+        description:
+          "ผู้ซื้อชำระเงินเข้าเอสโครว์บนบล็อกเชน คลังสินค้าของเราตรวจสอบการ์ดก่อน แล้วผู้ขายจึงได้รับเงิน หากไม่ตรงตามที่ลงขาย ผู้ซื้อได้รับเงินคืน",
+        points: ["เงินถูกพักไว้ในเอสโครว์บนบล็อกเชน", "การ์ดทุกใบตรวจสอบที่คลังสินค้าของเรา", "ส่งถึงบ้านหรือเก็บไว้ในวอลต์"],
+        orderTitle: "คำสั่งซื้อ #4821",
+        held: "พักไว้ในเอสโครว์",
+        steps: ["ชำระเงินเข้าเอสโครว์", "ผู้ขายจัดส่งแล้ว", "ตรวจสอบที่คลังสินค้า", "โอนเงินให้ผู้ขาย"],
+        stepDetails: ["3 ต.ค. 14:02", "เลขพัสดุ EX 7712 0934 TH", "กำลังดำเนินการ", "หลังการตรวจสอบ"],
+      },
+      auction: {
+        eyebrow: "ประมูลสด",
+        title: "ประมูลแบบเรียลไทม์ ชำระเงินบนบล็อกเชน",
+        description:
+          "เปิดประมูลพร้อมกำหนดเวลาเริ่มและราคาขั้นต่ำ หรือร่วมประมูลการ์ดของคนอื่น ทุกการเสนอราคาแสดงผลทันที และผู้ชนะชำระผ่านเอสโครว์เหมือนการซื้อทั่วไป",
+        points: ["เสนอราคาและนับถอยหลังแบบสด", "กำหนดเวลาเริ่มและราคาขั้นต่ำ", "ผู้ชนะชำระเงินผ่านเอสโครว์"],
+        live: "สด",
+        currentBid: "ราคาปัจจุบัน",
+        endsIn: "สิ้นสุดใน",
+        bids: "การเสนอราคา",
+        placeBid: "เสนอราคา",
+      },
+      agent: {
+        eyebrow: "เอเจนต์ช่วยซื้อ",
+        title: "บอกเอเจนต์ว่าต้องการอะไร แล้วมันจะเฝ้าตลาดให้คุณ",
+        description:
+          "ระบุการ์ด เกรด และราคาสูงสุด เอเจนต์จะตรวจทุกรายการใหม่ทั้งวันทั้งคืน เทียบกับราคาขายล่าสุด แล้วถามคุณก่อนหรือซื้อให้เลย",
+        points: ["ไม่จ่ายเกินราคาสูงสุดที่ตั้งไว้", "ข้ามการ์ดหน้าตาคล้ายจากชุดอื่น", "ชำระผ่านเอสโครว์เหมือนการซื้อทั่วไป"],
+        you: "หา Umbreon VMAX alt art เกรด PSA 10 ราคาไม่เกิน THB 26,000 ให้หน่อย",
+        working: "ตรวจรายการใหม่แล้ว 214 รายการ",
+        found: "เจอแล้วที่ THB 24,900 — ต่ำกว่าราคาขายกลาง 30 วันอยู่ 6%",
+        approve: "ซื้อเลย",
+        skip: "ข้าม",
+      },
     },
     features: {
       badge: "ทำไมต้อง CardMart",

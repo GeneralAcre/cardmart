@@ -5,6 +5,7 @@ import { BadgeCheck, ChartNoAxesCombined, ShieldCheck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { CardWall } from "@/components/landing/card-wall";
+import { FeatureShowcase } from "@/components/landing/feature-showcase";
 import type { LandingShowcaseItem } from "@/lib/queries";
 import { LandingNav } from "@/components/landing/landing-nav";
 import { LoginButton } from "@/components/onboarding/login-button";
@@ -32,7 +33,12 @@ function LandingCta({ authenticated, className }: { authenticated: boolean; clas
 // Same order as t.pillars.items: market data, safe trading, ownership.
 const PILLAR_ICONS = [ChartNoAxesCombined, ShieldCheck, BadgeCheck];
 
-function LandingPageContent({ authenticated, showcase }: { authenticated: boolean; showcase: LandingShowcaseItem[] }) {
+interface LandingPageProps {
+  authenticated: boolean;
+  showcase: LandingShowcaseItem[];
+}
+
+function LandingPageContent({ authenticated, showcase }: LandingPageProps) {
   const { t } = useLanguage();
 
   return (
@@ -95,10 +101,31 @@ function LandingPageContent({ authenticated, showcase }: { authenticated: boolea
           })}
         </div>
       </section>
+
+      <FeatureShowcase />
+
+      <section className="relative isolate overflow-hidden border-t">
+        <div
+          aria-hidden
+          className="absolute inset-0 -z-10 bg-[radial-gradient(50%_80%_at_50%_100%,color-mix(in_oklab,var(--highlight)_18%,transparent)_0%,transparent_100%)]"
+        />
+        <div className="mx-auto flex max-w-2xl flex-col items-center gap-5 px-4 py-24 text-center sm:px-6 sm:py-32">
+          <h2 className="text-3xl font-semibold tracking-tight text-balance sm:text-5xl">
+            {authenticated ? t.closing.titleAuthenticated : t.closing.titleGuest}
+          </h2>
+          <p className="text-muted-foreground text-balance">
+            {authenticated ? t.closing.subtitleAuthenticated : t.closing.subtitleGuest}
+          </p>
+          <div className="flex flex-col items-center gap-2.5 pt-2">
+            <LandingCta authenticated={authenticated} className="h-11 w-auto rounded-full px-8" />
+            {!authenticated && <span className="text-muted-foreground text-xs">{t.closing.freeSignInNote}</span>}
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
 
-export function LandingPage({ authenticated, showcase }: { authenticated: boolean; showcase: LandingShowcaseItem[] }) {
-  return <LandingPageContent authenticated={authenticated} showcase={showcase} />;
+export function LandingPage(props: LandingPageProps) {
+  return <LandingPageContent {...props} />;
 }
