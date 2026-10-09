@@ -80,7 +80,7 @@ export async function SiteFooter() {
 
         {COLUMNS.map((column) => (
           <nav key={column.heading} className="flex flex-col gap-4">
-            <h2 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">{t(column.heading)}</h2>
+            <h2 className="text-highlight text-xs font-semibold tracking-wide uppercase">{t(column.heading)}</h2>
             <ul className="flex flex-col gap-3">
               {column.links.map((link) => (
                 <li key={link.href}>
