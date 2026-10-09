@@ -137,7 +137,7 @@ const JUNK_WORDS = ["lot", "lots", "bundle", "proxy", "custom", "orica", "reprin
 // Words in a card name too generic to require in a title.
 const NAME_FILLER = new Set(["holo", "rare", "card", "cards", "pokemon", "the", "of", "and", "foil"]);
 // Spelled differently between our names and sellers' titles.
-const SYNONYMS: Record<string, string> = { alternate: "alt", edition: "ed", "1st": "1st", first: "1st", pokémon: "pokemon" };
+const SYNONYMS: Record<string, string> = { alternate: "alt", edition: "ed", "1st": "1st", first: "1st", pokémon: "pokemon", promos: "promo" };
 
 /** Lowercase words, keeping decimals like "9.5" and splitting "PSA10" into "psa 10". */
 function words(text: string): string[] {

@@ -28,6 +28,7 @@ const COLUMNS = [
   {
     heading: "Support",
     links: [
+      { href: "/faq", label: "FAQ" },
       { href: "/terms", label: "Terms of Use" },
       { href: "/privacy", label: "Privacy Policy" },
     ],
@@ -59,7 +60,7 @@ export async function SiteFooter() {
             <Logo />
           </Link>
           <p className="text-muted-foreground max-w-sm text-sm leading-relaxed">
-            {t("Real prices for every grade, and a safe place to buy and sell your cards.")}
+            {t("Real prices for every card, and a safe place to buy and sell your cards.")}
           </p>
           <div className="flex items-center gap-2">
             {SOCIAL_LINKS.map(({ label, href, icon }) => (

@@ -20,7 +20,7 @@ export const LANDING_DICTIONARY = {
       badge: "Beta · Running on a Test Blockchain",
       titleLine1: "What's your card",
       titleLine2: "really worth?",
-      subtitle: "See real prices for every grade. Then buy and sell safely, right here.",
+      subtitle: "See real prices for every card. Then buy and sell safely, right here.",
       noWalletNote: "No wallet needed to start — one is created for you automatically",
     },
     cta: {
@@ -168,7 +168,7 @@ export const LANDING_DICTIONARY = {
       badge: "เบต้า · ทำงานบนบล็อกเชนทดสอบ",
       titleLine1: "การ์ดของคุณ",
       titleLine2: "มีมูลค่าเท่าไรกันแน่?",
-      subtitle: "ดูราคาจริงในทุกเกรด แล้วซื้อขายได้อย่างปลอดภัยที่นี่",
+      subtitle: "ดูราคาจริงของการ์ดทุกใบ แล้วซื้อขายได้อย่างปลอดภัยที่นี่",
       noWalletNote: "ไม่ต้องมีกระเป๋าเงินก่อนเริ่มใช้งาน ระบบจะสร้างให้อัตโนมัติ",
     },
     cta: {
