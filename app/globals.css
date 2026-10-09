@@ -97,11 +97,11 @@
   }
 
   /* Landing hero title: a foil shine sweeps across the headline in about
-     2.5s, then rests until the next one, 10s apart. */
-  --animate-text-sweep: text-sweep 10s ease-in-out 1s infinite;
+     2.5s, then rests until the next one, 5s apart. */
+  --animate-text-sweep: text-sweep 5s ease-in-out 1s infinite;
   @keyframes text-sweep {
     0% { background-position: 100% 0; }
-    25%, 100% { background-position: 0% 0; }
+    50%, 100% { background-position: 0% 0; }
   }
 }
 

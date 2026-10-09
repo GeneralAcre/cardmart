@@ -27,7 +27,7 @@ function niceMax(value: number) {
 interface Lane {
   key: string;
   name: string;
-  mono: string;
+  source: Source;
   kind: "Asking" | "Sold" | "Market";
   pointThb: number | null;
   rangeThb?: [number, number];
@@ -39,16 +39,45 @@ interface Lane {
   loading?: boolean;
 }
 
-function Monogram({ text, strong }: { text: string; strong?: boolean }) {
+type Source = "cardmart" | "ebay" | "tcgplayer" | "pricecharting" | "beckett";
+
+// eBay's four-color lowercase wordmark, drawn as text so it stays crisp at any size.
+const EBAY_LETTERS = [
+  ["e", "#E53238"],
+  ["b", "#0064D2"],
+  ["a", "#F5AF02"],
+  ["y", "#86B817"],
+] as const;
+
+/** A price source's logo on a white tile, so each row is recognizable at a glance. */
+function SourceMark({ source, size = "md" }: { source: Source; size?: "sm" | "md" }) {
+  const small = size === "sm";
   return (
     <span
       aria-hidden
       className={cn(
-        "flex size-8 shrink-0 items-center justify-center rounded-lg text-[10px] font-bold tracking-tight",
-        strong ? "bg-foreground text-background" : "bg-muted text-foreground",
+        "flex shrink-0 items-center justify-center overflow-hidden bg-white",
+        small ? "size-5 rounded-full" : "size-8 rounded-lg",
       )}
     >
-      {text}
+      {source === "cardmart" ? (
+        // The star sits in a lot of padding; scale it up to fill the tile.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src="/cardmart-logo.png" alt="" className="size-full scale-[1.7] object-contain" />
+      ) : source === "ebay" ? (
+        <span className={cn("leading-none font-bold tracking-[-0.06em]", small ? "text-[8px]" : "text-[11px]")}>
+          {EBAY_LETTERS.map(([letter, color]) => (
+            <span key={letter} style={{ color }}>
+              {letter}
+            </span>
+          ))}
+        </span>
+      ) : source === "beckett" ? (
+        <span className={cn("font-black text-neutral-900", small ? "text-[9px]" : "text-xs")}>B</span>
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={`/logos/${source}.png`} alt="" className={small ? "size-3.5" : "size-5"} />
+      )}
     </span>
   );
 }
@@ -95,7 +124,7 @@ export function GradeCompare({
     {
       key: "listing",
       name: t("This listing"),
-      mono: "CM",
+      source: "cardmart",
       kind: "Asking",
       pointThb: listingThb,
       price: listingThb != null ? formatThb(listingThb) : null,
@@ -105,7 +134,7 @@ export function GradeCompare({
     {
       key: "same",
       name: t("CardMart — {grade}", { grade: tierName }),
-      mono: "CM",
+      source: "cardmart",
       kind: "Asking",
       pointThb: askRange ? null : lowAsk,
       rangeThb: askRange,
@@ -118,7 +147,7 @@ export function GradeCompare({
     {
       key: "sold",
       name: t("CardMart — median sale"),
-      mono: "CM",
+      source: "cardmart",
       kind: "Sold",
       pointThb: medianSale,
       price: medianSale != null ? formatThb(medianSale) : null,
@@ -132,7 +161,7 @@ export function GradeCompare({
     {
       key: "ebay",
       name: "eBay",
-      mono: "eB",
+      source: "ebay",
       kind: "Asking",
       pointThb: ebay ? usdToThb(ebay.medianPriceUsd) : null,
       rangeThb: ebay && ebay.itemCount > 1 ? [usdToThb(ebay.lowPriceUsd), usdToThb(ebay.highPriceUsd)] : undefined,
@@ -152,7 +181,7 @@ export function GradeCompare({
           {
             key: "tcg",
             name: "TCGplayer",
-            mono: "TCG",
+            source: "tcgplayer",
             kind: "Market",
             pointThb: usdToThb(tcg.marketPriceUsd),
             price: formatUsd(tcg.marketPriceUsd),
@@ -236,7 +265,7 @@ export function GradeCompare({
                   lane.highlight && "bg-muted/40",
                 )}
               >
-                <Monogram text={lane.mono} strong={lane.highlight} />
+                <SourceMark source={lane.source} />
                 <div className="flex min-w-0 flex-col">
                   {lane.href ? (
                     <a
@@ -346,7 +375,7 @@ function CompareLinks({ query }: { query: string }) {
   const searches = [
     {
       name: t("eBay sold listings"),
-      mono: "eB",
+      source: "ebay" as const,
       href: searchUrl("https://www.ebay.com/sch/i.html", "_nkw", query, {
         LH_Sold: "1",
         LH_Complete: "1",
@@ -354,12 +383,12 @@ function CompareLinks({ query }: { query: string }) {
     },
     {
       name: "PriceCharting",
-      mono: "PC",
+      source: "pricecharting" as const,
       href: searchUrl("https://www.pricecharting.com/search-products", "q", query, { type: "prices" }),
     },
     {
       name: "Beckett",
-      mono: "B",
+      source: "beckett" as const,
       href: searchUrl("https://www.beckett.com/search/", "term", query),
     },
   ];
@@ -375,7 +404,7 @@ function CompareLinks({ query }: { query: string }) {
             rel="noopener noreferrer"
             className="bg-card hover:bg-accent inline-flex items-center gap-2 rounded-full border py-1 pr-3 pl-1 text-xs font-medium transition-colors"
           >
-            <span className="bg-muted flex size-5 items-center justify-center rounded-full text-[8px] font-bold">{s.mono}</span>
+            <SourceMark source={s.source} size="sm" />
             {s.name}
             <ExternalLink className="text-muted-foreground size-3" />
           </a>

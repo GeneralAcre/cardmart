@@ -31,7 +31,7 @@ function LandingCta({ authenticated, className }: { authenticated: boolean; clas
 }
 
 // The hero headline: a green shine in the brand highlight color sweeps
-// across both lines every 10 seconds, then the text rests in its normal
+// across both lines every 5 seconds, then the text rests in its normal
 // colors. Off for visitors who ask for reduced motion (see globals.css).
 const foil = (base: string) =>
   `linear-gradient(110deg, ${base} 40%, var(--highlight) 50%, ${base} 60%)`;
