@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { after } from "next/server";
 
 import {
   getAcceptedOfferForViewer,
@@ -56,6 +57,7 @@ import {
 import { extractPsaCertNumber, isPsaCertNumber, lookupPsaCert, lookupPsaPopulation, psaCertUrl } from "@/lib/psa";
 import { lookupCardPrice } from "@/lib/tcg-price";
 import { buildMarketQuery, lookupEbayPrice } from "@/lib/ebay";
+import { getMarketPriceHistory, recordMarketPrice } from "@/lib/market-history";
 import { tierKey, type GradeTier } from "@/lib/grade-tier";
 import { cn } from "@/lib/utils";
 import { displayImage, realPhotos } from "@/lib/card-image";
@@ -91,6 +93,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
     grade: asset.grade,
     isBlackLabel: asset.isBlackLabel,
     cardNumber: asset.cardNumber,
+    language: asset.language,
   };
   // eBay prices preloaded for the grade picker: raw, PSA 9 and PSA 10. This
   // listing's own grade reuses ebayQuote below; any other grade loads when picked.
@@ -103,7 +106,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
   // page load, which is what was pushing this page to 5-10s and occasionally
   // outrunning the client's patience ("destination stream closed early").
   // Running them concurrently caps the wait at the slowest single call.
-  const [psaCert, priceQuote, ebayQuote, priceHistory, sellerRating, similarAssets, cardMarket, insightData, gradeData, otherTierEbay] = await Promise.all([
+  const [psaCert, priceQuote, ebayQuote, priceHistory, sellerRating, similarAssets, cardMarket, insightData, gradeData, otherTierEbay, ebayHistory] = await Promise.all([
     // Live PSA cert lookup for display — best-effort, and never blocks the
     // page: it silently returns null whenever PSA isn't configured, the
     // account isn't approved for live access yet, or the request fails.
@@ -126,11 +129,21 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
     getAssetInsightData(asset.id),
     getCardAcrossGrades(marketCard),
     Promise.all(otherTiers.map((tier) => lookupEbayPrice({ ...marketCard, ...tier }).catch(() => null))),
+    getMarketPriceHistory(marketCard),
   ]);
   const preloadedEbay: Record<string, Awaited<typeof ebayQuote>> = Object.fromEntries([
     [tierKey(currentTier), ebayQuote],
     ...otherTiers.map((tier, i) => [tierKey(tier), otherTierEbay[i]] as const),
   ]);
+  // Today's eBay prices become today's point in the market history chart.
+  after(() =>
+    Promise.all(
+      [currentTier, ...otherTiers].map((tier) => {
+        const quote = preloadedEbay[tierKey(tier)];
+        return quote ? recordMarketPrice({ ...marketCard, ...tier }, quote) : null;
+      }),
+    ).catch((err) => console.error("Saving market prices failed", err)),
+  );
 
   const psaPopulation = psaCert?.specId != null ? await lookupPsaPopulation(psaCert.specId) : null;
   const sellerInitials = (asset.seller.name ?? "?")
@@ -177,17 +190,29 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
     isOwner ? getShipmentForRecipient(asset.id, user.id) : Promise.resolve(null),
   ]);
 
-  // A fair price for this card in a grade, for the Similar Listings badges:
-  // eBay's median ask when we have it, else the CardMart median sale.
-  const estimateFor = (tier: GradeTier) => {
+  // The market price for this card in a grade, from real data only: eBay's
+  // median ask across live listings of this exact card and grade when we
+  // have it, else the median of real CardMart sales at that grade. Never a
+  // raw-card or other-grade price — null when neither source has a match.
+  const marketPriceFor = (tier: GradeTier) => {
     const quote = preloadedEbay[tierKey(tier)];
-    if (quote) return Math.round(quote.medianPriceUsd * THB_PER_USD);
+    if (quote) {
+      return { thb: Math.round(quote.medianPriceUsd * THB_PER_USD), source: "ebay" as const, count: quote.itemCount, usd: quote.medianPriceUsd };
+    }
     const sold = gradeData.sales
       .filter((sale) => tierKey(sale) === tierKey(tier))
       .map((sale) => sale.amountThb)
       .sort((a, b) => a - b);
-    return sold.length ? sold[Math.floor((sold.length - 1) / 2)] : null;
+    return sold.length ? { thb: sold[Math.floor((sold.length - 1) / 2)], source: "cardmart" as const, count: sold.length, usd: null } : null;
   };
+  // For the Similar Listings badges.
+  const estimateFor = (tier: GradeTier) => marketPriceFor(tier)?.thb ?? null;
+  const marketPrice = marketPriceFor(currentTier);
+  // How this listing compares, in whole percent; within ±3% reads as "at market".
+  const marketDeltaPct =
+    marketPrice && asset.forSale && asset.priceThb != null
+      ? Math.round(((asset.priceThb - marketPrice.thb) / marketPrice.thb) * 100)
+      : null;
   const toSimilar = (
     a: Pick<typeof asset, "id" | "name" | "subtitle" | "themeIndex" | "category" | "gradingCompany" | "grade" | "isBlackLabel" | "verificationPhotos" | "catalogImageUrl"> & {
       priceThb: number;
@@ -375,28 +400,50 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
             )}
           </div>
 
-          {/* Price stat box, same shape as the owner/serial row above — the
-              second figure comes from a real prior PriceSnapshot, not a
-              fabricated "last sale". Auctions/offers are a separate sale
-              channel (see below) and don't feed into this fixed-price figure. */}
-          <div
-            className={cn(
-              "detail-panel grid divide-x rounded-2xl border",
-              previousPriceThb != null ? "grid-cols-2" : "grid-cols-1",
-            )}
-          >
-            <div className="flex flex-col gap-1.5 p-4">
+          {/* Price stat box, same shape as the owner/serial row above: the
+              asking price next to the market price for this exact card and
+              grade (see marketPriceFor), so a buyer can see at a glance
+              whether it's a fair ask. The "was" figure is a real prior
+              PriceSnapshot, not a fabricated "last sale". */}
+          <div className="detail-panel grid grid-cols-2 divide-x rounded-2xl border">
+            <div className="flex min-w-0 flex-col gap-1.5 p-4">
               <span className="eyebrow text-muted-foreground">{t("Listing Price")}</span>
-              <span className="text-3xl leading-none font-bold tabular-nums">
+              <span className="text-2xl leading-none font-bold tabular-nums sm:text-3xl">
                 {asset.priceThb != null ? formatThb(asset.priceThb) : "—"}
               </span>
+              {marketDeltaPct != null && (
+                <span
+                  className={cn(
+                    "text-xs font-medium",
+                    Math.abs(marketDeltaPct) < 3
+                      ? "text-muted-foreground"
+                      : marketDeltaPct < 0
+                        ? "text-success"
+                        : "text-amber-400",
+                  )}
+                >
+                  {Math.abs(marketDeltaPct) < 3
+                    ? t("At market price")
+                    : marketDeltaPct < 0
+                      ? t("{pct}% below market", { pct: -marketDeltaPct })
+                      : t("{pct}% above market", { pct: marketDeltaPct })}
+                </span>
+              )}
+              {previousPriceThb != null && (
+                <span className="text-muted-foreground text-xs">
+                  {t("Was {amount}", { amount: formatThb(previousPriceThb) })}
+                </span>
+              )}
             </div>
-            {previousPriceThb != null && (
-              <div className="flex flex-col gap-1.5 p-4">
-                <span className="eyebrow text-muted-foreground">{t("Previous Price")}</span>
-                <span className="text-muted-foreground text-3xl leading-none font-bold tabular-nums">{formatThb(previousPriceThb)}</span>
-              </div>
-            )}
+            <div className="flex min-w-0 flex-col gap-1.5 p-4">
+              <span className="eyebrow text-muted-foreground">{t("Market Price")}</span>
+              <span
+                className="text-2xl leading-none font-bold tabular-nums sm:text-3xl"
+                title={marketPrice?.usd != null ? `US$${marketPrice.usd.toFixed(2)} × ${THB_PER_USD} THB/USD` : undefined}
+              >
+                {marketPrice ? formatThb(marketPrice.thb) : "—"}
+              </span>
+            </div>
           </div>
 
           {/* Seller card, kept above the buy actions since who you're buying
@@ -598,7 +645,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
         current={currentTier}
         subtitle={asset.subtitle}
         sales={gradeData.sales.map((s) => ({ ...s, soldAt: s.soldAt.toISOString() }))}
-        listingHistory={insightData.snapshots.map((p) => ({ priceThb: p.priceThb, createdAt: p.createdAt.toISOString() }))}
+        ebayHistory={ebayHistory}
         listingThb={asset.forSale ? asset.priceThb : null}
         listings={gradeData.listings.filter((l) => l.id !== asset.id)}
         initialEbay={preloadedEbay}

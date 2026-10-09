@@ -536,6 +536,26 @@ model PriceSnapshot {
   @@index([assetId, createdAt])
 }
 
+// The eBay market price of one card in one grade, saved once a day (later
+// lookups that day overwrite it). eBay's API only reports today's asking
+// prices, so this is how the item page charts a real market history. Keyed
+// by the card itself, not a listing, so every copy shares one history.
+model MarketPriceSnapshot {
+  id        String   @id @default(cuid())
+  // See marketCardKey in lib/market-history.ts.
+  cardKey   String
+  // See tierKey in lib/grade-tier.ts, e.g. "PSA:10:".
+  tierKey   String
+  day       DateTime @db.Date
+  medianUsd Float
+  lowUsd    Float
+  highUsd   Float
+  itemCount Int
+  updatedAt DateTime @updatedAt
+
+  @@unique([cardKey, tierKey, day])
+}
+
 // A single live-camera capture taken during self-mint verification, proving
 // the seller physically held the item at mint time (no gallery uploads).
 // The file itself lives in Vercel Blob storage — this only stores its URL.

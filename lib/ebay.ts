@@ -19,6 +19,7 @@ import "server-only";
 // API key at all and is always shown, even when the API isn't configured.
 const EBAY_TOKEN_URL = "https://api.ebay.com/identity/v1/oauth2/token";
 const EBAY_BROWSE_BASE = "https://api.ebay.com/buy/browse/v1";
+const EBAY_CACHE_SECONDS = 600;
 
 export function isEbayConfigured(): boolean {
   return Boolean(process.env.EBAY_APP_ID && process.env.EBAY_CERT_ID);
@@ -103,6 +104,10 @@ export interface MarketCard {
   // "215/203", "OP01-120", "TG23/TG30" — when known, the surest way to tell
   // same-named cards apart.
   cardNumber?: string | null;
+  // English and Japanese prints of the same card trade at very different
+  // prices, so only listings in the card's own language count. Unset means
+  // English.
+  language?: "ENGLISH" | "JAPANESE" | null;
 }
 
 // eBay's "CCG Individual Cards" category — singles only, no sealed product.
@@ -125,6 +130,7 @@ const GRADER_WORDS: Record<string, string[]> = {
   ACE: ["ace"],
 };
 
+const JAPANESE_WORDS = ["japanese", "jpn", "japan", "jp"];
 const LANGUAGE_WORDS = ["japanese", "jpn", "japan", "jp", "korean", "kor", "kr", "chinese", "chn", "cn", "thai", "german", "french", "italian", "spanish"];
 // Lots, fakes and things that aren't one real card.
 const JUNK_WORDS = ["lot", "lots", "bundle", "proxy", "custom", "orica", "reprint", "replica", "fake", "digital", "empty", "case", "pick", "choose"];
@@ -186,7 +192,14 @@ function titleMatches(title: string, card: MarketCard): boolean {
   if (JUNK_WORDS.some(has)) return false;
   const key = card.cardNumber ? numberKey(card.cardNumber) : null;
   if (key && !t.some((w) => stripZeros(w) === key)) return false;
-  if (LANGUAGE_WORDS.some((w) => has(w) && !own.includes(w))) return false;
+  if (card.language === "JAPANESE") {
+    // Sellers almost always say so in the title; one that doesn't is
+    // assumed to be the English print.
+    if (!JAPANESE_WORDS.some(has)) return false;
+    if (LANGUAGE_WORDS.some((w) => has(w) && !JAPANESE_WORDS.includes(w))) return false;
+  } else if (LANGUAGE_WORDS.some((w) => has(w) && !own.includes(w))) {
+    return false;
+  }
 
   const nameWords = words(card.name).filter((w) => w.length >= 2 && !NAME_FILLER.has(w));
   if (!nameWords.every(has)) return false;
@@ -249,16 +262,19 @@ async function searchOnce(card: MarketCard, token: string, useAspects: boolean):
           : EBAY_GRADER_ASPECT[card.gradingCompany]
             ? `Grade:{${gradeLabel(card.grade)}},Professional Grader:{${EBAY_GRADER_ASPECT[card.gradingCompany]}}`
             : null;
-      if (aspect) sp.set("aspect_filter", `categoryId:${CCG_SINGLES_CATEGORY},${aspect}`);
+      const language = `Language:{${card.language === "JAPANESE" ? "Japanese" : "English"}}`;
+      if (aspect) sp.set("aspect_filter", `categoryId:${CCG_SINGLES_CATEGORY},${aspect},${language}`);
     }
     const res = await fetch(`${EBAY_BROWSE_BASE}/item_summary/search?${sp.toString()}`, {
       headers: {
         Authorization: `Bearer ${token}`,
         "X-EBAY-C-MARKETPLACE-ID": "EBAY_US",
       },
-      // Shared cache across every visitor searching the same query — keeps
-      // this well within eBay's rate limits, same rationale as TCG API.
-      next: { revalidate: 21600 },
+      // Shared across every visitor viewing the same card, so prices stay
+      // within a few minutes of eBay while a busy page still makes at most
+      // one search per card and grade per window — eBay's Browse API allows
+      // 5,000 calls a day.
+      next: { revalidate: EBAY_CACHE_SECONDS },
     });
     if (!res.ok) {
       console.warn(`[ebay] search failed: HTTP ${res.status} ${(await res.text()).slice(0, 200)}`);
@@ -319,7 +335,8 @@ export function buildMarketQuery(card: MarketCard): string {
   const nameWords = words(card.name);
   const setText = set && !set.words.every((w) => nameWords.includes(w)) ? ` ${set.text}` : "";
   const number = card.cardNumber ? ` ${card.cardNumber}` : "";
-  if (card.gradingCompany === "RAW" || card.grade == null) return `${card.name}${setText}${number}`;
+  const japanese = card.language === "JAPANESE" ? " Japanese" : "";
+  if (card.gradingCompany === "RAW" || card.grade == null) return `${card.name}${setText}${number}${japanese}`;
   const label = card.isBlackLabel ? " Black Label" : "";
-  return `${card.name}${setText}${number} ${card.gradingCompany} ${gradeLabel(card.grade)}${label}`;
+  return `${card.name}${setText}${number}${japanese} ${card.gradingCompany} ${gradeLabel(card.grade)}${label}`;
 }

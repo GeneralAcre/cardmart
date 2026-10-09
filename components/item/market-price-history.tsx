@@ -12,6 +12,7 @@ import { tierKey } from "@/lib/grade-tier";
 import { GradeCompare } from "@/components/item/grade-compare";
 import { getEbayQuoteForGrade } from "@/lib/actions";
 import type { EbayPriceQuote } from "@/lib/ebay";
+import { THB_PER_USD } from "@/lib/pricing";
 
 interface Tier {
   gradingCompany: string;
@@ -60,18 +61,18 @@ type RangeKey = (typeof RANGES)[number]["key"];
 const DAY = 86_400_000;
 
 /**
- * The card's market price over time in one grade: real CardMart sales of this
- * card in that grade. For this listing's own grade with fewer than two sales,
- * it falls back to this listing's own price changes, and says so. The line
- * carries the last known price into the start of the range and on to today,
- * so a quiet card reads as a flat line rather than an empty chart.
+ * The card's market price over time in one grade: eBay's daily median ask for
+ * this card in that grade (saved once a day, see lib/market-history.ts), or
+ * real CardMart sales when eBay has no history for it. Never a seller's own
+ * asking price. The line carries the last known price into the start of the
+ * range and on to today, so a quiet card reads as a flat line.
  */
 export function MarketPriceHistory({
   assetId,
   current,
   subtitle,
   sales,
-  listingHistory,
+  ebayHistory,
   listingThb,
   listings,
   initialEbay,
@@ -82,7 +83,8 @@ export function MarketPriceHistory({
   current: Tier;
   subtitle: string;
   sales: MarketSale[];
-  listingHistory: { priceThb: number; createdAt: string }[];
+  // eBay's saved daily median for this card, in every grade, oldest first.
+  ebayHistory: { tierKey: string; day: string; medianUsd: number }[];
   // This listing's asking price, or null when it isn't for sale.
   listingThb: number | null;
   // Other live CardMart listings of this card, in any grade.
@@ -140,12 +142,19 @@ export function MarketPriceHistory({
   const tierSales = sales
     .filter((s) => tierKey(s) === condition)
     .sort((a, b) => new Date(a.soldAt).getTime() - new Date(b.soldAt).getTime());
-  const useListing = isOwnGrade && tierSales.length < 2 && listingHistory.length > 0;
-  const source = useListing
-    ? listingHistory.map((p) => ({
-        t: new Date(p.createdAt).getTime(),
-        price: p.priceThb,
-      }))
+  // eBay's saved days for this grade, with today's live quote as today's
+  // point (a grade picked just now may not be saved yet).
+  const today = Date.parse(new Date(now).toISOString().slice(0, 10));
+  const live = ebay[condition];
+  const savedEbay = ebayHistory
+    .filter((h) => h.tierKey === condition)
+    .map((h) => ({ t: Date.parse(h.day), price: Math.round(h.medianUsd * THB_PER_USD) }));
+  const ebayPoints = live
+    ? [...savedEbay.filter((p) => p.t < today), { t: today, price: Math.round(live.medianPriceUsd * THB_PER_USD) }]
+    : savedEbay;
+  const fromEbay = ebayPoints.length > 0;
+  const source = fromEbay
+    ? ebayPoints
     : tierSales.map((s) => ({
         t: new Date(s.soldAt).getTime(),
         price: s.amountThb,
@@ -161,7 +170,9 @@ export function MarketPriceHistory({
 
   const first = points[0]?.price;
   const latest = last?.price;
-  const changePct = first && latest != null ? ((latest - first) / first) * 100 : null;
+  // eBay needs two saved days for a line; a single sale still draws one, carried to today.
+  const canDraw = fromEbay ? ebayPoints.length >= 2 : points.length >= 2;
+  const changePct = canDraw && first && latest != null ? ((latest - first) / first) * 100 : null;
   const up = changePct == null || changePct >= 0;
   // Another grade than this listing gets its own color: its line is context, not this card's trend.
   const lineColor = !isOwnGrade
@@ -213,8 +224,8 @@ export function MarketPriceHistory({
             {tierName(selected)} · {subtitle}.{" "}
             {tab === "sales"
               ? t("Completed CardMart sales of this card.")
-              : useListing
-                ? t("This listing's price changes — not enough sales in this grade yet.")
+              : fromEbay
+                ? t("Daily median of live eBay listings of this card in this grade.")
                 : t("Completed CardMart sales of this card in this grade.")}
           </p>
         </div>
@@ -291,7 +302,7 @@ export function MarketPriceHistory({
           >
             CARDMART
           </span>
-          {points.length >= 2 ? (
+          {canDraw ? (
             <ChartContainer
               config={chartConfig}
               className="relative aspect-auto h-[320px] w-full [&_.recharts-curve.recharts-tooltip-cursor]:stroke-[var(--color-price)]"
@@ -370,8 +381,19 @@ export function MarketPriceHistory({
             </ChartContainer>
           ) : (
             <div className="relative flex h-[200px] flex-col items-center justify-center gap-1 text-center">
-              <p className="font-semibold">{t("No price history in this grade yet")}</p>
-              <p className="text-muted-foreground text-sm">{t("It fills in as this card sells on CardMart.")}</p>
+              {fromEbay ? (
+                <>
+                  <p className="font-semibold">
+                    {t("Tracking the market price since {date}", { date: new Date(ebayPoints[0].t).toLocaleDateString(dateLocale) })}
+                  </p>
+                  <p className="text-muted-foreground text-sm">{t("A new eBay price is saved every day, so the line builds up from here.")}</p>
+                </>
+              ) : (
+                <>
+                  <p className="font-semibold">{t("No market data in this grade yet")}</p>
+                  <p className="text-muted-foreground text-sm">{t("No matching eBay listings or CardMart sales of this card in this grade.")}</p>
+                </>
+              )}
             </div>
           )}
         </div>

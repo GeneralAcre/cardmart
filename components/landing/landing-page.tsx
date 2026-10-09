@@ -30,6 +30,27 @@ function LandingCta({ authenticated, className }: { authenticated: boolean; clas
   return <LoginButton className={className} label="Login" />;
 }
 
+// The hero headline: a green shine in the brand highlight color sweeps
+// across both lines every 10 seconds, then the text rests in its normal
+// colors. Off for visitors who ask for reduced motion (see globals.css).
+const foil = (base: string) =>
+  `linear-gradient(110deg, ${base} 40%, var(--highlight) 50%, ${base} 60%)`;
+
+function HeroTitle({ line1, line2 }: { line1: string; line2: string }) {
+  const shine = "animate-text-sweep inline-block bg-[length:250%_100%] bg-clip-text bg-[position:0%_0] text-transparent";
+  return (
+    <h1 className="text-4xl leading-[1.08] font-semibold tracking-tight text-balance sm:text-6xl sm:leading-[1.02] lg:text-7xl">
+      <span className={shine} style={{ backgroundImage: foil("var(--foreground)") }}>
+        {line1}
+      </span>
+      <br />
+      <span className={shine} style={{ backgroundImage: foil("var(--muted-foreground)") }} data-muted>
+        {line2}
+      </span>
+    </h1>
+  );
+}
+
 // Same order as t.pillars.items: market data, safe trading, ownership.
 const PILLAR_ICONS = [ChartNoAxesCombined, ShieldCheck, BadgeCheck];
 
@@ -56,11 +77,7 @@ function LandingPageContent({ authenticated, showcase }: LandingPageProps) {
         <div aria-hidden className="from-background absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t to-transparent" />
 
         <div className="relative mx-auto flex max-w-4xl flex-col items-center gap-6 px-4 py-20 text-center sm:px-6">
-          <h1 className="text-4xl leading-[1.08] font-semibold tracking-tight text-balance sm:text-6xl sm:leading-[1.02] lg:text-7xl">
-            {t.hero.titleLine1}
-            <br />
-            <span className="text-muted-foreground">{t.hero.titleLine2}</span>
-          </h1>
+          <HeroTitle line1={t.hero.titleLine1} line2={t.hero.titleLine2} />
           <p className="text-muted-foreground max-w-xl text-base text-balance sm:text-lg">{t.hero.subtitle}</p>
           <div className="flex flex-col items-center gap-2.5 pt-2">
             <LandingCta authenticated={authenticated} className="h-11 w-auto rounded-full px-8" />

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { z } from "zod";
-import type { AssetCategory, GradingCompany, KycIdType, NotificationType, Prisma } from "@prisma/client";
+import type { AssetCategory, CardLanguage, GradingCompany, KycIdType, NotificationType, Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, requireAdmin } from "@/lib/session";
@@ -15,7 +15,9 @@ import {
 import { releaseTradeToSeller, refundTradeToBuyer, getEscrowAuthorityAddress } from "@/lib/web3/escrow-server";
 import { isDigitalTwinHeldBy, isTransferDelegated, mintDigitalTwinToken, transferDigitalTwinToken } from "@/lib/web3/token-server";
 import { FULL_SERVICE_PACKAGE_PRICE_THB, THB_PER_USD, buyerFeeThb, thbToLamports } from "@/lib/pricing";
-import { lookupEbayPrice, type EbayPriceQuote } from "@/lib/ebay";
+import { lookupEbayPrice, type EbayPriceQuote, type MarketCard } from "@/lib/ebay";
+import { recordMarketPrice, snapshotMarketPrices } from "@/lib/market-history";
+import type { GradeTier } from "@/lib/grade-tier";
 import { verifyEscrowLock, verifyServiceFee } from "@/lib/web3/escrow-verify";
 import { sendFromPlatform } from "@/lib/web3/escrow-server";
 import { deriveTradePda } from "@/lib/web3/escrow-program";
@@ -253,8 +255,17 @@ const createListingSchema = z
  * eBay (a classic too-good-to-be-true scam). Runs after the response, and
  * only flags — the warehouse inspection is still what releases any payment.
  */
+/**
+ * Saves today's eBay price for a card the moment it's listed, so its market
+ * history starts on listing day rather than whenever someone first opens it.
+ * The daily cron (app/api/cron/market-prices) carries it on from there.
+ */
+function trackMarketPrice(card: MarketCard & GradeTier) {
+  after(() => snapshotMarketPrices([card]).catch((err) => console.error("Saving market price failed", err)));
+}
+
 function flagUnusualListing(
-  asset: { id: string; name: string; subtitle: string; cardNumber: string | null; gradingCompany: GradingCompany; grade: number | null; isBlackLabel: boolean; priceThb: number | null },
+  asset: { id: string; name: string; subtitle: string; cardNumber: string | null; language: CardLanguage; gradingCompany: GradingCompany; grade: number | null; isBlackLabel: boolean; priceThb: number | null },
   inCatalog: boolean,
   sellerName: string,
 ) {
@@ -533,6 +544,7 @@ export async function createListing(
   }
 
   flagUnusualListing(asset, Boolean(catalog), user.name ?? user.handle ?? "A user");
+  trackMarketPrice({ ...asset, cardNumber: asset.cardNumber ?? catalog?.number ?? null });
   await notifyWantedCardMatches(asset.id);
   triggerAgentsForListing(asset.id);
 
@@ -1863,7 +1875,10 @@ export async function vaultRelist(assetId: string, priceThb: number, txSignature
   if (asset.priceThb != null) {
     await notifyWatchersOfPriceDrop(assetId, asset.name, asset.priceThb, priceThb);
   }
-  if (!wasForSale) await notifyWantedCardMatches(assetId);
+  if (!wasForSale) {
+    trackMarketPrice(asset);
+    await notifyWantedCardMatches(assetId);
+  }
   triggerAgentsForListing(assetId);
 
   revalidateMarketplace(assetId);
@@ -1914,7 +1929,10 @@ export async function updateListingPrice(assetId: string, priceThb: number, txSi
   if (asset.priceThb != null) {
     await notifyWatchersOfPriceDrop(assetId, asset.name, asset.priceThb, priceThb);
   }
-  if (!wasForSale) await notifyWantedCardMatches(assetId);
+  if (!wasForSale) {
+    trackMarketPrice(asset);
+    await notifyWantedCardMatches(assetId);
+  }
   triggerAgentsForListing(assetId);
 
   revalidateMarketplace(assetId);
@@ -2407,10 +2425,14 @@ export async function getEbayQuoteForGrade(
   await getCurrentUser();
   const asset = await prisma.asset.findUnique({
     where: { id: assetId },
-    select: { name: true, subtitle: true, cardNumber: true },
+    select: { name: true, subtitle: true, cardNumber: true, language: true },
   });
   if (!asset) return null;
-  return lookupEbayPrice({ ...asset, ...tier }).catch(() => null);
+  const quote = await lookupEbayPrice({ ...asset, ...tier }).catch(() => null);
+  if (quote) {
+    after(() => recordMarketPrice({ ...asset, ...tier }, quote).catch((err) => console.error("Saving market price failed", err)));
+  }
+  return quote;
 }
 
 /**

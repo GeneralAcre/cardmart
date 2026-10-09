@@ -4,7 +4,7 @@ import "server-only";
 // (lib/agent/ai.ts), then each recommended buy is either executed or proposed
 // to the user. The actual purchase is passed in as `execute` — it lives with
 // the rest of the escrow code in lib/actions.ts.
-import type { AgentMandate, GradingCompany, Prisma } from "@prisma/client";
+import type { AgentMandate, CardLanguage, GradingCompany, Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { judgeListings, isAgentAiConfigured, type CandidateListing } from "@/lib/agent/ai";
@@ -99,11 +99,13 @@ async function marketData(card: {
   grade: number | null;
   isBlackLabel: boolean;
   cardNumber: string | null;
+  language: CardLanguage;
 }) {
   const since = new Date(Date.now() - SALE_LOOKBACK_DAYS * 86_400_000);
   const same = {
     name: card.name,
     subtitle: card.subtitle,
+    language: card.language,
     gradingCompany: card.gradingCompany,
     grade: card.grade,
     isBlackLabel: card.isBlackLabel,

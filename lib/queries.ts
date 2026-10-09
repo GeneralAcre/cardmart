@@ -763,6 +763,7 @@ export async function getCardMarketStats(
     grade: number | null;
     isBlackLabel: boolean;
     cardNumber?: string | null;
+    language?: CardLanguage;
   },
   excludeAssetId?: string,
 ) {
@@ -770,6 +771,7 @@ export async function getCardMarketStats(
   const sameCard = {
     name: card.name,
     subtitle: card.subtitle,
+    ...(card.language ? { language: card.language } : {}),
     gradingCompany: card.gradingCompany,
     grade: card.grade,
     isBlackLabel: card.isBlackLabel,
@@ -814,10 +816,11 @@ export async function getCardMarketStats(
  * and set (and card number, when known) — for the item page's "Price by
  * grade" ladder and recent-sales list.
  */
-export async function getCardAcrossGrades(card: { name: string; subtitle: string; cardNumber?: string | null }) {
+export async function getCardAcrossGrades(card: { name: string; subtitle: string; cardNumber?: string | null; language?: CardLanguage }) {
   const sameCard: Prisma.AssetWhereInput = {
     name: card.name,
     subtitle: card.subtitle,
+    ...(card.language ? { language: card.language } : {}),
     ...(card.cardNumber ? { OR: [{ cardNumber: card.cardNumber }, { cardNumber: null }] } : {}),
   };
   const [listings, sales] = await Promise.all([
