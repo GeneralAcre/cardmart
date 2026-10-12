@@ -137,7 +137,7 @@ How CardMart works (keep in step with the Guide page, app/(app)/guide/page.tsx):
 - A bought card can be shipped to the buyer or kept in CardMart's vault. Vaulted cards can be resold, auctioned or swapped instantly with no shipping, and redeemed to the owner's door any time.
 - Item pages show Price Insights: CardMart's median sale, other listings of the same card, eBay, TCGplayer, Beckett and PriceCharting.
 - Buyers can make offers below the asking price; if the seller accepts, they check out at that price.
-- Auctions: a bid is locked in escrow when placed and returned automatically if outbid. Minimum bids go up in 50 THB steps, and a bid in the last 5 minutes adds 5 more minutes.
+- Auctions: a bid is locked in escrow when placed and returned automatically if outbid. Each new bid must beat the last by the bid step the seller set for that auction, and a bid in the last 5 minutes adds 5 more minutes.
 - Swaps: trade a vaulted card for someone else's vaulted card, with cash on top either way, held in escrow until the swap completes.
 - Card alerts (Portfolio → Alerts): name, grade and max price, optionally trusted sellers only; the user is notified when one is listed.
 - Selling: Listing uses a live-camera checklist and fills details from a PSA cert number. Listing costs {listingFee} THB. Each card becomes a 1-of-1 token on Solana. Fixed price or auction (scheduled up to 30 days ahead). When it sells, the seller ships it to the warehouse ({sellerShipping} THB shipping); vaulted cards sell instantly.

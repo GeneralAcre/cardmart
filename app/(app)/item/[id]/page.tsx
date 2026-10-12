@@ -651,15 +651,13 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
         initialEbay={preloadedEbay}
         tcg={priceQuote?.marketPriceUsd != null ? { marketPriceUsd: priceQuote.marketPriceUsd, matchedName: priceQuote.matchedName } : null}
         baseQuery={buildMarketQuery({ ...marketCard, gradingCompany: "RAW", grade: null, isBlackLabel: false })}
+        itemHistory={<ProvenanceTimeline events={asset.provenance} />}
       />
 
       <div className="mt-12">
         <PriceInsights insights={insights} />
       </div>
 
-      <Separator className="my-12" />
-
-      <ProvenanceTimeline events={asset.provenance} />
 
       {similarAssets.length > 0 && (
         <>

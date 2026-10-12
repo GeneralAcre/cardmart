@@ -96,19 +96,23 @@ export default async function AuctionDetailPage({ params }: { params: Promise<{ 
             </div>
           </div>
 
-          <div className="detail-panel grid grid-cols-2 divide-x rounded-xl border">
-            <div className="flex flex-col gap-0.5 p-3">
-              <span className="text-muted-foreground text-xs">
-                {auction.currentBidThb != null ? t("Current Bid") : t("Starting Bid")}
-              </span>
-              <span className="text-lg leading-none font-bold tabular-nums">
-                {formatThb(auction.currentBidThb ?? auction.startPriceThb)}
-              </span>
-            </div>
-            <div className="flex flex-col gap-0.5 p-3">
-              <span className="text-muted-foreground text-xs">{t("Bids")}</span>
-              <span className="text-lg leading-none font-bold tabular-nums">{auction.bids.length}</span>
-            </div>
+          {/* Shown to everyone, the seller and early visitors included, so the
+              bidding rules are clear before the first bid. */}
+          <div className="bg-border grid grid-cols-2 gap-px overflow-hidden rounded-xl border sm:grid-cols-4">
+            {[
+              {
+                label: auction.currentBidThb != null ? t("Current Bid") : t("Starting Bid"),
+                value: formatThb(auction.currentBidThb ?? auction.startPriceThb),
+              },
+              { label: t("Next minimum bid"), value: hasEnded ? "—" : formatThb(minBid) },
+              { label: t("Bid step"), value: formatThb(bidStep(auction)) },
+              { label: t("Bids"), value: String(auction.bids.length) },
+            ].map((stat) => (
+              <div key={stat.label} className="detail-panel flex flex-col gap-0.5 p-3">
+                <span className="text-muted-foreground text-xs">{stat.label}</span>
+                <span className="text-lg leading-none font-bold tabular-nums">{stat.value}</span>
+              </div>
+            ))}
           </div>
 
           {isOwner ? (

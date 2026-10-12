@@ -209,6 +209,8 @@ export const ITEM: Record<string, string> = {
   // Timeline / similar / gallery
   "View on Solana Explorer": "ดูบน Solana Explorer",
   "Compare Prices": "เปรียบเทียบราคา",
+  Compare: "เปรียบเทียบ",
+  "This listing against every price source for this card in this grade.": "เทียบประกาศนี้กับแหล่งราคาทุกแหล่งของการ์ดใบนี้ในเกรดนี้",
   "Same card, other sellers — cheapest first": "การ์ดใบเดียวกันจากผู้ขายอื่น — ถูกที่สุดก่อน",
   Seller: "ผู้ขาย",
   "Not for sale": "ไม่ได้วางขาย",

@@ -124,8 +124,8 @@ export const PAGES: Record<string, string> = {
   "Not happy with the asking price? Offer your own. If the seller accepts, you check out at your price.":
     "ไม่พอใจราคาตั้ง? เสนอราคาของคุณเอง หากผู้ขายยอมรับ คุณจะชำระเงินที่ราคาที่เสนอ",
   "Browse listings": "ดูรายการขาย",
-  "Your bid is locked in escrow when you place it and returned automatically if you're outbid, so every winning bid is real money. Minimum bids go up in 50 THB steps, and a bid in the last 5 minutes adds 5 more.":
-    "เงินประมูลของคุณถูกล็อกในเอสโครว์ทันทีที่เสนอราคา และคืนอัตโนมัติหากมีคนเสนอสูงกว่า ทุกการชนะประมูลจึงมีเงินจริงรองรับ ราคาขั้นต่ำเพิ่มครั้งละ 50 บาท และการเสนอราคาใน 5 นาทีสุดท้ายจะขยายเวลาอีก 5 นาที",
+  "Your bid is locked in escrow when you place it and returned automatically if you're outbid, so every winning bid is real money. Each new bid must beat the last by the bid step the seller set, shown on the auction, and a bid in the last 5 minutes adds 5 more.":
+    "เงินประมูลของคุณถูกล็อกในเอสโครว์ทันทีที่เสนอราคา และคืนอัตโนมัติหากมีคนเสนอสูงกว่า ทุกการชนะประมูลจึงมีเงินจริงรองรับ การเสนอราคาใหม่ต้องสูงกว่าเดิมอย่างน้อยตามขั้นการเสนอราคาที่ผู้ขายกำหนด ซึ่งแสดงไว้ในหน้าประมูล และการเสนอราคาใน 5 นาทีสุดท้ายจะขยายเวลาอีก 5 นาที",
   "See auctions": "ดูการประมูล",
   "Swap cards": "แลกการ์ด",
   "Trade a vaulted card for someone else's vaulted card, with cash on top either way. Cash waits in escrow until the swap completes.":

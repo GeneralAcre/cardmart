@@ -4,12 +4,19 @@ import Image from "next/image";
 import { useMemo, useState } from "react";
 import { CalendarClock, CalendarDays, ExternalLink, PackageOpen } from "lucide-react";
 
+import { CARD_GAME_BADGE_CLASS } from "@/lib/labels";
 import type { SetRelease } from "@/lib/tcg-releases";
 import { cn } from "@/lib/utils";
 import { useT } from "@/components/landing/language-provider";
 import type { Translate } from "@/lib/i18n/translate";
 
 type View = "upcoming" | "recent";
+
+// Each game in the same colors as its badge on marketplace cards.
+const GAME_CLASS: Record<string, string> = {
+  pokemon: CARD_GAME_BADGE_CLASS.POKEMON,
+  "one-piece-card-game": CARD_GAME_BADGE_CLASS.ONE_PIECE,
+};
 
 function daysBetween(from: string, to: string) {
   return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
@@ -85,7 +92,9 @@ export function SetReleases({
               onClick={() => setGame(g.slug)}
               className={cn(
                 "shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors",
-                game === g.slug ? "bg-foreground text-background" : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                game === g.slug
+                  ? (GAME_CLASS[g.slug] ?? "bg-foreground text-background")
+                  : "text-muted-foreground hover:bg-accent hover:text-foreground",
               )}
             >
               {t(g.label)}
@@ -156,9 +165,16 @@ export function SetReleases({
                       <SetArtwork imageUrl={s.imageUrl} iconUrl={s.iconUrl} />
                       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                         <span className="line-clamp-2 text-sm font-semibold">{s.name}</span>
-                        <span className="text-muted-foreground text-xs">
-                          {t(s.gameLabel)}
-                          {s.cardCount ? ` · ${t("{count} cards listed so far", { count: s.cardCount })}` : ""}
+                        <span className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+                          <span
+                            className={cn(
+                              "rounded px-1.5 py-0.5 text-[10px] leading-none font-semibold",
+                              GAME_CLASS[s.game] ?? "bg-muted text-foreground",
+                            )}
+                          >
+                            {t(s.gameLabel)}
+                          </span>
+                          {s.cardCount ? t("{count} cards listed so far", { count: s.cardCount }) : null}
                         </span>
                       </div>
                       <ExternalLink className="text-muted-foreground size-3.5 shrink-0" />

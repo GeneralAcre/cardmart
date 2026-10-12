@@ -26,7 +26,7 @@ import { isOwnUploadUrl, photoUrlProblem, psaCertMismatch } from "@/lib/listing-
 import { themeIndexForSerial } from "@/lib/theme";
 import { getVerificationChecklist } from "@/lib/verification-checklist";
 import { BGS_BLACK_LABEL_GRADE, gradeTierLabel } from "@/lib/labels";
-import { bidAmountProblem } from "@/lib/auction-rules";
+import { bidAmountProblem, bidStepProblem } from "@/lib/auction-rules";
 import { requestDevnetAirdrop } from "@/lib/solana";
 import { runMandate, runMandatesForListing, withdrawAgentOffers } from "@/lib/agent/engine";
 import { taskReportText } from "@/lib/agent/report";
@@ -826,6 +826,7 @@ const ANTI_SNIPING_EXTENSION_MS = 5 * 60_000;
 
 const startAuctionSchema = z.object({
   startPriceThb: z.coerce.number().int().min(100),
+  bidIncrementThb: z.coerce.number().int(),
   durationDays: z.coerce.number().int().min(1).max(14),
   startTime: z.string().datetime().optional(),
 });
@@ -849,11 +850,19 @@ export async function auctionApprovalNeeded(assetId: string): Promise<{ mintAddr
 }
 
 /** Seller puts an item up for auction — supersedes any fixed-price listing (forSale is cleared). */
-export async function startAuction(assetId: string, startPriceThb: number, durationDays: number, startTime?: string) {
+export async function startAuction(
+  assetId: string,
+  startPriceThb: number,
+  bidIncrementThb: number,
+  durationDays: number,
+  startTime?: string,
+) {
   const user = await getCurrentUser();
   if (user.isBanned) throw new Error("Your account is suspended and can't start an auction.");
-  const parsed = startAuctionSchema.safeParse({ startPriceThb, durationDays, startTime });
+  const parsed = startAuctionSchema.safeParse({ startPriceThb, bidIncrementThb, durationDays, startTime });
   if (!parsed.success) throw new Error(parsed.error.issues[0]?.message ?? "Invalid auction details.");
+  const stepProblem = bidStepProblem(parsed.data.bidIncrementThb, parsed.data.startPriceThb);
+  if (stepProblem) throw new Error(stepProblem);
 
   const asset = await prisma.asset.findUniqueOrThrow({ where: { id: assetId } });
   if (asset.ownerId !== user.id) throw new Error("You do not own this item.");
@@ -875,7 +884,13 @@ export async function startAuction(assetId: string, startPriceThb: number, durat
 
   await prisma.$transaction([
     prisma.auction.create({
-      data: { assetId, startPriceThb: parsed.data.startPriceThb, startTime: auctionStartTime, endTime },
+      data: {
+        assetId,
+        startPriceThb: parsed.data.startPriceThb,
+        bidIncrementThb: parsed.data.bidIncrementThb,
+        startTime: auctionStartTime,
+        endTime,
+      },
     }),
     prisma.asset.update({
       where: { id: assetId },

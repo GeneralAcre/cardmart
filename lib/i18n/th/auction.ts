@@ -95,4 +95,8 @@ export const AUCTION: Record<string, string> = {
   "Ship to me": "ส่งให้ฉัน",
   "Keep in vault": "เก็บไว้ในห้องนิรภัย",
   "Confirm delivery": "ยืนยันวิธีรับสินค้า",
+  "Bid step (THB)": "ขั้นการเสนอราคา (บาท)",
+  "Each new bid must be at least {step} higher than the last.": "การเสนอราคาใหม่แต่ละครั้งต้องสูงกว่าครั้งก่อนอย่างน้อย {step}",
+  "Next minimum bid": "ราคาขั้นต่ำครั้งถัดไป",
+  "Bid step": "ขั้นการเสนอราคา",
 };

@@ -101,7 +101,7 @@ const MORE: { icon: LucideIcon; title: string; body: string; href: string; cta: 
   {
     icon: Gavel,
     title: "Auctions",
-    body: "Your bid is locked in escrow when you place it and returned automatically if you're outbid, so every winning bid is real money. Minimum bids go up in 50 THB steps, and a bid in the last 5 minutes adds 5 more.",
+    body: "Your bid is locked in escrow when you place it and returned automatically if you're outbid, so every winning bid is real money. Each new bid must beat the last by the bid step the seller set, shown on the auction, and a bid in the last 5 minutes adds 5 more.",
     href: "/auctions",
     cta: "See auctions",
   },

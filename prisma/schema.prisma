@@ -339,23 +339,27 @@ model Asset {
 // (see settleIfExpired in lib/queries.ts), and a sold auction still needs
 // its winner to actively claim it — see AuctionStatus.ENDED_SOLD.
 model Auction {
-  id            String        @id @default(cuid())
-  startPriceThb Int
+  id              String        @id @default(cuid())
+  startPriceThb   Int
   // Highest bid so far, denormalized from Bid for cheap list-page reads —
   // same "cache the current figure" pattern as PriceSnapshot/Asset.priceThb.
   // Null until the first bid comes in.
-  currentBidThb Int?
+  currentBidThb   Int?
+  // How much each new bid must beat the last one by, set by the seller.
+  // Null on older auctions, which use the automatic price-scaled step
+  // (lib/auction-rules.ts).
+  bidIncrementThb Int?
   // An auction may be scheduled ahead of time. It is visible and accepts bids
   // only once this time has arrived.
-  startTime     DateTime      @default(now())
-  endTime       DateTime
-  status        AuctionStatus @default(ACTIVE)
-  createdAt     DateTime      @default(now())
-  settledAt     DateTime?
+  startTime       DateTime      @default(now())
+  endTime         DateTime
+  status          AuctionStatus @default(ACTIVE)
+  createdAt       DateTime      @default(now())
+  settledAt       DateTime?
   // Set once bidding closes with a winner on a non-vaulted item: the
   // winner's money is already locked, they just pick ship or vault by then.
   // After it passes the item defaults to the vault (see settleAuction).
-  claimDeadline DateTime?
+  claimDeadline   DateTime?
 
   assetId String
   asset   Asset  @relation(fields: [assetId], references: [id])

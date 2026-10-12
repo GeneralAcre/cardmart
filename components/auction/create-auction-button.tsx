@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Gavel, Loader2 } from "lucide-react";
 
+import { BidStepField, resolveBidStep } from "@/components/auction/bid-step-field";
 import { StartTimePicker } from "@/components/auction/start-time-picker";
 import { ActionButton } from "@/components/ui/action-button";
 import { Button } from "@/components/ui/button";
@@ -47,6 +48,7 @@ export function CreateAuctionButton({ eligibleAssets }: { eligibleAssets: Eligib
   const [open, setOpen] = useState(false);
   const [assetId, setAssetId] = useState(eligibleAssets[0]?.id ?? "");
   const [startPrice, setStartPrice] = useState(eligibleAssets[0]?.priceThb ? String(eligibleAssets[0].priceThb) : "");
+  const [bidStep, setBidStep] = useState("");
   const [durationDays, setDurationDays] = useState("3");
   const [startTime, setStartTime] = useState("");
   const [pending, startTransition] = useTransition();
@@ -80,6 +82,7 @@ export function CreateAuctionButton({ eligibleAssets }: { eligibleAssets: Eligib
         await startAuction(
           assetId,
           Number(startPrice),
+          resolveBidStep(bidStep, startPrice),
           Number(durationDays),
           startTime ? new Date(startTime).toISOString() : undefined,
         );
@@ -136,6 +139,7 @@ export function CreateAuctionButton({ eligibleAssets }: { eligibleAssets: Eligib
                 onChange={(e) => setStartPrice(e.target.value)}
               />
             </div>
+            <BidStepField id="create-auction-bid-step" value={bidStep} onChange={setBidStep} startPrice={startPrice} />
             <div className="flex flex-col gap-2">
               <Label>{t("Duration")}</Label>
               <Select value={durationDays} onValueChange={setDurationDays}>

@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Flame, Gavel, Loader2, Repeat, Tag, TagX, Truck } from "lucide-react";
 
 import { CardArt } from "@/components/asset/card-art";
+import { BidStepField, resolveBidStep } from "@/components/auction/bid-step-field";
 import { StartTimePicker } from "@/components/auction/start-time-picker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -60,6 +61,7 @@ export function PortfolioItemCard({
   const [auctionOpen, setAuctionOpen] = useState(false);
   const [price, setPrice] = useState(asset.priceThb ? String(asset.priceThb) : "");
   const [auctionStartPrice, setAuctionStartPrice] = useState(asset.priceThb ? String(asset.priceThb) : "");
+  const [auctionBidStep, setAuctionBidStep] = useState("");
   const [auctionDurationDays, setAuctionDurationDays] = useState("3");
   const [auctionStartTime, setAuctionStartTime] = useState("");
   const [pending, startTransition] = useTransition();
@@ -177,6 +179,7 @@ export function PortfolioItemCard({
         await startAuction(
           asset.id,
           Number(auctionStartPrice),
+          resolveBidStep(auctionBidStep, auctionStartPrice),
           Number(auctionDurationDays),
           auctionStartTime ? new Date(auctionStartTime).toISOString() : undefined,
         );
@@ -214,6 +217,7 @@ export function PortfolioItemCard({
               onChange={(e) => setAuctionStartPrice(e.target.value)}
             />
           </div>
+          <BidStepField id="auction-bid-step" value={auctionBidStep} onChange={setAuctionBidStep} startPrice={auctionStartPrice} />
           <div className="flex flex-col gap-2">
             <Label>{t("Duration")}</Label>
             <Select value={auctionDurationDays} onValueChange={setAuctionDurationDays}>
