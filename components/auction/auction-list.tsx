@@ -9,7 +9,7 @@ import { CardArt } from "@/components/asset/card-art";
 import { CountdownTimer } from "@/components/auction/countdown-timer";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { CARD_GAME_LABELS } from "@/lib/labels";
+import { CARD_GAME_BADGE_CLASS, CARD_GAME_LABELS } from "@/lib/labels";
 import { displayImage } from "@/lib/card-image";
 import { formatDateTime, formatGrade, formatThb } from "@/lib/format";
 import type { getActiveAuctions } from "@/lib/queries";
@@ -103,7 +103,15 @@ function AuctionRow({ auction }: { auction: Auction }) {
           <div className="flex min-w-0 flex-col gap-1">
             <span className="text-muted-foreground flex items-center gap-1.5 text-xs">
               <span className="bg-destructive size-1.5 animate-pulse rounded-full" />
-              {t("Live")} · {t(CARD_GAME_LABELS[asset.game])}
+              {t("Live")}
+              <span
+                className={cn(
+                  "ml-0.5 rounded px-1.5 py-0.5 text-[10px] leading-none font-semibold",
+                  CARD_GAME_BADGE_CLASS[asset.game],
+                )}
+              >
+                {t(CARD_GAME_LABELS[asset.game])}
+              </span>
             </span>
             <Link href={href} className="truncate font-semibold hover:underline">
               {asset.name}

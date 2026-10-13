@@ -158,19 +158,21 @@ export function MarketPulse({ rows }: { rows: LeaderboardRow[] }) {
     .sort((a, b) => a.change[period]! - b.change[period]!)
     .slice(0, MOVERS_SHOWN);
 
+  const periodPicker = (
+    <Segmented value={period} onChange={setPeriod} options={PERIODS.map((p) => ({ value: p, label: p }))} />
+  );
+
   return (
     <section className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
           <div className="bg-secondary text-foreground flex size-7 items-center justify-center rounded-md">
             <Activity className="size-3.5" />
           </div>
           <h2 className="eyebrow text-foreground text-sm">{t("Trending")}</h2>
         </div>
-        <div className="ml-auto flex flex-wrap items-center gap-2">
-          {view === "movers" && (
-            <Segmented value={period} onChange={setPeriod} options={PERIODS.map((p) => ({ value: p, label: p }))} />
-          )}
+        <div className="ml-auto flex items-center gap-2">
+          {view === "movers" && <div className="hidden sm:block">{periodPicker}</div>}
           <Segmented
             value={view}
             onChange={setView}
@@ -181,6 +183,8 @@ export function MarketPulse({ rows }: { rows: LeaderboardRow[] }) {
           />
         </div>
       </div>
+      {/* Phones: the period gets its own line so the header doesn't squeeze. */}
+      {view === "movers" && <div className="sm:hidden">{periodPicker}</div>}
 
       {view === "movers" ? (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">

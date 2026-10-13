@@ -236,8 +236,8 @@ export const ITEM: Record<string, string> = {
   // Wanted-card alerts
   "Alert saved — we'll notify you when a match is listed.": "บันทึกการแจ้งเตือนแล้ว — เราจะแจ้งเมื่อมีการ์ดที่ตรงลงขาย",
   "Could not save alert.": "บันทึกการแจ้งเตือนไม่สำเร็จ",
-  "Get a notification the moment a matching card goes on sale, whether it's a new listing or a relist.":
-    "รับการแจ้งเตือนทันทีที่มีการ์ดที่ตรงลงขาย ทั้งรายการใหม่และที่ลงขายซ้ำ",
+  "Get notified the moment any seller lists a matching card. Set a maximum price to catch a cheaper copy, or a minimum grade to catch a better one. Watch follows one listing; this covers every copy.":
+    "รับการแจ้งเตือนทันทีที่มีผู้ขายลงขายการ์ดที่ตรงเงื่อนไข ตั้งราคาสูงสุดเพื่อจับใบที่ถูกกว่า หรือตั้งเกรดขั้นต่ำเพื่อจับใบที่เกรดดีกว่า ปุ่มติดตามจะติดตามแค่ประกาศเดียว ส่วนการแจ้งเตือนนี้ครอบคลุมทุกใบ",
   "Card name contains": "ชื่อการ์ดมีคำว่า",
   "e.g. Charizard": "เช่น Charizard",
   "Grading company": "บริษัทเกรด",

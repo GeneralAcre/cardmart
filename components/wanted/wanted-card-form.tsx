@@ -81,7 +81,7 @@ export function WantedCardDialog({
         <DialogHeader>
           <DialogTitle>{t("Notify me when listed")}</DialogTitle>
           <DialogDescription>
-            {t("Get a notification the moment a matching card goes on sale, whether it's a new listing or a relist.")}
+            {t("Get notified the moment any seller lists a matching card. Set a maximum price to catch a cheaper copy, or a minimum grade to catch a better one. Watch follows one listing; this covers every copy.")}
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-4">

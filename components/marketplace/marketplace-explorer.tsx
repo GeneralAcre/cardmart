@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Anchor, Grid3x3, LayoutGrid, PackageSearch, Scale, Sparkles, SlidersHorizontal } from "lucide-react";
+import { Anchor, Grid3x3, LayoutGrid, PackageSearch, Scale, Sparkles, SlidersHorizontal, X } from "lucide-react";
 import type { CardGame } from "@prisma/client";
 
 import { FilterBar } from "@/components/marketplace/filter-bar";
 import { ListingCard } from "@/components/marketplace/listing-card";
 import { MarketPulse } from "@/components/marketplace/market-pulse";
-import { PriceCompareTable } from "@/components/marketplace/price-compare-table";
+import { MAX_COMPARE, PriceCompareTable, compareCardKey } from "@/components/marketplace/price-compare-table";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -89,6 +89,9 @@ export function MarketplaceExplorer({
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sort, setSort] = useState<SortKey>("recent");
   const [density, setDensity] = useState<Density>("comfortable");
+  // Cards picked for comparison, from the grid or inside the dialog.
+  const [compareCards, setCompareCards] = useState<string[]>([]);
+  const [compareOpen, setCompareOpen] = useState(false);
   const isFirstRender = useRef(true);
   const activeFilterCount = countActiveFilters(filters);
   const t = useT();
@@ -214,10 +217,15 @@ export function MarketplaceExplorer({
           </div>
 
           {initialListings.some((listing) => listing.priceThb != null) && (
-            <Dialog>
+            <Dialog open={compareOpen} onOpenChange={setCompareOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline" className="h-10 rounded-lg">
                   <Scale /> <span className="hidden xl:inline">{t("Compare prices")}</span>
+                  {compareCards.length > 0 && (
+                    <span className="bg-success text-background rounded-full px-1.5 text-[11px] leading-5 font-semibold tabular-nums">
+                      {compareCards.length}
+                    </span>
+                  )}
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-5xl">
@@ -228,7 +236,7 @@ export function MarketplaceExplorer({
                 {/* Compares across everything listed, not just the filtered
                     results — filters narrow what you browse, not which cards
                     you can compare. */}
-                <PriceCompareTable listings={initialListings} />
+                <PriceCompareTable listings={initialListings} selected={compareCards} onSelectedChange={setCompareCards} />
               </DialogContent>
             </Dialog>
           )}
@@ -313,13 +321,51 @@ export function MarketplaceExplorer({
             </div>
           ) : (
             <div className={gridClass}>
-              {sortedListings.map((asset) => (
-                <ListingCard key={asset.id} asset={asset} compact={density === "compact"} />
-              ))}
+              {sortedListings.map((asset) => {
+                const key = compareCardKey(asset);
+                const selected = compareCards.includes(key);
+                return (
+                  <ListingCard
+                    key={asset.id}
+                    asset={asset}
+                    compact={density === "compact"}
+                    compare={
+                      asset.priceThb == null
+                        ? undefined
+                        : {
+                            selected,
+                            disabled: !selected && compareCards.length >= MAX_COMPARE,
+                            onToggle: () =>
+                              setCompareCards((prev) => (selected ? prev.filter((k) => k !== key) : [...prev, key])),
+                          }
+                    }
+                  />
+                );
+              })}
             </div>
           )}
         </div>
       </div>
+      {compareCards.length > 0 && !compareOpen && (
+        <div className="bg-card fixed inset-x-4 bottom-20 z-40 mx-auto flex max-w-md items-center gap-2 rounded-full border p-1.5 pl-4 shadow-lg md:bottom-6">
+          <Scale className="text-muted-foreground size-4 shrink-0" />
+          <span className="flex-1 text-sm font-medium">
+            {t("{count} of {max} cards picked", { count: compareCards.length, max: MAX_COMPARE })}
+          </span>
+          <Button size="sm" className="rounded-full" onClick={() => setCompareOpen(true)}>
+            {t("Compare")}
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="size-8 shrink-0 rounded-full"
+            onClick={() => setCompareCards([])}
+            aria-label={t("Clear comparison")}
+          >
+            <X />
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

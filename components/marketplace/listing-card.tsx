@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Images } from "lucide-react";
+import { Check, Images, Scale } from "lucide-react";
 
 import { CardArt } from "@/components/asset/card-art";
 import { formatGrade, formatThb } from "@/lib/format";
@@ -14,13 +14,29 @@ import { useT } from "@/components/landing/language-provider";
 
 const CHIP = "rounded-md px-2 py-1 text-[11px] font-semibold leading-none text-white backdrop-blur-sm";
 
-export function ListingCard({ asset, compact = false }: { asset: AssetSummary; compact?: boolean }) {
+/** The marketplace grid's "add to comparison" toggle; left out everywhere else. */
+export interface CompareToggle {
+  selected: boolean;
+  // The comparison is full and this card isn't in it.
+  disabled: boolean;
+  onToggle: () => void;
+}
+
+export function ListingCard({
+  asset,
+  compact = false,
+  compare,
+}: {
+  asset: AssetSummary;
+  compact?: boolean;
+  compare?: CompareToggle;
+}) {
   const photos = realPhotos(asset.verificationPhotos);
   const image = displayImage(asset);
   const t = useT();
   const sellerName = asset.seller.name ?? t("Collector");
 
-  return (
+  const card = (
     <Link
       href={`/item/${asset.id}`}
       className="group bg-card focus-visible:ring-ring relative flex flex-col overflow-hidden rounded-2xl border outline-none transition-colors hover:border-foreground/30 focus-visible:ring-2"
@@ -125,5 +141,32 @@ export function ListingCard({ asset, compact = false }: { asset: AssetSummary; c
         </div>
       </div>
     </Link>
+  );
+  if (!compare) return card;
+
+  // The toggle sits beside the link, not inside it, so tapping it never
+  // opens the listing; the overlay matches the picture's area so it lands
+  // in the picture's bottom-right corner.
+  return (
+    <div className={cn("relative", compare.selected && "[&>a]:border-success")}>
+      {card}
+      <div className="pointer-events-none absolute inset-x-0 top-0 aspect-[4/5]">
+        <button
+          type="button"
+          onClick={compare.onToggle}
+          disabled={compare.disabled}
+          aria-pressed={compare.selected}
+          title={compare.disabled ? t("You can compare up to 5 cards.") : undefined}
+          className={cn(
+            CHIP,
+            "pointer-events-auto absolute right-2.5 bottom-2.5 inline-flex items-center gap-1 py-1.5 transition-colors disabled:opacity-50",
+            compare.selected ? "bg-success text-background" : "bg-black/70 hover:bg-black/85",
+          )}
+        >
+          {compare.selected ? <Check className="size-3" /> : <Scale className="size-3" />}
+          {compare.selected ? t("Comparing") : t("Compare")}
+        </button>
+      </div>
+    </div>
   );
 }

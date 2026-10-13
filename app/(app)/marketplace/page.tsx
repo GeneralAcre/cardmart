@@ -12,15 +12,9 @@ export default async function MarketplacePage() {
 
   return (
     <div className="mx-auto w-full max-w-screen-2xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex flex-col gap-1">
-          <h1 className="eyebrow text-foreground text-sm">{t("Market")}</h1>
-          <p className="text-muted-foreground max-w-2xl text-sm">
-            {t("Graded and raw cards, paid through escrow and checked at our warehouse before the seller is paid.")}
-          </p>
-        </div>
-        {/* ml-auto keeps it on the right when it wraps below the intro on phones. */}
-        <ActionButton href="/marketplace/sell" icon={Plus} className="ml-auto">
+      <div className="mb-5 flex items-center justify-between gap-4">
+        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{t("Market")}</h1>
+        <ActionButton href="/marketplace/sell" icon={Plus}>
           {t("Sell a card")}
         </ActionButton>
       </div>
