@@ -18,7 +18,7 @@ export function PriceInsights({ insights }: { insights: PriceInsight[] }) {
         <div className="bg-secondary text-foreground flex size-7 items-center justify-center rounded-md">
           <Lightbulb className="size-3.5" />
         </div>
-        <span className="eyebrow text-foreground">{t("Price Insights")}</span>
+        <span className="eyebrow text-success">{t("Price Insights")}</span>
       </div>
       <ul className="divide-y">
         {insights.map((insight) => {
