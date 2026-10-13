@@ -1,18 +1,9 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { Wallet, LogOut, Copy, Check } from "lucide-react";
+import { Wallet, Copy, Check } from "lucide-react";
 import { useState } from "react";
 import { useWalletStore } from "@/lib/web3/wallet-store";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { useT } from "@/components/landing/language-provider";
 
@@ -20,10 +11,14 @@ function truncateKey(key: string) {
   return `${key.slice(0, 4)}…${key.slice(-4)}`;
 }
 
-export function WalletButton() {
-  const router = useRouter();
+/**
+ * The wallet part of the profile menu: the address to fund, with a copy
+ * button, or a Connect Wallet item when there's no wallet yet. Lives in the
+ * profile menu rather than its own header button, to keep the header short.
+ */
+export function WalletMenuSection() {
   const [copied, setCopied] = useState(false);
-  const { connected, connecting, publicKey, connect, disconnect } = useWalletStore();
+  const { connected, connecting, publicKey, connect } = useWalletStore();
   const t = useT();
 
   function copyAddress() {
@@ -36,11 +31,10 @@ export function WalletButton() {
 
   if (!connected) {
     return (
-      <Button
-        size="sm"
-        variant="outline"
+      <DropdownMenuItem
         disabled={connecting}
-        onClick={async () => {
+        onSelect={async (e) => {
+          e.preventDefault();
           try {
             const key = await connect();
             toast.success(t("Wallet connected"), {
@@ -48,56 +42,34 @@ export function WalletButton() {
             });
           } catch {
             // Not authenticated yet — connect() already opened the Privy
-            // sign-in modal; the button re-renders once that completes.
+            // sign-in modal; the menu re-renders once that completes.
           }
         }}
       >
-        <Wallet />
-        <span className="hidden sm:inline">{connecting ? t("Connecting…") : t("Connect Wallet")}</span>
-      </Button>
+        <Wallet /> {connecting ? t("Connecting…") : t("Connect Wallet")}
+      </DropdownMenuItem>
     );
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button size="sm" variant="outline">
-          <Wallet className="text-success" />
-          <span className="hidden sm:inline">{truncateKey(publicKey!)}</span>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-72">
-        <DropdownMenuLabel>{t("Solana Wallet (Test Network)")}</DropdownMenuLabel>
-        <div className="flex flex-col gap-1.5 px-2 pb-2">
-          <span className="text-muted-foreground text-[11px]">
-            {t("Send test SOL to this address to fund it:")}
-          </span>
-          <button
-            type="button"
-            onClick={copyAddress}
-            className="bg-muted/50 hover:bg-muted flex items-center gap-2 rounded-md border px-2 py-1.5 text-left transition-colors"
-          >
-            <span className="flex-1 truncate font-mono text-xs">{publicKey}</span>
-            {copied ? (
-              <Check className="text-success size-3.5 shrink-0" />
-            ) : (
-              <Copy className="text-muted-foreground size-3.5 shrink-0" />
-            )}
-          </button>
-        </div>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          variant="destructive"
-          onClick={() => {
-            disconnect();
-            toast(t("Signed out"));
-            router.push("/");
-          }}
-        >
-          <LogOut />
-          {t("Sign out")}
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <div className="flex flex-col gap-1.5 px-2 py-1.5">
+      <span className="flex items-center gap-1.5 text-xs font-medium">
+        <Wallet className="text-success size-3.5" />
+        {t("Solana Wallet (Test Network)")}
+      </span>
+      <span className="text-muted-foreground text-[11px]">{t("Send test SOL to this address to fund it:")}</span>
+      <button
+        type="button"
+        onClick={copyAddress}
+        className="bg-muted/50 hover:bg-muted flex items-center gap-2 rounded-md border px-2 py-1.5 text-left transition-colors"
+      >
+        <span className="flex-1 truncate font-mono text-xs">{publicKey}</span>
+        {copied ? (
+          <Check className="text-success size-3.5 shrink-0" />
+        ) : (
+          <Copy className="text-muted-foreground size-3.5 shrink-0" />
+        )}
+      </button>
+    </div>
   );
 }

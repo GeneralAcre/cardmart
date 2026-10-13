@@ -28,7 +28,7 @@ export const LANDING_DICTIONARY = {
     },
     pillars: {
       badge: "What CardMart does",
-      title: "Everything you need to trade cards, in one place.",
+      title: "Everything you need to trade cards, in one place",
       items: [
         {
           title: "See the market",
@@ -46,12 +46,12 @@ export const LANDING_DICTIONARY = {
     },
     showcase: {
       badge: "Inside CardMart",
-      title: "See it before you sign in.",
+      title: "See it before you sign in",
       subtitle: "Price data, protected payments, live auctions and an agent that shops for you — here's what each looks like.",
       sample: "Sample data",
       market: {
         eyebrow: "Market data",
-        title: "Know what a card is worth, grade by grade.",
+        title: "Know what a card is worth, grade by grade",
         description:
           "Price history from completed CardMart sales, checked against eBay and TCGplayer. Switch grades to see what a PSA 10 is worth next to a raw copy before you set a price or make an offer.",
         points: ["Sale history in every grade", "eBay and TCGplayer prices side by side", "Rankings and price moves across the market"],
@@ -61,7 +61,7 @@ export const LANDING_DICTIONARY = {
       },
       escrow: {
         eyebrow: "Protected payments",
-        title: "Your money waits until the card checks out.",
+        title: "Your money waits until the card checks out",
         description:
           "The buyer pays into escrow on the blockchain. Our warehouse inspects the card, and only then is the seller paid. If it isn't what was listed, the buyer gets the money back.",
         points: ["Payment held in an on-chain escrow", "Every card inspected at our warehouse", "Ship it home or keep it in the vault"],
@@ -72,7 +72,7 @@ export const LANDING_DICTIONARY = {
       },
       auction: {
         eyebrow: "Live auctions",
-        title: "Bid in real time, settle on-chain.",
+        title: "Bid in real time, settle on-chain",
         description:
           "Run an auction with a start time and reserve, or bid on someone else's. Every bid shows up live, and the winner pays through the same escrow as any other sale.",
         points: ["Live bids and countdown", "Start time and reserve price", "Winner pays through escrow"],
@@ -84,7 +84,7 @@ export const LANDING_DICTIONARY = {
       },
       agent: {
         eyebrow: "Buying agent",
-        title: "Tell the agent what you want. It watches the market for you.",
+        title: "Tell the agent what you want and it watches the market for you",
         description:
           "Name a card, a grade and your max price. The agent checks every new listing day and night, compares it with recent sales, and asks you first or buys for you.",
         points: ["Never pays over your max price", "Skips look-alikes from other sets", "Pays through escrow like any purchase"],
@@ -97,7 +97,7 @@ export const LANDING_DICTIONARY = {
     },
     features: {
       badge: "Why CardMart",
-      title: "Built so nobody has to just take your word for it.",
+      title: "Built so nobody has to just take your word for it",
       items: [
         {
           title: "Protected payments on every sale",
@@ -127,7 +127,7 @@ export const LANDING_DICTIONARY = {
     },
     steps: {
       badge: "How it works",
-      title: "From sign-in to sold, in four steps.",
+      title: "From sign-in to sold, in four steps",
       items: [
         {
           title: "Sign in",
@@ -148,7 +148,7 @@ export const LANDING_DICTIONARY = {
       ],
     },
     closing: {
-      titleAuthenticated: "Welcome back.",
+      titleAuthenticated: "Welcome back",
       titleGuest: "Ready to try it?",
       subtitleAuthenticated: "Pick up where you left off — browse, list, or check on your portfolio.",
       subtitleGuest:

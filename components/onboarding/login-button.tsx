@@ -1,7 +1,7 @@
 "use client";
 
 import { toast } from "sonner";
-import { Loader2, Wallet } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useLogin, usePrivy } from "@privy-io/react-auth";
 
 import { Button } from "@/components/ui/button";
@@ -75,7 +75,7 @@ export function LoginButton({
 
   return (
     <Button type="button" size={size} className={cn("w-full", className)} onClick={handleClick} disabled={!ready}>
-      {ready ? <Wallet /> : <Loader2 className="animate-spin" />}
+      {!ready && <Loader2 className="animate-spin" />}
       {label ?? t.login.continue}
     </Button>
   );

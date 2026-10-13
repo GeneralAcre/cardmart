@@ -105,9 +105,6 @@ function LandingPageContent({ authenticated, showcase }: LandingPageProps) {
                   aria-hidden
                   className="bg-highlight/20 absolute -top-16 -right-16 size-40 rounded-full opacity-0 blur-3xl transition-opacity duration-500 group-hover:opacity-100"
                 />
-                <span aria-hidden className="absolute top-5 right-6 font-mono text-5xl font-semibold text-white/[0.04]">
-                  0{i + 1}
-                </span>
                 <div className="bg-highlight/10 text-highlight ring-highlight/20 flex size-10 items-center justify-center rounded-xl ring-1">
                   <Icon className="size-5" />
                 </div>

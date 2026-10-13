@@ -4,12 +4,12 @@ import { BookOpen, MessageCircle } from "lucide-react";
 import { getCurrentUser } from "@/lib/session";
 import { getT } from "@/lib/i18n/server";
 import { getMyNotifications, getUnreadMessageCount, getUnreadNotificationCount } from "@/lib/queries";
-import { WalletButton } from "@/components/site/wallet-button";
+import { WalletMenuSection } from "@/components/site/wallet-button";
 import { NavLinks } from "@/components/site/nav-links";
 import { MobileBottomNav } from "@/components/site/mobile-bottom-nav";
 import { NotificationBell } from "@/components/site/notification-bell";
 import { SignOutButton } from "@/components/site/sign-out-button";
-import { LanguageSwitcher } from "@/components/landing/language-switcher";
+import { LanguageMenuItems } from "@/components/landing/language-switcher";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -71,8 +71,6 @@ export async function SiteHeader() {
               }))}
               initialUnreadCount={unreadCount}
             />
-            <LanguageSwitcher compact />
-            <WalletButton />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="rounded-full">
@@ -82,11 +80,15 @@ export async function SiteHeader() {
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" className="w-72">
                 <DropdownMenuLabel className="flex flex-col">
                   <span className="font-medium">{displayName}</span>
                   {user.email && <span className="text-muted-foreground text-xs">{user.email}</span>}
                 </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <WalletMenuSection />
+                <DropdownMenuSeparator />
+                <LanguageMenuItems />
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                   <Link href="/guide">

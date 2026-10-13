@@ -15,7 +15,6 @@ import { cn } from "@/lib/utils";
 // alternating sides on wide screens.
 
 function FeatureRow({
-  index,
   eyebrow,
   title,
   description,
@@ -23,7 +22,6 @@ function FeatureRow({
   reverse,
   children,
 }: {
-  index: number;
   eyebrow: string;
   title: string;
   description: string;
@@ -40,11 +38,7 @@ function FeatureRow({
       className="grid grid-cols-1 items-center gap-10 lg:grid-cols-2 lg:gap-16"
     >
       <div className={cn("flex flex-col", reverse && "lg:order-2")}>
-        <span className="text-highlight flex items-center gap-3 font-mono text-xs font-medium tracking-wider uppercase">
-          <span className="text-muted-foreground">0{index}</span>
-          <span className="bg-highlight/40 h-px w-8" />
-          {eyebrow}
-        </span>
+        <span className="text-highlight font-mono text-xs font-medium tracking-wider uppercase">{eyebrow}</span>
         <h3 className="mt-4 text-2xl font-semibold tracking-tight text-balance sm:text-3xl">{title}</h3>
         <p className="text-muted-foreground mt-4 text-sm leading-relaxed sm:text-base">{description}</p>
         <ul className="mt-6 flex flex-col gap-2.5">
@@ -472,16 +466,16 @@ export function FeatureShowcase() {
         </div>
 
         <div className="mt-16 flex flex-col gap-24 sm:mt-20 sm:gap-32">
-          <FeatureRow index={1} {...s.market}>
+          <FeatureRow {...s.market}>
             <MarketMock />
           </FeatureRow>
-          <FeatureRow index={2} reverse {...s.escrow}>
+          <FeatureRow reverse {...s.escrow}>
             <EscrowMock />
           </FeatureRow>
-          <FeatureRow index={3} {...s.auction}>
+          <FeatureRow {...s.auction}>
             <AuctionMock />
           </FeatureRow>
-          <FeatureRow index={4} reverse {...s.agent}>
+          <FeatureRow reverse {...s.agent}>
             <AgentMock />
           </FeatureRow>
         </div>
