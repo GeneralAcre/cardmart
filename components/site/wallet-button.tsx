@@ -51,25 +51,20 @@ export function WalletMenuSection() {
     );
   }
 
+  // One row: tap anywhere on it to copy the full address.
   return (
-    <div className="flex flex-col gap-1.5 px-2 py-1.5">
-      <span className="flex items-center gap-1.5 text-xs font-medium">
-        <Wallet className="text-success size-3.5" />
-        {t("Solana Wallet (Test Network)")}
+    <button
+      type="button"
+      onClick={copyAddress}
+      title={t("Send test SOL to this address to fund it:")}
+      className="hover:bg-accent flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm transition-colors"
+    >
+      <Wallet className="text-success size-4 shrink-0" />
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span>{t("Wallet · Test network")}</span>
+        <span className="text-muted-foreground font-mono text-xs">{truncateKey(publicKey!)}</span>
       </span>
-      <span className="text-muted-foreground text-[11px]">{t("Send test SOL to this address to fund it:")}</span>
-      <button
-        type="button"
-        onClick={copyAddress}
-        className="bg-muted/50 hover:bg-muted flex items-center gap-2 rounded-md border px-2 py-1.5 text-left transition-colors"
-      >
-        <span className="flex-1 truncate font-mono text-xs">{publicKey}</span>
-        {copied ? (
-          <Check className="text-success size-3.5 shrink-0" />
-        ) : (
-          <Copy className="text-muted-foreground size-3.5 shrink-0" />
-        )}
-      </button>
-    </div>
+      {copied ? <Check className="text-success size-4 shrink-0" /> : <Copy className="text-muted-foreground size-4 shrink-0" />}
+    </button>
   );
 }

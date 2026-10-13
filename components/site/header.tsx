@@ -81,9 +81,15 @@ export async function SiteHeader() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-72">
-                <DropdownMenuLabel className="flex flex-col">
-                  <span className="font-medium">{displayName}</span>
-                  {user.email && <span className="text-muted-foreground text-xs">{user.email}</span>}
+                <DropdownMenuLabel className="flex items-center gap-3 py-2">
+                  <Avatar className="size-9">
+                    {user.image && <AvatarImage src={user.image} alt="" />}
+                    <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+                  </Avatar>
+                  <span className="flex min-w-0 flex-col">
+                    <span className="truncate font-medium">{displayName}</span>
+                    {user.email && <span className="text-muted-foreground truncate text-xs font-normal">{user.email}</span>}
+                  </span>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <WalletMenuSection />
