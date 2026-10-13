@@ -24,7 +24,7 @@
   --accent-foreground: #ffffff;
   /* Status colors: every "good / up / done" green and every
      "bad / down / error" red on the site comes from these two. */
-  --success: #BFD200;
+  --success: #CCEF20;
   --success-foreground: #0a0a0a;
   --destructive: #D62828;
   /* Comparing against a different grade than the listing: informational, not a deal or a warning. */
