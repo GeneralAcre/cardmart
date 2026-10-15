@@ -208,4 +208,23 @@ export const PORTFOLIO: Record<string, string> = {
   "Last match {date}": "ตรงล่าสุด {date}",
   "No matches yet": "ยังไม่มีรายการที่ตรง",
   Remove: "ลบ",
+  // Profit and loss (components/portfolio/pnl.tsx)
+  "What did you pay?": "คุณซื้อมาในราคาเท่าไร?",
+  "For a card you didn't buy on CardMart. It's only used to show your profit or loss, and only you can see it.":
+    "สำหรับการ์ดที่ไม่ได้ซื้อผ่าน CardMart ใช้เพื่อแสดงกำไรหรือขาดทุนเท่านั้น และมีแค่คุณที่เห็น",
+  "Price paid (THB)": "ราคาที่ซื้อมา (บาท)",
+  "Price removed.": "ลบราคาแล้ว",
+  "Saved what you paid.": "บันทึกราคาที่ซื้อมาแล้ว",
+  "Could not save.": "บันทึกไม่สำเร็จ",
+  "Add what you paid to see profit": "ใส่ราคาที่ซื้อมาเพื่อดูกำไร",
+  "Edit what you paid": "แก้ไขราคาที่ซื้อมา",
+  "No market price yet": "ยังไม่มีราคาตลาด",
+  "No sales yet. Cards you sell show up here with your profit or loss.": "ยังไม่มีการขาย การ์ดที่คุณขายจะแสดงที่นี่พร้อมกำไรหรือขาดทุน",
+  "Cards sold": "การ์ดที่ขายแล้ว",
+  "Total sales": "ยอดขายรวม",
+  "Profit / loss": "กำไร / ขาดทุน",
+  "Add what you paid to see it": "ใส่ราคาที่ซื้อมาเพื่อดู",
+  "From {count} of {total} sales with a known cost": "จากการขาย {count} จาก {total} รายการที่ทราบราคาทุน",
+  "Sold {date}": "ขายเมื่อ {date}",
+  "Add what you paid": "ใส่ราคาที่ซื้อมา",
 };

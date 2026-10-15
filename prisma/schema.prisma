@@ -221,6 +221,7 @@ model User {
   conversationsB      Conversation[]      @relation("ConversationUserB")
   messagesSent        Message[]
   wantedCards         WantedCard[]
+  purchaseCosts       PurchaseCost[]
   tradeOffersMade     TradeOffer[]        @relation("TradeOfferProposer")
   tradeOffersReceived TradeOffer[]        @relation("TradeOfferRecipient")
   shipmentsReceived   Shipment[]          @relation("ShipmentRecipient")
@@ -307,6 +308,7 @@ model Asset {
   gradingSubmission  GradingSubmission?
   verificationPhotos VerificationPhoto[]
   priceSnapshots     PriceSnapshot[]
+  purchaseCosts      PurchaseCost[]
   watchedBy          WatchlistItem[]
   // Every auction this item has ever had, not just the current one — an
   // asset can be re-auctioned after a no-bid ending or a no-bids
@@ -544,6 +546,23 @@ model PriceSnapshot {
 // lookups that day overwrite it). eBay's API only reports today's asking
 // prices, so this is how the item page charts a real market history. Keyed
 // by the card itself, not a listing, so every copy shares one history.
+// What a user says they paid for a card they didn't buy on CardMart (one
+// they listed themselves), so their portfolio can show profit and loss.
+// Cards bought on CardMart use the real purchase (EscrowTransaction) instead.
+model PurchaseCost {
+  id        String   @id @default(cuid())
+  costThb   Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assetId String
+  asset   Asset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, assetId])
+}
+
 model MarketPriceSnapshot {
   id        String   @id @default(cuid())
   // See marketCardKey in lib/market-history.ts.

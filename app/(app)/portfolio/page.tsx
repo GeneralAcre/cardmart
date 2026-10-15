@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { Bookmark, Flame, PackageOpen } from "lucide-react";
+import { getHoldingPnl, getSoldTrades, type HoldingPnl } from "@/lib/pnl";
+import { TradeHistory } from "@/components/portfolio/pnl";
 
 import {
   getMyRedeemedAssets,
@@ -27,11 +29,11 @@ import { expireOverdueSellerShipments } from "@/lib/actions";
 import { toSaleToShip } from "@/lib/shipping";
 import { formatDate, formatGrade } from "@/lib/format";
 
-const TABS = ["hand", "vault", "watchlist", "alerts"] as const;
+const TABS = ["cards", "listed", "history", "watchlist", "alerts"] as const;
 
 export default async function PortfolioPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const { tab } = await searchParams;
-  const defaultTab = TABS.find((t) => t === tab) ?? "hand";
+  const defaultTab = TABS.find((t) => t === tab) ?? "cards";
   const [user, t] = await Promise.all([getCurrentUser(), getT()]);
   await expireOverdueSellerShipments({ revalidate: false });
   const walletAddress = user.walletAddress ?? user.walletMock;
@@ -47,6 +49,7 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
     rating,
     completedSales,
     salesToShip,
+    soldTrades,
   ] = await Promise.all([
     getVaultAssets(user.id),
     getDevnetSolBalance(user.walletAddress), // real balance only for real (Privy) wallets, not the mock demo ones
@@ -58,9 +61,11 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
     getSellerRating(user.id),
     prisma.escrowTransaction.count({ where: { sellerId: user.id, status: "RELEASED" } }),
     getMySalesToShip(user.id),
+    getSoldTrades(user.id),
   ]);
-  const inHand = assets.filter((a) => !a.vaulted);
-  const inVault = assets.filter((a) => a.vaulted);
+  const pnl = await getHoldingPnl(user.id, assets);
+  // My Cards is everything owned; Listed is only what's up for sale or auction.
+  const listed = assets.filter((a) => a.forSale || a.marketStatus === "IN_AUCTION");
 
   return (
     <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6">
@@ -100,21 +105,24 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
 
       <Tabs defaultValue={defaultTab}>
         <TabsList>
-          <TabsTrigger value="hand">
-            {t("My Cards")} ({inHand.length})
+          <TabsTrigger value="cards">
+            {t("My Cards")} ({assets.length})
           </TabsTrigger>
-          <TabsTrigger value="vault">
-            {t("Listing Cards")} ({inVault.length})
+          <TabsTrigger value="listed">
+            {t("Listing Cards")} ({listed.length})
+          </TabsTrigger>
+          <TabsTrigger value="history">
+            {t("History")} ({soldTrades.length})
           </TabsTrigger>
           <TabsTrigger value="watchlist">{t("Watchlist")} ({watchlist.length})</TabsTrigger>
           <TabsTrigger value="alerts">{t("Alerts")} ({wantedCards.length})</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="hand" className="pt-6">
-          <PortfolioGrid assets={inHand} escrowAuthorityAddress={escrowAuthorityAddress} shipping={shipping} />
+        <TabsContent value="listed" className="pt-6">
+          <PortfolioGrid assets={listed} escrowAuthorityAddress={escrowAuthorityAddress} shipping={shipping} pnl={pnl} />
         </TabsContent>
-        <TabsContent value="vault" className="pt-6">
-          <PortfolioGrid assets={inVault} escrowAuthorityAddress={escrowAuthorityAddress} shipping={shipping} />
+        <TabsContent value="cards" className="pt-6">
+          <PortfolioGrid assets={assets} escrowAuthorityAddress={escrowAuthorityAddress} shipping={shipping} pnl={pnl} />
           {redeemed.length > 0 && (
             <div className="mt-10">
               <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
@@ -141,6 +149,9 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
               </div>
             </div>
           )}
+        </TabsContent>
+        <TabsContent value="history" className="pt-6">
+          <TradeHistory trades={soldTrades} />
         </TabsContent>
         <TabsContent value="watchlist" className="pt-6">
           {watchlist.length === 0 ? (
@@ -171,10 +182,12 @@ async function PortfolioGrid({
   assets,
   escrowAuthorityAddress,
   shipping,
+  pnl,
 }: {
   assets: Awaited<ReturnType<typeof getVaultAssets>>;
   escrowAuthorityAddress: string | null;
   shipping: { address: string | null; phone: string | null };
+  pnl: Record<string, HoldingPnl>;
 }) {
   if (assets.length === 0) {
     const t = await getT();
@@ -188,7 +201,13 @@ async function PortfolioGrid({
   return (
     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4">
       {assets.map((asset) => (
-        <PortfolioItemCard key={asset.id} asset={asset} escrowAuthorityAddress={escrowAuthorityAddress} shipping={shipping} />
+        <PortfolioItemCard
+          key={asset.id}
+          asset={asset}
+          escrowAuthorityAddress={escrowAuthorityAddress}
+          shipping={shipping}
+          pnl={pnl[asset.id]}
+        />
       ))}
     </div>
   );

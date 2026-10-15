@@ -39,13 +39,18 @@ import type { AssetSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { displayImage } from "@/lib/card-image";
 import { useT } from "@/components/landing/language-provider";
+import { HoldingPnlBlock } from "@/components/portfolio/pnl";
+import type { HoldingPnl } from "@/lib/pnl";
 
 export function PortfolioItemCard({
   asset,
   escrowAuthorityAddress,
   shipping,
+  pnl,
 }: {
   asset: AssetSummary;
+  /** What the owner paid against what the card is worth now (lib/pnl.ts). */
+  pnl?: HoldingPnl;
   escrowAuthorityAddress: string | null;
   /** The owner's saved shipping details, pre-filled into the redeem dialog. */
   shipping: { address: string | null; phone: string | null };
@@ -300,6 +305,8 @@ export function PortfolioItemCard({
         </Link>
         <p className="text-muted-foreground line-clamp-1 text-xs">{asset.subtitle}</p>
       </div>
+
+      <HoldingPnlBlock assetId={asset.id} pnl={pnl} />
 
       {asset.forSale && (
         <Badge

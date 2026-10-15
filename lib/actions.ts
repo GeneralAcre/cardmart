@@ -3903,3 +3903,31 @@ export async function declineAgentDecision(decisionId: string) {
   });
   revalidatePath("/agent");
 }
+
+/**
+ * Saves (or, with null, clears) what the current user paid for a card they
+ * didn't buy on CardMart, so their portfolio and sales history can show
+ * profit and loss. Only for a card they own now or have sold.
+ */
+export async function setPurchaseCost(assetId: string, costThb: number | null) {
+  const user = await getCurrentUser();
+  if (costThb != null && (!Number.isInteger(costThb) || costThb < 1 || costThb > 100_000_000)) {
+    throw new Error("Enter what you paid in whole baht.");
+  }
+  const [asset, sold] = await Promise.all([
+    prisma.asset.findUnique({ where: { id: assetId }, select: { ownerId: true } }),
+    prisma.escrowTransaction.count({ where: { assetId, sellerId: user.id, status: "RELEASED" } }),
+  ]);
+  if (!asset || (asset.ownerId !== user.id && sold === 0)) throw new Error("You can only set a price for your own cards.");
+
+  if (costThb == null) {
+    await prisma.purchaseCost.deleteMany({ where: { userId: user.id, assetId } });
+  } else {
+    await prisma.purchaseCost.upsert({
+      where: { userId_assetId: { userId: user.id, assetId } },
+      create: { userId: user.id, assetId, costThb },
+      update: { costThb },
+    });
+  }
+  revalidatePath("/portfolio");
+}
