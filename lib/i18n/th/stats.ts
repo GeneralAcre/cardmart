@@ -10,6 +10,22 @@ export const STATS: Record<string, string> = {
   "{count} cards · since {date}": "{count} ใบ · ตั้งแต่ {date}",
   "No market prices yet": "ยังไม่มีราคาตลาด",
 
+  // Index detail page
+  Level: "ระดับดัชนี",
+  Trend: "แนวโน้ม",
+  "Best performer": "ผลงานดีที่สุด",
+  "Worst performer": "ผลงานแย่ที่สุด",
+  "Cards in this index": "การ์ดในดัชนีนี้",
+  "No cards have a market price yet.": "ยังไม่มีการ์ดที่มีราคาตลาด",
+  "Ranked by price change. Prices are eBay's daily median asking price for each card and grade, converted to baht.":
+    "เรียงตามการเปลี่ยนแปลงของราคา ราคาคือค่ามัธยฐานราคาตั้งขายรายวันบน eBay ของการ์ดและเกรดนั้น แปลงเป็นบาท",
+  "Every card on CardMart that has a market price, each in its own grade, weighted equally.":
+    "การ์ดทุกใบบน CardMart ที่มีราคาตลาด แต่ละใบในเกรดของตัวเอง ถ่วงน้ำหนักเท่ากัน",
+  "Well-known Pokémon cards in PSA 10, priced every day from eBay, whether or not they're listed on CardMart.":
+    "การ์ด Pokémon ยอดนิยมเกรด PSA 10 ตั้งราคาทุกวันจาก eBay ไม่ว่าจะลงขายบน CardMart หรือไม่",
+  "Well-known One Piece cards in PSA 10, priced every day from eBay, whether or not they're listed on CardMart.":
+    "การ์ด One Piece ยอดนิยมเกรด PSA 10 ตั้งราคาทุกวันจาก eBay ไม่ว่าจะลงขายบน CardMart หรือไม่",
+
   // Card stats
   "Card stats": "สถิติการ์ด",
   "7 days": "7 วัน",

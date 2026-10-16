@@ -7,6 +7,8 @@ import { marketCardKey } from "@/lib/market-history";
 import { tierKey } from "@/lib/grade-tier";
 import { THB_PER_USD } from "@/lib/pricing";
 import { buildIndex, changeOver, changeWithin, type PricePoint } from "@/lib/stats-math";
+import { displayImage } from "@/lib/card-image";
+import { INDEX_BASKETS } from "@/lib/index-baskets";
 import type { HoldingPnl } from "@/lib/pnl";
 
 // Market-wide and portfolio statistics, all from the daily eBay market prices
@@ -56,14 +58,38 @@ async function priceSeries(cards: CardLike[]): Promise<Map<string, PricePoint[]>
   return series;
 }
 
+/** One card-and-grade inside an index, with its own price series. */
+export interface IndexMember {
+  key: string;
+  name: string;
+  subtitle: string;
+  cardNumber: string | null;
+  gradingCompany: string;
+  grade: number | null;
+  isBlackLabel: boolean;
+  /** A CardMart listing of this card to link to and borrow a picture from, when one exists. */
+  assetId: string | null;
+  photoUrl: string | null;
+  points: PricePoint[];
+  latestThb: number;
+  change7d: number | null;
+  change30dOrSince: number | null;
+}
+
+export const INDEX_KEYS: IndexKey[] = ["ALL", "POKEMON", "ONE_PIECE"];
+
 /**
- * The CardMart indexes: every card and grade on CardMart that has a saved
- * market price, equal-weighted (see buildIndex), for all games and per game.
+ * Who's in each index. The CardMart Index is every card and grade on CardMart
+ * with a saved market price. The Pokémon and One Piece indexes are fixed lists
+ * of well-known cards priced from eBay (lib/index-baskets.ts), whether or not
+ * they're on CardMart. A card counts only once it has a saved price.
  */
-export async function getMarketIndexes(): Promise<MarketIndex[]> {
+async function loadIndexMembers(): Promise<Record<IndexKey, IndexMember[]>> {
   const assets = await prisma.asset.findMany({
     where: { redeemedAt: null },
+    orderBy: { updatedAt: "desc" },
     select: {
+      id: true,
       game: true,
       name: true,
       subtitle: true,
@@ -72,31 +98,77 @@ export async function getMarketIndexes(): Promise<MarketIndex[]> {
       gradingCompany: true,
       grade: true,
       isBlackLabel: true,
+      catalogImageUrl: true,
+      verificationPhotos: { orderBy: { createdAt: "asc" }, take: 1, select: { url: true } },
     },
   });
-  const series = await priceSeries(assets);
-  const keysByGame = new Map<IndexKey, Set<string>>([["ALL", new Set()]]);
+  const series = await priceSeries([...assets, ...INDEX_BASKETS]);
+  // A CardMart listing per card (any grade), for a link and a picture.
+  const assetByCard = new Map<string, (typeof assets)[number]>();
+  const assetBySeries = new Map<string, (typeof assets)[number]>();
   for (const a of assets) {
-    const key = seriesKey(a);
-    if (!series.has(key)) continue;
-    keysByGame.get("ALL")!.add(key);
-    if (!keysByGame.has(a.game)) keysByGame.set(a.game, new Set());
-    keysByGame.get(a.game)!.add(key);
+    if (!assetByCard.has(marketCardKey(a))) assetByCard.set(marketCardKey(a), a);
+    if (!assetBySeries.has(seriesKey(a))) assetBySeries.set(seriesKey(a), a);
   }
 
-  const order: IndexKey[] = ["ALL", "POKEMON", "ONE_PIECE"];
-  return order.map((key) => {
-    const keys = [...(keysByGame.get(key) ?? [])];
-    const points = buildIndex(keys.map((k) => series.get(k)!));
+  const member = (card: CardLike, key: string): IndexMember => {
+    const points = series.get(key)!;
+    const asset = assetBySeries.get(key) ?? assetByCard.get(marketCardKey(card)) ?? null;
     return {
       key,
+      name: card.name,
+      subtitle: card.subtitle,
+      cardNumber: card.cardNumber,
+      gradingCompany: card.gradingCompany,
+      grade: card.grade,
+      isBlackLabel: card.isBlackLabel,
+      assetId: asset?.id ?? null,
+      photoUrl: asset ? (displayImage(asset)?.url ?? null) : null,
       points,
+      latestThb: points.at(-1)!.price,
       change7d: changeOver(points, 7),
-      change30d: changeOver(points, 30),
       change30dOrSince: changeWithin(points, 30),
-      constituents: keys.length,
     };
-  });
+  };
+
+  const result: Record<IndexKey, IndexMember[]> = { ALL: [], POKEMON: [], ONE_PIECE: [] };
+  const seen = new Set<string>();
+  for (const a of assets) {
+    const key = seriesKey(a);
+    if (seen.has(key) || !series.has(key)) continue;
+    seen.add(key);
+    result.ALL.push(member(a, key));
+  }
+  for (const card of INDEX_BASKETS) {
+    const key = seriesKey(card);
+    if (series.has(key)) result[card.game].push(member(card, key));
+  }
+  return result;
+}
+
+function summarize(key: IndexKey, members: IndexMember[]): MarketIndex {
+  const points = buildIndex(members.map((m) => m.points));
+  return {
+    key,
+    points,
+    change7d: changeOver(points, 7),
+    change30d: changeOver(points, 30),
+    change30dOrSince: changeWithin(points, 30),
+    constituents: members.length,
+  };
+}
+
+/** The three indexes, each equal-weighted and chain-linked from daily prices (see buildIndex). */
+export async function getMarketIndexes(): Promise<MarketIndex[]> {
+  const members = await loadIndexMembers();
+  return INDEX_KEYS.map((key) => summarize(key, members[key]));
+}
+
+/** One index with every card inside it, best performer first. */
+export async function getIndexDetail(key: IndexKey): Promise<{ index: MarketIndex; members: IndexMember[] }> {
+  const members = (await loadIndexMembers())[key];
+  const rank = (m: IndexMember) => m.change30dOrSince ?? -Infinity;
+  return { index: summarize(key, members), members: [...members].sort((x, y) => rank(y) - rank(x)) };
 }
 
 export interface PortfolioStats {

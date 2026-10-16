@@ -134,6 +134,11 @@ const JAPANESE_WORDS = ["japanese", "jpn", "japan", "jp"];
 const LANGUAGE_WORDS = ["japanese", "jpn", "japan", "jp", "korean", "kor", "kr", "chinese", "chn", "cn", "thai", "german", "french", "italian", "spanish"];
 // Lots, fakes and things that aren't one real card.
 const JUNK_WORDS = ["lot", "lots", "bundle", "proxy", "custom", "orica", "reprint", "replica", "fake", "digital", "empty", "case", "pick", "choose"];
+// One Piece prints its alternate arts, manga rares, promos and reprints
+// under the same card number as the regular card, at many times (or a
+// fraction of) the price. A regular card skips listings with these words.
+const ONE_PIECE_VARIANT_WORDS = ["manga", "alt", "alternate", "parallel", "promo", "prize", "premium", "championship"];
+const ONE_PIECE_NUMBER = /^[a-z]{2,4}\d{2}-\d{3}$/i;
 // Words in a card name too generic to require in a title.
 const NAME_FILLER = new Set(["holo", "rare", "card", "cards", "pokemon", "the", "of", "and", "foil"]);
 // Spelled differently between our names and sellers' titles.
@@ -199,6 +204,11 @@ function titleMatches(title: string, card: MarketCard): boolean {
     if (LANGUAGE_WORDS.some((w) => has(w) && !JAPANESE_WORDS.includes(w))) return false;
   } else if (LANGUAGE_WORDS.some((w) => has(w) && !own.includes(w))) {
     return false;
+  }
+
+  if (card.cardNumber && ONE_PIECE_NUMBER.test(card.cardNumber.trim())) {
+    const isVariant = ONE_PIECE_VARIANT_WORDS.some((w) => own.includes(w));
+    if (!isVariant && ONE_PIECE_VARIANT_WORDS.some(has)) return false;
   }
 
   const nameWords = words(card.name).filter((w) => w.length >= 2 && !NAME_FILLER.has(w));

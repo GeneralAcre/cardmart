@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 import { Area, AreaChart, Tooltip, YAxis } from "recharts";
 
 import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
@@ -11,6 +13,13 @@ const NAMES: Record<MarketIndex["key"], string> = {
   ALL: "CardMart Index",
   POKEMON: "Pokémon Index",
   ONE_PIECE: "One Piece Index",
+};
+
+// Each index opens its own page listing the cards inside it.
+const HREF: Record<MarketIndex["key"], string> = {
+  ALL: "/market/index/cardmart",
+  POKEMON: "/market/index/pokemon",
+  ONE_PIECE: "/market/index/one-piece",
 };
 
 const formatLevel = (v: number) => v.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -80,10 +89,15 @@ function IndexCard({ index }: { index: MarketIndex }) {
   const long = longChange(index);
 
   return (
-    <div className="bg-card flex flex-col gap-3 rounded-xl border p-4">
+    <Link
+      href={HREF[index.key]}
+      className="bg-card hover:border-foreground/30 group flex flex-col gap-3 rounded-xl border p-4 transition-colors"
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 flex-col">
-          <span className="text-muted-foreground truncate text-xs font-medium">{t(NAMES[index.key])}</span>
+          <span className="text-muted-foreground group-hover:text-foreground flex items-center gap-0.5 truncate text-xs font-medium transition-colors">
+            {t(NAMES[index.key])} <ChevronRight className="size-3.5" />
+          </span>
           <span className="text-2xl font-bold tabular-nums">{last ? formatLevel(last.price) : "—"}</span>
         </div>
         <div className="flex shrink-0 gap-4 text-right">
@@ -113,7 +127,7 @@ function IndexCard({ index }: { index: MarketIndex }) {
             })
           : t("No market prices yet")}
       </span>
-    </div>
+    </Link>
   );
 }
 
@@ -131,11 +145,11 @@ function IndexTile({ index }: { index: MarketIndex }) {
   const long = longChange(index);
 
   return (
-    <div className="bg-card flex min-w-0 flex-col p-2.5">
+    <Link href={HREF[index.key]} className="bg-card active:bg-accent flex min-w-0 flex-col p-2.5">
       <span className="truncate text-sm font-semibold">{t(SHORT_NAMES[index.key])}</span>
       <span className="mt-0.5 text-lg leading-tight font-bold tabular-nums">{last ? formatLevel(last.price) : "—"}</span>
       <span className={cn("text-xs font-semibold tabular-nums", toneClass(long.pct))}>{formatPct(long.pct)}</span>
-    </div>
+    </Link>
   );
 }
 
