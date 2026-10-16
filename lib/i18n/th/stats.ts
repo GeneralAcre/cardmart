@@ -1,0 +1,51 @@
+// Market indexes, card stats and portfolio stats (lib/stats.ts).
+export const STATS: Record<string, string> = {
+  // Market indexes
+  "CardMart Index": "ดัชนี CardMart",
+  "Pokémon Index": "ดัชนี Pokémon",
+  "One Piece Index": "ดัชนี One Piece",
+  "7D": "7 วัน",
+  "Since start": "ตั้งแต่เริ่ม",
+  "The chart builds up as a new market price is saved each day.": "กราฟจะค่อย ๆ สร้างขึ้นเมื่อมีการบันทึกราคาตลาดใหม่ทุกวัน",
+  "{count} cards · since {date}": "{count} ใบ · ตั้งแต่ {date}",
+  "No market prices yet": "ยังไม่มีราคาตลาด",
+
+  // Card stats
+  "Card stats": "สถิติการ์ด",
+  "7 days": "7 วัน",
+  "30 days": "30 วัน",
+  "1 year": "1 ปี",
+  "Daily swing": "ความผันผวนรายวัน",
+  "Typical move per day": "การเปลี่ยนแปลงโดยทั่วไปต่อวัน",
+  "Needs a few more days": "ต้องมีข้อมูลอีกสองสามวัน",
+  "All-time high": "สูงสุดตลอดกาล",
+  "All-time low": "ต่ำสุดตลอดกาล",
+  "On CardMart, this grade": "บน CardMart เกรดนี้",
+  "Lowest ask {pct} vs last sale": "ราคาตั้งขายต่ำสุด {pct} เทียบกับการขายล่าสุด",
+  "Last sale {price}": "ขายล่าสุด {price}",
+  "No sales yet": "ยังไม่มีการขาย",
+  "Based on {days} days of market prices since {date}.": "อ้างอิงราคาตลาด {days} วัน ตั้งแต่ {date}",
+  "Is grading worth it?": "ส่งเกรดคุ้มไหม?",
+  "An ungraded copy against PSA 9 and PSA 10, after our {fee} grading package. Assumes the card gets that grade.":
+    "เทียบการ์ดที่ไม่ได้เกรดกับ PSA 9 และ PSA 10 หลังหักค่าแพ็กเกจส่งเกรด {fee} โดยสมมติว่าการ์ดได้เกรดนั้น",
+  "No ungraded market price to compare yet.": "ยังไม่มีราคาตลาดของการ์ดที่ไม่ได้เกรดให้เทียบ",
+  "Worth grading": "คุ้มที่จะส่งเกรด",
+  "Not worth it at this grade": "ไม่คุ้มที่เกรดนี้",
+
+  // Portfolio stats
+  "Market value": "มูลค่าตลาด",
+  "{priced} of {held} cards have a market price": "การ์ด {priced} จาก {held} ใบมีราคาตลาด",
+  "Add what you paid on your cards": "ใส่ราคาที่ซื้อมาในการ์ดของคุณ",
+  "30 days vs market": "30 วัน เทียบตลาด",
+  "Beating the CardMart Index by {pts} pts": "ดีกว่าดัชนี CardMart {pts} จุด",
+  "Behind the CardMart Index by {pts} pts": "ต่ำกว่าดัชนี CardMart {pts} จุด",
+  "CardMart Index {pct}": "ดัชนี CardMart {pct}",
+  "Best / worst card": "การ์ดดีสุด / แย่สุด",
+  "By game (market value)": "แยกตามเกม (มูลค่าตลาด)",
+  "By game": "แยกตามเกม",
+  "By grade (market value)": "แยกตามเกรด (มูลค่าตลาด)",
+  "By grade": "แยกตามเกรด",
+  "{count} card": "{count} ใบ",
+  "{count} cards": "{count} ใบ",
+  "Grade 8 and below": "เกรด 8 ลงไป",
+};

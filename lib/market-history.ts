@@ -47,11 +47,16 @@ export async function getMarketPriceHistory(card: Pick<MarketCard, "name" | "sub
  * Prices each card and grade on eBay and saves the result, for the daily
  * cron, so a card's history keeps growing on days nobody opens its page.
  */
-export async function snapshotMarketPrices(cards: (MarketCard & GradeTier)[]): Promise<number> {
-  const unique = new Map(cards.map((card) => [`${marketCardKey(card)}#${tierKey(card)}`, card]));
+export async function snapshotMarketPrices(cards: (MarketCard & GradeTier)[], max = Infinity): Promise<number> {
+  // First occurrence wins, so the caller's order (for-sale cards first) decides who's priced under the cap.
+  const unique = new Map<string, MarketCard & GradeTier>();
+  for (const card of cards) {
+    const key = `${marketCardKey(card)}#${tierKey(card)}`;
+    if (!unique.has(key)) unique.set(key, card);
+  }
   let saved = 0;
   // A few at a time, to stay polite to eBay's rate limit.
-  const queue = [...unique.values()];
+  const queue = [...unique.values()].slice(0, max);
   for (let i = 0; i < queue.length; i += 4) {
     await Promise.all(
       queue.slice(i, i + 4).map(async (card) => {

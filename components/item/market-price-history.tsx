@@ -10,6 +10,8 @@ import { cn } from "@/lib/utils";
 import { useLanguage } from "@/components/landing/language-provider";
 import { tierKey } from "@/lib/grade-tier";
 import { GradeCompare } from "@/components/item/grade-compare";
+import { CardStats, GradingValue } from "@/components/item/card-stats";
+import { priceStats } from "@/lib/stats-math";
 import { getEbayQuoteForGrade } from "@/lib/actions";
 import type { EbayPriceQuote } from "@/lib/ebay";
 import { THB_PER_USD } from "@/lib/pricing";
@@ -175,6 +177,10 @@ export function MarketPriceHistory({
   const latest = last?.price;
   // eBay needs two saved days for a line; a single sale still draws one, carried to today.
   const canDraw = fromEbay ? ebayPoints.length >= 2 : points.length >= 2;
+  // Ticker stats over the full series in this grade, not just the picked range.
+  const stats = priceStats(source);
+  const tierAsks = listings.filter((l) => tierKey(l) === condition).map((l) => l.priceThb);
+  const sales30d = tierSales.filter((s) => new Date(s.soldAt).getTime() >= now - 30 * DAY).length;
   const changePct = canDraw && first && latest != null ? ((latest - first) / first) * 100 : null;
   const up = changePct == null || changePct >= 0;
   // Another grade than this listing gets its own color: its line is context, not this card's trend.
@@ -302,121 +308,133 @@ export function MarketPriceHistory({
           </div>
 
           {tab === "history" ? (
-            <div className="bg-card relative overflow-hidden rounded-2xl border p-4 sm:p-6">
-              {/* Watermark behind the line, like a broadcast chart. */}
-              <span
-                aria-hidden
-                className="text-foreground/[0.04] pointer-events-none absolute inset-0 flex items-center justify-center text-6xl font-black tracking-tighter italic select-none sm:text-8xl"
-              >
-                CARDMART
-              </span>
-              {canDraw ? (
-                <ChartContainer
-                  config={chartConfig}
-                  className="relative aspect-auto h-[320px] w-full [&_.recharts-curve.recharts-tooltip-cursor]:stroke-[var(--color-price)]"
+            <>
+              <div className="bg-card relative overflow-hidden rounded-2xl border p-4 sm:p-6">
+                {/* Watermark behind the line, like a broadcast chart. */}
+                <span
+                  aria-hidden
+                  className="text-foreground/[0.04] pointer-events-none absolute inset-0 flex items-center justify-center text-6xl font-black tracking-tighter italic select-none sm:text-8xl"
                 >
-                  <AreaChart data={points} margin={{ left: 0, right: 16, top: 16, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="marketFill" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="var(--color-price)" stopOpacity={0.18} />
-                        <stop offset="100%" stopColor="var(--color-price)" stopOpacity={0.02} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid vertical={false} strokeDasharray="4 6" />
-                    <XAxis
-                      dataKey="t"
-                      type="number"
-                      scale="time"
-                      domain={["dataMin", "dataMax"]}
-                      tickFormatter={formatDay}
-                      tickLine={false}
-                      axisLine={false}
-                      tickMargin={10}
-                      minTickGap={40}
-                    />
-                    <YAxis
-                      dataKey="price"
-                      domain={[(min: number) => Math.floor(min * 0.9), (max: number) => Math.ceil(max * 1.1)]}
-                      tickFormatter={formatAxisPrice}
-                      tickLine={false}
-                      axisLine={false}
-                      tickMargin={8}
-                      width={52}
-                    />
-                    <Tooltip
-                      cursor={{ strokeDasharray: "4 4", strokeWidth: 1 }}
-                      content={({ active, payload }) => {
-                        const p = active ? payload?.[0]?.payload : null;
-                        if (!p) return null;
-                        return (
-                          <div className="bg-background/95 rounded-lg border px-3 py-2 shadow-lg">
-                            <p className="text-muted-foreground text-[11px]">{new Date(p.t).toLocaleDateString(dateLocale)}</p>
-                            <p className="text-base font-bold tabular-nums">{formatThb(p.price)}</p>
-                          </div>
-                        );
-                      }}
-                    />
-                    <Area
-                      dataKey="price"
-                      type="monotone"
-                      fill="url(#marketFill)"
-                      stroke="var(--color-price)"
-                      strokeWidth={2.5}
-                      isAnimationActive={false}
-                      activeDot={{
-                        r: 6,
-                        strokeWidth: 3,
-                        fill: "var(--background)",
-                        stroke: "var(--color-price)",
-                      }}
-                      dot={(props: { cx?: number; cy?: number; index?: number }) =>
-                        props.index === points.length - 1 ? (
-                          <circle
-                            key="last"
-                            cx={props.cx}
-                            cy={props.cy}
-                            r={6}
-                            strokeWidth={3}
-                            fill="var(--background)"
-                            stroke="var(--color-price)"
-                          />
-                        ) : (
-                          <g key={props.index} />
-                        )
-                      }
-                    />
-                  </AreaChart>
-                </ChartContainer>
-              ) : (
-                <div className="relative flex h-[200px] flex-col items-center justify-center gap-1 text-center">
-                  {fromEbay ? (
-                    <>
-                      <p className="font-semibold">
-                        {t("Tracking the market price since {date}", { date: new Date(ebayPoints[0].t).toLocaleDateString(dateLocale) })}
-                      </p>
-                      <p className="text-muted-foreground text-sm">{t("A new eBay price is saved every day, so the line builds up from here.")}</p>
-                    </>
-                  ) : (
-                    <>
-                      <p className="font-semibold">{t("No market data in this grade yet")}</p>
-                      <p className="text-muted-foreground text-sm">{t("No matching eBay listings or CardMart sales of this card in this grade.")}</p>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
+                  CARDMART
+                </span>
+                {canDraw ? (
+                  <ChartContainer
+                    config={chartConfig}
+                    className="relative aspect-auto h-[320px] w-full [&_.recharts-curve.recharts-tooltip-cursor]:stroke-[var(--color-price)]"
+                  >
+                    <AreaChart data={points} margin={{ left: 0, right: 16, top: 16, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="marketFill" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="var(--color-price)" stopOpacity={0.18} />
+                          <stop offset="100%" stopColor="var(--color-price)" stopOpacity={0.02} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid vertical={false} strokeDasharray="4 6" />
+                      <XAxis
+                        dataKey="t"
+                        type="number"
+                        scale="time"
+                        domain={["dataMin", "dataMax"]}
+                        tickFormatter={formatDay}
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={10}
+                        minTickGap={40}
+                      />
+                      <YAxis
+                        dataKey="price"
+                        domain={[(min: number) => Math.floor(min * 0.9), (max: number) => Math.ceil(max * 1.1)]}
+                        tickFormatter={formatAxisPrice}
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={8}
+                        width={52}
+                      />
+                      <Tooltip
+                        cursor={{ strokeDasharray: "4 4", strokeWidth: 1 }}
+                        content={({ active, payload }) => {
+                          const p = active ? payload?.[0]?.payload : null;
+                          if (!p) return null;
+                          return (
+                            <div className="bg-background/95 rounded-lg border px-3 py-2 shadow-lg">
+                              <p className="text-muted-foreground text-[11px]">{new Date(p.t).toLocaleDateString(dateLocale)}</p>
+                              <p className="text-base font-bold tabular-nums">{formatThb(p.price)}</p>
+                            </div>
+                          );
+                        }}
+                      />
+                      <Area
+                        dataKey="price"
+                        type="monotone"
+                        fill="url(#marketFill)"
+                        stroke="var(--color-price)"
+                        strokeWidth={2.5}
+                        isAnimationActive={false}
+                        activeDot={{
+                          r: 6,
+                          strokeWidth: 3,
+                          fill: "var(--background)",
+                          stroke: "var(--color-price)",
+                        }}
+                        dot={(props: { cx?: number; cy?: number; index?: number }) =>
+                          props.index === points.length - 1 ? (
+                            <circle
+                              key="last"
+                              cx={props.cx}
+                              cy={props.cy}
+                              r={6}
+                              strokeWidth={3}
+                              fill="var(--background)"
+                              stroke="var(--color-price)"
+                            />
+                          ) : (
+                            <g key={props.index} />
+                          )
+                        }
+                      />
+                    </AreaChart>
+                  </ChartContainer>
+                ) : (
+                  <div className="relative flex h-[200px] flex-col items-center justify-center gap-1 text-center">
+                    {fromEbay ? (
+                      <>
+                        <p className="font-semibold">
+                          {t("Tracking the market price since {date}", { date: new Date(ebayPoints[0].t).toLocaleDateString(dateLocale) })}
+                        </p>
+                        <p className="text-muted-foreground text-sm">{t("A new eBay price is saved every day, so the line builds up from here.")}</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="font-semibold">{t("No market data in this grade yet")}</p>
+                        <p className="text-muted-foreground text-sm">{t("No matching eBay listings or CardMart sales of this card in this grade.")}</p>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+              <CardStats
+                stats={stats}
+                liveListings={tierAsks.length}
+                sales30d={sales30d}
+                lowestAsk={tierAsks.length ? Math.min(...tierAsks) : null}
+                lastSale={tierSales.at(-1)?.amountThb ?? null}
+              />
+            </>
           ) : (
-            <GradeCompare
-              tierName={tierName(selected)}
-              isOwnGrade={isOwnGrade}
-              listingThb={listingThb}
-              listingGradeName={tierName(current)}
-              asks={listings.filter((l) => tierKey(l) === condition).map((l) => l.priceThb)}
-              salePrices={tierSales.map((s) => s.amountThb)}
-              ebay={ebay[condition]}
-              tcg={selected.gradingCompany === "RAW" ? tcg : null}
-              query={query}
-            />
+            <>
+              <GradeCompare
+                tierName={tierName(selected)}
+                isOwnGrade={isOwnGrade}
+                listingThb={listingThb}
+                listingGradeName={tierName(current)}
+                asks={tierAsks}
+                salePrices={tierSales.map((s) => s.amountThb)}
+                ebay={ebay[condition]}
+                tcg={selected.gradingCompany === "RAW" ? tcg : null}
+                query={query}
+              />
+              <GradingValue ebay={ebay} />
+            </>
           )}
         </>
       )}

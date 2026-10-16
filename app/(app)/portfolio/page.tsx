@@ -2,6 +2,8 @@ import Link from "next/link";
 import { Bookmark, Flame, PackageOpen } from "lucide-react";
 import { getHoldingPnl, getSoldTrades, type HoldingPnl } from "@/lib/pnl";
 import { TradeHistory } from "@/components/portfolio/pnl";
+import { PortfolioStats } from "@/components/portfolio/portfolio-stats";
+import { getMarketIndexes, getPortfolioStats } from "@/lib/stats";
 
 import {
   getMyRedeemedAssets,
@@ -50,6 +52,7 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
     completedSales,
     salesToShip,
     soldTrades,
+    indexes,
   ] = await Promise.all([
     getVaultAssets(user.id),
     getDevnetSolBalance(user.walletAddress), // real balance only for real (Privy) wallets, not the mock demo ones
@@ -62,8 +65,14 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
     prisma.escrowTransaction.count({ where: { sellerId: user.id, status: "RELEASED" } }),
     getMySalesToShip(user.id),
     getSoldTrades(user.id),
+    getMarketIndexes(),
   ]);
   const pnl = await getHoldingPnl(user.id, assets);
+  const portfolioStats = await getPortfolioStats(
+    assets,
+    pnl,
+    indexes.find((i) => i.key === "ALL")?.change30dOrSince ?? null,
+  );
   // My Cards is everything owned; Listed is only what's up for sale or auction.
   const listed = assets.filter((a) => a.forSale || a.marketStatus === "IN_AUCTION");
 
@@ -102,6 +111,12 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
           photoStorageReady={isKycPhotoStorageConfigured()}
         />
       </div>
+
+      {assets.length > 0 && (
+        <div className="mb-8">
+          <PortfolioStats stats={portfolioStats} />
+        </div>
+      )}
 
       <Tabs defaultValue={defaultTab}>
         <TabsList>
