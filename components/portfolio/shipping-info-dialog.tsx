@@ -55,7 +55,10 @@ export function ShippingInfoDialog({
   return (
     <>
       <Button size="sm" variant="outline" onClick={() => setOpen(true)}>
-        <Truck /> {shippingAddress ? t("Edit Shipping Info") : t("Add Shipping Info")}
+        <Truck />
+        {/* Shorter on phones, where three buttons share one row. */}
+        <span className="sm:hidden">{t("Shipping")}</span>
+        <span className="hidden sm:inline">{shippingAddress ? t("Shipping info") : t("Add shipping info")}</span>
       </Button>
       <Dialog open={open} onOpenChange={(o) => !pending && setOpen(o)}>
         <DialogContent className="max-w-sm">

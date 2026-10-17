@@ -35,7 +35,7 @@ export function WalletActions({ solBalance }: { solBalance?: number | null }) {
 
   return (
     <>
-      <div className="flex gap-2">
+      <div className="flex flex-[2] gap-2 sm:flex-none">
         <Button size="sm" variant="outline" onClick={() => setDepositOpen(true)}>
           <ArrowDownToLine /> {t("Deposit")}
         </Button>

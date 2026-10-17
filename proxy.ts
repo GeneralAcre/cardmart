@@ -66,7 +66,8 @@ export function proxy(req: NextRequest) {
 
   if (!PRIVY_ENFORCED) return NextResponse.next();
 
-  const isPublicPath = PUBLIC_PATHS.includes(pathname);
+  // Shared sale receipts (/share/...) are meant to be opened by anyone.
+  const isPublicPath = PUBLIC_PATHS.includes(pathname) || pathname.startsWith("/share/");
   if (!hasSession && !isPublicPath) {
     return NextResponse.redirect(new URL("/", req.nextUrl.origin));
   }

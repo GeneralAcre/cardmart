@@ -262,7 +262,9 @@ export function PortfolioItemCard({
   const thumbnail = displayImage(asset);
 
   return (
-    <div className="bg-card flex flex-col gap-3 rounded-xl border p-3 shadow-sm">
+    // @container: the actions below size to this card, not the screen, so they
+    // fit whether the grid shows 2 cards (phones) or 6 (wide desktops).
+    <div className="bg-card @container flex flex-col gap-3 rounded-xl border p-3 shadow-sm">
       {/* The image bleeds to the card's own edges (negative margin,
           matching corner radius) instead of sitting in its own inset
           border — a separate inner frame read as "double framed". */}
@@ -300,13 +302,14 @@ export function PortfolioItemCard({
       </Link>
       <div className="flex flex-col gap-1">
         <span className="text-muted-foreground text-xs">{t(CARD_GAME_LABELS[asset.game])}</span>
-        <Link href={`/item/${asset.id}`} className="line-clamp-1 text-sm font-semibold hover:underline">
-          {asset.name}
-        </Link>
+        <div className="flex min-w-0 items-center justify-between gap-2">
+          <Link href={`/item/${asset.id}`} className="line-clamp-1 min-w-0 text-sm font-semibold hover:underline">
+            {asset.name}
+          </Link>
+          <HoldingPnlBlock assetId={asset.id} pnl={pnl} />
+        </div>
         <p className="text-muted-foreground line-clamp-1 text-xs">{asset.subtitle}</p>
       </div>
-
-      <HoldingPnlBlock assetId={asset.id} pnl={pnl} />
 
       {asset.forSale && (
         <Badge
@@ -331,11 +334,11 @@ export function PortfolioItemCard({
           </Link>
         </div>
       ) : asset.vaulted ? (
-        <div className="grid grid-cols-2 gap-2 pt-1">
+        <div className="grid grid-cols-1 gap-2 pt-1 @[15rem]:grid-cols-2">
           <div className="contents">
             <Dialog open={relistOpen} onOpenChange={setRelistOpen}>
               <DialogTrigger asChild>
-                <Button size="sm" variant="default" className="col-span-2 w-full font-semibold">
+                <Button size="sm" variant="default" className="w-full font-semibold @[15rem]:col-span-2">
                   <Repeat /> {t("Relist")}
                 </Button>
               </DialogTrigger>

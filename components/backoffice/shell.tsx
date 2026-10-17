@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils";
 import { useT } from "@/components/landing/language-provider";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { StaffSignOut } from "@/components/backoffice/staff-sign-out";
+import { ThemeToggleButton } from "@/components/site/theme-toggle";
 import type { BackofficeCounts } from "@/lib/queries";
 
 interface NavItem {
@@ -201,6 +202,7 @@ export function BackofficeShell({
             <span className="border-highlight/50 text-highlight rounded border px-1.5 text-[10px] font-semibold tracking-wider uppercase">
               {t("Staff")}
             </span>
+            <ThemeToggleButton />
             <StaffSignOut />
           </div>
         </header>

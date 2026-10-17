@@ -99,7 +99,7 @@ function LandingPageContent({ authenticated, showcase }: LandingPageProps) {
             return (
               <div
                 key={item.title}
-                className="group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.05] to-transparent p-6 transition-colors hover:border-white/20 sm:p-7"
+                className="group relative overflow-hidden rounded-2xl border border-foreground/10 bg-gradient-to-b from-foreground/[0.05] to-transparent p-6 transition-colors hover:border-foreground/20 sm:p-7"
               >
                 <div
                   aria-hidden

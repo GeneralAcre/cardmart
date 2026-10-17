@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { History, Loader2, Pencil, Plus } from "lucide-react";
+import { History, Loader2, Pencil, Plus, Share2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -131,45 +131,44 @@ export function HoldingPnlBlock({ assetId, pnl }: { assetId: string; pnl: Holdin
       <PurchaseCostDialog assetId={assetId} costThb={null}>
         <button
           type="button"
-          className="text-muted-foreground hover:text-foreground hover:border-foreground/30 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed px-2.5 py-2 text-xs transition-colors"
+          className="text-muted-foreground hover:text-foreground inline-flex size-6 shrink-0 items-center justify-center rounded-full transition-colors"
+          aria-label={t("Add what you paid to see profit")}
+          title={t("Add what you paid to see profit")}
         >
-          <Plus className="size-3.5" /> {t("Add what you paid to see profit")}
+          <Plus className="size-4" />
         </button>
       </PurchaseCostDialog>
     );
   }
 
-  const paid = (
-    <span className="flex items-center gap-1">
-      {t("Paid")} <span className="text-foreground tabular-nums">{formatThb(pnl.costThb)}</span>
-      {pnl.costSource === "manual" && (
-        <PurchaseCostDialog assetId={assetId} costThb={pnl.costThb}>
-          <button type="button" className="hover:text-foreground" aria-label={t("Edit what you paid")}>
-            <Pencil className="size-3" />
-          </button>
-        </PurchaseCostDialog>
-      )}
-    </span>
-  );
-
+  // Just the percentage on the card; the prices behind it are on the card's
+  // page (and in the hover text), so the grid stays easy to scan.
   return (
-    <div className="rounded-lg border px-2.5 py-2">
-      {pnl.gainThb != null && pnl.gainPct != null ? (
-        <div className="flex items-baseline justify-between gap-2">
-          <span className={cn("text-base font-bold tabular-nums", toneClass(pnl.gainThb))}>{signedThb(pnl.gainThb)}</span>
-          <GainBadge pct={pnl.gainPct} className="text-sm" />
-        </div>
-      ) : (
-        <span className="text-muted-foreground text-xs">{t("No market price yet")}</span>
-      )}
-      <div className="text-muted-foreground mt-1 flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 text-[11px]">
-        {paid}
-        {pnl.valueThb != null && (
-          <span>
-            {t("Market")} <span className="text-foreground tabular-nums">{formatThb(pnl.valueThb)}</span>
-          </span>
+    <div
+      className="flex shrink-0 items-center"
+      title={
+        pnl.valueThb != null
+          ? t("Paid {paid} · Market {market}", { paid: formatThb(pnl.costThb), market: formatThb(pnl.valueThb) })
+          : t("Paid {paid}", { paid: formatThb(pnl.costThb) })
+      }
+    >
+      <span className="flex items-center">
+        {pnl.costSource === "manual" ? (
+          <PurchaseCostDialog assetId={assetId} costThb={pnl.costThb}>
+            <button type="button" className="rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={t("Edit what you paid")}>
+              {pnl.gainPct != null ? (
+                <GainBadge pct={pnl.gainPct} className="text-base" />
+              ) : (
+                <span className="text-muted-foreground text-sm" aria-hidden="true">—</span>
+              )}
+            </button>
+          </PurchaseCostDialog>
+        ) : pnl.gainPct != null ? (
+          <GainBadge pct={pnl.gainPct} className="text-base" />
+        ) : (
+          <span className="text-muted-foreground text-sm" title={t("No market price yet")}>—</span>
         )}
-      </div>
+      </span>
     </div>
   );
 }
@@ -271,6 +270,11 @@ export function TradeHistory({ trades }: { trades: SoldTrade[] }) {
                 <span className="text-muted-foreground text-xs">—</span>
               )}
             </div>
+            <Button asChild variant="ghost" size="icon" className="text-muted-foreground size-8 shrink-0">
+              <Link href={`/share/trade/${tr.escrowId}`} aria-label={t("Share this sale")} title={t("Share this sale")}>
+                <Share2 />
+              </Link>
+            </Button>
           </li>
         ))}
       </ul>

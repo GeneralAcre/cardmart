@@ -163,3 +163,73 @@ export async function getSoldTrades(userId: string): Promise<SoldTrade[]> {
     };
   });
 }
+
+export interface SaleReceipt extends SoldTrade {
+  sellerName: string;
+  sellerHandle: string | null;
+}
+
+/**
+ * One completed sale for its shareable receipt card: what the seller paid
+ * (their CardMart purchase, or a price they entered), what it sold for, and
+ * the profit. Null unless the sale is completed.
+ */
+export async function getSaleReceipt(escrowId: string): Promise<SaleReceipt | null> {
+  const sale = await prisma.escrowTransaction.findUnique({
+    where: { id: escrowId },
+    select: {
+      id: true,
+      status: true,
+      amountThb: true,
+      releasedAt: true,
+      createdAt: true,
+      sellerId: true,
+      seller: { select: { name: true, handle: true } },
+      asset: {
+        select: {
+          id: true,
+          name: true,
+          subtitle: true,
+          gradingCompany: true,
+          grade: true,
+          isBlackLabel: true,
+          catalogImageUrl: true,
+          verificationPhotos: { orderBy: { createdAt: "asc" }, select: { url: true } },
+        },
+      },
+    },
+  });
+  if (!sale || sale.status !== "RELEASED") return null;
+  const soldAt = sale.releasedAt ?? sale.createdAt;
+
+  const [purchase, entered] = await Promise.all([
+    prisma.escrowTransaction.findFirst({
+      where: { buyerId: sale.sellerId, assetId: sale.asset.id, status: "RELEASED", releasedAt: { lt: soldAt } },
+      orderBy: { releasedAt: "desc" },
+      select: { amountThb: true },
+    }),
+    prisma.purchaseCost.findUnique({
+      where: { userId_assetId: { userId: sale.sellerId, assetId: sale.asset.id } },
+      select: { costThb: true },
+    }),
+  ]);
+  const costThb = purchase?.amountThb ?? entered?.costThb ?? null;
+
+  return {
+    escrowId: sale.id,
+    assetId: sale.asset.id,
+    name: sale.asset.name,
+    subtitle: sale.asset.subtitle,
+    gradingCompany: sale.asset.gradingCompany,
+    grade: sale.asset.grade,
+    isBlackLabel: sale.asset.isBlackLabel,
+    photoUrl: displayImage(sale.asset)?.url ?? null,
+    soldThb: sale.amountThb,
+    soldAt: soldAt.toISOString(),
+    costThb,
+    costSource: purchase ? "purchase" : entered ? "manual" : null,
+    ...gain(sale.amountThb, costThb),
+    sellerName: sale.seller.name ?? sale.seller.handle ?? "A collector",
+    sellerHandle: sale.seller.handle,
+  };
+}

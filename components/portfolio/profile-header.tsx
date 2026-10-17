@@ -5,7 +5,6 @@ import { Check, Copy } from "lucide-react";
 import { toast } from "sonner";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
 import { WalletActions } from "@/components/portfolio/wallet-actions";
 import { ShippingInfoDialog } from "@/components/portfolio/shipping-info-dialog";
 import { EditProfileDialog } from "@/components/portfolio/edit-profile-dialog";
@@ -56,18 +55,21 @@ export function ProfileHeader({
     setTimeout(() => setCopied(false), 1500);
   }
 
+  // Sits straight on the page (no card frame): who you are, your balance
+  // with its actions, then how your portfolio's value has moved.
   return (
-    <div className="bg-card flex flex-col gap-4 rounded-xl border p-5">
-      <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:gap-6">
-        <div className="flex min-w-0 flex-1 items-center gap-4">
-          <Avatar className="ring-border size-14 shrink-0 ring-2 ring-offset-2">
+    <div className="flex flex-col gap-6">
+      {/* You on the left; your balance and its actions together on the right. */}
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center gap-4">
+          <Avatar className="ring-border size-16 shrink-0 ring-2 ring-offset-2 ring-offset-background">
             {image && <AvatarImage src={image} alt={name} />}
-            <AvatarFallback className="text-base font-medium">{initials}</AvatarFallback>
+            <AvatarFallback className="text-lg font-medium">{initials}</AvatarFallback>
           </Avatar>
           <div className="flex min-w-0 flex-col gap-1">
-            <div className="flex flex-wrap items-baseline gap-x-2">
-              <span className="truncate text-lg font-semibold">{name}</span>
-              {handle && <span className="text-muted-foreground text-sm">@{handle}</span>}
+            <span className="truncate text-xl font-semibold sm:text-2xl">{name}</span>
+            <div className="text-muted-foreground flex flex-wrap items-center gap-x-1.5 text-sm">
+              {handle && <span>@{handle}</span>}
               <EditProfileDialog name={name} handle={handle} />
             </div>
             <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
@@ -89,33 +91,26 @@ export function ProfileHeader({
           </div>
         </div>
 
-        <Separator className="hidden sm:block" orientation="vertical" />
-
-        <Stat label={t("SOL Balance")} value={solBalance != null ? `${solBalance.toFixed(4)} SOL` : "—"} />
-
-        <ShippingInfoDialog shippingAddress={shippingAddress} phone={phone} />
-      </div>
-
-      <div className="border-t pt-4">
-        <PortfolioValueChart initialHistory={portfolioValueHistory} />
-      </div>
-
-      {connected && (
-        <div className="border-t pt-4">
-          <WalletActions solBalance={solBalance} />
+        <div className="flex flex-col gap-3 sm:items-end">
+          <Stat label={t("SOL Balance")} value={solBalance != null ? `${solBalance.toFixed(4)} SOL` : "—"} />
+          {/* Phones: the buttons share the width equally on one row; from sm up they sit right-aligned. */}
+          <div className="flex gap-2 sm:justify-end [&_button]:flex-1 sm:[&_button]:flex-none">
+            {connected && <WalletActions solBalance={solBalance} />}
+            <ShippingInfoDialog shippingAddress={shippingAddress} phone={phone} />
+          </div>
         </div>
-      )}
+      </div>
+
+      <PortfolioValueChart initialHistory={portfolioValueHistory} />
     </div>
   );
 }
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex flex-col gap-0.5">
-      <span className="text-lg leading-none font-semibold tracking-tight tabular-nums sm:text-xl">
-        {value}
-      </span>
-      <span className="text-muted-foreground text-xs whitespace-nowrap">{label}</span>
+    <div className="flex flex-col gap-1 sm:items-end">
+      <span className="eyebrow text-muted-foreground">{label}</span>
+      <span className="text-3xl leading-none font-bold tracking-tight tabular-nums">{value}</span>
     </div>
   );
 }

@@ -41,6 +41,8 @@ export const COMMON: Record<string, string> = {
   "Connect Wallet": "เชื่อมต่อกระเป๋าเงิน",
   "Solana Wallet (Test Network)": "กระเป๋าเงิน Solana (เครือข่ายทดสอบ)",
   "Wallet · Test network": "กระเป๋าเงิน · เครือข่ายทดสอบ",
+  "Switch to light mode": "เปลี่ยนเป็นโหมดสว่าง",
+  "Switch to dark mode": "เปลี่ยนเป็นโหมดมืด",
   "Send test SOL to this address to fund it:": "ส่ง SOL ทดสอบมาที่อยู่นี้เพื่อเติมเงิน:",
 
   // Footer / contact

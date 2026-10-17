@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { LoginButton } from "@/components/onboarding/login-button";
 import { LanguageSwitcher } from "@/components/landing/language-switcher";
+import { ThemeToggleButton } from "@/components/site/theme-toggle";
 import { useLanguage } from "@/components/landing/language-provider";
 import { Logo } from "@/components/site/logo";
 
@@ -29,6 +30,7 @@ export function LandingNav({ authenticated }: { authenticated: boolean }) {
             <LoginButton size="sm" className="w-auto" label="Login" />
           )}
           <LanguageSwitcher />
+          <ThemeToggleButton />
         </div>
       </div>
     </header>

@@ -77,7 +77,8 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
   const listed = assets.filter((a) => a.forSale || a.marketStatus === "IN_AUCTION");
 
   return (
-    <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6">
+    // Same full width as the Market page, so the profile, stats and tabs fill the screen.
+    <div className="mx-auto w-full max-w-screen-2xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-8">
         <ProfileHeader
           name={user.name ?? user.handle ?? t("Collector")}
@@ -178,7 +179,7 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
               </Link>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
               {watchlist.map((asset) => (
                 <ListingCard key={asset.id} asset={asset} />
               ))}
@@ -214,7 +215,7 @@ async function PortfolioGrid({
     );
   }
   return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
       {assets.map((asset) => (
         <PortfolioItemCard
           key={asset.id}

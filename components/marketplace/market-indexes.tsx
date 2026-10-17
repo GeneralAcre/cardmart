@@ -76,84 +76,50 @@ function Sparkline({ index, className, tooltip = true }: { index: MarketIndex; c
   );
 }
 
-/**
- * The longer-term move: 30 days, or — while the index is younger than that —
- * since the day it began, named by date so it never reads like a duplicate.
- */
-function longChange(index: MarketIndex, t: (s: string, v?: Record<string, string | number>) => string, locale: string) {
-  if (index.change30d != null) return { label: t("30D"), pct: index.change30d };
-  const first = index.points[0];
-  const date = first
-    ? new Date(first.t).toLocaleDateString(locale === "th" ? "th-TH" : "en-US", { day: "numeric", month: "short" })
-    : "";
-  return { label: t("Since {date}", { date }), pct: index.change30dOrSince };
-}
-
 /** Desktop: a card per index with its chart. */
 function IndexCard({ index }: { index: MarketIndex }) {
-  const { locale, tr: t } = useLanguage();
+  const { tr: t } = useLanguage();
   const last = index.points.at(-1);
-  const first = index.points[0];
-  const long = longChange(index, t, locale);
 
   return (
     <Link
       href={HREF[index.key]}
-      className="bg-card hover:border-foreground/30 group flex flex-col gap-3 rounded-xl border p-4 transition-colors"
+      className="bg-card hover:border-foreground/30 group relative isolate flex flex-col gap-3 overflow-hidden rounded-2xl border p-4 transition-colors sm:p-5"
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 flex-col">
-          <span className="text-muted-foreground group-hover:text-foreground flex items-center gap-0.5 truncate text-xs font-medium transition-colors">
-            {t(NAMES[index.key])} <ChevronRight className="size-3.5" />
-          </span>
-          <span className="text-2xl font-bold tabular-nums">{last ? formatLevel(last.price) : "—"}</span>
-        </div>
-        <div className="flex shrink-0 gap-4 text-right">
-          {[{ label: t("1D"), pct: index.change1d }, long].map((c) => (
-            <span key={c.label} className="flex flex-col">
-              <span className="text-muted-foreground text-[10px] tracking-wide uppercase">{c.label}</span>
-              <span className={cn("text-sm font-semibold tabular-nums", toneClass(c.pct))}>{formatPct(c.pct)}</span>
-            </span>
-          ))}
-        </div>
+      <div className="pointer-events-none absolute -right-8 -top-10 z-0 size-36 rounded-full bg-primary/[0.035] blur-2xl transition-colors group-hover:bg-primary/[0.08]" />
+      <div className="relative z-10 flex min-w-0 items-center justify-between gap-3">
+        <span className="text-muted-foreground group-hover:text-foreground flex min-w-0 items-center gap-0.5 truncate text-xs font-medium transition-colors">
+          {t(NAMES[index.key])} <ChevronRight className="size-3.5 shrink-0" />
+        </span>
+        <span className={cn("shrink-0 text-sm font-semibold tabular-nums", toneClass(index.change1d))}>{formatPct(index.change1d)}</span>
+      </div>
+      <div className="relative z-10 -mt-2 text-2xl font-bold tabular-nums tracking-tight">
+        {last ? formatLevel(last.price) : "—"}
       </div>
       {index.points.length >= 2 ? (
-        <Sparkline index={index} className="h-14 w-full" />
+        <Sparkline index={index} className="relative z-10 h-14 w-full" />
       ) : (
-        <p className="text-muted-foreground flex h-14 items-center text-xs">
+        <p className="text-muted-foreground relative z-10 flex h-14 items-center text-xs">
           {t("The chart builds up as a new market price is saved each day.")}
         </p>
       )}
-      <span className="text-muted-foreground text-[11px]">
-        {first
-          ? t("{count} cards · since {date}", {
-              count: index.constituents,
-              date: new Date(first.t).toLocaleDateString(locale === "th" ? "th-TH" : "en-US", { day: "numeric", month: "short" }),
-            })
-          : t("No market prices yet")}
-      </span>
     </Link>
   );
 }
 
 // Short names for the phone strip, where three tiles share one row.
-const SHORT_NAMES: Record<MarketIndex["key"], string> = {
-  ALL: "CardMart",
-  POKEMON: "Pokémon",
-  ONE_PIECE: "One Piece",
-};
-
 /** Phones: a small tile per index, three side by side, like a stock app's ticker strip. */
 function IndexTile({ index }: { index: MarketIndex }) {
-  const { locale, tr: t } = useLanguage();
+  const { tr: t } = useLanguage();
   const last = index.points.at(-1);
-  const long = longChange(index, t, locale);
 
   return (
-    <Link href={HREF[index.key]} className="bg-card active:bg-accent flex min-w-0 flex-col p-2.5">
-      <span className="truncate text-sm font-semibold">{t(SHORT_NAMES[index.key])}</span>
+    <Link href={HREF[index.key]} className="bg-card active:bg-accent flex min-w-0 flex-col gap-1.5 p-2.5">
+      <span className="flex min-w-0 items-center justify-between gap-2">
+        <span className="truncate text-xs font-semibold">{t(NAMES[index.key])}</span>
+        <span className={cn("shrink-0 text-xs font-semibold tabular-nums", toneClass(index.change1d))}>{formatPct(index.change1d)}</span>
+      </span>
       <span className="mt-0.5 text-lg leading-tight font-bold tabular-nums">{last ? formatLevel(last.price) : "—"}</span>
-      <span className={cn("text-xs font-semibold tabular-nums", toneClass(long.pct))}>{formatPct(long.pct)}</span>
     </Link>
   );
 }

@@ -48,9 +48,11 @@ export function PortfolioValueChart({ initialHistory }: { initialHistory: ValueP
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <LineChart className="text-muted-foreground size-4" />
-          <span className="text-muted-foreground text-xs">{t("Portfolio Value")}</span>
+        <div className="flex flex-col gap-0.5">
+          <span className="text-muted-foreground flex items-center gap-1.5 text-xs">
+            <LineChart className="size-3.5" /> {t("Portfolio Value")}
+          </span>
+          <span className="text-xl font-semibold tabular-nums">{latest != null ? formatThb(latest) : "—"}</span>
         </div>
         <Tabs value={range} onValueChange={(v) => handleRangeChange(v as PriceHistoryRange)}>
           <TabsList>
@@ -92,9 +94,9 @@ export function PortfolioValueChart({ initialHistory }: { initialHistory: ValueP
           </AreaChart>
         </ChartContainer>
       ) : (
-        <p className="text-muted-foreground py-6 text-center text-xs">
+        <p className="text-muted-foreground text-xs">
           {latest != null
-            ? t("Currently {amount} — not enough history yet to plot a trend in this window.", { amount: formatThb(latest) })
+            ? t("Not enough history yet to draw a trend for this range.")
             : t("No priced assets yet — list or reprice something to start tracking value over time.")}
         </p>
       )}

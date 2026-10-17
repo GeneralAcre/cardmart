@@ -704,7 +704,8 @@ async function completePurchase(opts: {
       },
     });
     void release;
-    await notifyUser(asset.ownerId, "ITEM_SOLD", "Item sold", soldNote, `/item/${assetId}`);
+    // The seller lands on their shareable sale receipt.
+    await notifyUser(asset.ownerId, "ITEM_SOLD", "Item sold", soldNote, `/share/trade/${escrowTx.id}`);
     await notifyUser(user.id, "ITEM_PURCHASED", "Purchase complete", purchasedNote, `/item/${assetId}`);
   } else {
     // The seller now has to actually send the card in (markShippedToWarehouse)
@@ -1638,7 +1639,7 @@ export async function warehouseApproveShip(inboundPackageId: string) {
     "ITEM_SOLD",
     "Item sold",
     `${pkg.asset.name} passed inspection and sold for ${pkg.escrowTx.amountThb.toLocaleString()} THB.`,
-    `/item/${pkg.assetId}`,
+    `/share/trade/${pkg.escrowTx.id}`,
   );
   revalidateMarketplace(pkg.assetId);
 }
@@ -1706,7 +1707,7 @@ export async function warehouseApproveVault(inboundPackageId: string, vaultLocat
     "ITEM_SOLD",
     "Item sold",
     `${pkg.asset.name} passed inspection and sold for ${pkg.escrowTx.amountThb.toLocaleString()} THB.`,
-    `/item/${pkg.assetId}`,
+    `/share/trade/${pkg.escrowTx.id}`,
   );
   revalidateMarketplace(pkg.assetId);
 }

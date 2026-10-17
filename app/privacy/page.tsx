@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { SiteFooter } from "@/components/site/footer";
 import { Logo } from "@/components/site/logo";
+import { ThemeToggleButton } from "@/components/site/theme-toggle";
 
 export const metadata = {
   title: "Privacy Policy — CardMart",
@@ -11,10 +12,11 @@ export default function PrivacyPage() {
   return (
     <div className="flex min-h-full flex-col">
       <header className="border-b">
-        <div className="mx-auto flex h-16 max-w-7xl items-center px-4 sm:px-6">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
           <Link href="/" className="flex items-center gap-2">
             <Logo />
           </Link>
+          <ThemeToggleButton />
         </div>
       </header>
 

@@ -41,6 +41,53 @@
      price movement (the price chart line, the trending "gained value" badge). */
   --highlight: var(--success);
   --highlight-foreground: #0a0a0a;
+  /* The spotlight a card image sits on (see .card-stage). */
+  --stage: radial-gradient(120% 80% at 50% 0%, #2a2a2a 0%, #171717 45%, #0f0f0f 100%);
+}
+
+/* Light theme, opt-in from the theme toggle (<html data-theme="light">).
+   Same structure as dark: a slightly tinted page with white cards on it.
+   The brand lime is unreadable as text on white, so "up / good" figures use
+   a deeper green here; chips that fill with it switch to white text. */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --background: #f5f5f4;
+  --foreground: #0a0a0a;
+  --card: #ffffff;
+  --card-foreground: #0a0a0a;
+  --popover: #ffffff;
+  --popover-foreground: #0a0a0a;
+  --primary: #0a0a0a;
+  --primary-foreground: #ffffff;
+  --secondary: #ececeb;
+  --secondary-foreground: #0a0a0a;
+  --muted: #efefee;
+  --muted-foreground: #6b6b6b;
+  --accent: #ececeb;
+  --accent-foreground: #0a0a0a;
+  /* Clear green and red on white: saturated enough to read as up/down at a
+     glance, dark enough for small text (both above 4.5:1 on white). */
+  --success: #15803d;
+  --success-foreground: #ffffff;
+  --destructive: #dc2626;
+  --compare: #1d6fd1;
+  --border: #e2e2e0;
+  --input: #dcdcda;
+  --ring: #a3a3a3;
+  --chart-1: oklch(0.3 0 0);
+  --chart-2: oklch(0.45 0 0);
+  --chart-3: oklch(0.6 0 0);
+  --chart-4: oklch(0.72 0 0);
+  --chart-5: oklch(0.82 0 0);
+  --highlight-foreground: #ffffff;
+  --stage: radial-gradient(120% 80% at 50% 0%, #ffffff 0%, #f3f3f2 50%, #e9e9e7 100%);
+}
+
+/* Amber notes (Black Label, "rough guide", above-market) are tuned for the
+   dark page; on white they need a deeper amber to stay readable. */
+:root[data-theme="light"] .text-amber-400,
+:root[data-theme="light"] .text-amber-500 {
+  color: #b45309;
 }
 
 @theme inline {
@@ -129,7 +176,8 @@
   }
   html {
     @apply font-sans;
-    /* Dark-only theme: draw native scrollbars, date pickers and form controls dark too. */
+    /* Native scrollbars, date pickers and form controls follow the theme
+       (dark by default; the light theme block above switches it). */
     color-scheme: dark;
   }
 }
@@ -145,7 +193,7 @@
   /* The dark spotlight a card image sits on — a soft lift at the top fading
      into the card surface, like a slab photographed on a black stage. */
   .card-stage {
-    background: radial-gradient(120% 80% at 50% 0%, #2a2a2a 0%, #171717 45%, #0f0f0f 100%);
+    background: var(--stage);
   }
 
   /* Small uppercase, letter-spaced label used for nav, sidebar sections and

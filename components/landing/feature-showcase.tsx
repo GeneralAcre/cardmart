@@ -63,7 +63,7 @@ function FeatureRow({
 function MockFrame({ title, icon: Icon, children }: { title: string; icon: React.ElementType; children: React.ReactNode }) {
   const { t } = useLanguage();
   return (
-    <div className="bg-card/80 overflow-hidden rounded-2xl border shadow-2xl shadow-black/40 backdrop-blur">
+    <div className="bg-card/80 overflow-hidden rounded-2xl border shadow-2xl shadow-black/20 backdrop-blur">
       <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
         <span className="flex min-w-0 items-center gap-2 text-sm font-medium">
           <Icon className="text-muted-foreground size-4 shrink-0" />
@@ -200,13 +200,13 @@ function MarketMock() {
                 <span className={cn("font-mono", g.current ? "text-foreground font-semibold" : "text-muted-foreground")}>
                   {g.label}
                 </span>
-                <div className="h-2 overflow-hidden rounded-full bg-white/5">
+                <div className="h-2 overflow-hidden rounded-full bg-foreground/5">
                   <motion.div
                     initial={{ width: 0 }}
                     whileInView={{ width: `${(g.price / maxGrade) * 100}%` }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.8, ease: "easeOut" }}
-                    className={cn("h-full rounded-full", g.current ? "bg-success" : "bg-white/25")}
+                    className={cn("h-full rounded-full", g.current ? "bg-success" : "bg-foreground/25")}
                   />
                 </div>
                 <span className="text-right font-semibold tabular-nums">{formatThb(g.price)}</span>
@@ -251,7 +251,7 @@ function EscrowMock() {
                 {i < e.steps.length - 1 && (
                   <span
                     aria-hidden
-                    className={cn("absolute top-7 bottom-1 left-[11px] w-px", state === "done" ? "bg-success/60" : "bg-white/10")}
+                    className={cn("absolute top-7 bottom-1 left-[11px] w-px", state === "done" ? "bg-success/60" : "bg-foreground/10")}
                   />
                 )}
                 <span
@@ -259,7 +259,7 @@ function EscrowMock() {
                     "relative flex size-6 shrink-0 items-center justify-center rounded-full border",
                     state === "done" && "bg-success border-success text-success-foreground",
                     state === "current" && "border-success",
-                    state === "todo" && "border-white/15",
+                    state === "todo" && "border-foreground/15",
                   )}
                 >
                   {state === "done" && <Check className="size-3.5" />}
@@ -365,7 +365,7 @@ function AuctionMock() {
                   exit={{ opacity: 0 }}
                   className={cn(
                     "flex items-center justify-between rounded-lg px-3 py-2 text-sm",
-                    i === 0 ? "bg-success/10 ring-success/30 ring-1" : "bg-white/[0.03]",
+                    i === 0 ? "bg-success/10 ring-success/30 ring-1" : "bg-foreground/[0.03]",
                   )}
                 >
                   <span className="flex items-center gap-2">
@@ -424,7 +424,7 @@ function AgentMock() {
           <div className="bg-highlight/15 text-highlight flex size-7 shrink-0 items-center justify-center rounded-full">
             <Bot className="size-4" />
           </div>
-          <div className="flex min-w-0 flex-col gap-3 rounded-2xl rounded-tl-md border bg-white/[0.03] p-3">
+          <div className="flex min-w-0 flex-col gap-3 rounded-2xl rounded-tl-md border bg-foreground/[0.03] p-3">
             <p className="text-sm">{g.found}</p>
             <div className="flex items-center gap-3 rounded-xl border p-2.5">
               <div className="flex h-14 w-11 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-indigo-500/60 via-violet-600/50 to-slate-900 font-mono text-[9px] font-semibold text-white/80">

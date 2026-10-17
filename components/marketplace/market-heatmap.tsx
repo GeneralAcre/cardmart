@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import type { LeaderboardPeriod, LeaderboardRow } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 import { useT } from "@/components/landing/language-provider";
+import { useTheme } from "@/components/site/theme-provider";
 
 type Group = "series" | "cards";
 type SizeBy = "mcap" | "avg";
@@ -113,15 +114,21 @@ function squarify(values: number[], rect: Rect): Rect[] {
   return out;
 }
 
-function tileStyle(change: number | null): { background: string; dark: boolean } {
-  if (change == null || Math.abs(change) < 0.005) return { background: "var(--muted)", dark: false };
+/**
+ * A tile's fill and whether its text should be dark. The fill mixes green or
+ * red into the page's muted grey, so the right text color depends on the
+ * theme: on the dark theme a flat or faint tile is dark grey (white text) and
+ * only strong lime is light; on the light theme a flat or faint tile is light
+ * grey (dark text) and strong green or red is deep enough for white text.
+ */
+function tileStyle(change: number | null, theme: "dark" | "light"): { background: string; dark: boolean } {
+  if (change == null || Math.abs(change) < 0.005) return { background: "var(--muted)", dark: theme === "light" };
   const strength = Math.min(Math.abs(change) / FULL_COLOR_PCT, 1);
   const pct = Math.round(30 + strength * 70);
   const color = change > 0 ? "var(--success)" : "var(--destructive)";
   return {
     background: `color-mix(in oklab, ${color} ${pct}%, var(--muted))`,
-    // Lime is light — past ~60% it needs dark text to stay readable.
-    dark: change > 0 && pct >= 60,
+    dark: theme === "light" ? pct < 55 : change > 0 && pct >= 60,
   };
 }
 
@@ -138,6 +145,7 @@ export function MarketHeatmap({ rows, compact = false }: { rows: LeaderboardRow[
   const [sizeBy, setSizeBy] = useState<SizeBy>("mcap");
   const [series, setSeries] = useState<string | null>(null);
   const tr = useT();
+  const { theme } = useTheme();
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
@@ -244,7 +252,7 @@ export function MarketHeatmap({ rows, compact = false }: { rows: LeaderboardRow[
           width > 0 &&
           sorted.map((t, i) => {
             const r = rects[i];
-            const { background, dark } = tileStyle(t.change);
+            const { background, dark } = tileStyle(t.change, theme);
             const big = r.w > 110 && r.h > 64;
             const showCover = r.w > 150 && r.h > 150;
             const coverWidth = Math.min(112, Math.max(48, Math.floor(Math.min(r.w * 0.24, r.h * 0.24))));

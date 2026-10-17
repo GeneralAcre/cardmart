@@ -7,6 +7,9 @@ import { Toaster } from "@/components/ui/sonner";
 import { PrivyProvider } from "@/components/providers/privy-provider";
 import { LanguageProvider } from "@/components/landing/language-provider";
 import { getLocale } from "@/lib/i18n/server";
+import { ThemeProvider } from "@/components/site/theme-provider";
+import { DEFAULT_THEME, THEME_COOKIE, isColorTheme } from "@/lib/color-theme";
+import { cookies } from "next/headers";
 
 const geist = Geist({
   variable: "--font-geist",
@@ -49,19 +52,24 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
-  const locale = await getLocale();
+  const [locale, cookieStore] = await Promise.all([getLocale(), cookies()]);
+  const savedTheme = cookieStore.get(THEME_COOKIE)?.value;
+  const theme = isColorTheme(savedTheme) ? savedTheme : DEFAULT_THEME;
   return (
     <html
       lang={locale}
+      data-theme={theme}
       className={`${geist.variable} ${notoSansThai.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <LanguageProvider initialLocale={locale}>
-          <PrivyProvider>
-            {children}
-            <Toaster position="bottom-right" />
-          </PrivyProvider>
-        </LanguageProvider>
+        <ThemeProvider initialTheme={theme}>
+          <LanguageProvider initialLocale={locale}>
+            <PrivyProvider>
+              {children}
+              <Toaster position="bottom-right" />
+            </PrivyProvider>
+          </LanguageProvider>
+        </ThemeProvider>
         <Analytics />
       </body>
     </html>

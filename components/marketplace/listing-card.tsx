@@ -79,7 +79,8 @@ export function ListingCard({
           <span
             className={cn(
               CHIP,
-              "absolute right-2.5 top-2.5 bg-black/70",
+              // The page color, not black, so the green/red arrow reads on either theme.
+              "bg-background/90 absolute right-2.5 top-2.5 shadow-sm",
               asset.priceDirection === "up" ? "text-success" : "text-destructive",
             )}
             aria-label={asset.priceDirection === "up" ? t("Price went up") : t("Price went down")}

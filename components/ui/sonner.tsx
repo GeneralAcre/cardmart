@@ -2,10 +2,13 @@
 
 import { Toaster as Sonner, type ToasterProps } from "sonner";
 
+import { useTheme } from "@/components/site/theme-provider";
+
 const Toaster = ({ ...props }: ToasterProps) => {
+  const { theme } = useTheme();
   return (
     <Sonner
-      theme="system"
+      theme={theme}
       className="toaster group"
       style={
         {
