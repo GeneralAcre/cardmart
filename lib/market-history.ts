@@ -38,7 +38,7 @@ export async function getMarketPriceHistory(card: Pick<MarketCard, "name" | "sub
   const rows = await prisma.marketPriceSnapshot.findMany({
     where: { cardKey: marketCardKey(card) },
     orderBy: { day: "asc" },
-    select: { tierKey: true, day: true, medianUsd: true, itemCount: true },
+    select: { tierKey: true, day: true, medianUsd: true, lowUsd: true, highUsd: true, itemCount: true },
   });
   return rows.map((r) => ({ ...r, day: r.day.toISOString().slice(0, 10) }));
 }

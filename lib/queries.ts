@@ -1,5 +1,5 @@
 import "server-only";
-import type { AssetCategory, CardGame, CardLanguage, GradingCompany, Prisma } from "@prisma/client";
+import type { AssetCategory, CardGame, CardLanguage, GradingCompany, Prisma, ProvenanceType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { displayImage } from "@/lib/card-image";
 
@@ -844,6 +844,98 @@ export async function getCardAcrossGrades(card: { name: string; subtitle: string
     listings: listings.map((l) => ({ ...l, priceThb: l.priceThb! })),
     sales: sales.map((s) => ({ id: s.id, amountThb: s.amountThb, soldAt: s.releasedAt!, ...s.asset })),
   };
+}
+
+/**
+ * Demand for a card on CardMart, across every grade: who watches it and how
+ * many card alerts it would trigger.
+ */
+export async function getCardDemand(card: { name: string; subtitle: string; cardNumber?: string | null; language?: CardLanguage }) {
+  const sameCard: Prisma.AssetWhereInput = {
+    name: card.name,
+    subtitle: card.subtitle,
+    redeemedAt: null,
+    ...(card.language ? { language: card.language } : {}),
+    ...(card.cardNumber ? { OR: [{ cardNumber: card.cardNumber }, { cardNumber: null }] } : {}),
+  };
+  const [watchers, alerts] = await Promise.all([
+    prisma.watchlistItem.findMany({
+      where: { asset: sameCard },
+      select: { userId: true, asset: { select: { gradingCompany: true, grade: true, isBlackLabel: true } } },
+    }),
+    prisma.wantedCard.findMany({ select: { query: true, gradingCompany: true, minGrade: true, blackLabelOnly: true } }),
+  ]);
+  // Same rule as notifyWantedCardMatches: the alert's text appears in the card name.
+  const name = card.name.toLowerCase();
+  return {
+    watchers: watchers.map((w) => ({ userId: w.userId, ...w.asset })),
+    alerts: alerts
+      .filter((w) => name.includes(w.query.toLowerCase()))
+      .map((w) => ({ gradingCompany: w.gradingCompany, minGrade: w.minGrade, blackLabelOnly: w.blackLabelOnly })),
+  };
+}
+
+// Events that end a listing period: after one of these, the next LISTED or
+// RELISTED starts a fresh listing (a reprice inside a period doesn't).
+const LISTING_RESET: ProvenanceType[] = ["DELISTED", "OWNERSHIP_TRANSFERRED", "SWAPPED", "ESCROW_REFUNDED", "REDEEMED"];
+const LISTING_START: ProvenanceType[] = ["LISTED", "RELISTED"];
+const TIME_TO_SELL_BASELINE_DAYS = 180;
+
+/** Days from when a listing period began to the sale, or null when it wasn't listed first. */
+function daysListed(events: { type: ProvenanceType; createdAt: Date }[], soldAt: Date): number | null {
+  let start: Date | null = null;
+  for (const e of events) {
+    if (e.createdAt >= soldAt) break;
+    if (LISTING_RESET.includes(e.type)) start = null;
+    else if (LISTING_START.includes(e.type) && start == null) start = e.createdAt;
+  }
+  return start ? Math.max(0, (soldAt.getTime() - start.getTime()) / 86_400_000) : null;
+}
+
+/**
+ * How long listings take to sell on CardMart: every sale of this card (any
+ * grade, so the page can pick one) and, as a baseline, every sale in the same
+ * game over the last 180 days. A sale's clock starts when its listing period
+ * began, so repricing doesn't reset it.
+ */
+export async function getTimeToSell(
+  card: { name: string; subtitle: string; cardNumber?: string | null; language?: CardLanguage },
+  game: CardGame,
+) {
+  const sameCard: Prisma.AssetWhereInput = {
+    name: card.name,
+    subtitle: card.subtitle,
+    ...(card.language ? { language: card.language } : {}),
+    ...(card.cardNumber ? { OR: [{ cardNumber: card.cardNumber }, { cardNumber: null }] } : {}),
+  };
+  const select = {
+    createdAt: true,
+    asset: {
+      select: {
+        gradingCompany: true,
+        grade: true,
+        isBlackLabel: true,
+        provenance: {
+          where: { type: { in: [...LISTING_START, ...LISTING_RESET] } },
+          orderBy: { createdAt: "asc" },
+          select: { type: true, createdAt: true },
+        },
+      },
+    },
+  } satisfies Prisma.EscrowTransactionSelect;
+  const since = new Date(Date.now() - TIME_TO_SELL_BASELINE_DAYS * 86_400_000);
+  const [cardSales, gameSales] = await Promise.all([
+    prisma.escrowTransaction.findMany({ where: { status: { not: "REFUNDED" }, asset: sameCard }, select }),
+    prisma.escrowTransaction.findMany({ where: { status: { not: "REFUNDED" }, createdAt: { gte: since }, asset: { game } }, select }),
+  ]);
+  const toDays = (sales: typeof cardSales) =>
+    sales.flatMap((sale) => {
+      const days = daysListed(sale.asset.provenance, sale.createdAt);
+      return days == null
+        ? []
+        : [{ gradingCompany: sale.asset.gradingCompany, grade: sale.asset.grade, isBlackLabel: sale.asset.isBlackLabel, days }];
+    });
+  return { card: toDays(cardSales), game: toDays(gameSales).map((d) => d.days) };
 }
 
 /** Raw inputs for an item's price insights (see lib/insights.ts). */

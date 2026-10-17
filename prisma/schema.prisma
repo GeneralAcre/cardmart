@@ -204,28 +204,31 @@ model User {
   kycReviewedAt   DateTime?
   kycRejectReason String?
 
-  listedAssets        Asset[]             @relation("AssetSeller")
-  ownedAssets         Asset[]             @relation("AssetOwner")
+  listedAssets        Asset[]               @relation("AssetSeller")
+  ownedAssets         Asset[]               @relation("AssetOwner")
   provenanceEvents    ProvenanceEvent[]
-  purchases           EscrowTransaction[] @relation("EscrowBuyer")
-  sales               EscrowTransaction[] @relation("EscrowSeller")
-  gradingSubmissions  GradingSubmission[] @relation("GradingSubmissionSeller")
-  reviewsReceived     Review[]            @relation("SellerReviews")
-  reviewsGiven        Review[]            @relation("BuyerReviews")
+  purchases           EscrowTransaction[]   @relation("EscrowBuyer")
+  sales               EscrowTransaction[]   @relation("EscrowSeller")
+  gradingSubmissions  GradingSubmission[]   @relation("GradingSubmissionSeller")
+  reviewsReceived     Review[]              @relation("SellerReviews")
+  reviewsGiven        Review[]              @relation("BuyerReviews")
   watchlist           WatchlistItem[]
   notifications       Notification[]
   bids                Bid[]
-  offersMade          Offer[]             @relation("OfferBuyer")
-  offersReceived      Offer[]             @relation("OfferSeller")
-  conversationsA      Conversation[]      @relation("ConversationUserA")
-  conversationsB      Conversation[]      @relation("ConversationUserB")
+  offersMade          Offer[]               @relation("OfferBuyer")
+  offersReceived      Offer[]               @relation("OfferSeller")
+  conversationsA      Conversation[]        @relation("ConversationUserA")
+  conversationsB      Conversation[]        @relation("ConversationUserB")
   messagesSent        Message[]
   wantedCards         WantedCard[]
   purchaseCosts       PurchaseCost[]
-  tradeOffersMade     TradeOffer[]        @relation("TradeOfferProposer")
-  tradeOffersReceived TradeOffer[]        @relation("TradeOfferRecipient")
-  shipmentsReceived   Shipment[]          @relation("ShipmentRecipient")
-  disputesOpened      Dispute[]           @relation("DisputeOpener")
+  tradeStats          UserTradeStats[]
+  leaderboardRows     LeaderboardSnapshot[]
+  leaderboardBadges   LeaderboardBadge[]
+  tradeOffersMade     TradeOffer[]          @relation("TradeOfferProposer")
+  tradeOffersReceived TradeOffer[]          @relation("TradeOfferRecipient")
+  shipmentsReceived   Shipment[]            @relation("ShipmentRecipient")
+  disputesOpened      Dispute[]             @relation("DisputeOpener")
   agentWallet         AgentWallet?
   agentMandates       AgentMandate[]
 
@@ -677,6 +680,7 @@ model EscrowTransaction {
   shipment       Shipment?
   dispute        Dispute?
   agentDecision  AgentDecision?
+  antiCheatLogs  AntiCheatLog[]
 
   @@index([assetId])
   // getSellerProfile's sold-history section filters on exactly this pair on
@@ -1069,4 +1073,129 @@ model AgentDecision {
 
   @@unique([mandateId, assetId, priceThb])
   @@index([mandateId, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Trader leaderboards (lib/leaderboard). Everything below is derived from
+// completed CardMart sales (EscrowTransaction) by the leaderboard pipeline and
+// can be rebuilt from scratch at any time. Self-reported purchase prices
+// (PurchaseCost) never count here, so nobody can type their way up a board.
+// ---------------------------------------------------------------------------
+
+enum LeaderboardCategory {
+  WHALE // realized net profit
+  ALPHA // portfolio ROI %, ≥5 qualifying trades
+  CONSISTENCY // win rate %, ≥10 trades and ≥48%, then green-day streak
+  MARKET_MAKER // volume with distinct third parties
+  SPECIALIST // realized profit within one segment (game or grader)
+}
+
+enum LeaderboardPeriod {
+  DAILY // rolling last 24 hours
+  WEEKLY // resets Sunday 00:00 UTC
+  MONTHLY // calendar month, UTC
+  ALL_TIME
+}
+
+enum AntiCheatRule {
+  SELF_TRADE // buyer and seller are the same account
+  LINKED_WALLET // the buyer paid from a wallet that belongs to the seller, or they share one
+  ROUND_TRIP // the card went A → B → A within 7 days
+  SHORT_HOLD // the seller sold within 60 seconds of buying
+  OUTLIER_PRICE // the price is more than 50% away from the market price
+}
+
+enum AntiCheatAction {
+  EXCLUDED // left out of every board it affects
+  REVIEW // left out of ROI/PnL until staff clear it
+}
+
+// One user's figures for one leaderboard window, recomputed by the pipeline.
+model UserTradeStats {
+  id                     String            @id @default(cuid())
+  period                 LeaderboardPeriod
+  periodStart            DateTime
+  // Sales that passed every guardrail and have a CardMart-verified cost.
+  qualifyingTrades       Int
+  winningTrades          Int
+  realizedProfitThb      Int
+  costBasisThb           Int
+  roiPct                 Float?
+  bestTradeRoiPct        Float?
+  winRatePct             Float?
+  greenDayStreak         Int
+  // Buys plus sells with distinct, unlinked counterparties.
+  volumeThb              Int
+  filledOrders           Int
+  distinctCounterparties Int
+  excludedTrades         Int
+  computedAt             DateTime          @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, period, periodStart])
+  @@index([period, periodStart])
+}
+
+// A ranked board as of its last computation. Reads page through it by rank;
+// the pipeline replaces a board's rows in one transaction.
+model LeaderboardSnapshot {
+  id          String              @id @default(cuid())
+  category    LeaderboardCategory
+  period      LeaderboardPeriod
+  periodStart DateTime
+  // "ALL", or for SPECIALIST a segment such as "GAME:POKEMON" or "GRADER:PSA".
+  segment     String              @default("ALL")
+  rank        Int
+  score       Float
+  // The figures behind the score, shown next to it (trades, win rate, …).
+  metrics     Json
+  computedAt  DateTime            @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([category, period, periodStart, segment, userId])
+  @@index([category, period, periodStart, segment, rank])
+}
+
+// Every sale a guardrail flagged, and why. Staff can clear a REVIEW entry.
+model AntiCheatLog {
+  id         String          @id @default(cuid())
+  rule       AntiCheatRule
+  action     AntiCheatAction
+  detail     String
+  createdAt  DateTime        @default(now())
+  reviewedAt DateTime?
+  // True once staff confirmed a REVIEW sale is genuine; it then counts again.
+  cleared    Boolean         @default(false)
+
+  escrowTransactionId String
+  escrowTransaction   EscrowTransaction @relation(fields: [escrowTransactionId], references: [id], onDelete: Cascade)
+  buyerId             String
+  sellerId            String
+
+  @@unique([escrowTransactionId, rule])
+  @@index([sellerId])
+  @@index([action, cleared])
+}
+
+// A profile badge for finishing near the top of a closed weekly or monthly board.
+model LeaderboardBadge {
+  id          String              @id @default(cuid())
+  category    LeaderboardCategory
+  period      LeaderboardPeriod
+  periodStart DateTime
+  segment     String              @default("ALL")
+  // "TOP_10", "TOP_50" or "TOP_1_PERCENT".
+  tier        String
+  rank        Int
+  awardedAt   DateTime            @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, category, period, periodStart, segment])
+  @@index([userId])
 }

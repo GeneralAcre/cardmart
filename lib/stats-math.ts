@@ -28,6 +28,13 @@ export function changeOver(points: PricePoint[], days: number): number | null {
   return ((last.price - then) / then) * 100;
 }
 
+/** % change from the previous saved point to the latest, like a quote's day change. */
+export function changeSincePrevious(points: PricePoint[]): number | null {
+  if (points.length < 2) return null;
+  const prev = points[points.length - 2].price;
+  return prev > 0 ? ((points[points.length - 1].price - prev) / prev) * 100 : null;
+}
+
 /**
  * % change over the last `days`, or since the first point when the series is
  * younger than that — so a recently tracked card or index still shows a move.

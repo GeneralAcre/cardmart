@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Area, AreaChart, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts";
+import { Area, CartesianGrid, ComposedChart, Line, Tooltip, XAxis, YAxis } from "recharts";
 
 import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -10,7 +10,8 @@ import { cn } from "@/lib/utils";
 import { useLanguage } from "@/components/landing/language-provider";
 import { tierKey } from "@/lib/grade-tier";
 import { GradeCompare } from "@/components/item/grade-compare";
-import { CardStats, GradingValue } from "@/components/item/card-stats";
+import { GradingValue, KeyStats } from "@/components/item/card-stats";
+import { HistoricalData } from "@/components/item/market-depth";
 import { priceStats } from "@/lib/stats-math";
 import { getEbayQuoteForGrade } from "@/lib/actions";
 import type { EbayPriceQuote } from "@/lib/ebay";
@@ -62,6 +63,25 @@ type RangeKey = (typeof RANGES)[number]["key"];
 
 const DAY = 86_400_000;
 
+/** Average of the series' prices over the `days` up to and including `t`. */
+function trailingAverage(series: { t: number; price: number }[], t: number, days: number): number | null {
+  const window = series.filter((p) => p.t <= t && p.t > t - days * DAY);
+  if (window.length === 0) return null;
+  return Math.round(window.reduce((sum, p) => sum + p.price, 0) / window.length);
+}
+
+/** The last value on or before `t` (carried forward), or null before the series starts. */
+function valueAt(series: { t: number; price: number }[], t: number): number | null {
+  let found: number | null = null;
+  for (const p of series) {
+    if (p.t > t) break;
+    found = p.price;
+  }
+  return found;
+}
+
+const matchesTier = (tier: Tier, key: string) => tierKey(tier) === key;
+
 /**
  * The card's market price over time in one grade: eBay's daily median ask for
  * this card in that grade (saved once a day, see lib/market-history.ts), or
@@ -81,13 +101,16 @@ export function MarketPriceHistory({
   tcg,
   baseQuery,
   itemHistory,
+  depth,
+  timeToSell,
+  index,
 }: {
   assetId: string;
   current: Tier;
   subtitle: string;
   sales: MarketSale[];
   // eBay's saved daily median for this card, in every grade, oldest first.
-  ebayHistory: { tierKey: string; day: string; medianUsd: number }[];
+  ebayHistory: { tierKey: string; day: string; medianUsd: number; lowUsd: number; highUsd: number; itemCount: number }[];
   // This listing's asking price, or null when it isn't for sale.
   listingThb: number | null;
   // Other live CardMart listings of this card, in any grade.
@@ -99,9 +122,19 @@ export function MarketPriceHistory({
   baseQuery: string;
   // This exact item's own timeline (listings, sales, transfers), shown in the second tab.
   itemHistory: React.ReactNode;
+  // Watchers and alerts for this card across grades (getCardDemand).
+  depth: {
+    watchers: (Tier & { userId: string })[];
+    alerts: { gradingCompany: string | null; minGrade: number | null; blackLabelOnly: boolean }[];
+  };
+  // Days from listing to sale: this card by grade, and the whole game (getTimeToSell).
+  timeToSell: { card: (Tier & { days: number })[]; game: number[] };
+  // The card's game index, for the chart's comparison line.
+  index: { name: string; points: { t: number; price: number }[] } | null;
 }) {
   const { locale, tr: t } = useLanguage();
   const [tab, setTab] = useState<"history" | "compare" | "item">("history");
+  const [overlays, setOverlays] = useState({ ma7: false, ma30: false, index: false });
   const [range, setRange] = useState<RangeKey>("90d");
   const [condition, setCondition] = useState(tierKey(current));
   const [ebay, setEbay] = useState(initialEbay);
@@ -193,22 +226,78 @@ export function MarketPriceHistory({
     price: { label: t("Price"), color: lineColor },
   } satisfies ChartConfig;
 
+  // Chart overlays. Comparing with the index switches the chart to % change
+  // from the start of the range, so both lines share one scale (never two
+  // price axes); the moving averages only make sense in baht, so they hide.
+  const comparing = overlays.index && index != null && index.points.length >= 2 && points.length >= 2;
+  const indexBase = comparing ? (valueAt(index!.points, points[0].t) ?? index!.points[0].price) : null;
+  const chartData = points.map((p) => ({
+    t: p.t,
+    price: p.price,
+    pct: first ? ((p.price - first) / first) * 100 : 0,
+    ma7: overlays.ma7 && !comparing ? trailingAverage(source, p.t, 7) : null,
+    ma30: overlays.ma30 && !comparing ? trailingAverage(source, p.t, 30) : null,
+    indexPct:
+      comparing && indexBase
+        ? (((valueAt(index!.points, p.t) ?? indexBase) - indexBase) / indexBase) * 100
+        : null,
+  }));
+  const valueKey = comparing ? "pct" : "price";
+
+  // Every live CardMart listing in this grade, this one included.
+  const isThisGrade = condition === tierKey(current);
+  const gradeAsks = [...tierAsks, ...(isThisGrade && listingThb != null ? [listingThb] : [])];
+  // Supply (eBay listing count by day) and demand (watchers, alerts) in this grade.
+  const tierHistory = ebayHistory.filter((h) => h.tierKey === condition);
+  const supply = tierHistory.map((h) => ({ t: Date.parse(h.day), count: h.itemCount }));
+  if (live && !supply.some((p) => p.t === today)) supply.push({ t: today, count: live.itemCount });
+  const watchers = new Set(depth.watchers.filter((w) => matchesTier(w, condition)).map((w) => w.userId)).size;
+  const alerts = depth.alerts.filter(
+    (a) =>
+      (a.gradingCompany == null || a.gradingCompany === selected.gradingCompany) &&
+      (a.minGrade == null || (selected.grade != null && selected.grade >= a.minGrade)) &&
+      (!a.blackLabelOnly || selected.isBlackLabel),
+  ).length;
+  // Median days to sell in this grade, falling back to the game's baseline.
+  const median = (values: number[]) => {
+    const sorted = [...values].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+  };
+  const gradeDays = timeToSell.card.filter((d) => matchesTier(d, condition)).map((d) => d.days);
+  const sellTime =
+    gradeDays.length > 0
+      ? { days: median(gradeDays), count: gradeDays.length, scope: "card" as const }
+      : timeToSell.game.length > 0
+        ? { days: median(timeToSell.game), count: timeToSell.game.length, scope: "game" as const }
+        : null;
+  const csvName = `${baseQuery} ${tierName(selected)}`.trim().replace(/[^\w-]+/g, "-");
+  const historyRows = tierHistory.map((h) => ({
+    t: Date.parse(h.day),
+    median: Math.round(h.medianUsd * THB_PER_USD),
+    low: Math.round(h.lowUsd * THB_PER_USD),
+    high: Math.round(h.highUsd * THB_PER_USD),
+    count: h.itemCount,
+  }));
+
   const formatDay = (ms: number) =>
     new Date(ms).toLocaleDateString(dateLocale, {
       month: "short",
       day: "numeric",
       ...(days == null || days > 90 ? { year: "2-digit" } : {}),
     });
+  const formatAxisPct = (v: number) => `${v > 0 ? "+" : ""}${v.toFixed(0)}%`;
+  const formatTipPct = (v: number) => `${v > 0 ? "+" : ""}${v.toFixed(1)}%`;
   const formatAxisPrice = (v: number) => (v >= 1000 ? `${(v / 1000).toFixed(v >= 10_000 ? 0 : 1)}k` : String(v));
 
   return (
     <section className="flex flex-col gap-6">
-      <div className="bg-secondary/60 flex w-fit gap-1 rounded-xl border p-1">
+      <div className="bg-secondary/60 scrollbar-none flex w-fit max-w-full gap-1 overflow-x-auto rounded-xl border p-1">
         {(
           [
             ["history", t("Price History")],
-            ["item", t("Item History")],
             ["compare", t("Compare")],
+            ["item", t("Item History")],
           ] as const
         ).map(([key, label]) => (
           <button
@@ -216,7 +305,7 @@ export function MarketPriceHistory({
             type="button"
             onClick={() => setTab(key)}
             className={cn(
-              "rounded-lg px-4 py-1.5 text-sm font-semibold transition-colors",
+              "shrink-0 rounded-lg px-4 py-1.5 text-sm font-semibold whitespace-nowrap transition-colors",
               tab === key ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
             )}
           >
@@ -317,12 +406,41 @@ export function MarketPriceHistory({
                 >
                   CARDMART
                 </span>
+                {canDraw && (
+                  <div className="relative mb-3 flex flex-wrap items-center gap-2">
+                    {[
+                      { key: "ma7" as const, label: t("7D avg"), swatch: "border-muted-foreground border-t-2 border-dashed", disabled: comparing },
+                      { key: "ma30" as const, label: t("30D avg"), swatch: "border-foreground/55 border-t-2 border-dotted", disabled: comparing },
+                      ...(index && index.points.length >= 2
+                        ? [{ key: "index" as const, label: t("vs {name}", { name: t(index.name) }), swatch: "border-muted-foreground border-t-2", disabled: false }]
+                        : []),
+                    ].map((o) => (
+                      <button
+                        key={o.key}
+                        type="button"
+                        disabled={o.disabled}
+                        onClick={() => setOverlays((prev) => ({ ...prev, [o.key]: !prev[o.key] }))}
+                        aria-pressed={overlays[o.key]}
+                        className={cn(
+                          "flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-40",
+                          overlays[o.key] && !o.disabled ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        <span aria-hidden className={cn("w-4", o.swatch)} />
+                        {o.label}
+                      </button>
+                    ))}
+                    {comparing && (
+                      <span className="text-muted-foreground text-[11px]">{t("Both lines show % change from the start of the range.")}</span>
+                    )}
+                  </div>
+                )}
                 {canDraw ? (
                   <ChartContainer
                     config={chartConfig}
                     className="relative aspect-auto h-[320px] w-full [&_.recharts-curve.recharts-tooltip-cursor]:stroke-[var(--color-price)]"
                   >
-                    <AreaChart data={points} margin={{ left: 0, right: 16, top: 16, bottom: 0 }}>
+                    <ComposedChart data={chartData} margin={{ left: 0, right: 16, top: 16, bottom: 0 }}>
                       <defs>
                         <linearGradient id="marketFill" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="0%" stopColor="var(--color-price)" stopOpacity={0.18} />
@@ -342,9 +460,12 @@ export function MarketPriceHistory({
                         minTickGap={40}
                       />
                       <YAxis
-                        dataKey="price"
-                        domain={[(min: number) => Math.floor(min * 0.9), (max: number) => Math.ceil(max * 1.1)]}
-                        tickFormatter={formatAxisPrice}
+                        domain={
+                          comparing
+                            ? [(min: number) => Math.floor(min - 2), (max: number) => Math.ceil(max + 2)]
+                            : [(min: number) => Math.floor(min * 0.9), (max: number) => Math.ceil(max * 1.1)]
+                        }
+                        tickFormatter={comparing ? formatAxisPct : formatAxisPrice}
                         tickLine={false}
                         axisLine={false}
                         tickMargin={8}
@@ -356,15 +477,33 @@ export function MarketPriceHistory({
                           const p = active ? payload?.[0]?.payload : null;
                           if (!p) return null;
                           return (
-                            <div className="bg-background/95 rounded-lg border px-3 py-2 shadow-lg">
+                            <div className="bg-background/95 flex flex-col gap-0.5 rounded-lg border px-3 py-2 shadow-lg">
                               <p className="text-muted-foreground text-[11px]">{new Date(p.t).toLocaleDateString(dateLocale)}</p>
-                              <p className="text-base font-bold tabular-nums">{formatThb(p.price)}</p>
+                              <p className="text-base font-bold tabular-nums">
+                                {formatThb(p.price)}
+                                {comparing && <span className="text-muted-foreground ml-1.5 text-xs font-medium">{formatTipPct(p.pct)}</span>}
+                              </p>
+                              {p.ma7 != null && (
+                                <p className="text-muted-foreground text-xs tabular-nums">
+                                  {t("7D avg")} {formatThb(p.ma7)}
+                                </p>
+                              )}
+                              {p.ma30 != null && (
+                                <p className="text-muted-foreground text-xs tabular-nums">
+                                  {t("30D avg")} {formatThb(p.ma30)}
+                                </p>
+                              )}
+                              {p.indexPct != null && index && (
+                                <p className="text-muted-foreground text-xs tabular-nums">
+                                  {t(index.name)} {formatTipPct(p.indexPct)}
+                                </p>
+                              )}
                             </div>
                           );
                         }}
                       />
                       <Area
-                        dataKey="price"
+                        dataKey={valueKey}
                         type="monotone"
                         fill="url(#marketFill)"
                         stroke="var(--color-price)"
@@ -377,7 +516,7 @@ export function MarketPriceHistory({
                           stroke: "var(--color-price)",
                         }}
                         dot={(props: { cx?: number; cy?: number; index?: number }) =>
-                          props.index === points.length - 1 ? (
+                          props.index === chartData.length - 1 ? (
                             <circle
                               key="last"
                               cx={props.cx}
@@ -392,7 +531,33 @@ export function MarketPriceHistory({
                           )
                         }
                       />
-                    </AreaChart>
+                      {overlays.ma7 && !comparing && (
+                        <Line
+                          dataKey="ma7"
+                          type="monotone"
+                          stroke="var(--muted-foreground)"
+                          strokeWidth={1.5}
+                          strokeDasharray="6 4"
+                          dot={false}
+                          isAnimationActive={false}
+                        />
+                      )}
+                      {overlays.ma30 && !comparing && (
+                        <Line
+                          dataKey="ma30"
+                          type="monotone"
+                          stroke="var(--foreground)"
+                          strokeOpacity={0.55}
+                          strokeWidth={1.5}
+                          strokeDasharray="2 3"
+                          dot={false}
+                          isAnimationActive={false}
+                        />
+                      )}
+                      {comparing && (
+                        <Line dataKey="indexPct" type="monotone" stroke="var(--muted-foreground)" strokeWidth={2} dot={false} isAnimationActive={false} />
+                      )}
+                    </ComposedChart>
                   </ChartContainer>
                 ) : (
                   <div className="relative flex h-[200px] flex-col items-center justify-center gap-1 text-center">
@@ -412,13 +577,19 @@ export function MarketPriceHistory({
                   </div>
                 )}
               </div>
-              <CardStats
+              <KeyStats
                 stats={stats}
-                liveListings={tierAsks.length}
+                supply={supply}
+                cardmartListings={gradeAsks.length}
                 sales30d={sales30d}
-                lowestAsk={tierAsks.length ? Math.min(...tierAsks) : null}
+                lowestAsk={gradeAsks.length ? Math.min(...gradeAsks) : null}
                 lastSale={tierSales.at(-1)?.amountThb ?? null}
+                watchers={watchers}
+                alerts={alerts}
+                timeToSell={sellTime}
+                recentSales={[...tierSales].reverse().slice(0, 5)}
               />
+              <HistoricalData rows={historyRows} fileName={csvName} />
             </>
           ) : (
             <>

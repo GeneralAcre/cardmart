@@ -10,6 +10,8 @@ import {
   getAssetInsightData,
   getCardMarketStats,
   getCardAcrossGrades,
+  getCardDemand,
+  getTimeToSell,
   getPriceHistory,
   getSellerRating,
   getSimilarAssets,
@@ -24,6 +26,7 @@ import { getCurrentUser } from "@/lib/session";
 import { getT } from "@/lib/i18n/server";
 import { ItemGallery } from "@/components/item/item-gallery";
 import { MarketPriceHistory } from "@/components/item/market-price-history";
+import { ProfitCalculator } from "@/components/item/profit-calculator";
 import { ProvenanceTimeline } from "@/components/item/provenance-timeline";
 import { BuyPanel } from "@/components/item/buy-panel";
 import { WatchButton } from "@/components/item/watch-button";
@@ -58,6 +61,7 @@ import { extractPsaCertNumber, isPsaCertNumber, lookupPsaCert, lookupPsaPopulati
 import { lookupCardPrice } from "@/lib/tcg-price";
 import { buildMarketQuery, lookupEbayPrice } from "@/lib/ebay";
 import { getMarketPriceHistory, recordMarketPrice } from "@/lib/market-history";
+import { getMarketIndexes } from "@/lib/stats";
 import { tierKey, type GradeTier } from "@/lib/grade-tier";
 import { cn } from "@/lib/utils";
 import { displayImage, realPhotos } from "@/lib/card-image";
@@ -106,7 +110,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
   // page load, which is what was pushing this page to 5-10s and occasionally
   // outrunning the client's patience ("destination stream closed early").
   // Running them concurrently caps the wait at the slowest single call.
-  const [psaCert, priceQuote, ebayQuote, priceHistory, sellerRating, similarAssets, cardMarket, insightData, gradeData, otherTierEbay, ebayHistory] = await Promise.all([
+  const [psaCert, priceQuote, ebayQuote, priceHistory, sellerRating, similarAssets, cardMarket, insightData, gradeData, otherTierEbay, ebayHistory, depth, indexes, timeToSell] = await Promise.all([
     // Live PSA cert lookup for display — best-effort, and never blocks the
     // page: it silently returns null whenever PSA isn't configured, the
     // account isn't approved for live access yet, or the request fails.
@@ -130,7 +134,12 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
     getCardAcrossGrades(marketCard),
     Promise.all(otherTiers.map((tier) => lookupEbayPrice({ ...marketCard, ...tier }).catch(() => null))),
     getMarketPriceHistory(marketCard),
+    getCardDemand(marketCard),
+    getMarketIndexes(),
+    getTimeToSell(marketCard, asset.game),
   ]);
+  // The card's own game index, for the chart's "vs index" comparison.
+  const gameIndex = indexes.find((i) => i.key === asset.game) ?? null;
   const preloadedEbay: Record<string, Awaited<typeof ebayQuote>> = Object.fromEntries([
     [tierKey(currentTier), ebayQuote],
     ...otherTiers.map((tier, i) => [tierKey(tier), otherTierEbay[i]] as const),
@@ -446,6 +455,10 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
             </div>
           </div>
 
+          {asset.forSale && asset.priceThb != null && !isOwner && (
+            <ProfitCalculator priceThb={asset.priceThb} marketThb={marketPrice?.thb ?? null} />
+          )}
+
           {/* Seller card, kept above the buy actions since who you're buying
               from matters before you pay: the name links to their store, and
               messaging sits right on the card. Messages go to the current
@@ -646,6 +659,9 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
         subtitle={asset.subtitle}
         sales={gradeData.sales.map((s) => ({ ...s, soldAt: s.soldAt.toISOString() }))}
         ebayHistory={ebayHistory}
+        depth={depth}
+        timeToSell={timeToSell}
+        index={gameIndex ? { name: asset.game === "POKEMON" ? "Pokémon Index" : "One Piece Index", points: gameIndex.points } : null}
         listingThb={asset.forSale ? asset.priceThb : null}
         listings={gradeData.listings.filter((l) => l.id !== asset.id)}
         initialEbay={preloadedEbay}

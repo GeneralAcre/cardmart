@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { marketCardKey } from "@/lib/market-history";
 import { tierKey } from "@/lib/grade-tier";
 import { THB_PER_USD } from "@/lib/pricing";
-import { buildIndex, changeOver, changeWithin, type PricePoint } from "@/lib/stats-math";
+import { buildIndex, changeOver, changeSincePrevious, changeWithin, type PricePoint } from "@/lib/stats-math";
 import { displayImage } from "@/lib/card-image";
 import { INDEX_BASKETS } from "@/lib/index-baskets";
 import type { HoldingPnl } from "@/lib/pnl";
@@ -20,6 +20,8 @@ export type IndexKey = "ALL" | CardGame;
 export interface MarketIndex {
   key: IndexKey;
   points: PricePoint[];
+  /** Since the previous saved day. */
+  change1d: number | null;
   change7d: number | null;
   change30d: number | null;
   /** Over the last 30 days, or since the index began when it's younger. */
@@ -72,6 +74,7 @@ export interface IndexMember {
   photoUrl: string | null;
   points: PricePoint[];
   latestThb: number;
+  change1d: number | null;
   change7d: number | null;
   change30dOrSince: number | null;
 }
@@ -126,6 +129,7 @@ async function loadIndexMembers(): Promise<Record<IndexKey, IndexMember[]>> {
       photoUrl: asset ? (displayImage(asset)?.url ?? null) : null,
       points,
       latestThb: points.at(-1)!.price,
+      change1d: changeSincePrevious(points),
       change7d: changeOver(points, 7),
       change30dOrSince: changeWithin(points, 30),
     };
@@ -151,6 +155,7 @@ function summarize(key: IndexKey, members: IndexMember[]): MarketIndex {
   return {
     key,
     points,
+    change1d: changeSincePrevious(points),
     change7d: changeOver(points, 7),
     change30d: changeOver(points, 30),
     change30dOrSince: changeWithin(points, 30),
@@ -164,11 +169,17 @@ export async function getMarketIndexes(): Promise<MarketIndex[]> {
   return INDEX_KEYS.map((key) => summarize(key, members[key]));
 }
 
-/** One index with every card inside it, best performer first. */
-export async function getIndexDetail(key: IndexKey): Promise<{ index: MarketIndex; members: IndexMember[] }> {
-  const members = (await loadIndexMembers())[key];
+/** One index with every card inside it (best performer first), plus all three indexes for "other indexes". */
+export async function getIndexDetail(
+  key: IndexKey,
+): Promise<{ index: MarketIndex; members: IndexMember[]; all: MarketIndex[] }> {
+  const byIndex = await loadIndexMembers();
   const rank = (m: IndexMember) => m.change30dOrSince ?? -Infinity;
-  return { index: summarize(key, members), members: [...members].sort((x, y) => rank(y) - rank(x)) };
+  return {
+    index: summarize(key, byIndex[key]),
+    members: [...byIndex[key]].sort((x, y) => rank(y) - rank(x)),
+    all: INDEX_KEYS.map((k) => summarize(k, byIndex[k])),
+  };
 }
 
 export interface PortfolioStats {

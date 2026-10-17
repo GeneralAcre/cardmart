@@ -1,7 +1,17 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "crons": [
-    { "path": "/api/cron/expire-seller-shipments", "schedule": "0 1 * * *" },
-    { "path": "/api/cron/market-prices", "schedule": "0 2 * * *" }
+    {
+      "path": "/api/cron/expire-seller-shipments",
+      "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/api/cron/market-prices",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/leaderboards",
+      "schedule": "10 0 * * *"
+    }
   ]
 }

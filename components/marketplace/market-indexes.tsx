@@ -76,9 +76,17 @@ function Sparkline({ index, className, tooltip = true }: { index: MarketIndex; c
   );
 }
 
-/** The longer-term move: 30 days, or since the index began while it's younger than that. */
-function longChange(index: MarketIndex) {
-  return { label: index.change30d != null ? "30D" : "Since start", pct: index.change30d ?? index.change30dOrSince };
+/**
+ * The longer-term move: 30 days, or — while the index is younger than that —
+ * since the day it began, named by date so it never reads like a duplicate.
+ */
+function longChange(index: MarketIndex, t: (s: string, v?: Record<string, string | number>) => string, locale: string) {
+  if (index.change30d != null) return { label: t("30D"), pct: index.change30d };
+  const first = index.points[0];
+  const date = first
+    ? new Date(first.t).toLocaleDateString(locale === "th" ? "th-TH" : "en-US", { day: "numeric", month: "short" })
+    : "";
+  return { label: t("Since {date}", { date }), pct: index.change30dOrSince };
 }
 
 /** Desktop: a card per index with its chart. */
@@ -86,7 +94,7 @@ function IndexCard({ index }: { index: MarketIndex }) {
   const { locale, tr: t } = useLanguage();
   const last = index.points.at(-1);
   const first = index.points[0];
-  const long = longChange(index);
+  const long = longChange(index, t, locale);
 
   return (
     <Link
@@ -101,12 +109,9 @@ function IndexCard({ index }: { index: MarketIndex }) {
           <span className="text-2xl font-bold tabular-nums">{last ? formatLevel(last.price) : "—"}</span>
         </div>
         <div className="flex shrink-0 gap-4 text-right">
-          {[
-            { label: "7D", pct: index.change7d },
-            long,
-          ].map((c) => (
+          {[{ label: t("1D"), pct: index.change1d }, long].map((c) => (
             <span key={c.label} className="flex flex-col">
-              <span className="text-muted-foreground text-[10px] tracking-wide uppercase">{t(c.label)}</span>
+              <span className="text-muted-foreground text-[10px] tracking-wide uppercase">{c.label}</span>
               <span className={cn("text-sm font-semibold tabular-nums", toneClass(c.pct))}>{formatPct(c.pct)}</span>
             </span>
           ))}
@@ -140,9 +145,9 @@ const SHORT_NAMES: Record<MarketIndex["key"], string> = {
 
 /** Phones: a small tile per index, three side by side, like a stock app's ticker strip. */
 function IndexTile({ index }: { index: MarketIndex }) {
-  const { tr: t } = useLanguage();
+  const { locale, tr: t } = useLanguage();
   const last = index.points.at(-1);
-  const long = longChange(index);
+  const long = longChange(index, t, locale);
 
   return (
     <Link href={HREF[index.key]} className="bg-card active:bg-accent flex min-w-0 flex-col p-2.5">
