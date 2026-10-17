@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { BadgeCheck, CheckCircle2, Loader2, SearchX } from "lucide-react";
-import type { AssetCategory, CardGame, CardLanguage, GradingCompany } from "@prisma/client";
+import type { AssetCategory, CardGame, CardLanguage, CardRarity, GradingCompany } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -33,6 +33,7 @@ import { CameraCaptureGrid, type CaptureMap } from "@/components/listing/camera-
 import { StepHeading } from "@/components/listing/step-heading";
 import { confirmListingApproval, createListing, lookupPsaCertForForm, type PsaCertLookupResult } from "@/lib/actions";
 import { useWalletStore } from "@/lib/web3/wallet-store";
+import { RARITIES } from "@/lib/rarity";
 import {
   BGS_BLACK_LABEL_GRADE,
   CATEGORY_GRADING_COMPANIES,
@@ -66,6 +67,8 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
   const [name, setName] = useState("");
   const [subtitle, setSubtitle] = useState("");
   const [cardNumber, setCardNumber] = useState("");
+  // "" = let the card catalog decide when the listing is saved.
+  const [rarity, setRarity] = useState<CardRarity | "">("");
   const [grade, setGrade] = useState("");
   // BGS Black Label only applies at grade 10 — shown as a checkbox right
   // next to the grade field instead of a separate select option, since it's
@@ -156,6 +159,7 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
         fd.set("name", name);
         fd.set("subtitle", subtitle);
         if (cardNumber.trim()) fd.set("cardNumber", cardNumber.trim());
+        if (rarity) fd.set("rarity", rarity);
         fd.set("category", category);
         fd.set("game", game);
         fd.set("language", language);
@@ -334,6 +338,27 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
               />
               <span className="text-muted-foreground text-xs">
                 {t("Printed at the bottom of the card. Helps buyers find it — leave blank and we'll look it up.")}
+              </span>
+            </div>
+            <div className="flex flex-col gap-2 sm:col-span-2">
+              <Label>
+                {t("Rarity")} <span className="text-muted-foreground font-normal">({t("optional")})</span>
+              </Label>
+              <Select value={rarity || "AUTO"} onValueChange={(v) => setRarity(v === "AUTO" ? "" : (v as CardRarity))}>
+                <SelectTrigger className="sm:max-w-72">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="AUTO">{t("Auto (look it up)")}</SelectItem>
+                  {RARITIES.map((r) => (
+                    <SelectItem key={r.value} value={r.value}>
+                      {r.short} · {t(r.label)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <span className="text-muted-foreground text-xs">
+                {t("Leave on Auto and we'll fill it in from the card catalog.")}
               </span>
             </div>
           </div>

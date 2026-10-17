@@ -39,6 +39,7 @@ function buildQuery(filters: MarketplaceFilterState) {
   if (filters.q) sp.set("q", filters.q);
   filters.games.forEach((g) => sp.append("game", g));
   filters.languages.forEach((l) => sp.append("language", l));
+  filters.rarities.forEach((r) => sp.append("rarity", r));
   filters.gradingCompanies.forEach((c) => sp.append("gradingCompany", c));
   filters.grades.forEach((g) => sp.append("grade", String(g)));
   if (filters.blackLabelOnly) sp.set("blackLabel", "true");
@@ -53,6 +54,7 @@ function countActiveFilters(filters: MarketplaceFilterState): number {
     (filters.q ? 1 : 0) +
     filters.games.length +
     filters.languages.length +
+    filters.rarities.length +
     filters.gradingCompanies.length +
     filters.grades.length +
     (filters.blackLabelOnly ? 1 : 0) +

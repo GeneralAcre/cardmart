@@ -1,4 +1,4 @@
-import type { AssetCategory, CardGame, CardLanguage, GradingCompany, MarketStatus } from "@prisma/client";
+import type { AssetCategory, CardGame, CardLanguage, GradingCompany, MarketStatus, CardRarity } from "@prisma/client";
 
 export interface AssetSummary {
   id: string;
@@ -6,6 +6,8 @@ export interface AssetSummary {
   subtitle: string;
   /** Printed card number, e.g. "215/203" — see prisma/schema.prisma Asset.cardNumber. */
   cardNumber?: string | null;
+  /** Rarity group, e.g. SAR — null when unknown (see lib/rarity.ts). */
+  rarity?: CardRarity | null;
   category: AssetCategory;
   game: CardGame;
   /** Print language of the card (English or Japanese). */
@@ -38,6 +40,7 @@ export interface MarketplaceFilterState {
   q: string;
   games: CardGame[];
   languages: CardLanguage[];
+  rarities: CardRarity[];
   gradingCompanies: GradingCompany[];
   grades: number[];
   /** BGS Black Label only — a separate toggle since it's not a distinct numeric grade (see Asset.isBlackLabel). */
@@ -51,6 +54,7 @@ export const EMPTY_FILTERS: MarketplaceFilterState = {
   q: "",
   games: [],
   languages: [],
+  rarities: [],
   gradingCompanies: [],
   grades: [],
   blackLabelOnly: false,

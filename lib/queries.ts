@@ -1,5 +1,5 @@
 import "server-only";
-import type { AssetCategory, CardGame, CardLanguage, GradingCompany, Prisma, ProvenanceType } from "@prisma/client";
+import type { AssetCategory, CardGame, CardLanguage, CardRarity, GradingCompany, Prisma, ProvenanceType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { displayImage } from "@/lib/card-image";
 
@@ -7,6 +7,7 @@ export interface MarketplaceFilters {
   q?: string;
   games?: CardGame[];
   languages?: CardLanguage[];
+  rarities?: CardRarity[];
   gradingCompanies?: GradingCompany[];
   grades?: number[];
   blackLabelOnly?: boolean;
@@ -80,6 +81,9 @@ export async function getMarketplaceListings(filters: MarketplaceFilters = {}) {
   }
   if (filters.games?.length) {
     where.game = { in: filters.games };
+  }
+  if (filters.rarities?.length) {
+    where.rarity = { in: filters.rarities };
   }
   if (filters.languages?.length) {
     where.language = { in: filters.languages };

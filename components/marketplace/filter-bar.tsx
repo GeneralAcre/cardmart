@@ -1,12 +1,13 @@
 "use client";
 
 import { Anchor, Sparkles } from "lucide-react";
-import type { CardGame, CardLanguage, GradingCompany } from "@prisma/client";
+import type { CardGame, CardLanguage, GradingCompany, CardRarity } from "@prisma/client";
 
 import { Input } from "@/components/ui/input";
 import { CARD_GAMES, CARD_GAME_LABELS, CARD_LANGUAGES, CARD_LANGUAGE_LABELS, GRADING_COMPANY_LABELS } from "@/lib/labels";
 import { EMPTY_FILTERS, type MarketplaceFilterState } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { RARITIES } from "@/lib/rarity";
 import { useT } from "@/components/landing/language-provider";
 
 const GRADING_COMPANIES: GradingCompany[] = ["PSA", "BGS", "CGC", "RAW"];
@@ -92,6 +93,14 @@ export function FilterBar({
     });
   }
 
+  function toggleRarity(rarity: CardRarity) {
+    const has = filters.rarities.includes(rarity);
+    onChange({
+      ...filters,
+      rarities: has ? filters.rarities.filter((r) => r !== rarity) : [...filters.rarities, rarity],
+    });
+  }
+
   function toggleGradingCompany(company: GradingCompany) {
     const has = filters.gradingCompanies.includes(company);
     const gradingCompanies = has
@@ -161,6 +170,16 @@ export function FilterBar({
               onClick={() => toggleLanguage(language)}
             >
               {t(CARD_LANGUAGE_LABELS[language])}
+            </FilterPill>
+          ))}
+        </div>
+      </FilterSection>
+
+      <FilterSection label="Rarity">
+        <div className="flex flex-wrap gap-2">
+          {RARITIES.map((r) => (
+            <FilterPill key={r.value} active={filters.rarities.includes(r.value)} onClick={() => toggleRarity(r.value)}>
+              <span title={`${t(r.label)}: ${t(r.description)}`}>{r.short}</span>
             </FilterPill>
           ))}
         </div>

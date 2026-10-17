@@ -26,6 +26,19 @@ enum CardGame {
 
 // The language the card is printed in — English and Japanese prints of the
 // same card trade as different items with different prices.
+// How rare a card's printing is, grouped the way collectors talk about it
+// (see lib/rarity.ts for what each covers and how catalog rarities map in).
+enum CardRarity {
+  SAR // Special Art / Special Illustration Rare
+  AR // Art / Illustration Rare
+  SR // Super Rare: full-art portraits
+  UR // Ultra / Hyper Rare: gold or rainbow
+  SEC // Secret Rare: numbered past the set total
+  RR // Double Rare: ex and other core chase cards
+  R // Rare
+  UC // Uncommon / Common
+}
+
 enum CardLanguage {
   ENGLISH
   JAPANESE
@@ -246,6 +259,8 @@ model Asset {
   category            AssetCategory
   game                CardGame            @default(POKEMON)
   language            CardLanguage        @default(ENGLISH)
+  // Null until known: filled from the card catalog when listed, or by the seller.
+  rarity              CardRarity?
   gradingCompany      GradingCompany
   grade               Float?
   // True only for a BGS "Black Label" 10 — a distinct top tier (every

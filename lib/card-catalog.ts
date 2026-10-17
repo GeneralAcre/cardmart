@@ -41,6 +41,7 @@ interface SearchResult {
   image_url?: string;
   product_type?: string;
   number?: string;
+  rarity?: string | null;
 }
 
 /**
@@ -62,7 +63,9 @@ export async function findCatalogCard(card: {
   name: string;
   subtitle: string;
   game: CardGame;
-}): Promise<{ imageUrl: string; number: string | null } | null> {
+  /** When known, the result with this exact printed number wins, so a special print isn't mistaken for the regular one. */
+  cardNumber?: string | null;
+}): Promise<{ imageUrl: string; number: string | null; rarity: string | null } | null> {
   const key = process.env.TCG_API_KEY?.trim();
   if (!key) return null;
 
@@ -88,7 +91,8 @@ export async function findCatalogCard(card: {
 
   const subtitleTokens = tokens(card.subtitle);
   const hints = VARIANT_HINTS.filter((h) => h.pattern.test(card.name));
-  let best: { score: number; url: string; number: string | null } | null = null;
+  let best: { score: number; url: string; number: string | null; rarity: string | null; numberMatch: boolean } | null = null;
+  const wantNumber = card.cardNumber ? normalizeNumber(card.cardNumber) : null;
 
   for (const r of results) {
     if (r.game_slug !== GAME_SLUGS[card.game] || !r.image_url || (r.product_type && r.product_type !== "Cards")) continue;
@@ -101,9 +105,25 @@ export async function findCatalogCard(card: {
     const unaskedVariant = /\(/.test(name) && hints.length === 0 ? 1 : 0;
     const score = setScore * 3 + hintScore * 4 - unaskedVariant;
     const number = r.number?.trim() && numberFits(card.subtitle, r.set_name ?? "", r.number.trim()) ? r.number.trim() : null;
-    if (!best || score > best.score) best = { score, url: r.image_url, number };
+    const rarity = typeof r.rarity === "string" && r.rarity !== "None" ? r.rarity : null;
+    // The same card name is printed many times (regular, illustration rare,
+    // secret…); the printed number is what tells them apart.
+    const numberMatch = wantNumber != null && r.number != null && normalizeNumber(r.number) === wantNumber;
+    const total = score + (numberMatch ? 20 : 0);
+    if (!best || total > best.score) best = { score: total, url: r.image_url, number, rarity, numberMatch };
   }
-  return best ? { imageUrl: best.url, number: best.number } : null;
+  if (!best) return null;
+  // A rarity from a different printing would be wrong, so only trust it on a number match (or when there's no number to check).
+  return { imageUrl: best.url, number: best.number, rarity: wantNumber == null || best.numberMatch ? best.rarity : null };
+}
+
+/** "095/203" → "95/203", "OP01-120" → "op01-120": comparable printed numbers. */
+function normalizeNumber(n: string): string {
+  return n
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "")
+    .replace(/(^|\/)0+(?=\d)/g, "$1");
 }
 
 const setWords = (text: string) => text.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w && !/^(19|20)\d\d$/.test(w));

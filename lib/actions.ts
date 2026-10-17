@@ -41,6 +41,7 @@ import {
   sellerShipByDeadline,
 } from "@/lib/shipping";
 import { findCatalogCard } from "@/lib/card-catalog";
+import { normalizeRarity } from "@/lib/rarity";
 import { checkKycPhoto, deleteKycPhotos, isKycPhotoStorageConfigured, saveKycPhoto } from "@/lib/kyc-storage";
 import { getPortfolioPriceHistory, type PriceHistoryRange } from "@/lib/queries";
 import {
@@ -232,6 +233,7 @@ const createListingSchema = z
       .transform((v) => v === "true"),
     serial: z.string().min(4).optional(),
     cardNumber: z.string().trim().max(24).optional(),
+    rarity: z.enum(["SAR", "AR", "SR", "UR", "SEC", "RR", "R", "UC"]).optional(),
     priceThb: z.coerce.number().int().min(100),
     photos: z.string().transform((raw, ctx) => {
       try {
@@ -365,6 +367,7 @@ export async function createListing(
     isBlackLabel: formData.get("isBlackLabel") || undefined,
     serial: formData.get("serial") || undefined,
     cardNumber: formData.get("cardNumber") || undefined,
+    rarity: formData.get("rarity") || undefined,
     priceThb: formData.get("priceThb"),
     photos: formData.get("photos"),
   });
@@ -477,6 +480,7 @@ export async function createListing(
       name: data.name,
       subtitle: data.subtitle,
       cardNumber: data.cardNumber || null,
+      rarity: data.rarity ?? normalizeRarity(null, data.cardNumber),
       category: data.category as AssetCategory,
       game: data.game,
       language: data.language,
@@ -535,11 +539,16 @@ export async function createListing(
   // Official reference image so buyers recognise the card at a glance, and
   // its card number if the seller left that blank — best-effort, one API
   // call per listing; a miss just leaves the artwork.
-  const catalog = await findCatalogCard({ name: data.name, subtitle: data.subtitle, game: data.game });
+  const catalog = await findCatalogCard({ name: data.name, subtitle: data.subtitle, game: data.game, cardNumber: data.cardNumber });
   if (catalog) {
     await prisma.asset.update({
       where: { id: asset.id },
-      data: { catalogImageUrl: catalog.imageUrl, ...(!data.cardNumber && catalog.number ? { cardNumber: catalog.number } : {}) },
+      data: {
+        catalogImageUrl: catalog.imageUrl,
+        ...(!data.cardNumber && catalog.number ? { cardNumber: catalog.number } : {}),
+        // The seller's pick wins; otherwise the catalog's rarity, then the number rule.
+        ...(!data.rarity ? { rarity: normalizeRarity(catalog.rarity, data.cardNumber || catalog.number) } : {}),
+      },
     });
   }
 

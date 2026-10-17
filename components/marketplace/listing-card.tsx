@@ -11,6 +11,7 @@ import type { AssetSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { displayImage, realPhotos } from "@/lib/card-image";
 import { useT } from "@/components/landing/language-provider";
+import { RARITY_SHORT } from "@/lib/rarity";
 
 const CHIP = "rounded-md px-2 py-1 text-[11px] font-semibold leading-none text-white backdrop-blur-sm";
 
@@ -103,6 +104,11 @@ export function ListingCard({
           {asset.subtitle}
           {asset.cardNumber && <span className="font-mono"> · #{asset.cardNumber}</span>}
         </p>
+        {asset.rarity && (
+          <span className="text-muted-foreground w-fit rounded border px-1.5 py-0.5 text-[10px] leading-none font-semibold tracking-wide">
+            {RARITY_SHORT[asset.rarity]}
+          </span>
+        )}
         <span
           className={cn(
             "mt-1.5 font-bold tabular-nums",
