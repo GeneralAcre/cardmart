@@ -5,6 +5,7 @@ import { BadgeCheck, ChartNoAxesCombined, ShieldCheck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { CardWall } from "@/components/landing/card-wall";
+import { ConfidenceWords } from "@/components/landing/confidence-words";
 import { FeatureShowcase } from "@/components/landing/feature-showcase";
 import type { LandingShowcaseItem } from "@/lib/queries";
 import { LandingNav } from "@/components/landing/landing-nav";
@@ -37,9 +38,13 @@ const foil = (base: string) =>
   `linear-gradient(110deg, ${base} 40%, var(--highlight) 50%, ${base} 60%)`;
 
 function HeroTitle({ line1, line2 }: { line1: string; line2: string }) {
-  const shine = "animate-text-sweep inline-block bg-[length:250%_100%] bg-clip-text bg-[position:0%_0] text-transparent";
+  // bg-clip-text only paints inside each line's box, and Thai tone marks and
+  // lower vowels reach outside it — so each line gets extra room to paint
+  // into (py) that the negative margin takes back out of the layout.
+  const shine =
+    "animate-text-sweep inline-block bg-[length:250%_100%] bg-clip-text bg-[position:0%_0] py-[0.18em] -my-[0.18em] text-transparent";
   return (
-    <h1 className="text-4xl leading-[1.08] font-semibold tracking-tight text-balance sm:text-6xl sm:leading-[1.02] lg:text-7xl">
+    <h1 className="text-4xl leading-[1.08] font-semibold tracking-tight text-balance sm:text-6xl sm:leading-[1.02] lg:text-7xl hero-title">
       <span className={shine} style={{ backgroundImage: foil("var(--foreground)") }}>
         {line1}
       </span>
@@ -115,6 +120,8 @@ function LandingPageContent({ authenticated, showcase }: LandingPageProps) {
           })}
         </div>
       </section>
+
+      <ConfidenceWords />
 
       <FeatureShowcase />
 

@@ -455,7 +455,7 @@ export function FeatureShowcase() {
   const s = t.showcase;
 
   return (
-    <section className="border-t">
+    <section>
       <div className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6 sm:py-28">
         <div className="mx-auto flex max-w-2xl flex-col items-center text-center">
           <span className="border-highlight/30 bg-highlight/10 text-highlight rounded-full border px-3 py-1 text-xs font-medium">

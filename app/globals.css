@@ -152,6 +152,12 @@
   }
 }
 
+/* The landing headline in Thai: tone marks and lower vowels need more room
+   between the two lines than English capitals do. */
+html[lang="th"] .hero-title {
+  line-height: 1.3;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-wall-up,
   .animate-wall-down {

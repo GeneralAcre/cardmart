@@ -44,6 +44,10 @@ export const LANDING_DICTIONARY = {
         },
       ],
     },
+    confidence: {
+      words: ["Buy", "Sell", "Trade", "Vault", "Price", "Collect", "Hunt", "Redeem"],
+      tail: "with confidence",
+    },
     showcase: {
       badge: "Inside CardMart",
       title: "See it before you sign in",
@@ -191,6 +195,10 @@ export const LANDING_DICTIONARY = {
           description: "การ์ดทุกใบมีใบรับรองดิจิทัลบนบล็อกเชน พร้อมการ์ดจริงเก็บรักษาในวอลต์ของเรา",
         },
       ],
+    },
+    confidence: {
+      words: ["ซื้อ", "ขาย", "เทรด", "ฝากเก็บ", "เช็กราคา", "สะสม", "ตามล่า", "แลกรับ"],
+      tail: "อย่างมั่นใจ",
     },
     showcase: {
       badge: "ภายใน CardMart",
