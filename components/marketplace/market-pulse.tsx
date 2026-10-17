@@ -94,7 +94,12 @@ function MoversList({
 }) {
   const t = useT();
   return (
-    <section className="bg-card flex min-w-0 flex-col self-start rounded-2xl border">
+    <section
+      className="bg-card relative isolate flex min-w-0 flex-col self-start overflow-hidden rounded-2xl border"
+      style={{
+        backgroundImage: `radial-gradient(90% 60% at 0% 0%, ${tone === "up" ? "color-mix(in oklab, var(--success) 14%, transparent)" : "color-mix(in oklab, var(--destructive) 14%, transparent)"}, transparent 65%)`,
+      }}
+    >
       <h3 className="eyebrow text-muted-foreground flex items-center gap-2 border-b px-4 py-2.5">
         <Icon className={cn("size-3.5", tone === "up" ? "text-success" : "text-destructive")} />
         {t(title)}

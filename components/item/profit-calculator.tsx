@@ -32,7 +32,7 @@ export function ProfitCalculator({ priceThb, marketThb }: { priceThb: number; ma
   const marketProfit = marketThb != null ? marketThb - resaleCost - paid : null;
 
   return (
-    <details className="detail-panel group rounded-2xl border" open>
+    <details className="detail-panel group rounded-2xl border">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 [&::-webkit-details-marker]:hidden">
         <span className="flex items-center gap-2 text-sm font-semibold">
           <Calculator className="text-muted-foreground size-4" /> {t("Profit calculator")}

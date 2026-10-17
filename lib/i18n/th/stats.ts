@@ -113,6 +113,7 @@ export const STATS: Record<string, string> = {
 
   // Card page: key statistics, historical data, chart overlays
   "Key statistics": "สถิติสำคัญ",
+  Activity: "ความเคลื่อนไหว",
   "Last sale": "ขายล่าสุด",
   "Lowest ask {pct}": "ราคาเสนอขายต่ำสุด {pct}",
   "eBay listings": "รายการบน eBay",
@@ -121,6 +122,7 @@ export const STATS: Record<string, string> = {
   "For sale on CardMart": "ลงขายบน CardMart",
   "Want it": "อยากได้",
   "Historical data": "ข้อมูลย้อนหลัง",
+  "{count} days": "{count} วัน",
   "Download CSV": "ดาวน์โหลด CSV",
   Median: "ค่ามัธยฐาน",
   Low: "ต่ำสุด",

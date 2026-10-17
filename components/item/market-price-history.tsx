@@ -103,6 +103,7 @@ export function MarketPriceHistory({
   itemHistory,
   depth,
   timeToSell,
+  calculator,
   index,
 }: {
   assetId: string;
@@ -127,6 +128,8 @@ export function MarketPriceHistory({
     watchers: (Tier & { userId: string })[];
     alerts: { gradingCompany: string | null; minGrade: number | null; blackLabelOnly: boolean }[];
   };
+  // The buyer's profit calculator, shown at the bottom of the Compare tab (null for the owner).
+  calculator: React.ReactNode;
   // Days from listing to sale: this card by grade, and the whole game (getTimeToSell).
   timeToSell: { card: (Tier & { days: number })[]; game: number[] };
   // The card's game index, for the chart's comparison line.
@@ -605,6 +608,7 @@ export function MarketPriceHistory({
                 query={query}
               />
               <GradingValue ebay={ebay} />
+              {calculator}
             </>
           )}
         </>

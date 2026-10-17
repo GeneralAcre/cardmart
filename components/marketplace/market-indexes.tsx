@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { Anchor, ChevronRight, Sparkles } from "lucide-react";
 import { Area, AreaChart, Tooltip, YAxis } from "recharts";
 
 import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
@@ -21,6 +21,33 @@ const HREF: Record<MarketIndex["key"], string> = {
   POKEMON: "/market/index/pokemon",
   ONE_PIECE: "/market/index/one-piece",
 };
+
+// Shared CardMart green and white accents keep the index cards cohesive.
+const ACCENT: Record<MarketIndex["key"], { from: string; to: string; line: string }> = {
+  ALL: { from: "rgba(204, 239, 32, 0.16)", to: "rgba(255, 255, 255, 0.035)", line: "rgba(204, 239, 32, 0.75)" },
+  POKEMON: { from: "rgba(204, 239, 32, 0.16)", to: "rgba(255, 255, 255, 0.035)", line: "rgba(204, 239, 32, 0.75)" },
+  ONE_PIECE: { from: "rgba(204, 239, 32, 0.16)", to: "rgba(255, 255, 255, 0.035)", line: "rgba(204, 239, 32, 0.75)" },
+};
+
+function IndexIcon({ index }: { index: MarketIndex["key"] }) {
+  const a = ACCENT[index];
+  return (
+    <span
+      aria-hidden
+      className="flex size-8 shrink-0 items-center justify-center rounded-lg border"
+      style={{ backgroundImage: `linear-gradient(135deg, ${a.from}, ${a.to})` }}
+    >
+      {index === "ALL" ? (
+        // eslint-disable-next-line @next/next/no-img-element -- tiny static logo
+        <img src="/cardmart-logo.png" alt="" className="size-4 object-contain" />
+      ) : index === "POKEMON" ? (
+        <Sparkles className="size-4" />
+      ) : (
+        <Anchor className="size-4" />
+      )}
+    </span>
+  );
+}
 
 const formatLevel = (v: number) => v.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const toneClass = (pct: number | null) =>
@@ -84,14 +111,41 @@ function IndexCard({ index }: { index: MarketIndex }) {
   return (
     <Link
       href={HREF[index.key]}
-      className="bg-card hover:border-foreground/30 group relative isolate flex flex-col gap-3 overflow-hidden rounded-2xl border p-4 transition-colors sm:p-5"
+      className="bg-card hover:border-foreground/25 group relative isolate flex flex-col gap-3 overflow-hidden rounded-2xl border p-4 transition-colors sm:p-5"
     >
-      <div className="pointer-events-none absolute -right-8 -top-10 z-0 size-36 rounded-full bg-primary/[0.035] blur-2xl transition-colors group-hover:bg-primary/[0.08]" />
+      {/* The index's color: a glow from the top-left corner and a hairline on top. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10 opacity-80 transition-opacity duration-300 group-hover:opacity-100"
+        style={{
+          backgroundImage: `radial-gradient(120% 90% at 0% 0%, ${ACCENT[index.key].from} 0%, ${ACCENT[index.key].to} 38%, transparent 70%)`,
+        }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-px"
+        style={{ backgroundImage: `linear-gradient(90deg, ${ACCENT[index.key].line}, transparent 75%)` }}
+      />
       <div className="relative z-10 flex min-w-0 items-center justify-between gap-3">
-        <span className="text-muted-foreground group-hover:text-foreground flex min-w-0 items-center gap-0.5 truncate text-xs font-medium transition-colors">
-          {t(NAMES[index.key])} <ChevronRight className="size-3.5 shrink-0" />
+        <span className="flex min-w-0 items-center gap-2.5">
+          <IndexIcon index={index.key} />
+          <span className="text-muted-foreground group-hover:text-foreground flex min-w-0 items-center gap-0.5 truncate text-sm font-medium transition-colors">
+            {t(NAMES[index.key])} <ChevronRight className="size-3.5 shrink-0" />
+          </span>
         </span>
-        <span className={cn("shrink-0 text-sm font-semibold tabular-nums", toneClass(index.change1d))}>{formatPct(index.change1d)}</span>
+        <span
+          className={cn(
+            "shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums",
+            toneClass(index.change1d),
+            index.change1d == null || Math.abs(index.change1d) < 0.05
+              ? "bg-muted"
+              : index.change1d > 0
+                ? "bg-success/12"
+                : "bg-destructive/12",
+          )}
+        >
+          {formatPct(index.change1d)}
+        </span>
       </div>
       <div className="relative z-10 -mt-2 text-2xl font-bold tabular-nums tracking-tight">
         {last ? formatLevel(last.price) : "—"}

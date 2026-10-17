@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Download } from "lucide-react";
+import { ChevronDown, Download } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { formatThb } from "@/lib/format";
@@ -39,15 +39,22 @@ export function HistoricalData({ rows, fileName }: { rows: HistoryRow[]; fileNam
     URL.revokeObjectURL(url);
   }
 
+  // Folded by default: it's reference data, not something most people read.
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center justify-between gap-3">
-        <h3 className="text-sm font-semibold">{t("Historical data")}</h3>
+    <details className="group flex flex-col">
+      <summary className="bg-card hover:bg-accent flex cursor-pointer list-none items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm transition-colors group-open:rounded-b-none group-open:border-b-0 [&::-webkit-details-marker]:hidden">
+        <span className="font-semibold">
+          {t("Historical data")}{" "}
+          <span className="text-muted-foreground font-normal">· {t("{count} days", { count: newestFirst.length })}</span>
+        </span>
+        <ChevronDown className="text-muted-foreground size-4 transition-transform group-open:rotate-180" />
+      </summary>
+      <div className="bg-card flex justify-end rounded-none border-x px-3 pt-1 pb-2">
         <Button variant="outline" size="sm" onClick={download}>
           <Download /> {t("Download CSV")}
         </Button>
       </div>
-      <div className="bg-card overflow-hidden rounded-xl border">
+      <div className="bg-card overflow-hidden rounded-b-xl border">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-muted-foreground border-b text-left text-[11px] font-semibold tracking-wide uppercase">
@@ -80,9 +87,9 @@ export function HistoricalData({ rows, fileName }: { rows: HistoryRow[]; fileNam
           </button>
         )}
       </div>
-      <p className="text-muted-foreground text-[11px]">
+      <p className="text-muted-foreground mt-2 text-[11px]">
         {t("eBay's daily median, lowest and highest asking price for this card and grade, in baht, and how many listings matched.")}
       </p>
-    </div>
+    </details>
   );
 }

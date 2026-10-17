@@ -163,6 +163,17 @@ function summarize(key: IndexKey, members: IndexMember[]): MarketIndex {
   };
 }
 
+/**
+ * One game's index line, for a card page's "vs index" comparison: only that
+ * game's basket cards (lib/index-baskets.ts), so it's a single small query
+ * instead of loadIndexMembers' scan of every card on CardMart.
+ */
+export async function getGameIndexPoints(game: CardGame): Promise<PricePoint[]> {
+  const basket = INDEX_BASKETS.filter((c) => c.game === game);
+  const series = await priceSeries(basket);
+  return buildIndex(basket.map((c) => series.get(seriesKey(c))).filter((s): s is PricePoint[] => s != null));
+}
+
 /** The three indexes, each equal-weighted and chain-linked from daily prices (see buildIndex). */
 export async function getMarketIndexes(): Promise<MarketIndex[]> {
   const members = await loadIndexMembers();
