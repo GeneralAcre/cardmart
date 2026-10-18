@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Flame, Gavel, Loader2, Repeat, Tag, TagX, Truck } from "lucide-react";
+import { ChevronDown, Flame, Gavel, Loader2, Repeat, Tag, TagX, Truck } from "lucide-react";
 
 import { CardArt } from "@/components/asset/card-art";
 import { BidStepField, resolveBidStep } from "@/components/auction/bid-step-field";
@@ -31,6 +31,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { auctionApprovalNeeded, delistAsset, startAuction, updateListingPrice, prepareVaultRedeem, vaultRedeem, vaultRelist } from "@/lib/actions";
 import { useWalletStore } from "@/lib/web3/wallet-store";
 import { formatGrade, formatThb } from "@/lib/format";
@@ -198,12 +199,13 @@ export function PortfolioItemCard({
   }
 
   const startAuctionButton = (
+    <Button size="sm" variant="outline" className="w-full" onClick={() => setAuctionOpen(true)}>
+      <Gavel /> {t("Start Auction")}
+    </Button>
+  );
+
+  const startAuctionDialog = (
     <Dialog open={auctionOpen} onOpenChange={setAuctionOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm" variant="outline" className="w-full">
-          <Gavel /> {t("Start Auction")}
-        </Button>
-      </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{t("Start an Auction")}</DialogTitle>
@@ -264,7 +266,7 @@ export function PortfolioItemCard({
   return (
     // @container: the actions below size to this card, not the screen, so they
     // fit whether the grid shows 2 cards (phones) or 6 (wide desktops).
-    <div className="bg-card @container flex flex-col gap-3 rounded-xl border p-3 shadow-sm">
+    <div className="bg-card @container relative flex flex-col gap-3 rounded-xl border p-3 shadow-sm">
       {/* The image bleeds to the card's own edges (negative margin,
           matching corner radius) instead of sitting in its own inset
           border — a separate inner frame read as "double framed". */}
@@ -300,48 +302,68 @@ export function PortfolioItemCard({
           </span>
         )}
       </Link>
-      <div className="flex flex-col gap-1">
-        <span className="text-muted-foreground text-xs">{t(CARD_GAME_LABELS[asset.game])}</span>
-        <div className="flex min-w-0 items-center justify-between gap-2">
-          <Link href={`/item/${asset.id}`} className="line-clamp-1 min-w-0 text-sm font-semibold hover:underline">
-            {asset.name}
-          </Link>
+      {/* Gain or loss on the card, pinned over the image corner. A sibling of the
+          link (not inside it) because the badge can open a dialog. */}
+      {pnl && (
+        <div className="absolute right-2 top-2 rounded-md bg-black/70 px-2 py-0.5 backdrop-blur-sm">
           <HoldingPnlBlock assetId={asset.id} pnl={pnl} />
         </div>
+      )}
+      <div className="flex flex-col gap-1">
+        <span className="text-muted-foreground text-xs">{t(CARD_GAME_LABELS[asset.game])}</span>
+        <Link href={`/item/${asset.id}`} className="line-clamp-1 min-w-0 text-sm font-semibold hover:underline">
+          {asset.name}
+        </Link>
         <p className="text-muted-foreground line-clamp-1 text-xs">{asset.subtitle}</p>
       </div>
 
-      {asset.forSale && (
-        <Badge
-          variant="secondary"
-          className={cn(
-            "w-fit",
-            asset.priceDirection === "up" && "text-success",
-            asset.priceDirection === "down" && "text-destructive",
-          )}
-        >
-          {t("Listed at {price}", { price: formatThb(asset.priceThb!) })}
+      {asset.marketStatus === "IN_AUCTION" ? (
+        <Badge variant="secondary" className="w-fit">
+          <Gavel className="size-3" /> {t("Up for Auction")}
         </Badge>
+      ) : (
+        asset.forSale && (
+          <Badge
+            variant="secondary"
+            className={cn(
+              "w-fit",
+              asset.priceDirection === "up" && "text-success",
+              asset.priceDirection === "down" && "text-destructive",
+            )}
+          >
+            {t("Listed at {price}", { price: formatThb(asset.priceThb!) })}
+          </Badge>
+        )
       )}
 
       {asset.marketStatus === "IN_AUCTION" ? (
-        <div className="flex flex-col gap-1.5 pt-1">
-          <Badge variant="secondary" className="w-fit">
-            <Gavel className="size-3" /> {t("Up for Auction")}
-          </Badge>
-          <Link href={`/item/${asset.id}`} className="text-muted-foreground text-xs underline underline-offset-2">
-            {t("View auction & manage bids")}
-          </Link>
+        <div className="mt-auto pt-1">
+          <Button asChild size="sm" variant="default" className="w-full font-semibold">
+            <Link href={`/item/${asset.id}`}>{t("View auction")}</Link>
+          </Button>
         </div>
       ) : asset.vaulted ? (
-        <div className="grid grid-cols-1 gap-2 pt-1 @[15rem]:grid-cols-2">
-          <div className="contents">
+        <div className="mt-auto pt-1">
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" variant="default" className="w-full font-semibold">
+                {t("Manage")} <ChevronDown />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-48">
+              <DropdownMenuItem onSelect={() => setRelistOpen(true)}>
+                <Repeat /> {t("Relist")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setRedeemOpen(true)}>
+                <Truck /> {t("Redeem")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setAuctionOpen(true)}>
+                <Gavel /> {t("Start Auction")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <>
             <Dialog open={relistOpen} onOpenChange={setRelistOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm" variant="default" className="w-full font-semibold @[15rem]:col-span-2">
-                  <Repeat /> {t("Relist")}
-                </Button>
-              </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>{t("Relist for Instant Sale")}</DialogTitle>
@@ -372,11 +394,6 @@ export function PortfolioItemCard({
             </Dialog>
 
             <Dialog open={redeemOpen} onOpenChange={setRedeemOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm" variant="outline" className="w-full">
-                  <Truck /> {t("Redeem")}
-                </Button>
-              </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>{t("Redeem Physical Item")}</DialogTitle>
@@ -422,13 +439,13 @@ export function PortfolioItemCard({
                 </DialogFooter>
               </DialogContent>
             </Dialog>
-          </div>
-          {startAuctionButton}
+          </>
+          {startAuctionDialog}
         </div>
       ) : asset.marketStatus === "IN_ESCROW" ? (
-        <p className="text-muted-foreground pt-1 text-xs">{t("Locked in an active sale.")}</p>
+        <p className="text-muted-foreground mt-auto pt-1 text-xs">{t("Locked in an active sale.")}</p>
       ) : (
-        <div className="flex flex-col gap-2 pt-1">
+        <div className="flex flex-col gap-2 mt-auto pt-1">
           <div className="grid grid-cols-1 gap-2">
             <Dialog open={priceEditOpen} onOpenChange={setPriceEditOpen}>
               <DialogTrigger asChild>
@@ -475,6 +492,7 @@ export function PortfolioItemCard({
             )}
           </div>
           {startAuctionButton}
+          {startAuctionDialog}
         </div>
       )}
     </div>

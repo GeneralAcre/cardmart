@@ -56,6 +56,7 @@ export const AUCTION: Record<string, string> = {
   Tomorrow: "พรุ่งนี้",
   "Current listing price:": "ราคาขายปัจจุบัน:",
   "Start Auction": "เริ่มการประมูล",
+  "Manage": "จัดการ",
 
   // Bidding
   "Could not lock your bid. Try again.": "ล็อกเงินประมูลไม่สำเร็จ ลองอีกครั้ง",
