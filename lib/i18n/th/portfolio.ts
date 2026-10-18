@@ -147,7 +147,7 @@ export const PORTFOLIO: Record<string, string> = {
   "Replaces any fixed-price listing on this item. Bidding is separate from the marketplace — see /auctions once it's live.":
     "จะแทนที่การลงขายราคาคงที่ของสินค้านี้ การประมูลแยกจากตลาด — ดูได้ที่หน้าประมูลเมื่อเริ่มแล้ว",
   "Listed at {price}": "ตั้งขายที่ {price}",
-  "View auction & manage bids": "ดูการประมูลและจัดการการเสนอราคา",
+  "View auction": "ดูการประมูล",
   Relist: "ลงขายใหม่",
   "Relist for Instant Sale": "ลงขายใหม่แบบขายทันที",
   "This item stays in the vault. A buyer can purchase it with zero shipping — ownership transfers digitally and instantly.":

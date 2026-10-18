@@ -233,7 +233,7 @@ const createListingSchema = z
       .transform((v) => v === "true"),
     serial: z.string().min(4).optional(),
     cardNumber: z.string().trim().max(24).optional(),
-    rarity: z.enum(["SAR", "AR", "SR", "UR", "SEC", "RR", "R", "UC"]).optional(),
+    rarity: z.enum(["SAR", "AR", "SR", "UR", "SEC", "RR", "R", "UC"]),
     priceThb: z.coerce.number().int().min(100),
     photos: z.string().transform((raw, ctx) => {
       try {

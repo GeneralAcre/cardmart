@@ -67,7 +67,7 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
   const [name, setName] = useState("");
   const [subtitle, setSubtitle] = useState("");
   const [cardNumber, setCardNumber] = useState("");
-  // "" = let the card catalog decide when the listing is saved.
+  // Sellers choose the rarity before creating a listing.
   const [rarity, setRarity] = useState<CardRarity | "">("");
   const [grade, setGrade] = useState("");
   // BGS Black Label only applies at grade 10 — shown as a checkbox right
@@ -211,6 +211,7 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
   const canSubmit =
     name.trim().length >= 2 &&
     subtitle.trim().length >= 2 &&
+    rarity !== "" &&
     (raw ||
       (serial.trim().length >= 4 &&
         grade.trim().length > 0 &&
@@ -225,11 +226,6 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
       <Card>
         <CardHeader>
           <CardTitle>{t("Listing")}</CardTitle>
-          <CardDescription>
-            {raw
-              ? t("Describe the item, then prove you have it with a quick camera check.")
-              : t("Tell us what's on the certificate, then prove you have it with a quick camera check.")}
-          </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-5">
           <StepHeading step={1} title={t("What are you listing?")} />
@@ -281,7 +277,10 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
                 </SelectContent>
               </Select>
             </div>
-            {!raw && (
+          </div>
+
+          {!raw && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <div className="flex flex-col gap-2">
                 <Label>{t("Who graded it?")}</Label>
                 <Select
@@ -303,8 +302,46 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
                   </SelectContent>
                 </Select>
               </div>
-            )}
-          </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="serial">{t("Serial Number")}</Label>
+                  <Input
+                    id="serial"
+                  placeholder={t("e.g. 84920193")}
+                  value={serial}
+                  onChange={(e) => setSerial(e.target.value)}
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="grade">{t("Grade (1–10)")}</Label>
+                  <Input
+                    id="grade"
+                    type="number"
+                    step="0.5"
+                    min={1}
+                    max={10}
+                    placeholder={t("e.g. 10")}
+                    value={grade}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      const numericGrade = Number(value);
+                      if (value !== "" && (numericGrade < 1 || numericGrade > 10)) return;
+                      setGrade(value);
+                      if (numericGrade !== BGS_BLACK_LABEL_GRADE) setIsBlackLabel(false);
+                    }}
+                  />
+                  {gradeTier && <p className="text-muted-foreground text-xs">{gradeTier}</p>}
+                  {showBlackLabelOption && (
+                    <label className="mt-1 flex items-center gap-2 text-sm">
+                      <Checkbox
+                        checked={isBlackLabel}
+                        onCheckedChange={(checked) => setIsBlackLabel(checked === true)}
+                      />
+                      {t("Black Label (every sub-grade a perfect 10)")}
+                    </label>
+                  )}
+                </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
@@ -325,31 +362,25 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
                 onChange={(e) => setSubtitle(e.target.value)}
               />
             </div>
-            <div className="flex flex-col gap-2 sm:col-span-2">
+            <div className="flex flex-col gap-2">
               <Label htmlFor="cardNumber">
                 {t("Card number")} <span className="text-muted-foreground font-normal">({t("optional")})</span>
               </Label>
               <Input
                 id="cardNumber"
-                className="sm:max-w-56"
+                className="w-full"
                 placeholder={t("e.g. 215/203 or OP01-120")}
                 value={cardNumber}
                 onChange={(e) => setCardNumber(e.target.value)}
               />
-              <span className="text-muted-foreground text-xs">
-                {t("Printed at the bottom of the card. Helps buyers find it — leave blank and we'll look it up.")}
-              </span>
             </div>
-            <div className="flex flex-col gap-2 sm:col-span-2">
-              <Label>
-                {t("Rarity")} <span className="text-muted-foreground font-normal">({t("optional")})</span>
-              </Label>
-              <Select value={rarity || "AUTO"} onValueChange={(v) => setRarity(v === "AUTO" ? "" : (v as CardRarity))}>
-                <SelectTrigger className="sm:max-w-72">
-                  <SelectValue />
+            <div className="flex flex-col gap-2">
+              <Label>{t("Rarity")} *</Label>
+              <Select value={rarity || undefined} onValueChange={(v) => setRarity(v as CardRarity)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={t("Select rarity")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="AUTO">{t("Auto (look it up)")}</SelectItem>
                   {RARITIES.map((r) => (
                     <SelectItem key={r.value} value={r.value}>
                       {r.short} · {t(r.label)}
@@ -357,51 +388,8 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
                   ))}
                 </SelectContent>
               </Select>
-              <span className="text-muted-foreground text-xs">
-                {t("Leave on Auto and we'll fill it in from the card catalog.")}
-              </span>
             </div>
           </div>
-
-          {!raw && (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="serial">{t("Serial Number")}</Label>
-                <Input
-                  id="serial"
-                  placeholder={t("e.g. 84920193")}
-                  value={serial}
-                  onChange={(e) => setSerial(e.target.value)}
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="grade">{t("Grade (1–10)")}</Label>
-                <Input
-                  id="grade"
-                  type="number"
-                  step="0.5"
-                  min={1}
-                  max={10}
-                  placeholder={t("e.g. 10")}
-                  value={grade}
-                  onChange={(e) => {
-                    setGrade(e.target.value);
-                    if (Number(e.target.value) !== BGS_BLACK_LABEL_GRADE) setIsBlackLabel(false);
-                  }}
-                />
-                {gradeTier && <p className="text-muted-foreground text-xs">{gradeTier}</p>}
-                {showBlackLabelOption && (
-                  <label className="mt-1 flex items-center gap-2 text-sm">
-                    <Checkbox
-                      checked={isBlackLabel}
-                      onCheckedChange={(checked) => setIsBlackLabel(checked === true)}
-                    />
-                    {t("Black Label (every sub-grade a perfect 10)")}
-                  </label>
-                )}
-              </div>
-            </div>
-          )}
 
           {psaEligible && <PsaLookupPanel pending={psaLookupPending} result={psaLookup} />}
 
@@ -437,11 +425,6 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
             <BadgeCheck />
             {t("Create Listing")}
           </Button>
-          {!allCaptured && (
-            <p className="text-muted-foreground text-center text-xs">
-              {t("Complete every live capture above to unlock this button.")}
-            </p>
-          )}
         </CardContent>
       </Card>
 

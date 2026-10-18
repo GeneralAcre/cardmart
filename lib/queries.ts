@@ -345,9 +345,33 @@ export async function getVaultAssets(userId: string) {
       owner: true,
       verificationPhotos: { orderBy: { createdAt: "asc" } },
       priceSnapshots: { orderBy: { createdAt: "desc" }, take: 2, select: { priceThb: true } },
+      provenance: {
+        where: { type: "MINTED_DIGITAL_TWIN" },
+        orderBy: { createdAt: "asc" },
+        take: 1,
+        select: { actor: { select: { name: true, handle: true } } },
+      },
     },
   });
-  return assets.map(withPriceDirection);
+  if (assets.length === 0) return [];
+
+  const firstSnapshots = await prisma.priceSnapshot.findMany({
+    where: { assetId: { in: assets.map((asset) => asset.id) } },
+    orderBy: { createdAt: "asc" },
+    distinct: ["assetId"],
+    select: { assetId: true, priceThb: true },
+  });
+  const firstPriceByAsset = new Map(firstSnapshots.map((snapshot) => [snapshot.assetId, snapshot.priceThb]));
+
+  return assets.map((asset) => {
+    const { provenance, ...assetSummary } = asset;
+    const minter = provenance[0]?.actor;
+    return {
+      ...withPriceDirection(assetSummary),
+      originalMintPriceThb: firstPriceByAsset.get(asset.id) ?? null,
+      originalMinterName: minter?.name ?? minter?.handle ?? null,
+    };
+  });
 }
 
 // React's Flight serializer (Server Component -> Client Component props)

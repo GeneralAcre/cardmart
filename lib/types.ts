@@ -21,6 +21,9 @@ export interface AssetSummary {
   priceThb: number | null;
   /** Direction of the latest listed price compared with the previous snapshot. */
   priceDirection?: "up" | "down" | null;
+  /** First recorded listing price and minter, used as the lifetime price baseline. */
+  originalMintPriceThb?: number | null;
+  originalMinterName?: string | null;
   forSale: boolean;
   vaulted: boolean;
   marketStatus: MarketStatus;
