@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Anchor, ChevronRight, Sparkles } from "lucide-react";
+import { Anchor, ArrowDown, ArrowUp, ChevronRight, Minus } from "lucide-react";
 import { Area, AreaChart, Tooltip, YAxis } from "recharts";
 
 import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
@@ -22,28 +22,21 @@ const HREF: Record<MarketIndex["key"], string> = {
   ONE_PIECE: "/market/index/one-piece",
 };
 
-// Shared CardMart green and white accents keep the index cards cohesive.
-const ACCENT: Record<MarketIndex["key"], { from: string; to: string; line: string }> = {
-  ALL: { from: "rgba(204, 239, 32, 0.16)", to: "rgba(255, 255, 255, 0.035)", line: "rgba(204, 239, 32, 0.75)" },
-  POKEMON: { from: "rgba(204, 239, 32, 0.16)", to: "rgba(255, 255, 255, 0.035)", line: "rgba(204, 239, 32, 0.75)" },
-  ONE_PIECE: { from: "rgba(204, 239, 32, 0.16)", to: "rgba(255, 255, 255, 0.035)", line: "rgba(204, 239, 32, 0.75)" },
-};
-
+// Small tile for an index: the CardMart star, a Poké Ball, or an anchor.
 function IndexIcon({ index }: { index: MarketIndex["key"] }) {
-  const a = ACCENT[index];
   return (
-    <span
-      aria-hidden
-      className="flex size-8 shrink-0 items-center justify-center rounded-lg border"
-      style={{ backgroundImage: `linear-gradient(135deg, ${a.from}, ${a.to})` }}
-    >
+    <span aria-hidden className="bg-foreground/[0.07] flex size-7 shrink-0 items-center justify-center rounded-full">
       {index === "ALL" ? (
         // eslint-disable-next-line @next/next/no-img-element -- tiny static logo
-        <img src="/cardmart-logo.png" alt="" className="size-4 object-contain" />
+        <img src="/cardmart-logo.png" alt="" className="size-3.5 object-contain" />
       ) : index === "POKEMON" ? (
-        <Sparkles className="size-4" />
+        <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M3 12h5.5M15.5 12H21" />
+          <circle cx="12" cy="12" r="3" />
+        </svg>
       ) : (
-        <Anchor className="size-4" />
+        <Anchor className="size-3.5" />
       )}
     </span>
   );
@@ -103,72 +96,106 @@ function Sparkline({ index, className, tooltip = true }: { index: MarketIndex; c
   );
 }
 
-/** Desktop: a card per index with its chart. */
+/** The change as a small pill: an arrow and the percentage, tinted green, red or neutral. */
+function ChangePill({ pct }: { pct: number | null }) {
+  const flat = pct == null || Math.abs(pct) < 0.05;
+  const Arrow = flat ? Minus : pct > 0 ? ArrowUp : ArrowDown;
+  return (
+    <span
+      className={cn(
+        "flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums",
+        toneClass(pct),
+        flat ? "bg-foreground/[0.06]" : pct > 0 ? "bg-success/15" : "bg-destructive/15",
+      )}
+    >
+      <Arrow className="size-3" />
+      {pct == null ? "—" : `${Math.abs(pct).toFixed(1)}%`}
+    </span>
+  );
+}
+
+/** The light under a card: a bright hairline on the bottom edge and a glow rising from it. */
+function Beam({ strong }: { strong?: boolean }) {
+  return (
+    <>
+      <div
+        aria-hidden
+        className={cn(
+          "pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-32 transition-opacity duration-300",
+          strong ? "opacity-100" : "opacity-70 group-hover:opacity-100",
+        )}
+        style={{ backgroundImage: "radial-gradient(70% 100% at 50% 100%, color-mix(in oklab, var(--success) 34%, transparent), transparent 75%)" }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute bottom-0 left-1/2 h-px w-3/5 -translate-x-1/2"
+        style={{
+          backgroundImage: "linear-gradient(90deg, transparent, var(--success), transparent)",
+          boxShadow: "0 0 20px 2px color-mix(in oklab, var(--success) 55%, transparent)",
+        }}
+      />
+    </>
+  );
+}
+
+/** Desktop: a glass card per index, lit from below. */
 function IndexCard({ index }: { index: MarketIndex }) {
   const { tr: t } = useLanguage();
   const last = index.points.at(-1);
+  const prev = index.points.at(-2);
 
   return (
     <Link
       href={HREF[index.key]}
-      className="bg-card hover:border-foreground/25 group relative isolate flex flex-col gap-3 overflow-hidden rounded-2xl border p-4 transition-colors sm:p-5"
+      className="bg-card hover:border-success/40 group relative isolate flex flex-col gap-5 overflow-hidden rounded-3xl border px-5 pt-5 pb-7 transition-[border-color,transform] duration-300 hover:-translate-y-0.5"
     >
-      {/* The index's color: a glow from the top-left corner and a hairline on top. */}
+      {/* Glass: a faint sheen falling from the top-left corner. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10 opacity-80 transition-opacity duration-300 group-hover:opacity-100"
-        style={{
-          backgroundImage: `radial-gradient(120% 90% at 0% 0%, ${ACCENT[index.key].from} 0%, ${ACCENT[index.key].to} 38%, transparent 70%)`,
-        }}
+        className="pointer-events-none absolute inset-0 -z-10"
+        style={{ backgroundImage: "linear-gradient(150deg, color-mix(in oklab, var(--foreground) 8%, transparent), transparent 42%)" }}
       />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-px"
-        style={{ backgroundImage: `linear-gradient(90deg, ${ACCENT[index.key].line}, transparent 75%)` }}
-      />
-      <div className="relative z-10 flex min-w-0 items-center justify-between gap-3">
-        <span className="flex min-w-0 items-center gap-2.5">
+      <Beam />
+
+      <div className="flex min-w-0 items-center justify-between gap-3">
+        <span className="bg-foreground/[0.05] flex min-w-0 items-center gap-2 rounded-full border py-1 pr-3 pl-1 text-sm font-medium">
           <IndexIcon index={index.key} />
-          <span className="text-muted-foreground group-hover:text-foreground flex min-w-0 items-center gap-0.5 truncate text-sm font-medium transition-colors">
-            {t(NAMES[index.key])} <ChevronRight className="size-3.5 shrink-0" />
+          <span className="truncate">{t(NAMES[index.key])}</span>
+          <ChevronRight className="text-muted-foreground size-3.5 shrink-0 transition-transform group-hover:translate-x-0.5" />
+        </span>
+        <ChangePill pct={index.change1d} />
+      </div>
+
+      <div className="flex items-end justify-between gap-4">
+        <div className="flex min-w-0 flex-col gap-2">
+          <span className="text-muted-foreground text-xs tabular-nums">
+            {prev ? t("Prev {value}", { value: formatLevel(prev.price) }) : t("Just started tracking")}
+            {" · "}
+            {t("{count} cards", { count: index.constituents })}
           </span>
-        </span>
-        <span
-          className={cn(
-            "shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums",
-            toneClass(index.change1d),
-            index.change1d == null || Math.abs(index.change1d) < 0.05
-              ? "bg-muted"
-              : index.change1d > 0
-                ? "bg-success/12"
-                : "bg-destructive/12",
-          )}
-        >
-          {formatPct(index.change1d)}
-        </span>
+          <span className="text-4xl leading-none font-semibold tracking-tight tabular-nums">{last ? formatLevel(last.price) : "—"}</span>
+        </div>
+        {index.points.length >= 2 ? (
+          <Sparkline index={index} className="h-14 w-28 shrink-0" tooltip={false} />
+        ) : (
+          // Nothing to draw yet: a dashed baseline, so the card doesn't look broken.
+          <svg aria-hidden viewBox="0 0 112 56" className="text-muted-foreground h-14 w-28 shrink-0">
+            <path d="M2 30 H110" stroke="currentColor" strokeWidth="2" strokeDasharray="2 7" strokeLinecap="round" opacity="0.45" />
+          </svg>
+        )}
       </div>
-      <div className="relative z-10 -mt-2 text-2xl font-bold tabular-nums tracking-tight">
-        {last ? formatLevel(last.price) : "—"}
-      </div>
-      {index.points.length >= 2 ? (
-        <Sparkline index={index} className="relative z-10 h-14 w-full" />
-      ) : (
-        <p className="text-muted-foreground relative z-10 flex h-14 items-center text-xs">
-          {t("The chart builds up as a new market price is saved each day.")}
-        </p>
-      )}
     </Link>
   );
 }
 
-// Short names for the phone strip, where three tiles share one row.
 /** Phones: a small tile per index, three side by side, like a stock app's ticker strip. */
 function IndexTile({ index }: { index: MarketIndex }) {
   const { tr: t } = useLanguage();
   const last = index.points.at(-1);
 
   return (
-    <Link href={HREF[index.key]} className="bg-card active:bg-accent flex min-w-0 flex-col gap-1.5 p-2.5">
+    <Link href={HREF[index.key]} className="bg-card active:bg-accent group relative isolate flex min-w-0 flex-col gap-1.5 overflow-hidden p-2.5 pb-3.5">
+      <Beam strong />
       <span className="flex min-w-0 items-center justify-between gap-2">
         <span className="truncate text-xs font-semibold">{t(NAMES[index.key])}</span>
         <span className={cn("shrink-0 text-xs font-semibold tabular-nums", toneClass(index.change1d))}>{formatPct(index.change1d)}</span>
@@ -179,8 +206,8 @@ function IndexTile({ index }: { index: MarketIndex }) {
 }
 
 /**
- * The CardMart indexes, like a stock market's headline indexes: one level per
- * game built from every tracked card's daily market price (lib/stats.ts).
+ * The indexes, like a stock market's headline indexes: one level for CardMart's
+ * own cards and one each for the 50 most valuable Pokémon and One Piece cards.
  */
 export function MarketIndexes({ indexes }: { indexes: MarketIndex[] }) {
   if (indexes.every((i) => i.points.length === 0)) return null;
@@ -191,10 +218,18 @@ export function MarketIndexes({ indexes }: { indexes: MarketIndex[] }) {
           <IndexTile key={index.key} index={index} />
         ))}
       </div>
-      <section className="hidden grid-cols-3 gap-3 md:grid">
-        {indexes.map((index) => (
-          <IndexCard key={index.key} index={index} />
-        ))}
+      <section className="relative isolate hidden md:block">
+        {/* The beams spill a little light onto the page under the cards. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-[6%] -bottom-10 -z-10 h-36 blur-3xl"
+          style={{ backgroundImage: "radial-gradient(60% 100% at 50% 100%, color-mix(in oklab, var(--success) 22%, transparent), transparent 70%)" }}
+        />
+        <div className="grid grid-cols-3 gap-4">
+          {indexes.map((index) => (
+            <IndexCard key={index.key} index={index} />
+          ))}
+        </div>
       </section>
     </>
   );

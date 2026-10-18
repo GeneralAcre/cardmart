@@ -124,3 +124,45 @@ export function buildIndex(series: PricePoint[][], base = 1000): PricePoint[] {
   }
   return out;
 }
+
+export interface RankedPrice {
+  /** Day as epoch ms (midnight UTC). */
+  t: number;
+  productId: number;
+  rank: number;
+  price: number;
+}
+
+/**
+ * An equal-weighted index over a changing "top N" list, starting at 1,000.
+ * Each day's move is the average move of the cards that were in the top N the
+ * day before, measured to today's price, so a card counts only while it's in
+ * the list: one that drops out stops affecting the index, and one that joins
+ * starts counting from the next day. A held card with no price today (it fell
+ * out of the saved pool) is left out of that day's average.
+ */
+export function buildMembershipIndex(rows: RankedPrice[], topN: number, base = 1000): PricePoint[] {
+  const byDay = new Map<number, Map<number, RankedPrice>>();
+  for (const r of rows) {
+    if (!byDay.has(r.t)) byDay.set(r.t, new Map());
+    byDay.get(r.t)!.set(r.productId, r);
+  }
+  const days = [...byDay.keys()].sort((a, b) => a - b);
+  if (days.length === 0) return [];
+
+  const out: PricePoint[] = [{ t: days[0], price: base }];
+  let level = base;
+  for (let i = 1; i < days.length; i++) {
+    const prev = byDay.get(days[i - 1])!;
+    const today = byDay.get(days[i])!;
+    const ratios: number[] = [];
+    for (const held of prev.values()) {
+      if (held.rank > topN || held.price <= 0) continue;
+      const now = today.get(held.productId);
+      if (now) ratios.push(now.price / held.price);
+    }
+    if (ratios.length > 0) level *= ratios.reduce((s, r) => s + r, 0) / ratios.length;
+    out.push({ t: days[i], price: Math.round(level * 10) / 10 });
+  }
+  return out;
+}

@@ -27,6 +27,7 @@ import { getT } from "@/lib/i18n/server";
 import { ItemGallery } from "@/components/item/item-gallery";
 import { MarketPriceHistory } from "@/components/item/market-price-history";
 import { ProfitCalculator } from "@/components/item/profit-calculator";
+import { RarityBadge } from "@/components/item/rarity-badge";
 import { ProvenanceTimeline } from "@/components/item/provenance-timeline";
 import { BuyPanel } from "@/components/item/buy-panel";
 import { WatchButton } from "@/components/item/watch-button";
@@ -318,6 +319,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
               <Badge className={cn("rounded-md border-0", CARD_LANGUAGE_BADGE_CLASS[asset.language])}>
                 {t(CARD_LANGUAGE_LABELS[asset.language])}
               </Badge>
+              <RarityBadge rarity={asset.rarity} />
             </div>
             {!isOwner && (
               <div className="flex items-center gap-2">

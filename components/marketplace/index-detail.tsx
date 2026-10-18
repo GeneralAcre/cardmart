@@ -187,16 +187,16 @@ const gradeLabel = (m: IndexMember, ungraded: string) =>
     : `${m.gradingCompany} ${formatGrade(m.grade)}${m.isBlackLabel ? " · Black Label" : ""}`;
 
 const SORTS = [
+  { key: "price", label: "Most valuable" },
   { key: "long", label: "Best performers" },
   { key: "1d", label: "Today" },
-  { key: "price", label: "Price" },
 ] as const;
 type SortKey = (typeof SORTS)[number]["key"];
 
 /** Every card inside the index with its price and moves, sortable. */
 export function IndexMembers({ members, longLabel }: { members: IndexMember[]; longLabel: string }) {
   const { tr: t } = useLanguage();
-  const [sort, setSort] = useState<SortKey>("long");
+  const [sort, setSort] = useState<SortKey>("price");
 
   if (members.length === 0) {
     return (
@@ -251,6 +251,7 @@ export function IndexMembers({ members, longLabel }: { members: IndexMember[]; l
                     <span className="text-muted-foreground truncate text-xs">
                       {gradeLabel(m, t("Ungraded"))} · {m.subtitle}
                       {m.cardNumber && ` · #${m.cardNumber}`}
+                      {m.rarity && ` · ${m.rarity}`}
                     </span>
                   </span>
                 </div>
@@ -274,6 +275,10 @@ export function IndexMembers({ members, longLabel }: { members: IndexMember[]; l
                   <Link href={`/item/${m.assetId}`} className="hover:bg-accent block transition-colors">
                     {body}
                   </Link>
+                ) : m.externalUrl ? (
+                  <a href={m.externalUrl} target="_blank" rel="noopener noreferrer" className="hover:bg-accent block transition-colors">
+                    {body}
+                  </a>
                 ) : (
                   body
                 )}

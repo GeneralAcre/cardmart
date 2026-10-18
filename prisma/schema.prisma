@@ -1214,3 +1214,26 @@ model LeaderboardBadge {
   @@unique([userId, category, period, periodStart, segment])
   @@index([userId])
 }
+
+// The Pokémon and One Piece indexes follow the 50 most valuable cards by
+// TCGplayer market price, so who is in them changes as prices move. Each day
+// the top 100 are saved (lib/top-index.ts): ranks 1-50 are that day's index,
+// and 51-100 give a price for a card that just dropped out, so the day's
+// return can be worked out over the cards held the day before.
+model IndexPrice {
+  id         String   @id @default(cuid())
+  game       CardGame
+  day        DateTime @db.Date
+  // TCGplayer's product id, which also builds the card's picture URL.
+  productId  Int
+  rank       Int
+  name       String
+  setName    String
+  cardNumber String?
+  rarity     String?
+  imageUrl   String?
+  priceUsd   Float
+
+  @@unique([game, day, productId])
+  @@index([game, day, rank])
+}

@@ -16,15 +16,20 @@ export const STATS: Record<string, string> = {
   "Best performer": "ผลงานดีที่สุด",
   "Worst performer": "ผลงานแย่ที่สุด",
   "Cards in this index": "การ์ดในดัชนีนี้",
+  "The 50 most valuable Pokémon cards right now, by TCGplayer market price. A card that falls out of the top 50 leaves the index and the next most valuable one joins.":
+    "การ์ด Pokémon ที่มีมูลค่าสูงสุด 50 ใบในตอนนี้ ตามราคาตลาด TCGplayer การ์ดที่หลุดจาก 50 อันดับแรกจะออกจากดัชนี และการ์ดที่มูลค่าสูงถัดไปจะเข้ามาแทน",
+  "The 50 most valuable One Piece cards right now, by TCGplayer market price. A card that falls out of the top 50 leaves the index and the next most valuable one joins.":
+    "การ์ด One Piece ที่มีมูลค่าสูงสุด 50 ใบในตอนนี้ ตามราคาตลาด TCGplayer การ์ดที่หลุดจาก 50 อันดับแรกจะออกจากดัชนี และการ์ดที่มูลค่าสูงถัดไปจะเข้ามาแทน",
+  "Prices are TCGplayer's market price for the ungraded card, in baht. The top 50 is re-ranked once a day.":
+    "ราคาคือราคาตลาด TCGplayer ของการ์ดที่ไม่ได้เกรด เป็นบาท จัดอันดับ 50 อันดับแรกใหม่วันละครั้ง",
+  "Most valuable": "มูลค่าสูงสุด",
+  "Prev {value}": "ก่อนหน้า {value}",
+  "Just started tracking": "เพิ่งเริ่มติดตาม",
   "No cards have a market price yet.": "ยังไม่มีการ์ดที่มีราคาตลาด",
   "Ranked by price change. Prices are eBay's daily median asking price for each card and grade, converted to baht.":
     "เรียงตามการเปลี่ยนแปลงของราคา ราคาคือค่ามัธยฐานราคาตั้งขายรายวันบน eBay ของการ์ดและเกรดนั้น แปลงเป็นบาท",
   "Every card on CardMart that has a market price, each in its own grade, weighted equally.":
     "การ์ดทุกใบบน CardMart ที่มีราคาตลาด แต่ละใบในเกรดของตัวเอง ถ่วงน้ำหนักเท่ากัน",
-  "Well-known Pokémon cards in PSA 10, priced every day from eBay, whether or not they're listed on CardMart.":
-    "การ์ด Pokémon ยอดนิยมเกรด PSA 10 ตั้งราคาทุกวันจาก eBay ไม่ว่าจะลงขายบน CardMart หรือไม่",
-  "Well-known One Piece cards in PSA 10, priced every day from eBay, whether or not they're listed on CardMart.":
-    "การ์ด One Piece ยอดนิยมเกรด PSA 10 ตั้งราคาทุกวันจาก eBay ไม่ว่าจะลงขายบน CardMart หรือไม่",
 
   // Card stats
   "Card stats": "สถิติการ์ด",

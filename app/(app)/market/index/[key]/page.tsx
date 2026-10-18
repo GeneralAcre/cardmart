@@ -21,11 +21,13 @@ const INFO: Record<IndexKey, { title: string; description: string }> = {
   },
   POKEMON: {
     title: "Pokémon Index",
-    description: "Well-known Pokémon cards in PSA 10, priced every day from eBay, whether or not they're listed on CardMart.",
+    description:
+      "The 50 most valuable Pokémon cards right now, by TCGplayer market price. A card that falls out of the top 50 leaves the index and the next most valuable one joins.",
   },
   ONE_PIECE: {
     title: "One Piece Index",
-    description: "Well-known One Piece cards in PSA 10, priced every day from eBay, whether or not they're listed on CardMart.",
+    description:
+      "The 50 most valuable One Piece cards right now, by TCGplayer market price. A card that falls out of the top 50 leaves the index and the next most valuable one joins.",
   },
 };
 
@@ -151,7 +153,9 @@ export default async function IndexPage({ params }: { params: Promise<{ key: str
             <h2 className="text-lg font-semibold">{t("Cards in this index")}</h2>
             <IndexMembers members={members} longLabel={longLabel} />
             <p className="text-muted-foreground text-[11px]">
-              {t("Prices are eBay's daily median asking price for each card and grade, converted to baht.")}
+              {key === "ALL"
+                ? t("Prices are eBay's daily median asking price for each card and grade, converted to baht.")
+                : t("Prices are TCGplayer's market price for the ungraded card, in baht. The top 50 is re-ranked once a day.")}
             </p>
           </section>
         </div>

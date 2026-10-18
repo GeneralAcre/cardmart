@@ -6,9 +6,9 @@ import { prisma } from "@/lib/prisma";
 import { marketCardKey } from "@/lib/market-history";
 import { tierKey } from "@/lib/grade-tier";
 import { THB_PER_USD } from "@/lib/pricing";
-import { buildIndex, changeOver, changeSincePrevious, changeWithin, type PricePoint } from "@/lib/stats-math";
+import { buildIndex, buildMembershipIndex, changeOver, changeSincePrevious, changeWithin, type PricePoint } from "@/lib/stats-math";
 import { displayImage } from "@/lib/card-image";
-import { INDEX_BASKETS } from "@/lib/index-baskets";
+import { TOP_N } from "@/lib/top-index";
 import type { HoldingPnl } from "@/lib/pnl";
 
 // Market-wide and portfolio statistics, all from the daily eBay market prices
@@ -60,17 +60,21 @@ async function priceSeries(cards: CardLike[]): Promise<Map<string, PricePoint[]>
   return series;
 }
 
-/** One card-and-grade inside an index, with its own price series. */
+/** One card inside an index, with its own price series. */
 export interface IndexMember {
   key: string;
   name: string;
   subtitle: string;
   cardNumber: string | null;
+  /** Printed rarity ("Secret Rare", "SEC"…) when the source gives one. */
+  rarity: string | null;
   gradingCompany: string;
   grade: number | null;
   isBlackLabel: boolean;
-  /** A CardMart listing of this card to link to and borrow a picture from, when one exists. */
+  /** A CardMart listing of this card to link to, when the index is built from CardMart's own cards. */
   assetId: string | null;
+  /** Where to read more about the card when it isn't a CardMart listing. */
+  externalUrl: string | null;
   photoUrl: string | null;
   points: PricePoint[];
   latestThb: number;
@@ -81,19 +85,23 @@ export interface IndexMember {
 
 export const INDEX_KEYS: IndexKey[] = ["ALL", "POKEMON", "ONE_PIECE"];
 
+const memberChanges = (points: PricePoint[]) => ({
+  latestThb: points.at(-1)!.price,
+  change1d: changeSincePrevious(points),
+  change7d: changeOver(points, 7),
+  change30dOrSince: changeWithin(points, 30),
+});
+
 /**
- * Who's in each index. The CardMart Index is every card and grade on CardMart
- * with a saved market price. The Pokémon and One Piece indexes are fixed lists
- * of well-known cards priced from eBay (lib/index-baskets.ts), whether or not
- * they're on CardMart. A card counts only once it has a saved price.
+ * The CardMart Index: every card and grade on CardMart with a saved market
+ * price (eBay's daily median asking price for that card in that grade).
  */
-async function loadIndexMembers(): Promise<Record<IndexKey, IndexMember[]>> {
+async function loadCardMartMembers(): Promise<IndexMember[]> {
   const assets = await prisma.asset.findMany({
     where: { redeemedAt: null },
     orderBy: { updatedAt: "desc" },
     select: {
       id: true,
-      game: true,
       name: true,
       subtitle: true,
       cardNumber: true,
@@ -101,57 +109,101 @@ async function loadIndexMembers(): Promise<Record<IndexKey, IndexMember[]>> {
       gradingCompany: true,
       grade: true,
       isBlackLabel: true,
+      rarity: true,
       catalogImageUrl: true,
       verificationPhotos: { orderBy: { createdAt: "asc" }, take: 1, select: { url: true } },
     },
   });
-  const series = await priceSeries([...assets, ...INDEX_BASKETS]);
-  // A CardMart listing per card (any grade), for a link and a picture.
-  const assetByCard = new Map<string, (typeof assets)[number]>();
-  const assetBySeries = new Map<string, (typeof assets)[number]>();
-  for (const a of assets) {
-    if (!assetByCard.has(marketCardKey(a))) assetByCard.set(marketCardKey(a), a);
-    if (!assetBySeries.has(seriesKey(a))) assetBySeries.set(seriesKey(a), a);
-  }
-
-  const member = (card: CardLike, key: string): IndexMember => {
-    const points = series.get(key)!;
-    const asset = assetBySeries.get(key) ?? assetByCard.get(marketCardKey(card)) ?? null;
-    return {
-      key,
-      name: card.name,
-      subtitle: card.subtitle,
-      cardNumber: card.cardNumber,
-      gradingCompany: card.gradingCompany,
-      grade: card.grade,
-      isBlackLabel: card.isBlackLabel,
-      assetId: asset?.id ?? null,
-      photoUrl: asset ? (displayImage(asset)?.url ?? null) : null,
-      points,
-      latestThb: points.at(-1)!.price,
-      change1d: changeSincePrevious(points),
-      change7d: changeOver(points, 7),
-      change30dOrSince: changeWithin(points, 30),
-    };
-  };
-
-  const result: Record<IndexKey, IndexMember[]> = { ALL: [], POKEMON: [], ONE_PIECE: [] };
+  const series = await priceSeries(assets);
+  const members: IndexMember[] = [];
   const seen = new Set<string>();
   for (const a of assets) {
     const key = seriesKey(a);
     if (seen.has(key) || !series.has(key)) continue;
     seen.add(key);
-    result.ALL.push(member(a, key));
+    const points = series.get(key)!;
+    members.push({
+      key,
+      name: a.name,
+      subtitle: a.subtitle,
+      cardNumber: a.cardNumber,
+      rarity: a.rarity,
+      gradingCompany: a.gradingCompany,
+      grade: a.grade,
+      isBlackLabel: a.isBlackLabel,
+      assetId: a.id,
+      externalUrl: null,
+      photoUrl: displayImage(a)?.url ?? null,
+      points,
+      ...memberChanges(points),
+    });
   }
-  for (const card of INDEX_BASKETS) {
-    const key = seriesKey(card);
-    if (series.has(key)) result[card.game].push(member(card, key));
-  }
-  return result;
+  return members;
 }
 
-function summarize(key: IndexKey, members: IndexMember[]): MarketIndex {
-  const points = buildIndex(members.map((m) => m.points));
+interface TopIndex {
+  members: IndexMember[];
+  points: PricePoint[];
+}
+
+// The ranking only changes once a day, so a short in-memory copy spares the
+// database a read of the whole history on every page view.
+const TOP_CACHE_MS = 10 * 60_000;
+const topCache = new Map<CardGame, { at: number; value: TopIndex }>();
+
+/**
+ * A game's index: the TOP_N most valuable cards by TCGplayer market price
+ * (lib/top-index.ts saves the ranking every day). Its level is built from
+ * the cards held each day, so a card counts only while it's in the top 50.
+ */
+async function loadTopIndex(game: CardGame): Promise<TopIndex> {
+  const cached = topCache.get(game);
+  if (cached && Date.now() - cached.at < TOP_CACHE_MS) return cached.value;
+
+  const rows = await prisma.indexPrice.findMany({
+    where: { game },
+    orderBy: [{ day: "asc" }, { rank: "asc" }],
+  });
+  const toThb = (usd: number) => Math.round(usd * THB_PER_USD);
+  let value: TopIndex = { members: [], points: [] };
+  if (rows.length > 0) {
+    const points = buildMembershipIndex(
+      rows.map((r) => ({ t: r.day.getTime(), productId: r.productId, rank: r.rank, price: toThb(r.priceUsd) })),
+      TOP_N,
+    );
+    const byProduct = new Map<number, PricePoint[]>();
+    for (const r of rows) {
+      if (!byProduct.has(r.productId)) byProduct.set(r.productId, []);
+      byProduct.get(r.productId)!.push({ t: r.day.getTime(), price: toThb(r.priceUsd) });
+    }
+    const latest = rows[rows.length - 1].day.getTime();
+    const members: IndexMember[] = rows
+      .filter((r) => r.day.getTime() === latest && r.rank <= TOP_N)
+      .map((r) => {
+        const series = byProduct.get(r.productId)!;
+        return {
+          key: `top:${game}:${r.productId}`,
+          name: r.name,
+          subtitle: r.setName,
+          cardNumber: r.cardNumber,
+          rarity: r.rarity,
+          gradingCompany: "RAW",
+          grade: null,
+          isBlackLabel: false,
+          assetId: null,
+          externalUrl: `https://www.tcgplayer.com/product/${r.productId}`,
+          photoUrl: r.imageUrl,
+          points: series,
+          ...memberChanges(series),
+        };
+      });
+    value = { members, points };
+  }
+  topCache.set(game, { at: Date.now(), value });
+  return value;
+}
+
+function summarize(key: IndexKey, members: IndexMember[], points: PricePoint[]): MarketIndex {
   return {
     key,
     points,
@@ -163,33 +215,41 @@ function summarize(key: IndexKey, members: IndexMember[]): MarketIndex {
   };
 }
 
-/**
- * One game's index line, for a card page's "vs index" comparison: only that
- * game's basket cards (lib/index-baskets.ts), so it's a single small query
- * instead of loadIndexMembers' scan of every card on CardMart.
- */
-export async function getGameIndexPoints(game: CardGame): Promise<PricePoint[]> {
-  const basket = INDEX_BASKETS.filter((c) => c.game === game);
-  const series = await priceSeries(basket);
-  return buildIndex(basket.map((c) => series.get(seriesKey(c))).filter((s): s is PricePoint[] => s != null));
+async function loadEverything() {
+  const [cardmart, pokemon, onePiece] = await Promise.all([
+    loadCardMartMembers(),
+    loadTopIndex("POKEMON"),
+    loadTopIndex("ONE_PIECE"),
+  ]);
+  const byKey: Record<IndexKey, { members: IndexMember[]; points: PricePoint[] }> = {
+    ALL: { members: cardmart, points: buildIndex(cardmart.map((m) => m.points)) },
+    POKEMON: pokemon,
+    ONE_PIECE: onePiece,
+  };
+  return byKey;
 }
 
-/** The three indexes, each equal-weighted and chain-linked from daily prices (see buildIndex). */
+/** One game's index line, for a card page's "vs index" comparison. */
+export async function getGameIndexPoints(game: CardGame): Promise<PricePoint[]> {
+  return (await loadTopIndex(game)).points;
+}
+
+/** The three indexes. */
 export async function getMarketIndexes(): Promise<MarketIndex[]> {
-  const members = await loadIndexMembers();
-  return INDEX_KEYS.map((key) => summarize(key, members[key]));
+  const byKey = await loadEverything();
+  return INDEX_KEYS.map((key) => summarize(key, byKey[key].members, byKey[key].points));
 }
 
 /** One index with every card inside it (best performer first), plus all three indexes for "other indexes". */
 export async function getIndexDetail(
   key: IndexKey,
 ): Promise<{ index: MarketIndex; members: IndexMember[]; all: MarketIndex[] }> {
-  const byIndex = await loadIndexMembers();
+  const byKey = await loadEverything();
   const rank = (m: IndexMember) => m.change30dOrSince ?? -Infinity;
   return {
-    index: summarize(key, byIndex[key]),
-    members: [...byIndex[key]].sort((x, y) => rank(y) - rank(x)),
-    all: INDEX_KEYS.map((k) => summarize(k, byIndex[k])),
+    index: summarize(key, byKey[key].members, byKey[key].points),
+    members: [...byKey[key].members].sort((x, y) => rank(y) - rank(x)),
+    all: INDEX_KEYS.map((k) => summarize(k, byKey[k].members, byKey[k].points)),
   };
 }
 
