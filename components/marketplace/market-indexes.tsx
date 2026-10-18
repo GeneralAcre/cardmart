@@ -169,9 +169,7 @@ function IndexCard({ index }: { index: MarketIndex }) {
       <div className="flex items-end justify-between gap-4">
         <div className="flex min-w-0 flex-col gap-2">
           <span className="text-muted-foreground text-xs tabular-nums">
-            {prev ? t("Prev {value}", { value: formatLevel(prev.price) }) : t("Just started tracking")}
-            {" · "}
-            {t("{count} cards", { count: index.constituents })}
+            {index.key === "ALL" ? t("Top 10 listed on CardMart") : t("Top 50 by market cap")}
           </span>
           <span className="text-4xl leading-none font-semibold tracking-tight tabular-nums">{last ? formatLevel(last.price) : "—"}</span>
         </div>

@@ -10,6 +10,9 @@ export const STATS: Record<string, string> = {
   "{count} cards · since {date}": "{count} ใบ · ตั้งแต่ {date}",
   "No market prices yet": "ยังไม่มีราคาตลาด",
 
+  "Top 50 by market cap": "50 อันดับแรกตามมูลค่าตลาด",
+  "Top 10 listed on CardMart": "10 อันดับแรกที่ลงขายบน CardMart",
+
   // Index detail page
   Level: "ระดับดัชนี",
   Trend: "แนวโน้ม",
