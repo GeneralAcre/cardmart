@@ -20,6 +20,21 @@ export const RARITY_SHORT: Record<CardRarity, string> = Object.fromEntries(RARIT
   string
 >;
 
+// One green, in shades: the rarer the card, the fuller and brighter the tag
+// (SAR is the solid brand green, U/C a faint outline). Built on the theme's
+// success colour, so it turns a deeper green in light mode. Full class names
+// so Tailwind picks them up.
+export const RARITY_STYLE: Record<CardRarity, string> = {
+  SAR: "bg-success text-success-foreground",
+  SEC: "bg-success/80 text-success-foreground",
+  UR: "bg-success/65 text-success-foreground",
+  AR: "bg-success/45 text-foreground",
+  SR: "bg-success/30 text-success",
+  RR: "bg-success/20 text-success",
+  R: "bg-success/12 text-success",
+  UC: "border border-success/30 text-success/80",
+};
+
 export const isRarity = (value: string | null | undefined): value is CardRarity =>
   RARITIES.some((r) => r.value === value);
 

@@ -11,7 +11,7 @@ import type { AssetSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { displayImage, realPhotos } from "@/lib/card-image";
 import { useT } from "@/components/landing/language-provider";
-import { RARITY_SHORT } from "@/lib/rarity";
+import { RarityTag } from "@/components/item/rarity-badge";
 
 const CHIP = "rounded-md px-2 py-1 text-[11px] font-semibold leading-none text-white backdrop-blur-sm";
 
@@ -40,7 +40,7 @@ export function ListingCard({
   const card = (
     <Link
       href={`/item/${asset.id}`}
-      className="group bg-card focus-visible:ring-ring relative flex flex-col overflow-hidden rounded-2xl border outline-none transition-colors hover:border-foreground/30 focus-visible:ring-2"
+      className="group bg-card focus-visible:ring-ring relative flex w-full flex-col overflow-hidden rounded-2xl border outline-none transition-colors hover:border-foreground/30 focus-visible:ring-2"
     >
       {/* The card sits on a dark spotlight "stage", shown whole (contain)
           rather than cropped, the way a slab photo would be. */}
@@ -104,21 +104,14 @@ export function ListingCard({
           {asset.subtitle}
           {asset.cardNumber && <span className="font-mono"> · #{asset.cardNumber}</span>}
         </p>
-        {asset.rarity && (
-          <span className="text-muted-foreground w-fit rounded border px-1.5 py-0.5 text-[10px] leading-none font-semibold tracking-wide">
-            {RARITY_SHORT[asset.rarity]}
+        {/* Price on the left, the card's rarity on the right. */}
+        <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+          {/* Always the plain text colour: the up/down arrow on the picture already says which way it moved. */}
+          <span className={cn("font-bold tabular-nums", compact ? "text-base" : "text-lg")}>
+            {asset.priceThb != null ? formatThb(asset.priceThb) : t("Price unavailable")}
           </span>
-        )}
-        <span
-          className={cn(
-            "mt-1.5 font-bold tabular-nums",
-            compact ? "text-base" : "text-lg",
-            asset.priceDirection === "up" && "text-success",
-            asset.priceDirection === "down" && "text-destructive",
-          )}
-        >
-          {asset.priceThb != null ? formatThb(asset.priceThb) : t("Price unavailable")}
-        </span>
+          {asset.rarity && <RarityTag rarity={asset.rarity} />}
+        </div>
 
         {/* Footer: who's selling it, and the grade chip. */}
         <div className="mt-auto flex items-center justify-between gap-2 pt-2.5">
@@ -155,7 +148,7 @@ export function ListingCard({
   // opens the listing; the overlay matches the picture's area so it lands
   // in the picture's bottom-right corner.
   return (
-    <div className={cn("relative", compare.selected && "[&>a]:border-success")}>
+    <div className={cn("relative flex", compare.selected && "[&>a]:border-success")}>
       {card}
       <div className="pointer-events-none absolute inset-x-0 top-0 aspect-[4/5]">
         <button
