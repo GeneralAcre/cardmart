@@ -11,7 +11,6 @@ import {
   getCardMarketStats,
   getCardAcrossGrades,
   getCardDemand,
-  getTimeToSell,
   getPriceHistory,
   getSellerRating,
   getSimilarAssets,
@@ -26,6 +25,7 @@ import { getCurrentUser } from "@/lib/session";
 import { getT } from "@/lib/i18n/server";
 import { ItemGallery } from "@/components/item/item-gallery";
 import { MarketPriceHistory } from "@/components/item/market-price-history";
+import { KeyStats } from "@/components/item/card-stats";
 import { ProfitCalculator } from "@/components/item/profit-calculator";
 import { RarityBadge } from "@/components/item/rarity-badge";
 import { ProvenanceTimeline } from "@/components/item/provenance-timeline";
@@ -56,7 +56,6 @@ import {
   CARD_LANGUAGE_LABELS,
   MARKET_STATUS_BADGE_CLASS,
   MARKET_STATUS_LABELS,
-  gradeTierLabel,
 } from "@/lib/labels";
 import { extractPsaCertNumber, isPsaCertNumber, lookupPsaCert, lookupPsaPopulation, psaCertUrl } from "@/lib/psa";
 import { lookupCardPrice } from "@/lib/tcg-price";
@@ -66,6 +65,7 @@ import { getGameIndexPoints } from "@/lib/stats";
 import { tierKey, type GradeTier } from "@/lib/grade-tier";
 import { cn } from "@/lib/utils";
 import { displayImage, realPhotos } from "@/lib/card-image";
+import { priceStats } from "@/lib/stats-math";
 
 const PRELOADED_EBAY_TIERS: GradeTier[] = [
   { gradingCompany: "RAW", grade: null, isBlackLabel: false },
@@ -82,10 +82,6 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
 
   if (!asset) notFound();
 
-  const gradeTier = gradeTierLabel(asset.gradingCompany, asset.grade, asset.isBlackLabel);
-  // The tier name without its number, which the caption already shows
-  // ("PSA 9 · Mint", not "PSA 9 · Mint 9"). Black Label has its own pill.
-  const gradeTierName = gradeTier?.replace(/ \(Black Label\)$/, "").replace(/ \d+(\.\d+)?$/, "") ?? null;
   const psaCertNumber = asset.gradingCompany === "PSA" ? extractPsaCertNumber(asset.serial) : null;
 
   // This exact card: name, set, grader + grade (+ Black Label), e.g.
@@ -111,7 +107,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
   // page load, which is what was pushing this page to 5-10s and occasionally
   // outrunning the client's patience ("destination stream closed early").
   // Running them concurrently caps the wait at the slowest single call.
-  const [psaCert, priceQuote, ebayQuote, priceHistory, sellerRating, similarAssets, cardMarket, insightData, gradeData, otherTierEbay, ebayHistory, depth, gameIndexPoints, timeToSell] = await Promise.all([
+  const [psaCert, priceQuote, ebayQuote, priceHistory, sellerRating, similarAssets, cardMarket, insightData, gradeData, otherTierEbay, ebayHistory, depth, gameIndexPoints] = await Promise.all([
     // Live PSA cert lookup for display — best-effort, and never blocks the
     // page: it silently returns null whenever PSA isn't configured, the
     // account isn't approved for live access yet, or the request fails.
@@ -137,7 +133,6 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
     getMarketPriceHistory(marketCard),
     getCardDemand(marketCard),
     getGameIndexPoints(asset.game),
-    getTimeToSell(marketCard, asset.game),
   ]);
   // The card's own game index, for the chart's "vs index" comparison.
 
@@ -145,6 +140,23 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
     [tierKey(currentTier), ebayQuote],
     ...otherTiers.map((tier, i) => [tierKey(tier), otherTierEbay[i]] as const),
   ]);
+  const statsToday = Date.parse(new Date().toISOString().slice(0, 10));
+  const savedStatsPoints = ebayHistory
+    .filter((point) => point.tierKey === tierKey(currentTier))
+    .map((point) => ({ t: Date.parse(point.day), price: Math.round(point.medianUsd * THB_PER_USD) }));
+  const statsPoints = ebayQuote
+    ? [...savedStatsPoints.filter((point) => point.t < statsToday), { t: statsToday, price: Math.round(ebayQuote.medianPriceUsd * THB_PER_USD) }]
+    : savedStatsPoints.length
+      ? savedStatsPoints
+      : gradeData.sales
+          .filter((sale) => tierKey(sale) === tierKey(currentTier))
+          .map((sale) => ({ t: sale.soldAt.getTime(), price: sale.amountThb }))
+          .sort((a, b) => a.t - b.t);
+  const cardStats = priceStats(statsPoints);
+  const statsSales = gradeData.sales
+    .filter((sale) => tierKey(sale) === tierKey(currentTier))
+    .sort((a, b) => a.soldAt.getTime() - b.soldAt.getTime());
+  const statsWatchers = new Set(depth.watchers.filter((watcher) => tierKey(watcher) === tierKey(currentTier)).map((watcher) => watcher.userId)).size;
   // Today's eBay prices become today's point in the market history chart.
   after(() =>
     Promise.all(
@@ -310,9 +322,45 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
         </div>
 
         <div className="flex flex-col gap-5">
-          {/* Top pill row — game / language, plus watch */}
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex flex-wrap items-center gap-2">
+          {/* Grade, identity and card attributes share one metadata box. */}
+          <div className="detail-panel flex w-full min-w-0 flex-col gap-3 overflow-hidden rounded-2xl border p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex min-w-0 flex-col gap-1">
+                <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{asset.name}</h1>
+                <p className="text-muted-foreground text-sm">
+                  {asset.subtitle}
+                  {asset.cardNumber && <span className="font-mono"> · #{asset.cardNumber}</span>}
+                </p>
+                {psaCertNumber && isPsaCertNumber(psaCertNumber) && (
+                  <a
+                    href={psaCertUrl(psaCertNumber)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-muted-foreground hover:text-foreground mt-1 inline-flex w-fit items-center gap-1 text-xs underline underline-offset-2"
+                  >
+                    {t("View on PSA")} <ExternalLink className="size-3" />
+                  </a>
+                )}
+              </div>
+              <div className="flex shrink-0 flex-col items-end gap-3">
+                <Badge className={cn("shrink-0 rounded-lg border-foreground/60", MARKET_STATUS_BADGE_CLASS[asset.marketStatus])}>
+                  {t(MARKET_STATUS_LABELS[asset.marketStatus])}
+                </Badge>
+                {!isOwner && (
+                  <div className="flex gap-2">
+                    <WantedCardButton
+                      defaults={wantedDefaults}
+                      label={asset.forSale ? t("Notify me about other copies") : t("Notify me when listed")}
+                      size="sm"
+                      iconOnly
+                      className="size-11 rounded-xl"
+                    />
+                    <WatchButton assetId={asset.id} initialWatching={isWatching} iconOnly className="size-11 rounded-xl" />
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 border-t pt-3">
               <Badge className={cn("rounded-md border-0", CARD_GAME_BADGE_CLASS[asset.game])}>
                 {t(CARD_GAME_LABELS[asset.game])}
               </Badge>
@@ -321,82 +369,30 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
               </Badge>
               <RarityBadge rarity={asset.rarity} />
             </div>
-            {!isOwner && (
-              <div className="flex items-center gap-2">
-                <WantedCardButton
-                  defaults={wantedDefaults}
-                  label={asset.forSale ? t("Notify me about other copies") : t("Notify me when listed")}
-                  size="sm"
-                />
-                <WatchButton assetId={asset.id} initialWatching={isWatching} />
-              </div>
-            )}
-          </div>
-
-          {/* Title block — small certification caption above the name, price
-              and status pinned to the right, mirroring a graded-card listing
-              page's hierarchy: what it is graded, what it's called, what it
-              costs, all in one glance. */}
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex min-w-0 flex-col gap-1">
-              <span className="eyebrow text-muted-foreground flex flex-wrap items-center gap-1.5">
+            <div className="flex items-center justify-between gap-3 border-t pt-3 text-sm">
+              <span className="text-muted-foreground">{t("Grade")}</span>
+              <span className="flex items-center gap-2 text-right font-semibold">
                 {asset.gradingCompany === "RAW"
                   ? t("Ungraded — verified by camera")
-                  : `${asset.gradingCompany} ${formatGrade(asset.grade)}${gradeTierName ? ` · ${gradeTierName}` : ""}`}
+                  : `${asset.gradingCompany} ${formatGrade(asset.grade)}`}
                 {asset.isBlackLabel && (
-                  <span className="rounded bg-amber-400 px-1 py-0.5 text-[9px] font-bold normal-case tracking-wide text-neutral-900">
+                  <span className="rounded bg-amber-400 px-1 py-0.5 text-[9px] font-bold text-neutral-900">
                     Black Label
                   </span>
                 )}
               </span>
-              <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{asset.name}</h1>
-              <p className="text-muted-foreground text-sm">
-                {asset.subtitle}
-                {asset.cardNumber && <span className="font-mono"> · #{asset.cardNumber}</span>}
-              </p>
-              {psaCertNumber && isPsaCertNumber(psaCertNumber) && (
-                <a
-                  href={psaCertUrl(psaCertNumber)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-muted-foreground hover:text-foreground mt-1 inline-flex w-fit items-center gap-1 text-xs underline underline-offset-2"
-                >
-                  {t("View on PSA")} <ExternalLink className="size-3" />
-                </a>
-              )}
-            </div>
-            {/* The price lives in the Listing Price box below (and on the Buy
-                button), so only the status sits up here. */}
-            <Badge className={cn("shrink-0 rounded-md border-0", MARKET_STATUS_BADGE_CLASS[asset.marketStatus])}>
-              {t(MARKET_STATUS_LABELS[asset.marketStatus])}
-            </Badge>
-          </div>
-
-          {/* Owner / serial / on-chain mint — the same three facts a
-              blockchain-native marketplace leads with (owner, address,
-              token id), backed by this platform's own real SPL mint. */}
-          {/* A raw card has no grading company, so no cert serial to show. */}
-          <div
-            className={cn(
-              "detail-panel grid divide-x rounded-2xl border text-sm",
-              ["grid-cols-1", "grid-cols-2", "grid-cols-3"][
-                (asset.gradingCompany === "RAW" ? 0 : 1) + (asset.mintAddress ? 1 : 0)
-              ],
-            )}
-          >
-            <div className="flex min-w-0 flex-col gap-0.5 p-3">
-              <span className="text-muted-foreground text-xs">{t("Owned by")}</span>
-              <Link href={`/store/${asset.owner.id}`} className="truncate font-medium hover:underline">
-                {asset.owner.name}
-              </Link>
             </div>
             {asset.gradingCompany !== "RAW" && (
-              <div className="flex min-w-0 flex-col gap-0.5 p-3">
-                <span className="text-muted-foreground text-xs">{t("Serial")}</span>
-                <span className="truncate font-mono">{asset.serial}</span>
+              <div className="flex min-w-0 items-start justify-between gap-3 border-t pt-3 text-sm">
+                <span className="text-muted-foreground shrink-0">{t("Serial")}</span>
+                <span className="min-w-0 break-all text-right font-mono font-medium">{asset.serial}</span>
               </div>
             )}
-            {asset.mintAddress && (
+          </div>
+
+          {/* Keep on-chain mint details visible when this card has a mint. */}
+          {asset.mintAddress && (
+            <div className="detail-panel grid grid-cols-1 divide-x rounded-2xl border text-sm">
               <div className="flex min-w-0 flex-col gap-0.5 p-3">
                 <span className="text-muted-foreground text-xs">{t("Mint Address")}</span>
                 <a
@@ -408,8 +404,8 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
                   {asset.mintAddress.slice(0, 4)}…{asset.mintAddress.slice(-4)}
                 </a>
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Price stat box, same shape as the owner/serial row above: the
               asking price next to the market price for this exact card and
@@ -496,6 +492,17 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
               </p>
             )}
           </div>
+
+          <KeyStats
+            stats={cardStats}
+            watchers={statsWatchers}
+            lastSale={statsSales.at(-1)?.amountThb ?? null}
+            recentSales={statsSales.slice(-5).reverse().map((sale) => ({
+              id: sale.id,
+              amountThb: sale.amountThb,
+              soldAt: sale.soldAt.toISOString(),
+            }))}
+          />
 
           {asset.redeemedAt ? (
             <div className="flex items-start gap-3 rounded-xl border border-dashed p-4 text-sm">
@@ -657,8 +664,6 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
         subtitle={asset.subtitle}
         sales={gradeData.sales.map((s) => ({ ...s, soldAt: s.soldAt.toISOString() }))}
         ebayHistory={ebayHistory}
-        depth={depth}
-        timeToSell={timeToSell}
         calculator={
           asset.forSale && asset.priceThb != null && !isOwner ? (
             <ProfitCalculator priceThb={asset.priceThb} marketThb={marketPrice?.thb ?? null} />

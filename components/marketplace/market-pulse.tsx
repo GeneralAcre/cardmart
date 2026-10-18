@@ -97,7 +97,7 @@ function MoversList({
     <section
       className="bg-card relative isolate flex min-w-0 flex-col self-start overflow-hidden rounded-2xl border"
       style={{
-        backgroundImage: `radial-gradient(90% 60% at 0% 0%, ${tone === "up" ? "color-mix(in oklab, var(--success) 14%, transparent)" : "color-mix(in oklab, var(--destructive) 14%, transparent)"}, transparent 65%)`,
+        backgroundImage: "radial-gradient(90% 60% at 0% 0%, color-mix(in oklab, var(--foreground) 9%, transparent), transparent 65%)",
       }}
     >
       <h3 className="eyebrow text-muted-foreground flex items-center gap-2 border-b px-4 py-2.5">
@@ -189,7 +189,7 @@ export function MarketPulse({ rows }: { rows: LeaderboardRow[] }) {
         </div>
       </div>
       {/* Phones: the period gets its own line so the header doesn't squeeze. */}
-      {view === "movers" && <div className="sm:hidden">{periodPicker}</div>}
+      {view === "movers" && <div className="flex justify-end sm:hidden">{periodPicker}</div>}
 
       {view === "movers" ? (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">

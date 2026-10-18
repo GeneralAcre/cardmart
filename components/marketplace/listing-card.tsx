@@ -105,9 +105,9 @@ export function ListingCard({
           {asset.cardNumber && <span className="font-mono"> · #{asset.cardNumber}</span>}
         </p>
         {/* Price on the left, the card's rarity on the right. */}
-        <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+        <div className="mt-1.5 flex flex-nowrap items-center justify-between gap-2">
           {/* Always the plain text colour: the up/down arrow on the picture already says which way it moved. */}
-          <span className={cn("font-bold tabular-nums", compact ? "text-base" : "text-lg")}>
+          <span className={cn("shrink-0 whitespace-nowrap font-bold tabular-nums", compact ? "text-sm sm:text-base" : "text-base sm:text-lg")}>
             {asset.priceThb != null ? formatThb(asset.priceThb) : t("Price unavailable")}
           </span>
           {asset.rarity && <RarityTag rarity={asset.rarity} />}

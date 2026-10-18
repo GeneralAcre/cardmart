@@ -182,19 +182,29 @@ export function WantedCardButton({
   className,
   variant = "outline",
   size = "default",
+  iconOnly = false,
 }: {
   defaults?: WantedCardDefaults;
   label?: string;
   className?: string;
   variant?: "outline" | "secondary" | "default";
   size?: "default" | "sm";
+  iconOnly?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const t = useT();
+  const buttonLabel = label ?? t("Notify me when listed");
   return (
     <>
-      <Button variant={variant} size={size} className={className} onClick={() => setOpen(true)}>
-        <BellPlus /> {label ?? t("Notify me when listed")}
+      <Button
+        variant={variant}
+        size={iconOnly ? "icon" : size}
+        className={className}
+        onClick={() => setOpen(true)}
+        aria-label={buttonLabel}
+        title={buttonLabel}
+      >
+        <BellPlus /> {!iconOnly && buttonLabel}
       </Button>
       {open && <WantedCardDialog open={open} onOpenChange={setOpen} defaults={defaults} />}
     </>

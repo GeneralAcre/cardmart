@@ -47,7 +47,7 @@ const toneClass = (pct: number | null) =>
   pct == null || Math.abs(pct) < 0.05 ? "text-muted-foreground" : pct > 0 ? "text-success" : "text-destructive";
 const formatPct = (pct: number | null) => (pct == null ? "—" : `${pct > 0 ? "+" : ""}${pct.toFixed(1)}%`);
 
-/** The index's line, green when it's up over its history and red when down, with a hover tooltip. */
+/** The index's line is green when up and red when down, with a hover tooltip. */
 function Sparkline({ index, className, tooltip = true }: { index: MarketIndex; className: string; tooltip?: boolean }) {
   const { locale, tr: t } = useLanguage();
   const first = index.points[0];
@@ -114,7 +114,7 @@ function ChangePill({ pct }: { pct: number | null }) {
   );
 }
 
-/** The light under a card: a bright hairline on the bottom edge and a glow rising from it. */
+/** A neutral white glow under a card, with a soft hairline along its bottom edge. */
 function Beam({ strong }: { strong?: boolean }) {
   return (
     <>
@@ -124,14 +124,14 @@ function Beam({ strong }: { strong?: boolean }) {
           "pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-32 transition-opacity duration-300",
           strong ? "opacity-100" : "opacity-70 group-hover:opacity-100",
         )}
-        style={{ backgroundImage: "radial-gradient(70% 100% at 50% 100%, color-mix(in oklab, var(--success) 34%, transparent), transparent 75%)" }}
+        style={{ backgroundImage: "radial-gradient(70% 100% at 50% 100%, color-mix(in oklab, var(--foreground) 24%, transparent), transparent 75%)" }}
       />
       <div
         aria-hidden
         className="pointer-events-none absolute bottom-0 left-1/2 h-px w-3/5 -translate-x-1/2"
         style={{
-          backgroundImage: "linear-gradient(90deg, transparent, var(--success), transparent)",
-          boxShadow: "0 0 20px 2px color-mix(in oklab, var(--success) 55%, transparent)",
+          backgroundImage: "linear-gradient(90deg, transparent, var(--foreground), transparent)",
+          boxShadow: "0 0 20px 2px color-mix(in oklab, var(--foreground) 40%, transparent)",
         }}
       />
     </>
@@ -196,11 +196,11 @@ function IndexTile({ index }: { index: MarketIndex }) {
   return (
     <Link href={HREF[index.key]} className="bg-card active:bg-accent group relative isolate flex min-w-0 flex-col gap-1.5 overflow-hidden p-2.5 pb-3.5">
       <Beam strong />
-      <span className="flex min-w-0 items-center justify-between gap-2">
-        <span className="truncate text-xs font-semibold">{t(NAMES[index.key])}</span>
+      <span className="min-h-8 text-xs leading-tight font-semibold">{t(NAMES[index.key])}</span>
+      <span className="flex items-center justify-between gap-1">
+        <span className="text-lg leading-tight font-bold tabular-nums">{last ? formatLevel(last.price) : "—"}</span>
         <span className={cn("shrink-0 text-xs font-semibold tabular-nums", toneClass(index.change1d))}>{formatPct(index.change1d)}</span>
       </span>
-      <span className="mt-0.5 text-lg leading-tight font-bold tabular-nums">{last ? formatLevel(last.price) : "—"}</span>
     </Link>
   );
 }
@@ -223,7 +223,7 @@ export function MarketIndexes({ indexes }: { indexes: MarketIndex[] }) {
         <div
           aria-hidden
           className="pointer-events-none absolute inset-x-[6%] -bottom-10 -z-10 h-36 blur-3xl"
-          style={{ backgroundImage: "radial-gradient(60% 100% at 50% 100%, color-mix(in oklab, var(--success) 22%, transparent), transparent 70%)" }}
+          style={{ backgroundImage: "radial-gradient(60% 100% at 50% 100%, color-mix(in oklab, var(--foreground) 18%, transparent), transparent 70%)" }}
         />
         <div className="grid grid-cols-3 gap-4">
           {indexes.map((index) => (

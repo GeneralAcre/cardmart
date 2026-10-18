@@ -21,27 +21,17 @@ const pct = (v: number | null) => (v == null ? "—" : `${v > 0 ? "+" : ""}${v.t
 export function KeyStats({
   stats,
   watchers,
-  lowestAsk,
   lastSale,
   recentSales,
 }: {
   stats: PriceStats;
-  supply: { t: number; count: number }[];
-  cardmartListings: number;
-  sales30d: number;
   watchers: number;
-  alerts: number;
-  timeToSell: { days: number; count: number; scope: "card" | "game" } | null;
-  lowestAsk: number | null;
   lastSale: number | null;
-  /** Median days from listing to sale: this card and grade, or the game as a baseline. */
-  /** The latest CardMart sales in this grade, newest first. */
   recentSales: { id: string; amountThb: number; soldAt: string }[];
 }) {
   const { locale, tr: t } = useLanguage();
   const day = (ms: number) =>
     new Date(ms).toLocaleDateString(locale === "th" ? "th-TH" : "en-US", { day: "numeric", month: "short", year: "2-digit" });
-  const spread = lowestAsk != null && lastSale != null && lastSale > 0 ? ((lowestAsk - lastSale) / lastSale) * 100 : null;
 
   const items: { label: string; value: React.ReactNode; note?: string }[] = [
     { label: t("Change · 7 days"), value: <span className={tone(stats.change7d)}>{pct(stats.change7d)}</span> },
@@ -55,7 +45,6 @@ export function KeyStats({
     {
       label: t("Last sale"),
       value: lastSale != null ? formatThb(lastSale) : "—",
-      note: spread != null ? t("Lowest ask {pct}", { pct: pct(spread) }) : undefined,
     },
   ];
 
@@ -84,11 +73,6 @@ export function KeyStats({
             </div>
           ))}
         </div>
-      )}
-      {stats.since != null && (
-        <p className="text-muted-foreground text-[11px]">
-          {t("Based on {days} days of market prices since {date}.", { days: stats.days, date: day(stats.since) })}
-        </p>
       )}
     </div>
   );

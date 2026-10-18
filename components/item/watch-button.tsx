@@ -8,10 +8,11 @@ import { Button } from "@/components/ui/button";
 import { toggleWatchlist } from "@/lib/actions";
 import { useT } from "@/components/landing/language-provider";
 
-export function WatchButton({ assetId, initialWatching }: { assetId: string; initialWatching: boolean }) {
+export function WatchButton({ assetId, initialWatching, className, iconOnly = false }: { assetId: string; initialWatching: boolean; className?: string; iconOnly?: boolean }) {
   const [watching, setWatching] = useState(initialWatching);
   const [pending, startTransition] = useTransition();
   const t = useT();
+  const buttonLabel = watching ? t("Watching") : t("Watch");
 
   function handleClick() {
     startTransition(async () => {
@@ -26,7 +27,15 @@ export function WatchButton({ assetId, initialWatching }: { assetId: string; ini
   }
 
   return (
-    <Button size="sm" variant={watching ? "secondary" : "outline"} onClick={handleClick} disabled={pending}>
+    <Button
+      size={iconOnly ? "icon" : "sm"}
+      variant={watching ? "secondary" : "outline"}
+      onClick={handleClick}
+      disabled={pending}
+      className={className}
+      aria-label={buttonLabel}
+      title={buttonLabel}
+    >
       {pending ? (
         <Loader2 className="animate-spin" />
       ) : watching ? (
@@ -34,7 +43,7 @@ export function WatchButton({ assetId, initialWatching }: { assetId: string; ini
       ) : (
         <Bookmark />
       )}
-      {watching ? t("Watching") : t("Watch")}
+      {!iconOnly && buttonLabel}
     </Button>
   );
 }

@@ -10,9 +10,8 @@ import { cn } from "@/lib/utils";
 import { useLanguage } from "@/components/landing/language-provider";
 import { tierKey } from "@/lib/grade-tier";
 import { GradeCompare } from "@/components/item/grade-compare";
-import { GradingValue, KeyStats } from "@/components/item/card-stats";
+import { GradingValue } from "@/components/item/card-stats";
 import { HistoricalData } from "@/components/item/market-depth";
-import { priceStats } from "@/lib/stats-math";
 import { getEbayQuoteForGrade } from "@/lib/actions";
 import type { EbayPriceQuote } from "@/lib/ebay";
 import { THB_PER_USD } from "@/lib/pricing";
@@ -80,8 +79,6 @@ function valueAt(series: { t: number; price: number }[], t: number): number | nu
   return found;
 }
 
-const matchesTier = (tier: Tier, key: string) => tierKey(tier) === key;
-
 /**
  * The card's market price over time in one grade: eBay's daily median ask for
  * this card in that grade (saved once a day, see lib/market-history.ts), or
@@ -101,8 +98,6 @@ export function MarketPriceHistory({
   tcg,
   baseQuery,
   itemHistory,
-  depth,
-  timeToSell,
   calculator,
   index,
 }: {
@@ -123,15 +118,8 @@ export function MarketPriceHistory({
   baseQuery: string;
   // This exact item's own timeline (listings, sales, transfers), shown in the second tab.
   itemHistory: React.ReactNode;
-  // Watchers and alerts for this card across grades (getCardDemand).
-  depth: {
-    watchers: (Tier & { userId: string })[];
-    alerts: { gradingCompany: string | null; minGrade: number | null; blackLabelOnly: boolean }[];
-  };
   // The buyer's profit calculator, shown at the bottom of the Compare tab (null for the owner).
   calculator: React.ReactNode;
-  // Days from listing to sale: this card by grade, and the whole game (getTimeToSell).
-  timeToSell: { card: (Tier & { days: number })[]; game: number[] };
   // The card's game index, for the chart's comparison line.
   index: { name: string; points: { t: number; price: number }[] } | null;
 }) {
@@ -213,10 +201,6 @@ export function MarketPriceHistory({
   const latest = last?.price;
   // eBay needs two saved days for a line; a single sale still draws one, carried to today.
   const canDraw = fromEbay ? ebayPoints.length >= 2 : points.length >= 2;
-  // Ticker stats over the full series in this grade, not just the picked range.
-  const stats = priceStats(source);
-  const tierAsks = listings.filter((l) => tierKey(l) === condition).map((l) => l.priceThb);
-  const sales30d = tierSales.filter((s) => new Date(s.soldAt).getTime() >= now - 30 * DAY).length;
   const changePct = canDraw && first && latest != null ? ((latest - first) / first) * 100 : null;
   const up = changePct == null || changePct >= 0;
   // Another grade than this listing gets its own color: its line is context, not this card's trend.
@@ -247,33 +231,9 @@ export function MarketPriceHistory({
   }));
   const valueKey = comparing ? "pct" : "price";
 
-  // Every live CardMart listing in this grade, this one included.
-  const isThisGrade = condition === tierKey(current);
-  const gradeAsks = [...tierAsks, ...(isThisGrade && listingThb != null ? [listingThb] : [])];
-  // Supply (eBay listing count by day) and demand (watchers, alerts) in this grade.
+  const tierAsks = listings.filter((l) => tierKey(l) === condition).map((l) => l.priceThb);
+  // Supply history for the chart and CSV export.
   const tierHistory = ebayHistory.filter((h) => h.tierKey === condition);
-  const supply = tierHistory.map((h) => ({ t: Date.parse(h.day), count: h.itemCount }));
-  if (live && !supply.some((p) => p.t === today)) supply.push({ t: today, count: live.itemCount });
-  const watchers = new Set(depth.watchers.filter((w) => matchesTier(w, condition)).map((w) => w.userId)).size;
-  const alerts = depth.alerts.filter(
-    (a) =>
-      (a.gradingCompany == null || a.gradingCompany === selected.gradingCompany) &&
-      (a.minGrade == null || (selected.grade != null && selected.grade >= a.minGrade)) &&
-      (!a.blackLabelOnly || selected.isBlackLabel),
-  ).length;
-  // Median days to sell in this grade, falling back to the game's baseline.
-  const median = (values: number[]) => {
-    const sorted = [...values].sort((a, b) => a - b);
-    const mid = Math.floor(sorted.length / 2);
-    return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
-  };
-  const gradeDays = timeToSell.card.filter((d) => matchesTier(d, condition)).map((d) => d.days);
-  const sellTime =
-    gradeDays.length > 0
-      ? { days: median(gradeDays), count: gradeDays.length, scope: "card" as const }
-      : timeToSell.game.length > 0
-        ? { days: median(timeToSell.game), count: timeToSell.game.length, scope: "game" as const }
-        : null;
   const csvName = `${baseQuery} ${tierName(selected)}`.trim().replace(/[^\w-]+/g, "-");
   const historyRows = tierHistory.map((h) => ({
     t: Date.parse(h.day),
@@ -321,7 +281,7 @@ export function MarketPriceHistory({
         itemHistory
       ) : (
         <>
-          <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex flex-col items-start gap-4 sm:flex-row sm:justify-between">
             <div className="flex min-w-0 flex-col gap-1">
               <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
                 {tab === "compare" ? t("Compare Prices") : t("Market Price History")}
@@ -336,7 +296,7 @@ export function MarketPriceHistory({
               </p>
             </div>
             {tab === "history" && latest != null && (
-              <div className="flex flex-col items-end gap-1">
+              <div className="hidden flex-col items-start gap-1 sm:flex sm:items-end">
                 <span className="text-3xl font-bold tabular-nums">{formatThb(latest)}</span>
                 {changePct != null && (
                   <span
@@ -353,11 +313,11 @@ export function MarketPriceHistory({
             )}
           </div>
 
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div className="flex flex-col gap-1.5">
+          <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-end gap-x-3 gap-y-3 sm:flex sm:items-end sm:justify-between">
+            <div className="flex min-w-0 flex-col gap-1.5">
               <span className="eyebrow text-muted-foreground text-xs">{t("Condition")}</span>
               <Select value={condition} onValueChange={pickCondition}>
-                <SelectTrigger className="h-11 w-60">
+                <SelectTrigger className="h-11 w-full sm:w-60">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -380,23 +340,35 @@ export function MarketPriceHistory({
                 </SelectContent>
               </Select>
             </div>
-            {tab === "history" && (
-              <div className="bg-secondary/60 flex gap-1 rounded-xl border p-1">
-                {RANGES.map((r) => (
-                  <button
-                    key={r.key}
-                    type="button"
-                    onClick={() => setRange(r.key)}
-                    className={cn(
-                      "rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors",
-                      range === r.key ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    {t(r.label)}
-                  </button>
-                ))}
-              </div>
-            )}
+            <div className="flex flex-col items-end gap-3">
+              {tab === "history" && latest != null && (
+                <div className="flex flex-col items-end gap-1 sm:hidden">
+                  <span className="text-2xl font-bold tabular-nums">{formatThb(latest)}</span>
+                  {changePct != null && (
+                    <span className={cn("text-sm font-semibold tabular-nums", !isOwnGrade ? "text-compare" : up ? "text-success" : "text-destructive")}>
+                      {up ? "+" : ""}{changePct.toFixed(1)}% {t("in range")}
+                    </span>
+                  )}
+                </div>
+              )}
+              {tab === "history" && (
+                <div className="bg-secondary/60 flex gap-1 rounded-xl border p-1">
+                  {RANGES.map((r) => (
+                    <button
+                      key={r.key}
+                      type="button"
+                      onClick={() => setRange(r.key)}
+                      className={cn(
+                        "rounded-lg px-2 py-1.5 text-xs font-semibold transition-colors sm:px-3 sm:text-sm",
+                        range === r.key ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      {t(r.label)}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {tab === "history" ? (
@@ -580,18 +552,6 @@ export function MarketPriceHistory({
                   </div>
                 )}
               </div>
-              <KeyStats
-                stats={stats}
-                supply={supply}
-                cardmartListings={gradeAsks.length}
-                sales30d={sales30d}
-                lowestAsk={gradeAsks.length ? Math.min(...gradeAsks) : null}
-                lastSale={tierSales.at(-1)?.amountThb ?? null}
-                watchers={watchers}
-                alerts={alerts}
-                timeToSell={sellTime}
-                recentSales={[...tierSales].reverse().slice(0, 5)}
-              />
               <HistoricalData rows={historyRows} fileName={csvName} />
             </>
           ) : (
