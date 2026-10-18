@@ -331,16 +331,6 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
                   {asset.subtitle}
                   {asset.cardNumber && <span className="font-mono"> · #{asset.cardNumber}</span>}
                 </p>
-                {psaCertNumber && isPsaCertNumber(psaCertNumber) && (
-                  <a
-                    href={psaCertUrl(psaCertNumber)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-muted-foreground hover:text-foreground mt-1 inline-flex w-fit items-center gap-1 text-xs underline underline-offset-2"
-                  >
-                    {t("View on PSA")} <ExternalLink className="size-3" />
-                  </a>
-                )}
               </div>
               <div className="flex shrink-0 flex-col items-end gap-3">
                 <Badge className={cn("shrink-0 rounded-lg border-foreground/60", MARKET_STATUS_BADGE_CLASS[asset.marketStatus])}>
@@ -385,27 +375,39 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
             {asset.gradingCompany !== "RAW" && (
               <div className="flex min-w-0 items-start justify-between gap-3 border-t pt-3 text-sm">
                 <span className="text-muted-foreground shrink-0">{t("Serial")}</span>
-                <span className="min-w-0 break-all text-right font-mono font-medium">{asset.serial}</span>
+                {psaCertNumber && isPsaCertNumber(psaCertNumber) ? (
+                  <a
+                    href={psaCertUrl(psaCertNumber)}
+                    target="_blank"
+                    rel="noreferrer"
+                    title={t("View on PSA")}
+                    className="text-foreground hover:text-muted-foreground inline-flex min-w-0 items-center justify-end gap-1 break-all text-right font-mono font-medium underline decoration-foreground/30 underline-offset-2"
+                  >
+                    {asset.serial}
+                    <ExternalLink className="size-3 shrink-0" />
+                  </a>
+                ) : (
+                  <span className="min-w-0 break-all text-right font-mono font-medium">{asset.serial}</span>
+                )}
               </div>
             )}
-          </div>
-
-          {/* Keep on-chain mint details visible when this card has a mint. */}
-          {asset.mintAddress && (
-            <div className="detail-panel grid grid-cols-1 divide-x rounded-2xl border text-sm">
-              <div className="flex min-w-0 flex-col gap-0.5 p-3">
-                <span className="text-muted-foreground text-xs">{t("Mint Address")}</span>
+            {asset.mintAddress && (
+              <div className="flex min-w-0 items-start justify-between gap-3 border-t pt-3 text-sm">
+                <span className="text-muted-foreground shrink-0">{t("Mint Address")}</span>
                 <a
                   href={`https://explorer.solana.com/address/${asset.mintAddress}?cluster=devnet`}
                   target="_blank"
                   rel="noreferrer"
-                  className="truncate font-mono hover:underline"
+                  title={asset.mintAddress}
+                  className="text-foreground hover:text-muted-foreground inline-flex min-w-0 items-center justify-end gap-1 break-all text-right font-mono font-medium underline decoration-foreground/30 underline-offset-2"
                 >
-                  {asset.mintAddress.slice(0, 4)}…{asset.mintAddress.slice(-4)}
+                  <span className="sm:hidden">{asset.mintAddress.slice(0, 4)}…{asset.mintAddress.slice(-4)}</span>
+                  <span className="hidden sm:inline break-all">{asset.mintAddress}</span>
+                  <ExternalLink className="size-3 shrink-0" />
                 </a>
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Price stat box, same shape as the owner/serial row above: the
               asking price next to the market price for this exact card and
