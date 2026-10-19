@@ -1,11 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Grid3x3, LayoutGrid, PackageSearch, Scale, SlidersHorizontal, X } from "lucide-react";
+import { ArrowRight, Grid3x3, LayoutGrid, PackageSearch, Scale, Search, SlidersHorizontal, X } from "lucide-react";
 
 import { FilterBar } from "@/components/marketplace/filter-bar";
 import { ListingCard } from "@/components/marketplace/listing-card";
-import { MarketPulse } from "@/components/marketplace/market-pulse";
 import { MAX_COMPARE, PriceCompareTable, compareCardKey } from "@/components/marketplace/price-compare-table";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,7 +14,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { cn } from "@/lib/utils";
 import { useT } from "@/components/landing/language-provider";
 import { EMPTY_FILTERS, type AssetSummary, type MarketplaceFilterState } from "@/lib/types";
-import type { LeaderboardRow } from "@/lib/queries";
 
 type SortKey = "recent" | "price-asc" | "price-desc";
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
@@ -70,13 +68,13 @@ function sortListings(listings: AssetSummary[], sort: SortKey): AssetSummary[] {
 
 export function MarketplaceExplorer({
   initialListings,
-  pulseRows,
+  initialFilters = EMPTY_FILTERS,
 }: {
   initialListings: AssetSummary[];
-  /** Cards with their price moves, for the Market pulse panel above the grid. */
-  pulseRows?: LeaderboardRow[];
+  /** Starting filters, e.g. from the hero search (?q=…&game=…). */
+  initialFilters?: MarketplaceFilterState;
 }) {
-  const [filters, setFilters] = useState<MarketplaceFilterState>(EMPTY_FILTERS);
+  const [filters, setFilters] = useState<MarketplaceFilterState>(initialFilters);
   const [listings, setListings] = useState<AssetSummary[]>(initialListings);
   const [loading, setLoading] = useState(false);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
@@ -87,6 +85,8 @@ export function MarketplaceExplorer({
   const [compareCards, setCompareCards] = useState<string[]>([]);
   const [compareOpen, setCompareOpen] = useState(false);
   const isFirstRender = useRef(true);
+  // Opened with filters already set (the hero search): fetch right away instead of showing the unfiltered list.
+  const startedFiltered = useRef(initialFilters !== EMPTY_FILTERS);
   const activeFilterCount = countActiveFilters(filters);
   const t = useT();
   const itemCount = t(listings.length === 1 ? "{count} item" : "{count} items", { count: listings.length });
@@ -95,7 +95,7 @@ export function MarketplaceExplorer({
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;
-      return;
+      if (!startedFiltered.current) return;
     }
     const controller = new AbortController();
     const timeout = setTimeout(async () => {
@@ -160,6 +160,41 @@ export function MarketplaceExplorer({
           <SlidersHorizontal /> {t("Filters")} {filterCountBadge}
         </Button>
 
+        {/* Search: types straight into the same filter the sidebar uses, so
+            results update as you type. Full width on its own row on phones. */}
+        <form
+          role="search"
+          onSubmit={(e) => e.preventDefault()}
+          className="bg-card focus-within:border-foreground/40 order-last flex h-10 w-full min-w-0 items-center gap-2 rounded-lg border px-3 transition-colors sm:order-none sm:w-auto sm:flex-1"
+        >
+          <Search className="text-muted-foreground size-4 shrink-0" />
+          <input
+            value={filters.q}
+            onChange={(e) => setFilters({ ...filters, q: e.target.value })}
+            placeholder={t("Search cards")}
+            aria-label={t("Search cards")}
+            className="placeholder:text-muted-foreground h-full min-w-0 flex-1 bg-transparent text-sm outline-none"
+          />
+          {filters.q && (
+            <button
+              type="button"
+              onClick={() => setFilters({ ...filters, q: "" })}
+              aria-label={t("Clear search")}
+              className="text-muted-foreground hover:text-foreground shrink-0 transition-colors"
+            >
+              <X className="size-4" />
+            </button>
+          )}
+          <button
+            type="submit"
+            aria-label={t("Search")}
+            disabled={!filters.q}
+            className="text-muted-foreground enabled:hover:text-foreground shrink-0 transition-colors disabled:opacity-40"
+          >
+            <ArrowRight className="size-4" />
+          </button>
+        </form>
+
         <div className="ml-auto flex items-center gap-2 sm:gap-3">
           <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
             <SelectTrigger className="bg-card !h-10 rounded-lg text-sm font-medium" aria-label={t("Sort by")}>
@@ -209,7 +244,7 @@ export function MarketplaceExplorer({
                   )}
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-5xl">
+              <DialogContent className="sm:max-w-5xl">
                 <DialogHeader>
                   <DialogTitle>{t("Compare prices")}</DialogTitle>
                   <DialogDescription>{t("Compare asking prices across cards and grading institutes.")}</DialogDescription>
@@ -254,7 +289,6 @@ export function MarketplaceExplorer({
         )}
 
         <div className={cn("flex min-w-0 flex-col gap-6 py-5", sidebarOpen && "lg:pl-5")}>
-          {pulseRows && <MarketPulse rows={pulseRows} />}
 
           {loading ? (
             <div className={gridClass}>

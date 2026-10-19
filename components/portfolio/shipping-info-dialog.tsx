@@ -61,7 +61,7 @@ export function ShippingInfoDialog({
         <span className="hidden sm:inline">{shippingAddress ? t("Shipping info") : t("Add shipping info")}</span>
       </Button>
       <Dialog open={open} onOpenChange={(o) => !pending && setOpen(o)}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <MapPin className="size-4" />

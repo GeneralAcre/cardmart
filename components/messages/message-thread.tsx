@@ -289,7 +289,7 @@ function OfferDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{t("Make an offer")}</DialogTitle>
           <DialogDescription>
@@ -650,7 +650,7 @@ export function MessageThread({
       </div>
 
       <Dialog open={picking} onOpenChange={setPicking}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{t("Attach a card")}</DialogTitle>
             <DialogDescription>{t("Share a listing so you're both talking about the same card.")}</DialogDescription>
@@ -680,7 +680,7 @@ export function MessageThread({
       />
 
       <Dialog open={viewer !== null} onOpenChange={(open) => !open && setViewer(null)}>
-        <DialogContent className="max-w-3xl p-2">
+        <DialogContent className="sm:max-w-3xl p-2">
           <DialogTitle className="sr-only">{t("Photo")}</DialogTitle>
           {viewer && (
             <div className="relative aspect-square w-full">

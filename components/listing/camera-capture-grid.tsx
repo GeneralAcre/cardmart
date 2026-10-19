@@ -235,7 +235,7 @@ function CameraCaptureDialog({
 
   return (
     <Dialog open onOpenChange={(open) => !open && onCancel()}>
-      <DialogContent className="max-w-md" showCloseButton={false}>
+      <DialogContent className="sm:max-w-md" showCloseButton={false}>
         <DialogTitle className="flex items-center gap-2 text-base">
           <Video className="size-4" />
           {t(view.label)}

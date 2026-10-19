@@ -133,7 +133,7 @@ export function InspectionDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !pending && onOpenChange(o)}>
-      <DialogContent className="max-w-xl">
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>{pkg.asset.name}</DialogTitle>
           <DialogDescription>

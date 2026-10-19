@@ -151,7 +151,7 @@ export function ItemGallery({
       )}
 
       <Dialog open={zoomOpen} onOpenChange={setZoomOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="sm:max-w-md">
           <DialogTitle className="sr-only">
             {t("Zoomed {what}", { what: selectedPhoto ? t(selectedPhoto.viewLabel) : t("certificate artwork") })}
           </DialogTitle>

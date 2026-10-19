@@ -306,7 +306,7 @@ export function PriceCompareTable({
               {t("No cards match your search.")}
             </p>
           ) : (
-            <div className="grid max-h-[50vh] grid-cols-3 gap-2 overflow-y-auto pr-1 sm:grid-cols-5">
+            <div className="grid max-h-[60vh] grid-cols-3 gap-2 overflow-y-auto pr-1 sm:grid-cols-5 lg:grid-cols-6">
               {visibleCards.map((card) => {
                 const isChosen = chosen.has(card.key);
                 return (

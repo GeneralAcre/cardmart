@@ -1,5 +1,10 @@
 // Messages, seller store, market overview, getting-started guide, onboarding.
 export const PAGES: Record<string, string> = {
+  "Your account, wallet and settings.": "บัญชี กระเป๋าเงิน และการตั้งค่าของคุณ",
+  "Find your next card at the right price.": "หาการ์ดใบถัดไปในราคาที่ใช่",
+  "Compare prices across cards and grades, and follow the ones you love.": "เปรียบเทียบราคาการ์ดและเกรด แล้วติดตามใบที่คุณชอบ",
+  "Try Umbreon PSA 10": "ลองค้นหา Umbreon PSA 10",
+  "Browse all listings": "ดูรายการทั้งหมด",
   "Originally listed by": "ลงขายครั้งแรกโดย",
   Yours: "ของคุณ",
   "You own this card": "การ์ดใบนี้เป็นของคุณ",

@@ -1,27 +1,16 @@
 import Link from "next/link";
-import { BookOpen, MessageCircle, Settings } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 
 import { getCurrentUser } from "@/lib/session";
 import { getT } from "@/lib/i18n/server";
 import { getMyNotifications, getUnreadMessageCount, getUnreadNotificationCount } from "@/lib/queries";
-import { WalletMenuSection } from "@/components/site/wallet-button";
 import { NavLinks } from "@/components/site/nav-links";
 import { MobileBottomNav } from "@/components/site/mobile-bottom-nav";
 import { NotificationBell } from "@/components/site/notification-bell";
-import { SignOutButton } from "@/components/site/sign-out-button";
-import { LanguageMenuItems } from "@/components/landing/language-switcher";
+import { ProfileDrawer } from "@/components/site/profile-drawer";
 import { ThemeToggleButton } from "@/components/site/theme-toggle";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Logo } from "@/components/site/logo";
 
 export async function SiteHeader() {
@@ -73,46 +62,7 @@ export async function SiteHeader() {
               initialUnreadCount={unreadCount}
             />
             <ThemeToggleButton />
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-full">
-                  <Avatar>
-                    {user.image && <AvatarImage src={user.image} alt={displayName} />}
-                    <AvatarFallback>{initials}</AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-72">
-                <DropdownMenuLabel className="flex items-center gap-3 py-2">
-                  <Avatar className="size-9">
-                    {user.image && <AvatarImage src={user.image} alt="" />}
-                    <AvatarFallback className="text-xs">{initials}</AvatarFallback>
-                  </Avatar>
-                  <span className="flex min-w-0 flex-col">
-                    <span className="truncate font-medium">{displayName}</span>
-                    {user.email && <span className="text-muted-foreground truncate text-xs font-normal">{user.email}</span>}
-                  </span>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <WalletMenuSection />
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link href="/settings">
-                    <Settings /> {t("Settings")}
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <LanguageMenuItems />
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link href="/guide">
-                    <BookOpen /> {t("Getting started guide")}
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <SignOutButton />
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <ProfileDrawer name={displayName} handle={user.handle} email={user.email} image={user.image} initials={initials} />
           </div>
         </div>
       </header>

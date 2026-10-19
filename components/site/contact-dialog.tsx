@@ -11,7 +11,7 @@ export function ContactDialog({ className }: { className?: string }) {
   return (
     <Dialog>
       <DialogTrigger className={className}>{t("Contact us")}</DialogTrigger>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{t("Contact & Support")}</DialogTitle>
           <DialogDescription>{t("Send us a message and we'll reply by email.")}</DialogDescription>

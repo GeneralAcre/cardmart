@@ -138,9 +138,21 @@ function formatChange(change: number | null) {
 }
 
 /** `compact` gives a shorter map for sitting inside another page's panel. */
-export function MarketHeatmap({ rows, compact = false }: { rows: LeaderboardRow[]; compact?: boolean }) {
+export function MarketHeatmap({
+  rows,
+  compact = false,
+  period: controlledPeriod,
+  onPeriodChange,
+}: {
+  rows: LeaderboardRow[];
+  compact?: boolean;
+  /** When the page owns the period (the Market page shares one picker with the movers), pass it here and the map hides its own. */
+  period?: LeaderboardPeriod;
+  onPeriodChange?: (period: LeaderboardPeriod) => void;
+}) {
   const router = useRouter();
-  const [period, setPeriod] = useState<LeaderboardPeriod>("7d");
+  const [ownPeriod, setPeriod] = useState<LeaderboardPeriod>("7d");
+  const period = controlledPeriod ?? ownPeriod;
   const [group, setGroup] = useState<Group>("series");
   const [sizeBy, setSizeBy] = useState<SizeBy>("mcap");
   const [series, setSeries] = useState<string | null>(null);
@@ -156,7 +168,7 @@ export function MarketHeatmap({ rows, compact = false }: { rows: LeaderboardRow[
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
-  const height = width < 640 ? (compact ? 360 : 440) : compact ? 440 : 580;
+  const height = width < 640 ? (compact ? 360 : 440) : compact ? 480 : 580;
 
   const tiles: Tile[] = useMemo(() => {
     const cardTiles = (list: LeaderboardRow[]): Tile[] =>
@@ -231,10 +243,12 @@ export function MarketHeatmap({ rows, compact = false }: { rows: LeaderboardRow[
           )}
           {series != null && <span className="truncate text-sm font-semibold">{series}</span>}
         </div>
-        <Segmented value={period} onChange={(v) => setPeriod(v as LeaderboardPeriod)} options={PERIODS.map((p) => ({ value: p, label: p }))} />
+        {!onPeriodChange && (
+          <Segmented value={period} onChange={(v) => setPeriod(v as LeaderboardPeriod)} options={PERIODS.map((p) => ({ value: p, label: p }))} />
+        )}
       </div>
 
-      {tiles.length > 0 && (
+      {tiles.length > 0 && !compact && (
         <div className="grid grid-cols-3 gap-2 sm:gap-3">
           <Stat label={`${tr("Top gainer")} · ${period}`} tile={best && best.change! > 0 ? best : null} />
           <Stat label={`${tr("Top loser")} · ${period}`} tile={worst && worst.change! < 0 ? worst : null} />

@@ -107,7 +107,7 @@ function DepositDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !pending && onOpenChange(o)}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle className="text-center">{t("Deposit")}</DialogTitle>
         </DialogHeader>
@@ -207,7 +207,7 @@ function WithdrawDialog({
         onOpenChange(o);
       }}
     >
-      <DialogContent className="max-w-sm">
+      <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle className="text-center">{t("Withdraw")}</DialogTitle>
         </DialogHeader>

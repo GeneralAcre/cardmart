@@ -219,3 +219,8 @@ html[lang="th"] .hero-title {
     display: none;
   }
 }
+
+/* A card tilted by --tilt (Market hero). */
+.card-tilt {
+  transform: rotate(var(--tilt, 0deg));
+}

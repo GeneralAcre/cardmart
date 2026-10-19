@@ -71,7 +71,7 @@ function Thumbnail({ auction }: { auction: Auction }) {
           <Expand className="size-4 text-white" />
         </span>
       </DialogTrigger>
-      <DialogContent className="max-w-lg p-4 sm:p-6">
+      <DialogContent className="sm:max-w-lg p-4 sm:p-6">
         <DialogTitle className="pr-8 text-base">{asset.name}</DialogTitle>
         <div className="card-stage relative mx-auto flex aspect-[3/4] max-h-[75vh] w-full items-center justify-center overflow-hidden rounded-xl">
           {art("lg")}

@@ -56,7 +56,7 @@ export function EditProfileDialog({ name, handle }: { name: string; handle: stri
         <Pencil className="size-3.5" />
       </button>
       <Dialog open={open} onOpenChange={(o) => !pending && setOpen(o)}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>{t("Edit Profile")}</DialogTitle>
             <DialogDescription>{t("Update your display name and username.")}</DialogDescription>
