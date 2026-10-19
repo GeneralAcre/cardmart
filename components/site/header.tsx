@@ -16,7 +16,7 @@ import { LoginButton } from "@/components/onboarding/login-button";
 
 export async function SiteHeader() {
   const [user, t] = await Promise.all([getOptionalUser(), getT()]);
-  if (!user) return <GuestHeader label={t("Market")} />;
+  if (!user) return <GuestHeader />;
   const [notifications, unreadCount, unreadMessageCount] = await Promise.all([
     getMyNotifications(user.id),
     getUnreadNotificationCount(user.id),
@@ -73,24 +73,29 @@ export async function SiteHeader() {
   );
 }
 
-/** What a visitor who isn't signed in sees: just the way to the market and a sign-in button. */
-function GuestHeader({ label }: { label: string }) {
+/**
+ * What a visitor who isn't signed in sees: the same menu as everyone else (so
+ * they can see what's here), a sign-in button, and no messages, alerts or
+ * profile. Pages other than the market ask them to sign in when opened.
+ */
+function GuestHeader() {
   return (
-    <header className="bg-background/90 sticky top-0 z-40 border-b backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-screen-2xl items-center justify-between gap-2 px-4 sm:h-[72px] sm:gap-4 sm:px-6 lg:px-8">
-        <div className="flex min-w-0 items-center gap-4 sm:gap-8">
-          <Link href="/" className="flex shrink-0 items-center gap-2">
-            <Logo />
-          </Link>
-          <Link href="/marketplace" className="text-foreground text-sm font-medium tracking-[0.15em] uppercase">
-            {label}
-          </Link>
+    <>
+      <header className="bg-background/90 sticky top-0 z-40 border-b backdrop-blur">
+        <div className="mx-auto flex h-16 max-w-screen-2xl items-center justify-between gap-2 px-4 sm:h-[72px] sm:gap-4 sm:px-6 lg:px-8">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-8">
+            <Link href="/" className="flex shrink-0 items-center gap-2">
+              <Logo />
+            </Link>
+            <NavLinks />
+          </div>
+          <div className="flex shrink-0 items-center gap-1 sm:gap-3">
+            <ThemeToggleButton />
+            <LoginButton size="sm" label="Login" />
+          </div>
         </div>
-        <div className="flex shrink-0 items-center gap-1 sm:gap-3">
-          <ThemeToggleButton />
-          <LoginButton size="sm" label="Login" />
-        </div>
-      </div>
-    </header>
+      </header>
+      <MobileBottomNav />
+    </>
   );
 }
