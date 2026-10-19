@@ -41,7 +41,7 @@ export function RarityBadge({ rarity }: { rarity: CardRarity | null | undefined 
 }
 
 /**
- * The rarity as a small green tag for a card in a grid: just the code (SAR),
+ * The rarity as a small coloured tag for a card in a grid: just the code (SAR),
  * short enough to sit beside the price. Hover for the full name.
  */
 export function RarityTag({ rarity }: { rarity: CardRarity }) {

@@ -16,6 +16,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import { CardGuide } from "@/components/guide/card-guide";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SELF_MINT_FEE_THB, SELLER_SHIPPING_COST_THB, THB_PER_SOL } from "@/lib/pricing";
@@ -168,10 +169,11 @@ export default async function GuidePage({ searchParams }: { searchParams: Promis
         </p>
       </div>
 
-      <Tabs defaultValue={tab === "sell" ? "sell" : "buy"}>
+      <Tabs defaultValue={tab === "sell" ? "sell" : tab === "cards" ? "cards" : "buy"}>
         <TabsList>
           <TabsTrigger value="buy">{t("I want to buy")}</TabsTrigger>
           <TabsTrigger value="sell">{t("I want to sell")}</TabsTrigger>
+          <TabsTrigger value="cards">{t("Card guide")}</TabsTrigger>
         </TabsList>
         <TabsContent value="buy" className="flex flex-col gap-4 pt-4">
           <StepList steps={BUY_STEPS} t={t} />
@@ -184,6 +186,9 @@ export default async function GuidePage({ searchParams }: { searchParams: Promis
           <Button asChild className="w-fit">
             <Link href="/marketplace/sell">{t("List your first card")}</Link>
           </Button>
+        </TabsContent>
+        <TabsContent value="cards" className="pt-4">
+          <CardGuide t={t} />
         </TabsContent>
       </Tabs>
 

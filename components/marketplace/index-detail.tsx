@@ -181,6 +181,20 @@ function MemberSparkline({ member }: { member: IndexMember }) {
   );
 }
 
+/** Compact history graph for the related indexes list. */
+export function IndexSparkline({ index }: { index: MarketIndex }) {
+  if (index.points.length < 2) return <span className="text-muted-foreground text-xs">—</span>;
+  const config = { price: { label: index.key, color: lineColor(index.points) } } satisfies ChartConfig;
+  return (
+    <ChartContainer config={config} className="aspect-auto h-8 w-16 shrink-0">
+      <LineChart data={index.points} margin={{ left: 0, right: 0, top: 2, bottom: 2 }}>
+        <YAxis hide domain={["dataMin", "dataMax"]} />
+        <Line dataKey="price" type="monotone" stroke="var(--color-price)" strokeWidth={1.5} dot={false} isAnimationActive={false} />
+      </LineChart>
+    </ChartContainer>
+  );
+}
+
 const gradeLabel = (m: IndexMember, ungraded: string) =>
   m.gradingCompany === "RAW" || m.grade == null
     ? ungraded

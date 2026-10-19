@@ -266,29 +266,30 @@ export function PortfolioItemCard({
   return (
     // @container: the actions below size to this card, not the screen, so they
     // fit whether the grid shows 2 cards (phones) or 6 (wide desktops).
-    <div className="bg-card @container relative flex flex-col gap-3 rounded-xl border p-3 shadow-sm">
-      {/* The image bleeds to the card's own edges (negative margin,
-          matching corner radius) instead of sitting in its own inset
-          border — a separate inner frame read as "double framed". */}
-      <Link href={`/item/${asset.id}`} className="relative -mx-3 -mt-3 block aspect-[3/4]">
+    <div className="bg-card @container relative flex flex-col gap-3 rounded-2xl border p-3 shadow-sm">
+      {/* Same treatment as the Market cards: the whole card shown on a dark
+          spotlight stage (contain, with padding) instead of cropped to fill. */}
+      <Link href={`/item/${asset.id}`} className="card-stage relative -mx-3 -mt-3 block aspect-[4/5] overflow-hidden rounded-t-2xl">
         {thumbnail ? (
           <Image
             src={thumbnail.url}
             alt={asset.name}
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1280px) 33vw, 25vw"
-            className="rounded-t-xl object-cover"
+            className="object-contain p-4 drop-shadow-[0_12px_24px_rgba(0,0,0,0.6)] sm:p-5"
           />
         ) : (
-          <CardArt
-            themeIndex={asset.themeIndex}
-            category={asset.category}
-            gradingCompany={asset.gradingCompany}
-            grade={asset.grade}
-            isBlackLabel={asset.isBlackLabel}
-            bordered={false}
-            className="rounded-t-xl"
-          />
+          <div className="absolute inset-0 flex items-center justify-center p-5">
+            <CardArt
+              themeIndex={asset.themeIndex}
+              category={asset.category}
+              gradingCompany={asset.gradingCompany}
+              grade={asset.grade}
+              isBlackLabel={asset.isBlackLabel}
+              bordered={false}
+              className="h-full w-auto rounded-lg"
+            />
+          </div>
         )}
         {thumbnail && (
           <span

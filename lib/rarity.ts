@@ -20,19 +20,21 @@ export const RARITY_SHORT: Record<CardRarity, string> = Object.fromEntries(RARIT
   string
 >;
 
-// One green, in shades: the rarer the card, the fuller and brighter the tag
-// (SAR is the solid brand green, U/C a faint outline). Built on the theme's
-// success colour, so it turns a deeper green in light mode. Full class names
-// so Tailwind picks them up.
+// A green-to-yellow scale, one solid shade per tier so each reads apart at a
+// glance: the common cards are deep green, the rarer the card the further it
+// moves toward bright yellow, and SAR is the brightest of all. Two of the
+// palette's ten shades are skipped (they sit too close to a neighbour to tell
+// apart). White text on the three darkest greens, black on the rest. Full
+// class names so Tailwind picks them up.
 export const RARITY_STYLE: Record<CardRarity, string> = {
-  SAR: "bg-success text-success-foreground",
-  SEC: "bg-success/80 text-success-foreground",
-  UR: "bg-success/65 text-success-foreground",
-  AR: "bg-success/45 text-foreground",
-  SR: "bg-success/30 text-success",
-  RR: "bg-success/20 text-success",
-  R: "bg-success/12 text-success",
-  UC: "border border-success/30 text-success/80",
+  SAR: "bg-[#FFFF3F] text-black",
+  SEC: "bg-[#EEEF20] text-black",
+  UR: "bg-[#D4D700] text-black",
+  AR: "bg-[#AACC00] text-black",
+  SR: "bg-[#80B918] text-black",
+  RR: "bg-[#55A630] text-white",
+  R: "bg-[#2B9348] text-white",
+  UC: "bg-[#007F5F] text-white",
 };
 
 export const isRarity = (value: string | null | undefined): value is CardRarity =>

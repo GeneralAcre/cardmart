@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
-import { IndexMembers, IndexQuote } from "@/components/marketplace/index-detail";
+import { IndexMembers, IndexQuote, IndexSparkline } from "@/components/marketplace/index-detail";
 import { getIndexDetail, type IndexKey, type IndexMember } from "@/lib/stats";
 import { priceStats } from "@/lib/stats-math";
 import { formatThb } from "@/lib/format";
@@ -86,9 +86,6 @@ export default async function IndexPage({ params }: { params: Promise<{ key: str
   const lastYear = points.filter((p) => p.t >= yearAgo);
   const yearLow = lastYear.length ? Math.min(...lastYear.map((p) => p.price)) : null;
   const yearHigh = lastYear.length ? Math.max(...lastYear.map((p) => p.price)) : null;
-  const up = members.filter((m) => (m.change1d ?? 0) > 0.05).length;
-  const down = members.filter((m) => (m.change1d ?? 0) < -0.05).length;
-  const flat = members.length - up - down;
   const combinedValue = members.reduce((sum, m) => sum + m.latestThb, 0);
   const byDay = [...members].filter((m) => m.change1d != null).sort((a, b) => b.change1d! - a.change1d!);
   const gainers = byDay.filter((m) => m.change1d! > 0.05).slice(0, 3);
@@ -115,41 +112,12 @@ export default async function IndexPage({ params }: { params: Promise<{ key: str
       </div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
-        <div className="flex min-w-0 flex-col gap-8">
-          <IndexQuote index={index} name={t(info.title)} />
+        <div className="contents lg:flex lg:min-w-0 lg:flex-col lg:gap-8">
+          <div className="order-1 lg:order-none">
+            <IndexQuote index={index} name={t(info.title)} />
+          </div>
 
-          <section className="flex flex-col gap-2">
-            <h2 className="text-lg font-semibold">{t("Key statistics")}</h2>
-            <div className="bg-card grid grid-cols-1 rounded-xl border sm:grid-cols-2">
-              <div className="flex flex-col px-4 sm:border-r">
-                <Row label={t("Previous close")} value={points.length >= 2 ? formatLevel(points.at(-2)!.price) : "—"} />
-                <Row
-                  label={t("52-week range")}
-                  value={yearLow != null && yearHigh != null ? `${formatLevel(yearLow)} – ${formatLevel(yearHigh)}` : "—"}
-                />
-                <Row label={t("All-time high")} value={stats.high ? formatLevel(stats.high.price) : "—"} note={stats.high ? day(stats.high.t) : undefined} />
-                <Row label={t("All-time low")} value={stats.low ? formatLevel(stats.low.price) : "—"} note={stats.low ? day(stats.low.t) : undefined} />
-                <Row label={t("Start date")} value={points[0] ? day(points[0].t) : "—"} note={t("Base 1,000")} />
-              </div>
-              <div className="flex flex-col border-t px-4 sm:border-t-0">
-                <Row label={t("Cards in this index")} value={index.constituents} />
-                <Row
-                  label={t("Advancers / decliners")}
-                  value={
-                    <>
-                      <span className="text-success">{up}</span> / <span className="text-destructive">{down}</span>
-                    </>
-                  }
-                  note={flat > 0 ? t("{count} unchanged", { count: flat }) : undefined}
-                />
-                <Row label={t("Daily swing")} value={stats.volatility != null ? `±${stats.volatility.toFixed(2)}%` : "—"} />
-                <Row label={t("Combined value")} value={formatThb(combinedValue)} note={t("One copy of each")} />
-                <Row label={t("7 days")} value={<span className={toneClass(index.change7d)}>{formatPct(index.change7d)}</span>} />
-              </div>
-            </div>
-          </section>
-
-          <section className="flex flex-col gap-2">
+          <section className="order-3 flex flex-col gap-2 lg:order-none">
             <h2 className="text-lg font-semibold">{t("Cards in this index")}</h2>
             <IndexMembers members={members} longLabel={longLabel} />
             <p className="text-muted-foreground text-[11px]">
@@ -158,34 +126,54 @@ export default async function IndexPage({ params }: { params: Promise<{ key: str
                 : t("Prices are TCGplayer's market price for the ungraded card, in baht. The top 50 is re-ranked once a day.")}
             </p>
           </section>
+          <section className="order-4 flex flex-col gap-2 lg:order-none">
+            <h2 className="text-lg font-semibold">{t("Other indexes")}</h2>
+            <div className="bg-card rounded-xl border px-4 py-1">
+              {all
+                .filter((i) => i.key !== key)
+                .map((i) => {
+                  const level = i.points.at(-1)?.price;
+                  return (
+                    <Link
+                      key={i.key}
+                      href={`/market/index/${SLUG_OF[i.key]}`}
+                      className="hover:text-foreground flex items-center justify-between gap-3 border-b py-2.5 text-sm last:border-b-0"
+                    >
+                      <span className="min-w-0 flex-1 truncate font-medium">{t(INFO[i.key].title)}</span>
+                      <IndexSparkline index={i} />
+                      <span className="flex items-center gap-2 tabular-nums">
+                        <span className="font-semibold">{level != null ? formatLevel(level) : "—"}</span>
+                        <span className={cn("text-xs", toneClass(i.change1d))}>{formatPct(i.change1d)}</span>
+                      </span>
+                    </Link>
+                  );
+                })}
+            </div>
+          </section>
+
         </div>
 
-        <aside className="flex flex-col gap-4">
+        <aside className="order-2 flex flex-col gap-4 lg:order-none">
           <h2 className="text-lg font-semibold">{t("Top movers today")}</h2>
           <MoverList title={t("Gainers")} members={gainers} />
           <MoverList title={t("Losers")} members={losers} />
 
-          <h2 className="mt-2 text-lg font-semibold">{t("Other indexes")}</h2>
-          <div className="bg-card rounded-xl border px-4 py-1">
-            {all
-              .filter((i) => i.key !== key)
-              .map((i) => {
-                const level = i.points.at(-1)?.price;
-                return (
-                  <Link
-                    key={i.key}
-                    href={`/market/index/${SLUG_OF[i.key]}`}
-                    className="hover:text-foreground flex items-center justify-between gap-3 border-b py-2.5 text-sm last:border-b-0"
-                  >
-                    <span className="font-medium">{t(INFO[i.key].title)}</span>
-                    <span className="flex items-center gap-2 tabular-nums">
-                      <span className="font-semibold">{level != null ? formatLevel(level) : "—"}</span>
-                      <span className={cn("text-xs", toneClass(i.change1d))}>{formatPct(i.change1d)}</span>
-                    </span>
-                  </Link>
-                );
-              })}
-          </div>
+          <section className="flex flex-col gap-2">
+            <h2 className="text-lg font-semibold">{t("Key statistics")}</h2>
+            <div className="bg-card flex flex-col rounded-xl border px-4">
+              <Row label={t("Previous close")} value={points.length >= 2 ? formatLevel(points.at(-2)!.price) : "—"} />
+              <Row
+                label={t("52-week range")}
+                value={yearLow != null && yearHigh != null ? `${formatLevel(yearLow)} – ${formatLevel(yearHigh)}` : "—"}
+              />
+              <Row label={t("All-time high")} value={stats.high ? formatLevel(stats.high.price) : "—"} />
+              <Row label={t("All-time low")} value={stats.low ? formatLevel(stats.low.price) : "—"} />
+              <Row label={t("Start date")} value={points[0] ? day(points[0].t) : "—"} />
+              <Row label={t("Cards in this index")} value={index.constituents} />
+              <Row label={t("Daily swing")} value={stats.volatility != null ? `±${stats.volatility.toFixed(2)}%` : "—"} />
+              <Row label={t("Combined value")} value={formatThb(combinedValue)} />
+            </div>
+          </section>
         </aside>
       </div>
     </div>
