@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
-import { ChevronDown, Crown, Diamond, Info } from "lucide-react";
+import { ChevronDown, Crown, Diamond } from "lucide-react";
 
 import { CardArt } from "@/components/asset/card-art";
 import { UserAvatar, displayNameOf } from "@/components/messages/user-avatar";
@@ -94,17 +94,17 @@ function YourStanding({ me, rows }: { me: Me; rows: TraderRow[] }) {
 
   return (
     <section className="bg-card relative overflow-hidden rounded-2xl border">
-      {row && <Watermark className="-right-4 -bottom-10 text-[11rem] sm:text-[14rem]">{rank}</Watermark>}
-      <div className="relative flex flex-col gap-6 p-6 sm:flex-row sm:items-center sm:p-8">
+      {row && <Watermark className="-right-3 -bottom-6 text-[7rem] sm:-right-4 sm:-bottom-10 sm:text-[14rem]">{rank}</Watermark>}
+      <div className="relative flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:gap-6 sm:p-8">
         <div className="flex flex-col gap-1 sm:border-r sm:pr-8">
           <span className="text-muted-foreground text-[11px] font-medium tracking-[0.2em] uppercase">{t("Your standing")}</span>
-          <span className="text-5xl font-bold tracking-tight tabular-nums sm:text-6xl">{row ? `#${rank}` : "—"}</span>
+          <span className="text-4xl font-bold tracking-tight tabular-nums sm:text-6xl">{row ? `#${rank}` : "—"}</span>
         </div>
 
         <div className="flex min-w-0 flex-1 items-center gap-4">
-          <UserAvatar user={me} className="size-16 text-base" />
+          <UserAvatar user={me} className="size-12 text-sm sm:size-16 sm:text-base" />
           <div className="flex min-w-0 flex-col gap-0.5">
-            <span className="truncate text-2xl font-semibold">{me.handle ? `@${me.handle}` : displayNameOf(me)}</span>
+            <span className="truncate text-xl font-semibold sm:text-2xl">{me.handle ? `@${me.handle}` : displayNameOf(me)}</span>
             <span className="truncate text-sm font-medium text-[#F2C14E]">
               {!row
                 ? t("Buy a card to get on the board")
@@ -116,7 +116,7 @@ function YourStanding({ me, rows }: { me: Me; rows: TraderRow[] }) {
         </div>
 
         {row && (
-          <div className="flex items-center gap-8 sm:border-l sm:pl-8">
+          <div className="flex items-center justify-between gap-6 border-t pt-4 sm:justify-start sm:gap-8 sm:border-t-0 sm:border-l sm:pt-0 sm:pl-8">
             <div className="flex flex-col items-center gap-1">
               <span className="text-2xl font-semibold tabular-nums">{winRate(row)}</span>
               <span className="text-muted-foreground text-[11px] tracking-[0.2em] uppercase">{t("Flips won")}</span>
@@ -140,23 +140,23 @@ function PodiumCard({ r, rank, onSelect }: { r: TraderRow; rank: number; onSelec
     <button
       type="button"
       onClick={onSelect}
-      className="bg-card hover:border-foreground/25 relative flex h-full w-full flex-col overflow-hidden rounded-2xl border p-6 text-left transition-colors"
+      className="bg-card hover:border-foreground/25 relative flex h-full w-full flex-col overflow-hidden rounded-2xl border p-4 text-left sm:p-6 transition-colors"
     >
       {/* thin medal-coloured glow along the top edge */}
       <span aria-hidden className={cn("absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent to-transparent", medal.line)} />
-      <Watermark className="-top-3 -right-3 text-[8rem]">{pad(rank)}</Watermark>
+      <Watermark className="-top-2 -right-2 text-[6rem] sm:-top-3 sm:-right-3 sm:text-[8rem]">{pad(rank)}</Watermark>
       {first ? (
-        <Crown className={cn("absolute top-5 right-5 size-6", medal.text)} />
+        <Crown className={cn("absolute top-4 right-4 size-5 sm:top-5 sm:right-5 sm:size-6", medal.text)} />
       ) : (
-        <Diamond className={cn("absolute top-6 right-6 size-3.5", medal.text)} />
+        <Diamond className={cn("absolute top-4 right-4 size-3.5 sm:top-6 sm:right-6", medal.text)} />
       )}
 
-      <span className={cn("relative font-bold leading-none tracking-tight tabular-nums", medal.text, first ? "text-7xl" : "text-6xl")}>
+      <span className={cn("relative font-bold leading-none tracking-tight tabular-nums", medal.text, first ? "text-5xl sm:text-7xl" : "text-5xl sm:text-6xl")}>
         {pad(rank)}
       </span>
 
       <span className="relative mt-3 flex min-w-0 items-center gap-3">
-        <UserAvatar user={r} className={cn("ring-2 ring-offset-2 ring-offset-card", medal.ring, first ? "size-20" : "size-[4.5rem]")} />
+        <UserAvatar user={r} className={cn("ring-2 ring-offset-2 ring-offset-card", medal.ring, first ? "size-14 sm:size-20" : "size-14 sm:size-[4.5rem]")} />
         <span className="flex min-w-0 flex-col gap-1">
           <span className="truncate text-lg font-semibold">{r.handle ? `@${r.handle}` : displayNameOf(r)}</span>
           <span className="text-muted-foreground truncate text-xs">
@@ -166,17 +166,53 @@ function PodiumCard({ r, rank, onSelect }: { r: TraderRow; rank: number; onSelec
         </span>
       </span>
 
-      <span className="relative mt-6 flex items-end justify-between gap-2 border-t pt-5">
-        <span className="flex flex-col gap-1">
-          <span className="flex items-baseline gap-2">
-            <Gain thb={r.totalGainThb} className="text-3xl font-bold" />
-            <Pct pct={r.totalGainPct} className="text-sm font-medium" />
-          </span>
-          <span className="text-muted-foreground text-[11px] tracking-[0.2em] uppercase">{t("Total gain")}</span>
+      <span className="relative mt-4 flex items-center justify-between gap-3 border-t pt-3 sm:mt-6 sm:pt-5">
+        <span className="text-muted-foreground text-base font-medium tracking-[0.15em] sm:text-lg uppercase">{t("Total gain")}</span>
+        <span className="flex flex-col items-end">
+          <Gain thb={r.totalGainThb} className="text-lg font-bold sm:text-2xl" />
+          <Pct pct={r.totalGainPct} className="text-sm font-medium" />
         </span>
-        {first && <span className={cn("text-[11px] font-bold tracking-[0.15em] uppercase", medal.text)}>{t("Top trader")}</span>}
       </span>
     </button>
+  );
+}
+
+// Phones: a literal podium. 2 · 1 · 3 side by side, each trader standing on a
+// block whose height follows their rank, so the winner is in the middle on top.
+function MobilePodium({ rows, onSelect }: { rows: TraderRow[]; onSelect: (id: string) => void }) {
+  const top = rows.slice(0, 3);
+  const order = [1, 0, 2].filter((i) => i < top.length);
+  const blockHeight = ["h-32", "h-24", "h-20"];
+  return (
+    <ol className="grid grid-cols-3 items-end gap-2 sm:hidden">
+      {order.map((i) => {
+        const r = top[i];
+        const medal = MEDAL[i];
+        const first = i === 0;
+        return (
+          <li key={r.userId} className="min-w-0">
+            <button type="button" onClick={() => onSelect(r.userId)} className="flex w-full min-w-0 flex-col items-center gap-1.5 text-center">
+              {first && <Crown className={cn("size-5", medal.text)} />}
+              <UserAvatar user={r} className={cn("ring-2 ring-offset-2 ring-offset-background", medal.ring, first ? "size-16" : "size-12")} />
+              <span className="w-full truncate text-xs font-semibold">{r.handle ? `@${r.handle}` : displayNameOf(r)}</span>
+              <span
+                className={cn(
+                  "bg-card relative flex w-full flex-col items-center gap-1 overflow-hidden rounded-t-xl border border-b-0 px-1 pt-2",
+                  blockHeight[i],
+                )}
+              >
+                <span aria-hidden className={cn("absolute inset-x-3 top-0 h-px bg-gradient-to-r from-transparent to-transparent", medal.line)} />
+                <span className={cn("text-3xl font-bold leading-none tabular-nums", medal.text)}>{pad(i + 1)}</span>
+                <span className="flex w-full flex-col items-center gap-0.5">
+                  <Gain thb={r.totalGainThb} className="w-full truncate text-xs font-bold" />
+                  <Pct pct={r.totalGainPct} className="text-[10px]" />
+                </span>
+              </span>
+            </button>
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 
@@ -190,7 +226,7 @@ export function TopTraders({ rows, me }: { rows: TraderRow[]; me: Me }) {
 
   if (rows.length === 0) {
     return (
-      <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-6 sm:gap-8">
         <YourStanding me={me} rows={rows} />
         <p className="text-muted-foreground rounded-2xl border border-dashed py-16 text-center text-sm">
           {t("No completed sales yet — traders show up here once someone buys a card.")}
@@ -203,10 +239,17 @@ export function TopTraders({ rows, me }: { rows: TraderRow[]; me: Me }) {
   const podiumOrder = ["sm:order-2", "sm:order-1 sm:mt-10", "sm:order-3 sm:mt-10"];
 
   return (
-    <div className="flex flex-col gap-8">
-      <YourStanding me={me} rows={rows} />
+    <div className="flex flex-col gap-6 sm:gap-8">
+      <MobilePodium rows={rows} onSelect={setOpenId} />
 
-      <ol className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <ol
+        className={cn(
+          "hidden gap-4 sm:grid",
+          rows.length >= 3 && "sm:grid-cols-3",
+          rows.length === 2 && "sm:mx-auto sm:w-full sm:max-w-2xl sm:grid-cols-2",
+          rows.length === 1 && "sm:mx-auto sm:w-full sm:max-w-sm",
+        )}
+      >
         {rows.slice(0, 3).map((r, i) => (
           <li key={r.userId} className={podiumOrder[i]}>
             <PodiumCard r={r} rank={i + 1} onSelect={() => setOpenId(r.userId)} />
@@ -214,12 +257,7 @@ export function TopTraders({ rows, me }: { rows: TraderRow[]; me: Me }) {
         ))}
       </ol>
 
-      <div className="text-muted-foreground flex items-start gap-3 text-sm">
-        <Info className="mt-0.5 size-4 shrink-0" />
-        <p>
-          {t("Who made money, and on which cards. Every card is one of a kind, so this shows what worked — there's no copy-trading a card someone else already owns.")}
-        </p>
-      </div>
+      <YourStanding me={me} rows={rows} />
 
       {/* Full standings */}
       <section className="overflow-hidden rounded-2xl border">
@@ -289,6 +327,39 @@ export function TopTraders({ rows, me }: { rows: TraderRow[]; me: Me }) {
         </ol>
       </section>
 
+      {/* What the numbers mean, led by "Flips won" since it's the least obvious. */}
+      <details className="bg-card group rounded-2xl border">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-sm font-semibold sm:px-6 [&::-webkit-details-marker]:hidden">
+          {t("How to read the leaderboard")}
+          <ChevronDown className="text-muted-foreground size-4 transition-transform group-open:rotate-180" />
+        </summary>
+        <dl className="grid gap-4 border-t px-4 py-4 sm:grid-cols-2 sm:px-6">
+          <div className="flex flex-col gap-1">
+            <dt className="text-sm font-semibold">{t("Flips won")}</dt>
+            <dd className="text-muted-foreground text-sm leading-relaxed">
+              {t("A flip is a card someone bought and then sold. It's won when the sale price beat what they paid. 2/3 means 3 cards sold and 2 of them for a profit. A dash means nothing sold yet.")}
+            </dd>
+          </div>
+          <div className="flex flex-col gap-1">
+            <dt className="text-sm font-semibold">{t("Realized")}</dt>
+            <dd className="text-muted-foreground text-sm leading-relaxed">
+              {t("Profit locked in from cards already sold: sold price minus bought price.")}
+            </dd>
+          </div>
+          <div className="flex flex-col gap-1">
+            <dt className="text-sm font-semibold">{t("Unrealized")}</dt>
+            <dd className="text-muted-foreground text-sm leading-relaxed">
+              {t("Paper profit on cards still held: the current asking price minus bought price. It changes until the card sells.")}
+            </dd>
+          </div>
+          <div className="flex flex-col gap-1">
+            <dt className="text-sm font-semibold">{t("Total gain")}</dt>
+            <dd className="text-muted-foreground text-sm leading-relaxed">
+              {t("Realized plus unrealized. The board is ranked by this number.")}
+            </dd>
+          </div>
+        </dl>
+      </details>
       <p className="text-muted-foreground text-xs leading-relaxed">
         {t("Built from completed escrow sales only. Realized = sold price − bought price. Unrealized = a held card's current asking price − bought price. A first sale by the card's minter has no purchase price, so it isn't counted as a gain; swaps aren't counted either.")}
       </p>

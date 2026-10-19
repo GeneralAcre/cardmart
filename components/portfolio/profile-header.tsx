@@ -7,7 +7,8 @@ import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { WalletActions } from "@/components/portfolio/wallet-actions";
 import { ShippingInfoDialog } from "@/components/portfolio/shipping-info-dialog";
-import { EditProfileDialog } from "@/components/portfolio/edit-profile-dialog";
+import { IdentityBadge } from "@/components/portfolio/identity-card";
+import type { KycStatus } from "@prisma/client";
 import { PortfolioValueChart } from "@/components/portfolio/portfolio-value-chart";
 import { useWalletStore } from "@/lib/web3/wallet-store";
 import { formatDate, shortSignature } from "@/lib/format";
@@ -24,6 +25,14 @@ interface ProfileHeaderProps {
   portfolioValueHistory: { totalThb: number; createdAt: string }[];
   shippingAddress: string | null;
   phone: string | null;
+  identity: {
+    status: KycStatus;
+    rejectReason: string | null;
+    rating: number | null;
+    reviewCount: number;
+    completedSales: number;
+    photoStorageReady: boolean;
+  };
 }
 
 export function ProfileHeader({
@@ -36,6 +45,7 @@ export function ProfileHeader({
   portfolioValueHistory,
   shippingAddress,
   phone,
+  identity,
 }: ProfileHeaderProps) {
   const { connected } = useWalletStore();
   const [copied, setCopied] = useState(false);
@@ -67,10 +77,12 @@ export function ProfileHeader({
             <AvatarFallback className="text-lg font-medium">{initials}</AvatarFallback>
           </Avatar>
           <div className="flex min-w-0 flex-col gap-1">
-            <span className="truncate text-xl font-semibold sm:text-2xl">{name}</span>
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="truncate text-xl font-semibold sm:text-2xl">{name}</span>
+              <IdentityBadge {...identity} />
+            </div>
             <div className="text-muted-foreground flex flex-wrap items-center gap-x-1.5 text-sm">
               {handle && <span>@{handle}</span>}
-              <EditProfileDialog name={name} handle={handle} />
             </div>
             <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
               {walletAddress ? (

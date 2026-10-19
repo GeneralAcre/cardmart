@@ -28,11 +28,11 @@ import { useT } from "@/components/landing/language-provider";
 const STATUS_ICON = { NONE: ShieldAlert, PENDING: Clock, VERIFIED: BadgeCheck, REJECTED: ShieldAlert } as const;
 
 /**
- * Trust & Safety summary for the signed-in user: their identity (KYC) status,
- * plus the reputation buyers already see: star rating and completed sales,
- * all backed by escrow.
+ * Identity (KYC) status as a small icon next to the user's name. Tapping it
+ * opens a popup with the status, the reputation buyers already see (star
+ * rating, completed escrow sales) and, when it applies, the way to verify.
  */
-export function IdentityCard({
+export function IdentityBadge({
   status,
   rejectReason,
   rating,
@@ -48,54 +48,88 @@ export function IdentityCard({
   /** Whether the private Blob store for ID photos is configured (KYC_BLOB_READ_WRITE_TOKEN). */
   photoStorageReady: boolean;
 }) {
-  const [open, setOpen] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
+  const [kycOpen, setKycOpen] = useState(false);
   const Icon = STATUS_ICON[status];
   const canSubmit = status === "NONE" || status === "REJECTED";
   const t = useT();
 
   return (
-    <div className="bg-card flex flex-wrap items-center justify-between gap-4 rounded-xl border p-4">
-      <div className="flex min-w-0 items-start gap-3">
-        <div
-          className={cn(
-            "flex size-9 shrink-0 items-center justify-center rounded-lg",
-            status === "VERIFIED" ? "bg-success text-success-foreground" : "bg-muted text-foreground",
-          )}
-        >
-          <Icon className="size-4" />
-        </div>
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <span className="text-sm font-semibold">{t("Trust & Safety")} · {t(KYC_STATUS_LABELS[status])}</span>
-          <span className="text-muted-foreground text-xs">
-            {status === "VERIFIED"
-              ? t("Buyers see an ID-verified badge on your store and listings.")
-              : status === "PENDING"
-                ? t("Our team is reviewing your details. You'll get a notification once it's done.")
-                : status === "REJECTED"
-                  ? `${rejectReason ? t(rejectReason) : t("We couldn't confirm your details.")} ${t("You can submit again.")}`
-                  : t("Verify your identity to earn an ID-verified badge buyers can trust.")}
-          </span>
-          <span className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 pt-1 text-xs">
-            <span className="inline-flex items-center gap-1">
-              <Star className="size-3" />
+    <>
+      <button
+        type="button"
+        onClick={() => setInfoOpen(true)}
+        aria-label={`${t("Trust & Safety")} · ${t(KYC_STATUS_LABELS[status])}`}
+        title={`${t("Trust & Safety")} · ${t(KYC_STATUS_LABELS[status])}`}
+        className={cn(
+          "inline-flex size-6 shrink-0 items-center justify-center rounded-full transition-opacity hover:opacity-80",
+          status === "VERIFIED" ? "text-success" : status === "PENDING" ? "text-muted-foreground" : "text-amber-500",
+        )}
+      >
+        <Icon className="size-5" />
+      </button>
+
+      <Dialog open={infoOpen} onOpenChange={setInfoOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("Trust & Safety")}</DialogTitle>
+            <DialogDescription>{t("Your identity status and the reputation buyers see.")}</DialogDescription>
+          </DialogHeader>
+
+          <div className="flex items-start gap-3 rounded-lg border p-3">
+            <div
+              className={cn(
+                "flex size-9 shrink-0 items-center justify-center rounded-lg",
+                status === "VERIFIED" ? "bg-success text-success-foreground" : "bg-muted text-foreground",
+              )}
+            >
+              <Icon className="size-4" />
+            </div>
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <span className="text-sm font-semibold">{t(KYC_STATUS_LABELS[status])}</span>
+              <span className="text-muted-foreground text-xs">
+                {status === "VERIFIED"
+                  ? t("Buyers see an ID-verified badge on your store and listings.")
+                  : status === "PENDING"
+                    ? t("Our team is reviewing your details. You'll get a notification once it's done.")
+                    : status === "REJECTED"
+                      ? `${rejectReason ? t(rejectReason) : t("We couldn't confirm your details.")} ${t("You can submit again.")}`
+                      : t("Verify your identity to earn an ID-verified badge buyers can trust.")}
+              </span>
+            </div>
+          </div>
+
+          <ul className="text-muted-foreground flex flex-col gap-2 text-sm">
+            <li className="flex items-center gap-2">
+              <Star className="size-4 shrink-0" />
               {rating != null && reviewCount > 0
                 ? t(reviewCount === 1 ? "{rating} from {count} review" : "{rating} from {count} reviews", { rating: rating.toFixed(1), count: reviewCount })
                 : t("No ratings yet")}
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <ShieldCheck className="size-3" />
+            </li>
+            <li className="flex items-center gap-2">
+              <ShieldCheck className="size-4 shrink-0" />
               {t(completedSales === 1 ? "{count} completed sale through escrow" : "{count} completed sales through escrow", { count: completedSales })}
-            </span>
-          </span>
-        </div>
-      </div>
-      {canSubmit && (
-        <Button size="sm" onClick={() => setOpen(true)}>
-          <BadgeCheck /> {t("Verify identity")}
-        </Button>
-      )}
-      {open && <KycDialog open={open} onOpenChange={setOpen} photoStorageReady={photoStorageReady} />}
-    </div>
+            </li>
+          </ul>
+
+          {canSubmit && (
+            <DialogFooter>
+              <Button
+                className="w-full"
+                onClick={() => {
+                  setInfoOpen(false);
+                  setKycOpen(true);
+                }}
+              >
+                <BadgeCheck /> {t("Verify identity")}
+              </Button>
+            </DialogFooter>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {kycOpen && <KycDialog open={kycOpen} onOpenChange={setKycOpen} photoStorageReady={photoStorageReady} />}
+    </>
   );
 }
 

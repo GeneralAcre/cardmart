@@ -34,8 +34,6 @@ export const LEADERBOARD: Record<string, string> = {
 
   // Top traders
   "No completed sales yet — traders show up here once someone buys a card.": "ยังไม่มีการขายสำเร็จ — เทรดเดอร์จะแสดงที่นี่เมื่อมีคนซื้อการ์ด",
-  "Who made money, and on which cards. Every card is one of a kind, so this shows what worked — there's no copy-trading a card someone else already owns.":
-    "ใครทำกำไรได้ และจากการ์ดใบไหน การ์ดทุกใบมีใบเดียว หน้านี้จึงแสดงให้เห็นว่าอะไรได้ผล — ไม่สามารถก๊อปเทรดการ์ดที่คนอื่นเป็นเจ้าของอยู่แล้วได้",
   "{count} card bought": "ซื้อการ์ด {count} ใบ",
   "{count} cards bought": "ซื้อการ์ด {count} ใบ",
   "{wins}/{total} flips won": "ซื้อมาขายไปได้กำไร {wins}/{total} ครั้ง",
@@ -54,6 +52,13 @@ export const LEADERBOARD: Record<string, string> = {
   Trader: "เทรดเดอร์",
   "Flips won": "ขายได้กำไร",
   "Total gain": "กำไรรวม",
+  "How to read the leaderboard": "วิธีอ่านกระดานอันดับ",
+  "A flip is a card someone bought and then sold. It's won when the sale price beat what they paid. 2/3 means 3 cards sold and 2 of them for a profit. A dash means nothing sold yet.":
+    "Flip คือการ์ดที่ซื้อมาแล้วขายต่อ ถือว่าชนะเมื่อราคาขายสูงกว่าราคาที่ซื้อ 2/3 หมายถึงขายไป 3 ใบ และได้กำไร 2 ใบ ถ้าเป็นขีดแปลว่ายังไม่ได้ขาย",
+  "Profit locked in from cards already sold: sold price minus bought price.": "กำไรที่ได้จริงจากการ์ดที่ขายแล้ว: ราคาขาย − ราคาซื้อ",
+  "Paper profit on cards still held: the current asking price minus bought price. It changes until the card sells.":
+    "กำไรบนกระดาษของการ์ดที่ยังถืออยู่: ราคาตั้งปัจจุบัน − ราคาซื้อ ตัวเลขนี้จะเปลี่ยนไปจนกว่าจะขายการ์ด",
+  "Realized plus unrealized. The board is ranked by this number.": "กำไรที่รับรู้แล้ว + ที่ยังไม่รับรู้ กระดานนี้จัดอันดับตามตัวเลขนี้",
   "Your standing": "อันดับของคุณ",
   "Buy a card to get on the board": "ซื้อการ์ดเพื่อขึ้นกระดานอันดับ",
   "{amount} to #{rank}": "อีก {amount} ถึงอันดับ {rank}",

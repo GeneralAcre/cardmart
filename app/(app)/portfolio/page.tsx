@@ -23,7 +23,6 @@ import { getEscrowAuthorityAddress } from "@/lib/web3/escrow-server";
 import { ListingCard } from "@/components/marketplace/listing-card";
 import { PortfolioItemCard } from "@/components/portfolio/portfolio-item-card";
 import { ProfileHeader } from "@/components/portfolio/profile-header";
-import { IdentityCard } from "@/components/portfolio/identity-card";
 import { WantedCardsPanel } from "@/components/wanted/wanted-cards-panel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SalesToShipPanel } from "@/components/portfolio/ship-to-warehouse";
@@ -93,6 +92,14 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
           }))}
           shippingAddress={user.shippingAddress}
           phone={user.phone}
+          identity={{
+            status: user.kycStatus,
+            rejectReason: user.kycRejectReason,
+            rating: rating.average,
+            reviewCount: rating.count,
+            completedSales,
+            photoStorageReady: isKycPhotoStorageConfigured(),
+          }}
         />
       </div>
 
@@ -101,17 +108,6 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
           <SalesToShipPanel sales={salesToShip.map(toSaleToShip)} />
         </div>
       )}
-
-      <div className="mb-8">
-        <IdentityCard
-          status={user.kycStatus}
-          rejectReason={user.kycRejectReason}
-          rating={rating.average}
-          reviewCount={rating.count}
-          completedSales={completedSales}
-          photoStorageReady={isKycPhotoStorageConfigured()}
-        />
-      </div>
 
       {assets.length > 0 && (
         <div className="mb-8">

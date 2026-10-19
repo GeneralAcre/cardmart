@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BookOpen, MessageCircle } from "lucide-react";
+import { BookOpen, MessageCircle, Settings } from "lucide-react";
 
 import { getCurrentUser } from "@/lib/session";
 import { getT } from "@/lib/i18n/server";
@@ -95,6 +95,12 @@ export async function SiteHeader() {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <WalletMenuSection />
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/settings">
+                    <Settings /> {t("Settings")}
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <LanguageMenuItems />
                 <DropdownMenuSeparator />

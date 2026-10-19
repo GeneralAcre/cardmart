@@ -1,5 +1,15 @@
 // Messages, seller store, market overview, getting-started guide, onboarding.
 export const PAGES: Record<string, string> = {
+  "Your identity status and the reputation buyers see.": "สถานะการยืนยันตัวตนและชื่อเสียงที่ผู้ซื้อเห็น",
+  Settings: "ตั้งค่า",
+  Appearance: "การแสดงผล",
+  "Screen mode": "โหมดหน้าจอ",
+  Dark: "มืด",
+  Light: "สว่าง",
+  "Your profile and where we ship physical items.": "โปรไฟล์ของคุณและที่อยู่สำหรับจัดส่งการ์ดจริง",
+  Profile: "โปรไฟล์",
+  "Save changes": "บันทึกการเปลี่ยนแปลง",
+  "Profile updated.": "อัปเดตโปรไฟล์แล้ว",
   // Messages
   "No conversations yet.": "ยังไม่มีการสนทนา",
   "Open a seller's profile or a listing and tap “Message Seller” to ask a question or negotiate a price.":
