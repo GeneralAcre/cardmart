@@ -27,7 +27,7 @@ import { ItemGallery } from "@/components/item/item-gallery";
 import { MarketPriceHistory } from "@/components/item/market-price-history";
 import { KeyStats } from "@/components/item/card-stats";
 import { ProfitCalculator } from "@/components/item/profit-calculator";
-import { RarityBadge } from "@/components/item/rarity-badge";
+import { RarityTag } from "@/components/item/rarity-badge";
 import { ProvenanceTimeline } from "@/components/item/provenance-timeline";
 import { BuyPanel } from "@/components/item/buy-panel";
 import { WatchButton } from "@/components/item/watch-button";
@@ -46,7 +46,7 @@ import { RatingStars } from "@/components/store/rating-stars";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ChevronDown, ChevronLeft, ExternalLink, Flame, Gavel } from "lucide-react";
+import { ChevronDown, ChevronLeft, ExternalLink, Flame, Gavel, UserCheck } from "lucide-react";
 
 import { formatDate, formatGrade, formatThb } from "@/lib/format";
 import {
@@ -66,6 +66,7 @@ import { tierKey, type GradeTier } from "@/lib/grade-tier";
 import { cn } from "@/lib/utils";
 import { displayImage, realPhotos } from "@/lib/card-image";
 import { priceStats } from "@/lib/stats-math";
+import { ItemShareButton } from "@/components/item/share-button";
 
 const PRELOADED_EBAY_TIERS: GradeTier[] = [
   { gradingCompany: "RAW", grade: null, isBlackLabel: false },
@@ -124,7 +125,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
     lookupEbayPrice(marketCard),
     // Only feeds the Previous Price box; the full history comes from insightData.
     getPriceHistory(asset.id, "7d"),
-    getSellerRating(asset.seller.id),
+    getSellerRating(asset.owner.id),
     getSimilarAssets({ id: asset.id, name: asset.name, subtitle: asset.subtitle }),
     getCardMarketStats(marketCard, asset.id),
     getAssetInsightData(asset.id),
@@ -168,7 +169,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
   );
 
   const psaPopulation = psaCert?.specId != null ? await lookupPsaPopulation(psaCert.specId) : null;
-  const sellerInitials = (asset.seller.name ?? "?")
+  const sellerInitials = (asset.owner.name ?? "?")
     .split(" ")
     .map((n) => n[0])
     .join("")
@@ -192,6 +193,8 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
       isWithinDisputeWindow(myCompletedPurchase.releasedAt));
 
   const isOwner = asset.ownerId === user.id;
+  // The year comes from the PSA cert when we have it, otherwise from the set name ("Base Set — 1999").
+  const cardYear = psaCert?.year ?? asset.subtitle.match(/\b(?:19|20)\d{2}\b/)?.[0] ?? null;
 
   // A sale of this item still in escrow — shown to the buyer as order
   // progress, and to the seller as the "ship it to us" task.
@@ -326,38 +329,50 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
           <div className="detail-panel flex w-full min-w-0 flex-col gap-3 overflow-hidden rounded-2xl border p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="flex min-w-0 flex-col gap-1">
-                <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{asset.name}</h1>
+                <div className="flex min-w-0 items-center gap-2">
+                  <h1 className="min-w-0 text-2xl font-bold tracking-tight sm:text-3xl">{asset.name}</h1>
+                </div>
                 <p className="text-muted-foreground text-sm">
                   {asset.subtitle}
                   {asset.cardNumber && <span className="font-mono"> · #{asset.cardNumber}</span>}
                 </p>
               </div>
               <div className="flex shrink-0 flex-col items-end gap-3">
-                <Badge className={cn("shrink-0 rounded-lg border-foreground/60", MARKET_STATUS_BADGE_CLASS[asset.marketStatus])}>
-                  {t(MARKET_STATUS_LABELS[asset.marketStatus])}
-                </Badge>
-                {!isOwner && (
-                  <div className="flex gap-2">
-                    <WantedCardButton
-                      defaults={wantedDefaults}
-                      label={asset.forSale ? t("Notify me about other copies") : t("Notify me when listed")}
-                      size="sm"
-                      iconOnly
-                      className="size-11 rounded-xl"
-                    />
-                    <WatchButton assetId={asset.id} initialWatching={isWatching} iconOnly className="size-11 rounded-xl" />
-                  </div>
+                {isOwner ? (
+                  <Badge className="border-success/40 bg-success/10 text-success shrink-0 gap-1.5 rounded-lg" title={t("You own this card")}>
+                    <UserCheck className="size-3.5" />
+                    {t("Yours")}
+                  </Badge>
+                ) : (
+                  <Badge className={cn("shrink-0 rounded-lg border-foreground/60", MARKET_STATUS_BADGE_CLASS[asset.marketStatus])}>
+                    {t(MARKET_STATUS_LABELS[asset.marketStatus])}
+                  </Badge>
                 )}
+                  <div className="flex items-center gap-1">
+                    <ItemShareButton path={`/item/${asset.id}`} />
+                    {!isOwner && (
+                      <>
+                        <WantedCardButton
+                          defaults={wantedDefaults}
+                          label={asset.forSale ? t("Notify me about other copies") : t("Notify me when listed")}
+                          size="sm"
+                          iconOnly
+                          className="size-8 rounded-full border-0 bg-transparent p-0 text-muted-foreground shadow-none hover:bg-transparent hover:text-foreground dark:border-0 dark:bg-transparent dark:hover:bg-transparent [&_svg:not([class*=size-])]:size-5"
+                        />
+                        <WatchButton assetId={asset.id} initialWatching={isWatching} iconOnly className="size-8 rounded-full border-0 bg-transparent p-0 text-muted-foreground shadow-none hover:bg-transparent hover:text-foreground dark:border-0 dark:bg-transparent dark:hover:bg-transparent [&_svg:not([class*=size-])]:size-5" />
+                      </>
+                    )}
+                  </div>
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-2 border-t pt-3">
+            <div className="flex flex-nowrap items-center gap-2 border-t pt-3">
               <Badge className={cn("rounded-md border-0", CARD_GAME_BADGE_CLASS[asset.game])}>
                 {t(CARD_GAME_LABELS[asset.game])}
               </Badge>
               <Badge className={cn("rounded-md border-0", CARD_LANGUAGE_BADGE_CLASS[asset.language])}>
                 {t(CARD_LANGUAGE_LABELS[asset.language])}
               </Badge>
-              <RarityBadge rarity={asset.rarity} />
+              {asset.rarity && <RarityTag rarity={asset.rarity} />}
             </div>
             <div className="flex items-center justify-between gap-3 border-t pt-3 text-sm">
               <span className="text-muted-foreground">{t("Grade")}</span>
@@ -372,6 +387,18 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
                 )}
               </span>
             </div>
+            {asset.cardNumber && (
+              <div className="flex items-center justify-between gap-3 border-t pt-3 text-sm">
+                <span className="text-muted-foreground">{t("Card number")}</span>
+                <span className="font-mono font-medium">#{asset.cardNumber}</span>
+              </div>
+            )}
+            {cardYear && (
+              <div className="flex items-center justify-between gap-3 border-t pt-3 text-sm">
+                <span className="text-muted-foreground">{t("Year")}</span>
+                <span className="font-medium">{cardYear}</span>
+              </div>
+            )}
             {asset.gradingCompany !== "RAW" && (
               <div className="flex min-w-0 items-start justify-between gap-3 border-t pt-3 text-sm">
                 <span className="text-muted-foreground shrink-0">{t("Serial")}</span>
@@ -462,16 +489,16 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
               the price. */}
           <div className="flex flex-col gap-2">
             <div className="detail-panel flex items-center gap-3 rounded-2xl border p-4">
-              <Link href={`/store/${asset.seller.id}`} className="group flex min-w-0 flex-1 items-center gap-3">
+              <Link href={`/store/${asset.owner.id}`} className="group flex min-w-0 flex-1 items-center gap-3">
                 <Avatar className="size-10 shrink-0">
-                  {asset.seller.image && <AvatarImage src={asset.seller.image} alt={asset.seller.name ?? ""} />}
+                  {asset.owner.image && <AvatarImage src={asset.owner.image} alt={asset.owner.name ?? ""} />}
                   <AvatarFallback className="text-sm font-medium">{sellerInitials}</AvatarFallback>
                 </Avatar>
                 <div className="flex min-w-0 flex-col gap-0.5">
-                  <span className="text-muted-foreground text-xs">{t("Listed by")}</span>
+                  <span className="text-muted-foreground text-xs">{t("Owned by")}</span>
                   <span className="flex min-w-0 items-center gap-2">
-                    <span className="truncate text-sm font-semibold group-hover:underline">{asset.seller.name}</span>
-                    <VerifiedBadge status={asset.seller.kycStatus} />
+                    <span className="truncate text-sm font-semibold group-hover:underline">{asset.owner.name}</span>
+                    <VerifiedBadge status={asset.owner.kycStatus} />
                   </span>
                   <RatingStars average={sellerRating.average} count={sellerRating.count} />
                 </div>
@@ -485,14 +512,6 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
                 />
               )}
             </div>
-            {asset.owner.id !== asset.seller.id && (
-              <p className="text-muted-foreground text-xs">
-                {t("Currently owned by")}{" "}
-                <Link href={`/store/${asset.owner.id}`} className="text-foreground font-medium hover:underline">
-                  {asset.owner.name}
-                </Link>
-              </p>
-            )}
           </div>
 
           <KeyStats

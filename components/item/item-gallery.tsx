@@ -142,13 +142,13 @@ export function ItemGallery({
         </div>
       )}
 
-      <p className="text-muted-foreground text-center text-xs">
-        {selectedPhoto?.reference
-          ? t("Official image of this card from TCGplayer's catalogue, for reference — not a photo of this copy.")
-          : selectedPhoto
+      {!selectedPhoto?.reference && (
+        <p className="text-muted-foreground text-center text-xs">
+          {selectedPhoto
             ? `${t(selectedPhoto.viewLabel)} — ${t("live camera capture, click to zoom")}`
             : t("Generated certificate artwork — click to zoom")}
-      </p>
+        </p>
+      )}
 
       <Dialog open={zoomOpen} onOpenChange={setZoomOpen}>
         <DialogContent className="max-w-md">

@@ -74,15 +74,7 @@ export function BuyPanel({
     if (!vaulted && marketStatus !== "IN_ESCROW" && !forSale) {
       return <OwnerListForSaleForm assetId={assetId} assetName={assetName} />;
     }
-    return (
-      <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
-        {t("You own this item. Manage it from")}{" "}
-        <a href="/portfolio" className="underline">
-          {t("Portfolio")}
-        </a>
-        .
-      </p>
-    );
+    return null;
   }
 
   if (forSale && awaitingSellerApproval) {

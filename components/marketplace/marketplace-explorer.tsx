@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Anchor, Grid3x3, LayoutGrid, PackageSearch, Scale, Sparkles, SlidersHorizontal, X } from "lucide-react";
-import type { CardGame } from "@prisma/client";
+import { Grid3x3, LayoutGrid, PackageSearch, Scale, SlidersHorizontal, X } from "lucide-react";
 
 import { FilterBar } from "@/components/marketplace/filter-bar";
 import { ListingCard } from "@/components/marketplace/listing-card";
@@ -13,17 +12,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { CARD_GAME_LABELS } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 import { useT } from "@/components/landing/language-provider";
 import { EMPTY_FILTERS, type AssetSummary, type MarketplaceFilterState } from "@/lib/types";
 import type { LeaderboardRow } from "@/lib/queries";
-
-const CATEGORY_TILES: { category: CardGame | "ALL"; label: string; icon: typeof LayoutGrid }[] = [
-  { category: "ALL", label: "All", icon: LayoutGrid },
-  { category: "POKEMON", label: CARD_GAME_LABELS.POKEMON, icon: Sparkles },
-  { category: "ONE_PIECE", label: CARD_GAME_LABELS.ONE_PIECE, icon: Anchor },
-];
 
 type SortKey = "recent" | "price-asc" | "price-desc";
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
@@ -133,19 +125,6 @@ export function MarketplaceExplorer({
     };
   }, [filters]);
 
-  function selectCategoryTile(tile: (typeof CATEGORY_TILES)[number]["category"]) {
-    if (tile === "ALL") {
-      setFilters({ ...filters, games: [] });
-    } else {
-      const isActive = filters.games.includes(tile);
-      setFilters({ ...filters, games: isActive ? [] : [tile] });
-    }
-  }
-
-  function isCategoryTileActive(tile: (typeof CATEGORY_TILES)[number]["category"]) {
-    if (tile === "ALL") return filters.games.length === 0;
-    return filters.games.includes(tile);
-  }
 
   const gridClass = cn(
     "grid gap-3 sm:gap-4",
@@ -276,34 +255,6 @@ export function MarketplaceExplorer({
 
         <div className={cn("flex min-w-0 flex-col gap-6 py-5", sidebarOpen && "lg:pl-5")}>
           {pulseRows && <MarketPulse rows={pulseRows} />}
-
-          {/* A storefront-style "pick what you're into" row — the sidebar/sheet
-              filters still cover everything in depth. */}
-          <div className="scrollbar-none -mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0">
-            {CATEGORY_TILES.map(({ category, label, icon: Icon }) => {
-              const active = isCategoryTileActive(category);
-              return (
-                <button
-                  key={category}
-                  type="button"
-                  onClick={() => selectCategoryTile(category)}
-                  className={cn(
-                    "flex shrink-0 items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-medium outline-none transition-colors",
-                    "focus-visible:ring-ring focus-visible:ring-2",
-                    active
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "text-muted-foreground hover:text-foreground hover:border-foreground/30",
-                  )}
-                >
-                  <Icon className="size-4" />
-                  {t(label)}
-                </button>
-              );
-            })}
-            <span className="text-muted-foreground ml-auto hidden self-center text-sm md:hidden sm:inline">
-              {loading ? t("Searching…") : itemCount}
-            </span>
-          </div>
 
           {loading ? (
             <div className={gridClass}>

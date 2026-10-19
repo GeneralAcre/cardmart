@@ -1,5 +1,8 @@
 // Messages, seller store, market overview, getting-started guide, onboarding.
 export const PAGES: Record<string, string> = {
+  "Originally listed by": "ลงขายครั้งแรกโดย",
+  Yours: "ของคุณ",
+  "You own this card": "การ์ดใบนี้เป็นของคุณ",
   "Card guide": "คู่มือการ์ด",
   Games: "เกม",
   "The coloured tag above a card's name shows which game it is from.": "ป้ายสีเหนือชื่อการ์ดบอกว่าเป็นการ์ดของเกมไหน",
