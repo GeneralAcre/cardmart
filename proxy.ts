@@ -5,7 +5,8 @@ import { NextResponse, type NextRequest } from "next/server";
 // /login route anymore: "/" IS the sign-in surface (it embeds the real
 // Privy login button directly), so anyone without a session gets sent
 // there instead of to a dedicated login page.
-const PUBLIC_PATHS = ["/", "/terms", "/privacy", "/staff-login"];
+// "/marketplace" itself is open so visitors can look around before signing in; the pages under it (selling) and every card page still need an account.
+const PUBLIC_PATHS = ["/", "/marketplace", "/terms", "/privacy", "/staff-login"];
 
 // Privy sign-in is wired up (see lib/session.ts, app/page.tsx) but
 // intentionally not enforced until both NEXT_PUBLIC_PRIVY_APP_ID and

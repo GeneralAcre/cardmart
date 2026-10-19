@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { BadgeCheck, ChartNoAxesCombined, ShieldCheck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { CardWall } from "@/components/landing/card-wall";
@@ -28,7 +27,15 @@ function LandingCta({ authenticated, className }: { authenticated: boolean; clas
       </Button>
     );
   }
-  return <LoginButton className={className} label="Login" />;
+  // A visitor can look around the market first and sign in whenever they like.
+  return (
+    <div className="flex flex-col items-center gap-3 sm:flex-row">
+      <LoginButton className={className} label="Login" />
+      <Button asChild size="lg" variant="outline" className={className}>
+        <Link href="/marketplace">{t.cta.browseMarketplace}</Link>
+      </Button>
+    </div>
+  );
 }
 
 // The hero headline: a green shine in the brand highlight color sweeps
@@ -56,8 +63,6 @@ function HeroTitle({ line1, line2 }: { line1: string; line2: string }) {
   );
 }
 
-// Same order as t.pillars.items: market data, safe trading, ownership.
-const PILLAR_ICONS = [ChartNoAxesCombined, ShieldCheck, BadgeCheck];
 
 interface LandingPageProps {
   authenticated: boolean;
@@ -98,26 +103,26 @@ function LandingPageContent({ authenticated, showcase }: LandingPageProps) {
           </span>
           <h2 className="mt-5 text-3xl font-semibold tracking-tight text-balance sm:text-4xl">{t.pillars.title}</h2>
         </div>
-        <div className="mt-12 grid grid-cols-1 gap-4 md:grid-cols-3">
-          {t.pillars.items.map((item, i) => {
-            const Icon = PILLAR_ICONS[i];
-            return (
-              <div
-                key={item.title}
-                className="group relative overflow-hidden rounded-2xl border border-foreground/10 bg-gradient-to-b from-foreground/[0.05] to-transparent p-6 transition-colors hover:border-foreground/20 sm:p-7"
-              >
-                <div
-                  aria-hidden
-                  className="bg-highlight/20 absolute -top-16 -right-16 size-40 rounded-full opacity-0 blur-3xl transition-opacity duration-500 group-hover:opacity-100"
-                />
-                <div className="bg-highlight/10 text-highlight ring-highlight/20 flex size-10 items-center justify-center rounded-xl ring-1">
-                  <Icon className="size-5" />
-                </div>
-                <h3 className="mt-6 text-lg font-semibold tracking-tight">{item.title}</h3>
-                <p className="text-muted-foreground mt-2 text-sm leading-relaxed">{item.description}</p>
-              </div>
-            );
-          })}
+        {/* Numbered steps: a big numeral (the same font as the app's other numbers), the title, thin glowing rules between. */}
+        <div className="mt-14 grid grid-cols-1 md:grid-cols-3">
+          {t.pillars.items.map((item, i) => (
+            <div key={item.title} className="relative flex flex-col items-center px-6 py-10 text-center md:py-6">
+              {i > 0 && (
+                <>
+                  <span
+                    aria-hidden
+                    className="via-foreground/40 absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent to-transparent md:hidden"
+                  />
+                  <span
+                    aria-hidden
+                    className="via-foreground/40 absolute inset-y-0 left-0 hidden w-px bg-gradient-to-b from-transparent to-transparent md:block"
+                  />
+                </>
+              )}
+              <span className="text-6xl leading-none font-bold tracking-tight tabular-nums sm:text-7xl">{i + 1}</span>
+              <h3 className="mt-8 text-xl font-medium tracking-tight text-balance">{item.title}</h3>
+            </div>
+          ))}
         </div>
       </section>
 

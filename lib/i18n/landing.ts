@@ -25,6 +25,7 @@ export const LANDING_DICTIONARY = {
     },
     cta: {
       enterMarketplace: "Go to marketplace",
+      browseMarketplace: "Browse the market",
     },
     pillars: {
       badge: "What CardMart does",
@@ -51,14 +52,13 @@ export const LANDING_DICTIONARY = {
     showcase: {
       badge: "Inside CardMart",
       title: "See it before you sign in",
-      subtitle: "Price data, protected payments, live auctions and an agent that shops for you — here's what each looks like.",
+      subtitle: "Price data, protected payments, live auctions and a buying agent — here is what each looks like.",
       sample: "Sample data",
       market: {
         eyebrow: "Market data",
         title: "Know what a card is worth, grade by grade",
-        description:
-          "Price history from completed CardMart sales, checked against eBay and TCGplayer. Switch grades to see what a PSA 10 is worth next to a raw copy before you set a price or make an offer.",
-        points: ["Sale history in every grade", "eBay and TCGplayer prices side by side", "Rankings and price moves across the market"],
+        description: "Price history from real CardMart sales, checked against eBay and TCGplayer. Switch grades to compare before you set a price or make an offer.",
+        points: ["Sale history in every grade", "eBay and TCGplayer prices side by side"],
         chartLabel: "Market price",
         inRange: "in range",
         gradeTitle: "Same card, by grade",
@@ -66,9 +66,8 @@ export const LANDING_DICTIONARY = {
       escrow: {
         eyebrow: "Protected payments",
         title: "Your money waits until the card checks out",
-        description:
-          "The buyer pays into escrow on the blockchain. Our warehouse inspects the card, and only then is the seller paid. If it isn't what was listed, the buyer gets the money back.",
-        points: ["Payment held in an on-chain escrow", "Every card inspected at our warehouse", "Ship it home or keep it in the vault"],
+        description: "The buyer pays into escrow. Our warehouse inspects the card, and only then is the seller paid. If it isn't as listed, the buyer is refunded.",
+        points: ["Payment held in an on-chain escrow", "Every card inspected at our warehouse"],
         orderTitle: "Order #4821",
         held: "Held in escrow",
         steps: ["Paid into escrow", "Seller shipped", "Inspected at warehouse", "Payment released to seller"],
@@ -77,9 +76,8 @@ export const LANDING_DICTIONARY = {
       auction: {
         eyebrow: "Live auctions",
         title: "Bid in real time, settle on-chain",
-        description:
-          "Run an auction with a start time and reserve, or bid on someone else's. Every bid shows up live, and the winner pays through the same escrow as any other sale.",
-        points: ["Live bids and countdown", "Start time and reserve price", "Winner pays through escrow"],
+        description: "Run an auction with a start time and reserve, or bid on someone else's. The winner pays through escrow.",
+        points: ["Live bids and countdown", "Winner pays through escrow"],
         live: "Live",
         currentBid: "Current bid",
         endsIn: "Ends in",
@@ -89,9 +87,8 @@ export const LANDING_DICTIONARY = {
       agent: {
         eyebrow: "Buying agent",
         title: "Tell the agent what you want and it watches the market for you",
-        description:
-          "Name a card, a grade and your max price. The agent checks every new listing day and night, compares it with recent sales, and asks you first or buys for you.",
-        points: ["Never pays over your max price", "Skips look-alikes from other sets", "Pays through escrow like any purchase"],
+        description: "Name a card, a grade and your max price. The agent watches every new listing and asks you before it buys.",
+        points: ["Never pays over your max price", "Pays through escrow like any purchase"],
         you: "Find me an Umbreon VMAX alt art, PSA 10, under THB 26,000.",
         working: "Checked 214 new listings",
         found: "Found one at THB 24,900 — 6% under the 30-day median sale.",
@@ -177,6 +174,7 @@ export const LANDING_DICTIONARY = {
     },
     cta: {
       enterMarketplace: "ไปที่ตลาดซื้อขาย",
+      browseMarketplace: "ดูตลาดก่อน",
     },
     pillars: {
       badge: "CardMart ทำอะไร",
@@ -203,14 +201,13 @@ export const LANDING_DICTIONARY = {
     showcase: {
       badge: "ภายใน CardMart",
       title: "ดูก่อนเข้าสู่ระบบ",
-      subtitle: "ข้อมูลราคา การชำระเงินที่ได้รับการคุ้มครอง การประมูลสด และเอเจนต์ที่ช่วยซื้อการ์ดให้คุณ — หน้าตาเป็นแบบนี้",
+      subtitle: "ข้อมูลราคา การชำระเงินที่ปลอดภัย การประมูลสด และเอเจนต์ช่วยซื้อ — หน้าตาเป็นแบบนี้",
       sample: "ข้อมูลตัวอย่าง",
       market: {
         eyebrow: "ข้อมูลตลาด",
         title: "รู้มูลค่าการ์ดในทุกเกรด",
-        description:
-          "ประวัติราคาจากการขายที่สำเร็จบน CardMart เทียบกับ eBay และ TCGplayer สลับเกรดเพื่อดูว่า PSA 10 มีมูลค่าเท่าไรเทียบกับการ์ดดิบ ก่อนตั้งราคาหรือยื่นข้อเสนอ",
-        points: ["ประวัติการขายในทุกเกรด", "ราคา eBay และ TCGplayer เทียบกันได้ทันที", "อันดับและการเคลื่อนไหวของราคาทั้งตลาด"],
+        description: "ประวัติราคาจากการขายจริงบน CardMart เทียบกับ eBay และ TCGplayer สลับเกรดเพื่อเทียบราคาก่อนตั้งราคาหรือยื่นข้อเสนอ",
+        points: ["ประวัติการขายในทุกเกรด", "ราคา eBay และ TCGplayer เทียบกันได้ทันที"],
         chartLabel: "ราคาตลาด",
         inRange: "ในช่วงเวลานี้",
         gradeTitle: "การ์ดใบเดียวกัน แยกตามเกรด",
@@ -218,9 +215,8 @@ export const LANDING_DICTIONARY = {
       escrow: {
         eyebrow: "การชำระเงินที่ได้รับการคุ้มครอง",
         title: "เงินของคุณจะรอจนกว่าการ์ดผ่านการตรวจสอบ",
-        description:
-          "ผู้ซื้อชำระเงินเข้าเอสโครว์บนบล็อกเชน คลังสินค้าของเราตรวจสอบการ์ดก่อน แล้วผู้ขายจึงได้รับเงิน หากไม่ตรงตามที่ลงขาย ผู้ซื้อได้รับเงินคืน",
-        points: ["เงินถูกพักไว้ในเอสโครว์บนบล็อกเชน", "การ์ดทุกใบตรวจสอบที่คลังสินค้าของเรา", "ส่งถึงบ้านหรือเก็บไว้ในวอลต์"],
+        description: "ผู้ซื้อชำระเงินเข้าเอสโครว์ คลังสินค้าตรวจการ์ดก่อน แล้วผู้ขายจึงได้รับเงิน หากไม่ตรงตามที่ลงขาย ผู้ซื้อได้เงินคืน",
+        points: ["เงินถูกพักไว้ในเอสโครว์บนบล็อกเชน", "การ์ดทุกใบตรวจสอบที่คลังสินค้า"],
         orderTitle: "คำสั่งซื้อ #4821",
         held: "พักไว้ในเอสโครว์",
         steps: ["ชำระเงินเข้าเอสโครว์", "ผู้ขายจัดส่งแล้ว", "ตรวจสอบที่คลังสินค้า", "โอนเงินให้ผู้ขาย"],
@@ -229,9 +225,8 @@ export const LANDING_DICTIONARY = {
       auction: {
         eyebrow: "ประมูลสด",
         title: "ประมูลแบบเรียลไทม์ ชำระเงินบนบล็อกเชน",
-        description:
-          "เปิดประมูลพร้อมกำหนดเวลาเริ่มและราคาขั้นต่ำ หรือร่วมประมูลการ์ดของคนอื่น ทุกการเสนอราคาแสดงผลทันที และผู้ชนะชำระผ่านเอสโครว์เหมือนการซื้อทั่วไป",
-        points: ["เสนอราคาและนับถอยหลังแบบสด", "กำหนดเวลาเริ่มและราคาขั้นต่ำ", "ผู้ชนะชำระเงินผ่านเอสโครว์"],
+        description: "เปิดประมูลพร้อมเวลาเริ่มและราคาขั้นต่ำ หรือร่วมประมูลการ์ดของคนอื่น ผู้ชนะชำระผ่านเอสโครว์",
+        points: ["เสนอราคาและนับถอยหลังแบบสด", "ผู้ชนะชำระเงินผ่านเอสโครว์"],
         live: "สด",
         currentBid: "ราคาปัจจุบัน",
         endsIn: "สิ้นสุดใน",
@@ -241,9 +236,8 @@ export const LANDING_DICTIONARY = {
       agent: {
         eyebrow: "เอเจนต์ช่วยซื้อ",
         title: "บอกเอเจนต์ว่าต้องการอะไร แล้วมันจะเฝ้าตลาดให้คุณ",
-        description:
-          "ระบุการ์ด เกรด และราคาสูงสุด เอเจนต์จะตรวจทุกรายการใหม่ทั้งวันทั้งคืน เทียบกับราคาขายล่าสุด แล้วถามคุณก่อนหรือซื้อให้เลย",
-        points: ["ไม่จ่ายเกินราคาสูงสุดที่ตั้งไว้", "ข้ามการ์ดหน้าตาคล้ายจากชุดอื่น", "ชำระผ่านเอสโครว์เหมือนการซื้อทั่วไป"],
+        description: "ระบุการ์ด เกรด และราคาสูงสุด เอเจนต์จะเฝ้าทุกรายการใหม่ และถามคุณก่อนซื้อ",
+        points: ["ไม่จ่ายเกินราคาสูงสุดที่ตั้งไว้", "ชำระผ่านเอสโครว์เหมือนการซื้อทั่วไป"],
         you: "หา Umbreon VMAX alt art เกรด PSA 10 ราคาไม่เกิน THB 26,000 ให้หน่อย",
         working: "ตรวจรายการใหม่แล้ว 214 รายการ",
         found: "เจอแล้วที่ THB 24,900 — ต่ำกว่าราคาขายกลาง 30 วันอยู่ 6%",

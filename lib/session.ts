@@ -87,3 +87,15 @@ export const requireAdmin = cache(async () => {
   if (!user.isAdmin) notFound();
   return user;
 });
+
+/**
+ * The signed-in user, or null for a visitor who hasn't signed in. For the few
+ * pages open to everyone (the marketplace): they show a guest view instead of
+ * sending people to the sign-in page. Everything else uses getCurrentUser().
+ */
+export const getOptionalUser = cache(async () => {
+  if (!PRIVY_ENFORCED) return getCurrentUser();
+  const session = await verifyPrivySession();
+  if (!session) return null;
+  return getCurrentUser();
+});

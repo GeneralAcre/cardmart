@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { MessageCircle } from "lucide-react";
 
-import { getCurrentUser } from "@/lib/session";
+import { getOptionalUser } from "@/lib/session";
 import { getT } from "@/lib/i18n/server";
 import { getMyNotifications, getUnreadMessageCount, getUnreadNotificationCount } from "@/lib/queries";
 import { NavLinks } from "@/components/site/nav-links";
@@ -12,9 +12,11 @@ import { ThemeToggleButton } from "@/components/site/theme-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/site/logo";
+import { LoginButton } from "@/components/onboarding/login-button";
 
 export async function SiteHeader() {
-  const [user, t] = await Promise.all([getCurrentUser(), getT()]);
+  const [user, t] = await Promise.all([getOptionalUser(), getT()]);
+  if (!user) return <GuestHeader label={t("Market")} />;
   const [notifications, unreadCount, unreadMessageCount] = await Promise.all([
     getMyNotifications(user.id),
     getUnreadNotificationCount(user.id),
@@ -68,5 +70,27 @@ export async function SiteHeader() {
       </header>
       <MobileBottomNav />
     </>
+  );
+}
+
+/** What a visitor who isn't signed in sees: just the way to the market and a sign-in button. */
+function GuestHeader({ label }: { label: string }) {
+  return (
+    <header className="bg-background/90 sticky top-0 z-40 border-b backdrop-blur">
+      <div className="mx-auto flex h-16 max-w-screen-2xl items-center justify-between gap-2 px-4 sm:h-[72px] sm:gap-4 sm:px-6 lg:px-8">
+        <div className="flex min-w-0 items-center gap-4 sm:gap-8">
+          <Link href="/" className="flex shrink-0 items-center gap-2">
+            <Logo />
+          </Link>
+          <Link href="/marketplace" className="text-foreground text-sm font-medium tracking-[0.15em] uppercase">
+            {label}
+          </Link>
+        </div>
+        <div className="flex shrink-0 items-center gap-1 sm:gap-3">
+          <ThemeToggleButton />
+          <LoginButton size="sm" label="Login" />
+        </div>
+      </div>
+    </header>
   );
 }
