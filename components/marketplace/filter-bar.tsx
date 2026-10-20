@@ -1,7 +1,7 @@
 "use client";
 
-import { Anchor, Sparkles } from "lucide-react";
 import type { CardGame, CardLanguage, GradingCompany, CardRarity } from "@prisma/client";
+import { GameIcon } from "@/components/ui/game-icon";
 
 import { Input } from "@/components/ui/input";
 import { CARD_GAMES, CARD_GAME_LABELS, CARD_LANGUAGES, CARD_LANGUAGE_LABELS, GRADING_COMPANY_LABELS } from "@/lib/labels";
@@ -27,7 +27,6 @@ function gradeOptions(companies: GradingCompany[]) {
   const offered = new Set(companies.flatMap((c) => GRADES_BY_COMPANY[c]));
   return { grades: GRADES.filter((g) => offered.has(g)), blackLabel: companies.includes("BGS") };
 }
-const GAME_ICONS: Record<CardGame, typeof Sparkles> = { POKEMON: Sparkles, ONE_PIECE: Anchor };
 
 function FilterPill({
   active,
@@ -137,7 +136,6 @@ export function FilterBar({
       <FilterSection label="Card">
         <div className="grid grid-cols-2 gap-2">
           {CARD_GAMES.map((game) => {
-            const Icon = GAME_ICONS[game];
             const active = filters.games.includes(game);
             return (
               <button
@@ -153,7 +151,7 @@ export function FilterBar({
                     : "text-foreground hover:border-foreground/30",
                 )}
               >
-                <Icon className="size-4" />
+                <GameIcon game={game} size={20} />
                 {t(CARD_GAME_LABELS[game])}
               </button>
             );

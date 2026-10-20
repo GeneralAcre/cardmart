@@ -222,13 +222,17 @@ html[lang="th"] .hero-title {
   }
 }
 
-/* A card tilted by --tilt (Market hero). */
-.card-tilt {
-  transform: rotate(var(--tilt, 0deg));
-}
 
 /* The soft shadow under a card photo on its stage: deep on the dark stage,
    light on the light one (a heavy shadow there reads as a grey smudge). */
 .photo-shadow {
   filter: drop-shadow(var(--photo-shadow));
+}
+
+/* Heatmap tiles: the text colour for the current theme (the tile passes both). */
+.heat-tile {
+  color: var(--ink-dark, #fff);
+}
+:root[data-theme="light"] .heat-tile {
+  color: var(--ink-light, #0a0a0a);
 }

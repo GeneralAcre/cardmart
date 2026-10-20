@@ -1,3 +1,4 @@
+import { GameIcon } from "@/components/ui/game-icon";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -115,6 +116,7 @@ export default async function StorePage({ params }: { params: Promise<{ id: stri
                     <div className="flex min-w-0 flex-1 flex-col">
                       <span className="truncate text-sm font-medium">{tx.asset.name}</span>
                       <span className="text-muted-foreground text-xs">
+                        <GameIcon game={tx.asset.game} size={14} className="mr-1 align-[-3px]" />
                         {t(CARD_GAME_LABELS[tx.asset.game])} &middot;{" "}
                         {t("Sold {date}", { date: formatDate(tx.releasedAt ?? tx.createdAt) })}
                       </span>

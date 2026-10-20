@@ -1,3 +1,4 @@
+import { GameIcon } from "@/components/ui/game-icon";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
@@ -302,7 +303,10 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
           {t("Market")}
         </Link>
         <span>/</span>
-        <span className="shrink-0">{t(CARD_GAME_LABELS[asset.game])}</span>
+        <span className="inline-flex shrink-0 items-center gap-1.5">
+          <GameIcon game={asset.game} size={14} />
+          {t(CARD_GAME_LABELS[asset.game])}
+        </span>
         <span>/</span>
         <span className="text-foreground truncate">{asset.name}</span>
       </nav>

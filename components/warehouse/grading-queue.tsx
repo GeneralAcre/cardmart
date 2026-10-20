@@ -1,5 +1,6 @@
 "use client";
 
+import { GameIcon } from "@/components/ui/game-icon";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -221,7 +222,10 @@ export function GradingQueue({ submissions }: { submissions: SubmissionWithSelle
               <TableCell>
                 <div className="flex flex-col">
                   <span className="font-medium">{s.itemName}</span>
-                  <span className="text-muted-foreground text-xs">{t(CARD_GAME_LABELS[s.game])}</span>
+                  <span className="text-muted-foreground inline-flex items-center gap-1.5 text-xs">
+                    <GameIcon game={s.game} size={14} />
+                    {t(CARD_GAME_LABELS[s.game])}
+                  </span>
                 </div>
               </TableCell>
               <TableCell>

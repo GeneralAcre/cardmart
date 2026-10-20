@@ -1,7 +1,8 @@
 "use client";
 
+import { GameIcon } from "@/components/ui/game-icon";
 import Link from "next/link";
-import { Anchor, ArrowDown, ArrowUp, ChevronRight, Minus } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronRight, Minus } from "lucide-react";
 import { Area, AreaChart, Tooltip, YAxis } from "recharts";
 
 import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
@@ -25,18 +26,12 @@ const HREF: Record<MarketIndex["key"], string> = {
 // Small tile for an index: the CardMart star, a Poké Ball, or an anchor.
 function IndexIcon({ index }: { index: MarketIndex["key"] }) {
   return (
-    <span aria-hidden className="bg-foreground/[0.07] flex size-7 shrink-0 items-center justify-center rounded-full">
+    <span aria-hidden className="flex size-7 shrink-0 items-center justify-center">
       {index === "ALL" ? (
         // eslint-disable-next-line @next/next/no-img-element -- tiny static logo
         <img src="/cardmart-logo.png" alt="" className="size-3.5 object-contain" />
-      ) : index === "POKEMON" ? (
-        <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-          <circle cx="12" cy="12" r="9" />
-          <path d="M3 12h5.5M15.5 12H21" />
-          <circle cx="12" cy="12" r="3" />
-        </svg>
       ) : (
-        <Anchor className="size-3.5" />
+        <GameIcon game={index} size={20} />
       )}
     </span>
   );
@@ -141,7 +136,6 @@ function Beam({ strong }: { strong?: boolean }) {
 function IndexCard({ index }: { index: MarketIndex }) {
   const { tr: t } = useLanguage();
   const last = index.points.at(-1);
-  const prev = index.points.at(-2);
 
   return (
     <Link

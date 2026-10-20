@@ -1,5 +1,6 @@
 "use client";
 
+import { GameIcon } from "@/components/ui/game-icon";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -256,7 +257,10 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
                 <SelectContent>
                   {CARD_GAMES.map((g) => (
                     <SelectItem key={g} value={g}>
-                      {t(CARD_GAME_LABELS[g])}
+                      <span className="inline-flex items-center gap-2">
+                        <GameIcon game={g} size={18} />
+                        {t(CARD_GAME_LABELS[g])}
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>

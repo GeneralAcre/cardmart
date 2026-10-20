@@ -1,3 +1,4 @@
+import { GameIcon } from "@/components/ui/game-icon";
 import Link from "next/link";
 import { Sparkles } from "lucide-react";
 import type { GradingSubmissionStatus } from "@prisma/client";
@@ -38,6 +39,7 @@ export async function GradingSubmissionsPanel({
               <div className="flex min-w-0 flex-col">
                 <span className="truncate font-semibold">{s.itemName}</span>
                 <span className="text-muted-foreground truncate text-xs">
+                  <GameIcon game={s.game} size={14} className="mr-1 align-[-3px]" />
                   {t(CARD_GAME_LABELS[s.game])} · {s.gradingCompany} · {s.itemSubtitle}
                 </span>
               </div>

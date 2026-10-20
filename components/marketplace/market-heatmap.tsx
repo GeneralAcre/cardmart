@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import type { LeaderboardPeriod, LeaderboardRow } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 import { useT } from "@/components/landing/language-provider";
-import { useTheme } from "@/components/site/theme-provider";
 
 type Group = "series" | "cards";
 type SizeBy = "mcap" | "avg";
@@ -113,22 +112,25 @@ function squarify(values: number[], rect: Rect): Rect[] {
   }
   return out;
 }
+// Each tile mixes green or red into the page's muted grey, so the readable text colour depends on the theme.
+// Text colours for the two themes: dark ink on light fills, white on deep ones.
+const INK_DARK = "#0a0a0a";
+const INK_LIGHT = "#ffffff";
 
 /**
- * A tile's fill and whether its text should be dark. The fill mixes green or
- * red into the page's muted grey, so the right text color depends on the
- * theme: on the dark theme a flat or faint tile is dark grey (white text) and
- * only strong lime is light; on the light theme a flat or faint tile is light
- * grey (dark text) and strong green or red is deep enough for white text.
+ * A tile's fill, plus its text colour on each theme. Both inks are passed to
+ * CSS (see .heat-tile in globals.css), which picks the one for the theme the
+ * page is actually showing, so the text is right whichever theme is on.
  */
-function tileStyle(change: number | null, theme: "dark" | "light"): { background: string; dark: boolean } {
-  if (change == null || Math.abs(change) < 0.005) return { background: "var(--muted)", dark: theme === "light" };
+function tileStyle(change: number | null): { background: string; inkOnDark: string; inkOnLight: string } {
+  if (change == null || Math.abs(change) < 0.005) return { background: "var(--muted)", inkOnDark: INK_LIGHT, inkOnLight: INK_DARK };
   const strength = Math.min(Math.abs(change) / FULL_COLOR_PCT, 1);
   const pct = Math.round(30 + strength * 70);
   const color = change > 0 ? "var(--success)" : "var(--destructive)";
   return {
     background: `color-mix(in oklab, ${color} ${pct}%, var(--muted))`,
-    dark: theme === "light" ? pct < 55 : change > 0 && pct >= 60,
+    inkOnDark: change > 0 && pct >= 60 ? INK_DARK : INK_LIGHT,
+    inkOnLight: pct < 55 ? INK_DARK : INK_LIGHT,
   };
 }
 
@@ -157,7 +159,6 @@ export function MarketHeatmap({
   const [sizeBy, setSizeBy] = useState<SizeBy>("mcap");
   const [series, setSeries] = useState<string | null>(null);
   const tr = useT();
-  const { theme } = useTheme();
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
@@ -266,7 +267,7 @@ export function MarketHeatmap({
           width > 0 &&
           sorted.map((t, i) => {
             const r = rects[i];
-            const { background, dark } = tileStyle(t.change, theme);
+            const { background, inkOnDark, inkOnLight } = tileStyle(t.change);
             const minSide = Math.min(r.w, r.h);
             const big = r.w > 150 && r.h > 100;
             const showCover = r.w > 190 && r.h > 190;
@@ -283,10 +284,9 @@ export function MarketHeatmap({
                 onClick={() => (t.series ? setSeries(t.series) : t.href && router.push(t.href))}
                 title={`${t.label}\n${formatChange(t.change)} (${period})`}
                 className={cn(
-                  "absolute flex flex-col items-center justify-center overflow-hidden border border-black/40 p-1 text-center transition-[filter] hover:brightness-110",
-                  dark ? "text-neutral-950" : "text-white",
+                  "heat-tile absolute flex flex-col items-center justify-center overflow-hidden border border-black/40 p-1 text-center transition-[filter] hover:brightness-110",
                 )}
-                style={{ left: r.x, top: r.y, width: r.w, height: r.h, background }}
+                style={{ left: r.x, top: r.y, width: r.w, height: r.h, background, "--ink-dark": inkOnDark, "--ink-light": inkOnLight } as React.CSSProperties}
               >
                 {showCover && <CoverThumb card={t.cover} className="mb-2 shadow-md" style={{ width: coverWidth }} />}
                 <span

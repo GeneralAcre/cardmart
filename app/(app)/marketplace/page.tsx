@@ -2,13 +2,12 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import type { CardGame } from "@prisma/client";
 
-import { CardScatter } from "@/components/marketplace/card-scatter";
 import { MarketHero } from "@/components/marketplace/market-hero";
 import { MarketIndexes } from "@/components/marketplace/market-indexes";
 import { MarketPulse } from "@/components/marketplace/market-pulse";
 import { MarketplaceExplorer } from "@/components/marketplace/marketplace-explorer";
 import { ActionButton } from "@/components/ui/action-button";
-import { getLandingShowcase, getLeaderboard, getMarketplaceListings } from "@/lib/queries";
+import { getLeaderboard, getMarketplaceListings } from "@/lib/queries";
 import { getOptionalUser } from "@/lib/session";
 import { getT } from "@/lib/i18n/server";
 import { getMarketIndexes } from "@/lib/stats";
@@ -17,11 +16,10 @@ import { EMPTY_FILTERS } from "@/lib/types";
 
 export default async function MarketplacePage({ searchParams }: { searchParams: Promise<{ q?: string; game?: string }> }) {
   const [{ q, game }, user] = await Promise.all([searchParams, getOptionalUser()]);
-  const [listings, movers, indexes, showcase, t] = await Promise.all([
+  const [listings, movers, indexes, t] = await Promise.all([
     getMarketplaceListings(),
     getLeaderboard(user?.id ?? ""),
     getMarketIndexes(),
-    getLandingShowcase(40),
     getT(),
   ]);
 
@@ -31,7 +29,7 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
 
   return (
     <div className="mx-auto w-full max-w-screen-2xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
-      <MarketHero cards={<CardScatter items={showcase} />} />
+      <MarketHero />
       <div id="listings" className="mb-5 flex scroll-mt-20 items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold">{t("Market")}</h1>
         {user && (
