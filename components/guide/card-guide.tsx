@@ -41,7 +41,7 @@ export function CardGuide({ t }: { t: Translate }) {
               key={g}
               tag={<span className={cn(pill, "rounded", CARD_GAME_BADGE_CLASS[g])}>{t(CARD_GAME_LABELS[g])}</span>}
               title={t(CARD_GAME_LABELS[g])}
-              body={g === "POKEMON" ? t("Pokémon cards. Blue tag.") : t("One Piece cards. Red tag.")}
+              body={g === "POKEMON" ? t("Pokémon cards. Blue tag.") : t("One Piece cards. Ice blue tag.")}
             />
           ))}
         </ul>
@@ -90,7 +90,7 @@ export function CardGuide({ t }: { t: Translate }) {
               key={l}
               tag={<span className={cn(pill, "rounded", CARD_LANGUAGE_BADGE_CLASS[l])}>{t(CARD_LANGUAGE_LABELS[l])}</span>}
               title={t(CARD_LANGUAGE_LABELS[l])}
-              body={l === "ENGLISH" ? t("English print. Yellow tag.") : t("Japanese print. Orange tag.")}
+              body={l === "ENGLISH" ? t("English print. Magenta tag.") : t("Japanese print. Pink tag.")}
             />
           ))}
         </ul>

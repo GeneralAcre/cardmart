@@ -26,8 +26,8 @@ export const CARD_GAME_LABELS: Record<CardGame, string> = {
 export const CARD_GAMES: CardGame[] = ["POKEMON", "ONE_PIECE"];
 
 export const CARD_GAME_BADGE_CLASS: Record<CardGame, string> = {
-  POKEMON: "bg-[#003049] text-white",
-  ONE_PIECE: "bg-[#D62828] text-white",
+  POKEMON: "bg-[#788BFF] text-black",
+  ONE_PIECE: "bg-[#E2FDFF] text-black",
 };
 
 /** The print language of the card itself, not the site's UI language. */
@@ -39,8 +39,8 @@ export const CARD_LANGUAGE_LABELS: Record<CardLanguage, string> = {
 export const CARD_LANGUAGES: CardLanguage[] = ["ENGLISH", "JAPANESE"];
 
 export const CARD_LANGUAGE_BADGE_CLASS: Record<CardLanguage, string> = {
-  ENGLISH: "bg-[#FCBF49] text-[#003049]",
-  JAPANESE: "bg-[#F77F00] text-white",
+  ENGLISH: "bg-[#F10291] text-white",
+  JAPANESE: "bg-[#FFCAE4] text-black",
 };
 
 export const CATEGORY_LABELS: Record<AssetCategory, string> = {

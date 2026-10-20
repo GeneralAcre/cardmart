@@ -132,6 +132,32 @@ function YourStanding({ me, rows }: { me: Me; rows: TraderRow[] }) {
   );
 }
 
+/** An empty podium spot: the same card shell as a trader's, with nothing in it yet. */
+function PodiumPlaceholder({ rank }: { rank: number }) {
+  const t = useT();
+  const medal = MEDAL[rank - 1];
+  const first = rank === 1;
+  return (
+    <div className="bg-card/60 relative flex h-full w-full flex-col overflow-hidden rounded-2xl border border-dashed p-4 sm:p-6">
+      <Watermark className="-top-2 -right-2 text-[6rem] sm:-top-3 sm:-right-3 sm:text-[8rem]">{pad(rank)}</Watermark>
+      <span className={cn("relative font-bold leading-none tracking-tight tabular-nums opacity-40", medal.text, first ? "text-5xl sm:text-7xl" : "text-5xl sm:text-6xl")}>
+        {pad(rank)}
+      </span>
+      <span className="relative mt-3 flex min-w-0 items-center gap-3">
+        <span aria-hidden className={cn("shrink-0 rounded-full border-2 border-dashed opacity-50", medal.ring.replace("ring-", "border-"), first ? "size-14 sm:size-20" : "size-14 sm:size-[4.5rem]")} />
+        <span aria-hidden className="flex min-w-0 flex-1 flex-col gap-2">
+          <span className="bg-muted h-4 w-3/4 rounded" />
+          <span className="bg-muted h-3 w-1/2 rounded" />
+        </span>
+      </span>
+      <span className="relative mt-4 flex items-center justify-between gap-3 border-t pt-3 sm:mt-6 sm:pt-5">
+        <span className="text-muted-foreground text-base font-medium tracking-[0.15em] uppercase sm:text-lg">{t("Total gain")}</span>
+        <span aria-hidden className="bg-muted h-6 w-24 rounded" />
+      </span>
+    </div>
+  );
+}
+
 function PodiumCard({ r, rank, onSelect }: { r: TraderRow; rank: number; onSelect: () => void }) {
   const t = useT();
   const medal = MEDAL[rank - 1];
@@ -181,7 +207,7 @@ function PodiumCard({ r, rank, onSelect }: { r: TraderRow; rank: number; onSelec
 // block whose height follows their rank, so the winner is in the middle on top.
 function MobilePodium({ rows, onSelect }: { rows: TraderRow[]; onSelect: (id: string) => void }) {
   const top = rows.slice(0, 3);
-  const order = [1, 0, 2].filter((i) => i < top.length);
+  const order = [1, 0, 2];
   const blockHeight = ["h-32", "h-24", "h-20"];
   return (
     <ol className="grid grid-cols-3 items-end gap-2 sm:hidden">
@@ -189,6 +215,20 @@ function MobilePodium({ rows, onSelect }: { rows: TraderRow[]; onSelect: (id: st
         const r = top[i];
         const medal = MEDAL[i];
         const first = i === 0;
+        if (!r) {
+          // An empty spot: a dashed avatar, a blank name line and the block with just its number.
+          return (
+            <li key={`empty-${i}`} className="min-w-0">
+              <div aria-hidden className="flex w-full min-w-0 flex-col items-center gap-1.5">
+                <span className={cn("rounded-full border-2 border-dashed opacity-50", medal.ring.replace("ring-", "border-"), first ? "size-16" : "size-12")} />
+                <span className="bg-muted h-3 w-2/3 rounded" />
+                <span className={cn("bg-card/60 relative flex w-full items-start justify-center overflow-hidden rounded-t-xl border border-b-0 border-dashed pt-2", blockHeight[i])}>
+                  <span className={cn("text-3xl font-bold leading-none tabular-nums opacity-40", medal.text)}>{pad(i + 1)}</span>
+                </span>
+              </div>
+            </li>
+          );
+        }
         return (
           <li key={r.userId} className="min-w-0">
             <button type="button" onClick={() => onSelect(r.userId)} className="flex w-full min-w-0 flex-col items-center gap-1.5 text-center">
@@ -242,19 +282,15 @@ export function TopTraders({ rows, me }: { rows: TraderRow[]; me: Me }) {
     <div className="flex flex-col gap-6 sm:gap-8">
       <MobilePodium rows={rows} onSelect={setOpenId} />
 
-      <ol
-        className={cn(
-          "hidden gap-4 sm:grid",
-          rows.length >= 3 && "sm:grid-cols-3",
-          rows.length === 2 && "sm:mx-auto sm:w-full sm:max-w-2xl sm:grid-cols-2",
-          rows.length === 1 && "sm:mx-auto sm:w-full sm:max-w-sm",
-        )}
-      >
-        {rows.slice(0, 3).map((r, i) => (
-          <li key={r.userId} className={podiumOrder[i]}>
-            <PodiumCard r={r} rank={i + 1} onSelect={() => setOpenId(r.userId)} />
-          </li>
-        ))}
+      <ol className="hidden gap-4 sm:grid sm:grid-cols-3">
+        {[0, 1, 2].map((i) => {
+          const r = rows[i];
+          return (
+            <li key={r?.userId ?? `empty-${i}`} className={podiumOrder[i]}>
+              {r ? <PodiumCard r={r} rank={i + 1} onSelect={() => setOpenId(r.userId)} /> : <PodiumPlaceholder rank={i + 1} />}
+            </li>
+          );
+        })}
       </ol>
 
       <YourStanding me={me} rows={rows} />
