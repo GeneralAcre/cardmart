@@ -1,10 +1,12 @@
 "use client";
 
 import { GameIcon } from "@/components/ui/game-icon";
+import { Cell, Pie, PieChart } from "recharts";
+import { ChartContainer } from "@/components/ui/chart";
 import Link from "next/link";
 
 import { formatThb } from "@/lib/format";
-import { CARD_GAME_BADGE_CLASS, CARD_GAME_LABELS } from "@/lib/labels";
+import { CARD_GAME_COLOR, CARD_GAME_LABELS } from "@/lib/labels";
 import type { PortfolioStats as Stats } from "@/lib/stats";
 import { cn } from "@/lib/utils";
 import { useT } from "@/components/landing/language-provider";
@@ -33,30 +35,72 @@ function Tile({
   );
 }
 
-/** One breakdown row: label, share bar and share. Value-weighted, or by count when nothing is priced. */
-function Breakdown({ title, rows }: { title: string; rows: { label: React.ReactNode; key: string; share: number }[] }) {
-  const sorted = [...rows].sort((a, b) => b.share - a.share);
+
+// Slice colours: the green-to-yellow palette from the high grade down, so the
+// best grades are the brightest. Black Label and ungraded get their own.
+const GRADE_PALETTE = ["#FFFF3F", "#EEEF20", "#D4D700", "#AACC00", "#80B918", "#55A630", "#2B9348", "#007F5F"];
+const BLACK_LABEL_COLOR = "#1c1c1f";
+const UNGRADED_COLOR = "#9aa5a0";
+
+function gradeLabel(key: string, t: (s: string) => string) {
+  return key.startsWith("Grade ") ? `${t("Grade")} ${key.slice(6)}` : t(key);
+}
+
+type Slice = { key: string; label: React.ReactNode; share: number; color: string };
+
+/** The score colours spread across the whole palette (not just its first few shades), so neighbouring slices are easy to tell apart even with only two or three grades. */
+function gradeSlices(rows: { key: string; share: number }[], t: (s: string) => string): Slice[] {
+  const scores = rows.filter((r) => r.key !== "Black Label" && r.key !== "Ungraded");
+  return rows.map((row) => {
+    const rank = scores.findIndex((r) => r.key === row.key);
+    const paletteIndex = scores.length > 1 ? Math.round((rank * (GRADE_PALETTE.length - 1)) / (scores.length - 1)) : 0;
+    return {
+      ...row,
+      label: gradeLabel(row.key, t),
+      color: row.key === "Black Label" ? BLACK_LABEL_COLOR : row.key === "Ungraded" ? UNGRADED_COLOR : GRADE_PALETTE[paletteIndex],
+    };
+  });
+}
+
+/** A share-of-the-whole donut with its key underneath (side by side on wide screens). Used for both the games and the grades. */
+function Donut({ title, slices }: { title: string; slices: Slice[] }) {
   return (
-    <div className="bg-card flex min-w-0 flex-col gap-2 rounded-xl border p-4 sm:gap-3 sm:p-5">
+    <div className="bg-card flex min-w-0 flex-col gap-3 rounded-xl border p-4 sm:gap-4 sm:p-5">
       <h3 className="text-muted-foreground text-xs leading-tight font-medium sm:text-sm">{title}</h3>
-      <ul className="flex flex-col gap-2 sm:gap-3">
-        {sorted.map((row, i) => (
-          <li key={row.key} className="flex flex-col gap-1 sm:gap-1.5">
-            <div className="flex items-center justify-between gap-2 text-xs sm:text-sm">
-              <span className={cn("min-w-0 truncate", i === 0 && "text-sm font-bold sm:text-base")}>{row.label}</span>
-              <span className={cn("shrink-0 tabular-nums", i === 0 ? "text-foreground text-sm font-bold sm:text-base" : "text-muted-foreground")}>
-                {Math.round(row.share * 100)}%
-              </span>
-            </div>
-            <div className="bg-muted h-2 overflow-hidden rounded-full">
-              <div className="bg-foreground/80 h-full rounded-full" style={{ width: `${Math.max(row.share * 100, 2)}%` }} />
-            </div>
-          </li>
-        ))}
-      </ul>
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:gap-4">
+        <ChartContainer config={{}} className="mx-auto aspect-square size-28 shrink-0 sm:size-32 xl:mx-0 xl:size-28">
+          <PieChart>
+            <Pie
+              data={slices}
+              dataKey="share"
+              nameKey="key"
+              innerRadius="58%"
+              outerRadius="100%"
+              paddingAngle={slices.length > 1 ? 2 : 0}
+              stroke="var(--card)"
+              strokeWidth={2}
+              isAnimationActive={false}
+            >
+              {slices.map((s) => (
+                <Cell key={s.key} fill={s.color} />
+              ))}
+            </Pie>
+          </PieChart>
+        </ChartContainer>
+        <ul className="flex min-w-0 flex-col gap-1.5 xl:flex-1">
+          {slices.map((s) => (
+            <li key={s.key} className="flex items-center gap-2 text-xs sm:text-sm">
+              <span className="size-2.5 shrink-0 rounded-full border border-black/15" style={{ backgroundColor: s.color }} />
+              <span className="flex min-w-0 flex-1 items-center gap-1.5 truncate">{s.label}</span>
+              <span className="text-foreground shrink-0 font-semibold tabular-nums">{Math.round(s.share * 100)}%</span>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }
+
 /**
  * The portfolio at a glance, like a brokerage account: market value, profit
  * or loss, the 30-day move against the CardMart Index, best and worst card,
@@ -100,22 +144,23 @@ export function PortfolioStats({ stats }: { stats: Stats }) {
           )}
         </Tile>
 
-        <Breakdown
+        <Donut
           title={byValue ? t("By game (market value)") : t("By game")}
-          rows={stats.byGame.map((g) => ({
+          slices={stats.byGame.map((g) => ({
             key: g.key,
             label: (
-              <span className={cn("inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold", CARD_GAME_BADGE_CLASS[g.key])}>
-                <GameIcon game={g.key} size={12} />
+              <>
+                <GameIcon game={g.key} size={14} />
                 {t(CARD_GAME_LABELS[g.key])}
-              </span>
+              </>
             ),
             share: share(g),
+            color: CARD_GAME_COLOR[g.key],
           }))}
         />
-        <Breakdown
+        <Donut
           title={byValue ? t("By grade (market value)") : t("By grade")}
-          rows={stats.byGrade.map((g) => ({ key: g.key, label: t(g.key), share: share(g) }))}
+          slices={gradeSlices(stats.byGrade.map((g) => ({ key: g.key, share: share(g) })), t)}
         />
     </section>
   );

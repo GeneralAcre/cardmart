@@ -1,4 +1,5 @@
 import { AppearanceSettings, ProfileForm, ShippingForm } from "@/components/settings/settings-forms";
+import { ProfilePhoto } from "@/components/settings/profile-photo";
 import { getCurrentUser } from "@/lib/session";
 import { getT } from "@/lib/i18n/server";
 
@@ -19,6 +20,7 @@ export default async function SettingsPage() {
         </section>
         <section className="bg-card flex flex-col gap-4 rounded-xl border p-4 sm:p-6">
           <h2 className="text-base font-semibold">{t("Profile")}</h2>
+          <ProfilePhoto image={user.image} name={user.name ?? ""} initials={(user.name ?? user.handle ?? "?").split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()} />
           <ProfileForm name={user.name ?? ""} handle={user.handle ?? ""} />
         </section>
         <section className="bg-card flex flex-col gap-4 rounded-xl border p-4 sm:p-6">

@@ -21,7 +21,6 @@ export const LANDING_DICTIONARY = {
       titleLine1: "What's your card",
       titleLine2: "really worth?",
       subtitle: "See real prices for every card. Then buy and sell safely, right here.",
-      noWalletNote: "No wallet needed to start — one is created for you automatically",
     },
     cta: {
       enterMarketplace: "Go to marketplace",
@@ -169,7 +168,6 @@ export const LANDING_DICTIONARY = {
       titleLine1: "การ์ดของคุณ",
       titleLine2: "มีมูลค่าเท่าไรกันแน่?",
       subtitle: "ดูราคาจริงของการ์ดทุกใบ แล้วซื้อขายได้อย่างปลอดภัยที่นี่",
-      noWalletNote: "ไม่ต้องมีกระเป๋าเงินก่อนเริ่มใช้งาน ระบบจะสร้างให้อัตโนมัติ",
     },
     cta: {
       enterMarketplace: "ไปที่ตลาดซื้อขาย",

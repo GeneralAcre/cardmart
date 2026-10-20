@@ -35,7 +35,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { auctionApprovalNeeded, delistAsset, startAuction, updateListingPrice, prepareVaultRedeem, vaultRedeem, vaultRelist } from "@/lib/actions";
 import { useWalletStore } from "@/lib/web3/wallet-store";
 import { formatGrade, formatThb } from "@/lib/format";
-import { CARD_GAME_LABELS } from "@/lib/labels";
+import { CARD_GAME_BADGE_CLASS, CARD_GAME_LABELS } from "@/lib/labels";
 import type { AssetSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { displayImage } from "@/lib/card-image";
@@ -291,17 +291,15 @@ export function PortfolioItemCard({
             />
           </div>
         )}
-        {thumbnail && (
-          <span
-            className={cn(
-              "absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-semibold backdrop-blur-sm",
-              asset.isBlackLabel ? "bg-neutral-900/90 text-amber-400" : "bg-foreground/90 text-background",
-            )}
-          >
-            {asset.gradingCompany === "RAW" ? "RAW" : `${asset.gradingCompany} ${formatGrade(asset.grade)}`}
-            {asset.isBlackLabel && " · Black Label"}
-          </span>
-        )}
+        {/* The game tag, the same coloured chip as on the Market cards. */}
+        <span
+          className={cn(
+            "absolute left-2 top-2 rounded-md px-2 py-1 text-[11px] leading-none font-semibold backdrop-blur-sm",
+            CARD_GAME_BADGE_CLASS[asset.game],
+          )}
+        >
+          {t(CARD_GAME_LABELS[asset.game])}
+        </span>
       </Link>
       {/* Gain or loss on the card, pinned over the image corner. A sibling of the
           link (not inside it) because the badge can open a dialog. */}
@@ -311,10 +309,23 @@ export function PortfolioItemCard({
         </div>
       )}
       <div className="flex flex-col gap-1">
-        <span className="text-muted-foreground text-xs">{t(CARD_GAME_LABELS[asset.game])}</span>
-        <Link href={`/item/${asset.id}`} className="line-clamp-1 min-w-0 text-sm font-semibold hover:underline">
-          {asset.name}
-        </Link>
+        <div className="flex min-w-0 items-center justify-between gap-2">
+          <Link href={`/item/${asset.id}`} className="line-clamp-1 min-w-0 text-sm font-semibold hover:underline">
+            {asset.name}
+          </Link>
+          {/* Who graded it and the score, on the right of the name, like the Market cards. */}
+          <span className="flex shrink-0 items-center gap-1 rounded-md border px-2 py-1 text-[11px] leading-none">
+            {asset.gradingCompany === "RAW" ? (
+              <span className="font-semibold">{t("Ungraded")}</span>
+            ) : (
+              <>
+                <span className="text-muted-foreground">{asset.gradingCompany}</span>
+                <span className="font-bold">{formatGrade(asset.grade)}</span>
+              </>
+            )}
+            {asset.isBlackLabel && <span className="font-semibold text-amber-500">· BL</span>}
+          </span>
+        </div>
         <p className="text-muted-foreground line-clamp-1 text-xs">{asset.subtitle}</p>
       </div>
 

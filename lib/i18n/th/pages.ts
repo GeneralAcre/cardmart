@@ -1,5 +1,12 @@
 // Messages, seller store, market overview, getting-started guide, onboarding.
 export const PAGES: Record<string, string> = {
+  "Change photo": "เปลี่ยนรูป",
+  "Add photo": "เพิ่มรูป",
+  "Remove photo": "ลบรูป",
+  "Photo updated.": "อัปเดตรูปแล้ว",
+  "Photo removed.": "ลบรูปแล้ว",
+  "Could not upload that photo. Try again.": "อัปโหลดรูปไม่สำเร็จ ลองอีกครั้ง",
+  "Could not remove the photo.": "ลบรูปไม่สำเร็จ",
   "Your account, wallet and settings.": "บัญชี กระเป๋าเงิน และการตั้งค่าของคุณ",
   "Find your next card at the right price.": "หาการ์ดใบถัดไปในราคาที่ใช่",
   "Compare prices across cards and grades, and follow the ones you love.": "เปรียบเทียบราคาการ์ดและเกรด แล้วติดตามใบที่คุณชอบ",

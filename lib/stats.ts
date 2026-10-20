@@ -10,6 +10,7 @@ import { buildIndex, buildMembershipIndex, changeOver, changeSincePrevious, chan
 import { displayImage } from "@/lib/card-image";
 import { TOP_N } from "@/lib/top-index";
 import type { HoldingPnl } from "@/lib/pnl";
+import { formatGrade } from "@/lib/format";
 
 // Market-wide and portfolio statistics, all from the daily eBay market prices
 // saved in MarketPriceSnapshot. Nothing is estimated: a card counts only from
@@ -273,13 +274,18 @@ export interface PortfolioStats {
 
 type HeldCard = CardLike & { id: string; game: CardGame };
 
-/** Grade buckets for the portfolio breakdown. */
+/** One bucket per grade: Black Label, then every score on its own (10, 9.5, 9, 8.5, …), then ungraded. */
 function gradeBucket(card: CardLike): string {
   if (card.gradingCompany === "RAW" || card.grade == null) return "Ungraded";
   if (card.isBlackLabel) return "Black Label";
-  if (card.grade >= 10) return "Grade 10";
-  if (card.grade >= 9) return "Grade 9";
-  return "Grade 8 and below";
+  return `Grade ${formatGrade(card.grade)}`;
+}
+
+/** Black Label first, the scores from highest to lowest, ungraded last. */
+function gradeBucketRank(key: string): number {
+  if (key === "Black Label") return Infinity;
+  if (key === "Ungraded") return -Infinity;
+  return Number(key.replace("Grade ", ""));
 }
 
 /** Totals, best and worst card, 30-day change against the index, and breakdowns. */
@@ -335,7 +341,6 @@ export async function getPortfolioStats(
   }
 
   ranked.sort((x, y) => y.gainPct - x.gainPct);
-  const gradeOrder = ["Black Label", "Grade 10", "Grade 9", "Grade 8 and below", "Ungraded"];
   return {
     marketValueThb,
     pricedCount,
@@ -347,6 +352,8 @@ export async function getPortfolioStats(
     best: ranked.length > 0 ? ranked[0] : null,
     worst: ranked.length > 1 ? ranked.at(-1)! : null,
     byGame: [...byGame.entries()].map(([key, v]) => ({ key, ...v })),
-    byGrade: gradeOrder.filter((k) => byGrade.has(k)).map((key) => ({ key, ...byGrade.get(key)! })),
+    byGrade: [...byGrade.entries()]
+      .sort(([a], [b]) => gradeBucketRank(b) - gradeBucketRank(a))
+      .map(([key, v]) => ({ key, ...v })),
   };
 }

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { getSessionUser } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
+import { isOwnUploadUrl } from "@/lib/listing-checks";
 
 const nameSchema = z.string().min(2, "Enter your name.");
 const handleSchema = z
@@ -127,4 +128,18 @@ export async function updateDisplayProfile(
   });
 
   return { success: true };
+}
+
+/**
+ * Sets (or, with null, clears) the user's profile picture. The picture is
+ * uploaded straight to our own Blob store from the browser; this only saves
+ * its address, and refuses any address that isn't one of our own uploads.
+ */
+export async function updateProfileImage(url: string | null): Promise<{ error?: string }> {
+  const user = await getSessionUser();
+  if (url !== null && !isOwnUploadUrl(url)) {
+    return { error: "The picture must be uploaded here, not linked from elsewhere." };
+  }
+  await prisma.user.update({ where: { id: user.id }, data: { image: url } });
+  return {};
 }

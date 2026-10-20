@@ -93,7 +93,6 @@ function LandingPageContent({ authenticated, showcase }: LandingPageProps) {
           <p className="text-muted-foreground max-w-xl text-base text-balance sm:text-lg">{t.hero.subtitle}</p>
           <div className="flex flex-col items-center gap-2.5 pt-2">
             <LandingCta authenticated={authenticated} className="h-11 w-auto rounded-full px-8" />
-            {!authenticated && <span className="text-muted-foreground text-xs">{t.hero.noWalletNote}</span>}
           </div>
         </div>
       </div>

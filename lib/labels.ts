@@ -25,6 +25,12 @@ export const CARD_GAME_LABELS: Record<CardGame, string> = {
 
 export const CARD_GAMES: CardGame[] = ["POKEMON", "ONE_PIECE"];
 
+/** The game's own colour as a plain value (same as its tag), for bars and charts. */
+export const CARD_GAME_COLOR: Record<CardGame, string> = {
+  POKEMON: "#788BFF",
+  ONE_PIECE: "#E2FDFF",
+};
+
 export const CARD_GAME_BADGE_CLASS: Record<CardGame, string> = {
   POKEMON: "bg-[#788BFF] text-black",
   ONE_PIECE: "bg-[#E2FDFF] text-black",
