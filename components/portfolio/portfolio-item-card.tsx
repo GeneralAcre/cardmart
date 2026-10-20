@@ -276,7 +276,7 @@ export function PortfolioItemCard({
             alt={asset.name}
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1280px) 33vw, 25vw"
-            className="object-contain p-4 drop-shadow-[0_12px_24px_rgba(0,0,0,0.6)] sm:p-5"
+            className="object-contain p-4 photo-shadow sm:p-5"
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center p-5">
@@ -306,7 +306,7 @@ export function PortfolioItemCard({
       {/* Gain or loss on the card, pinned over the image corner. A sibling of the
           link (not inside it) because the badge can open a dialog. */}
       {pnl && (
-        <div className="absolute right-2 top-2 rounded-md bg-black/70 px-2 py-0.5 backdrop-blur-sm">
+        <div className="bg-background/90 absolute right-2 top-2 rounded-md px-2 py-0.5 shadow-sm backdrop-blur-sm">
           <HoldingPnlBlock assetId={asset.id} pnl={pnl} />
         </div>
       )}

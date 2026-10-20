@@ -43,6 +43,7 @@
   --highlight-foreground: #0a0a0a;
   /* The spotlight a card image sits on (see .card-stage). */
   --stage: radial-gradient(120% 80% at 50% 0%, #2a2a2a 0%, #171717 45%, #0f0f0f 100%);
+  --photo-shadow: 0 12px 24px rgba(0, 0, 0, 0.6);
 }
 
 /* Light theme, opt-in from the theme toggle (<html data-theme="light">).
@@ -81,6 +82,7 @@
   --chart-5: oklch(0.82 0 0);
   --highlight-foreground: #ffffff;
   --stage: radial-gradient(120% 80% at 50% 0%, #ffffff 0%, #f3f3f2 50%, #e9e9e7 100%);
+  --photo-shadow: 0 6px 14px rgba(0, 0, 0, 0.2);
 }
 
 /* Amber notes (Black Label, "rough guide", above-market) are tuned for the
@@ -223,4 +225,10 @@ html[lang="th"] .hero-title {
 /* A card tilted by --tilt (Market hero). */
 .card-tilt {
   transform: rotate(var(--tilt, 0deg));
+}
+
+/* The soft shadow under a card photo on its stage: deep on the dark stage,
+   light on the light one (a heavy shadow there reads as a grey smudge). */
+.photo-shadow {
+  filter: drop-shadow(var(--photo-shadow));
 }

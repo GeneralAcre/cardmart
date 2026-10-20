@@ -174,8 +174,10 @@ export function MarketPulse({ rows }: { rows: LeaderboardRow[] }) {
   return (
     <section className="flex w-full flex-col gap-6 lg:flex-row">
       <div className="flex min-w-0 flex-col gap-3 lg:flex-[2]">
-        <div className="flex h-9 items-center">
+        <div className="flex h-9 items-center justify-between gap-3">
           {sectionTitle(Activity, t("Trending"))}
+          {/* Phones stack Trending above the heatmap, so the shared period picker sits up here; on wide screens it stays by the heatmap. */}
+          <div className="lg:hidden">{periodPicker}</div>
         </div>
         <div className="flex flex-col gap-3">
           <MoversList title="Top gainers" icon={TrendingUp} tone="up" rows={gainers} period={period} />
@@ -186,7 +188,7 @@ export function MarketPulse({ rows }: { rows: LeaderboardRow[] }) {
       <div className="flex min-w-0 flex-col gap-3 lg:flex-[3]">
         <div className="flex h-9 items-center justify-between gap-3">
           {sectionTitle(LayoutGrid, t("Heatmap"))}
-          {periodPicker}
+          <div className="hidden lg:block">{periodPicker}</div>
         </div>
         <MarketHeatmap rows={rows} compact period={period} onPeriodChange={setPeriod} />
       </div>

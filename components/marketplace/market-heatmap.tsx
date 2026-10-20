@@ -267,10 +267,13 @@ export function MarketHeatmap({
           sorted.map((t, i) => {
             const r = rects[i];
             const { background, dark } = tileStyle(t.change, theme);
-            const big = r.w > 110 && r.h > 64;
-            const showCover = r.w > 150 && r.h > 150;
+            const minSide = Math.min(r.w, r.h);
+            const big = r.w > 150 && r.h > 100;
+            const showCover = r.w > 190 && r.h > 190;
             const coverWidth = Math.min(112, Math.max(48, Math.floor(Math.min(r.w * 0.24, r.h * 0.24))));
-            const medium = r.w > 64 && r.h > 36;
+            // Every tile gets a label and its change. Scale down for narrow
+            // treemap cells instead of hiding the text behind a size cutoff.
+            const fontSize = minSide < 44 ? 8 : minSide < 64 ? 9 : minSide < 90 ? 10 : undefined;
             const clickable = Boolean(t.href || t.series);
             return (
               <button
@@ -286,16 +289,18 @@ export function MarketHeatmap({
                 style={{ left: r.x, top: r.y, width: r.w, height: r.h, background }}
               >
                 {showCover && <CoverThumb card={t.cover} className="mb-2 shadow-md" style={{ width: coverWidth }} />}
-                {medium && (
-                  <span className={cn("line-clamp-2 leading-tight font-semibold", big ? "text-sm" : "text-[11px]")}>
+                <span
+                  className={cn("line-clamp-2 leading-tight font-semibold", big ? "text-sm" : "text-[11px]")}
+                  style={fontSize ? { fontSize } : undefined}
+                >
                     {t.label}
-                  </span>
-                )}
-                {medium && (
-                  <span className={cn("font-bold tabular-nums", big ? "text-base" : "text-[11px]")}>
+                </span>
+                <span
+                  className={cn("font-bold tabular-nums", big ? "text-base" : "text-[11px]")}
+                  style={fontSize ? { fontSize } : undefined}
+                >
                     {formatChange(t.change)}
-                  </span>
-                )}
+                </span>
               </button>
             );
           })

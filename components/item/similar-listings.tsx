@@ -123,7 +123,7 @@ function ListingCard({ listing: l }: { listing: SimilarListing }) {
             alt={l.name}
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
-            className="object-contain p-4 drop-shadow-[0_12px_24px_rgba(0,0,0,0.6)] transition-transform duration-300 group-hover:scale-[1.04]"
+            className="object-contain p-4 photo-shadow transition-transform duration-300 group-hover:scale-[1.04]"
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center p-4">

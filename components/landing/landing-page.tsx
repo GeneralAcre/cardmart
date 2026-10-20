@@ -3,6 +3,7 @@
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { CardWall } from "@/components/landing/card-wall";
 import { ConfidenceWords } from "@/components/landing/confidence-words";
 import { FeatureShowcase } from "@/components/landing/feature-showcase";
@@ -29,9 +30,10 @@ function LandingCta({ authenticated, className }: { authenticated: boolean; clas
   }
   // A visitor can look around the market first and sign in whenever they like.
   return (
-    <div className="flex flex-col items-center gap-3 sm:flex-row">
-      <LoginButton className={className} label="Login" />
-      <Button asChild size="lg" variant="outline" className={className}>
+    <div className="flex flex-row items-center justify-center gap-2 sm:gap-3">
+      {/* Slimmer on phones so the two buttons always fit side by side. */}
+      <LoginButton className={cn(className, "px-5 sm:px-8")} label="Login" />
+      <Button asChild size="lg" variant="outline" className={cn(className, "px-5 sm:px-8")}>
         <Link href="/marketplace">{t.cta.browseMarketplace}</Link>
       </Button>
     </div>
