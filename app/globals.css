@@ -236,3 +236,13 @@ html[lang="th"] .hero-title {
 :root[data-theme="light"] .heat-tile {
   color: var(--ink-light, #0a0a0a);
 }
+
+/* Decorative glows made for the dark page: on the light theme they only smudge, so they are hidden. */
+:root[data-theme="light"] .dark-only {
+  display: none;
+}
+
+/* A white logo turned dark on the light theme. */
+:root[data-theme="light"] .logo-adaptive {
+  filter: invert(1);
+}

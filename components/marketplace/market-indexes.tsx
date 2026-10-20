@@ -29,7 +29,7 @@ function IndexIcon({ index }: { index: MarketIndex["key"] }) {
     <span aria-hidden className="flex size-7 shrink-0 items-center justify-center">
       {index === "ALL" ? (
         // eslint-disable-next-line @next/next/no-img-element -- tiny static logo
-        <img src="/cardmart-logo.png" alt="" className="size-3.5 object-contain" />
+        <img src="/cardmart-logo.png" alt="" className="logo-adaptive size-3.5 object-contain" />
       ) : (
         <GameIcon game={index} size={20} />
       )}
@@ -115,6 +115,7 @@ function Beam({ strong }: { strong?: boolean }) {
       <div
         aria-hidden
         className={cn(
+          "dark-only",
           "pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-32 transition-opacity duration-300",
           strong ? "opacity-100" : "opacity-70 group-hover:opacity-100",
         )}
@@ -122,7 +123,7 @@ function Beam({ strong }: { strong?: boolean }) {
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute bottom-0 left-1/2 h-px w-3/5 -translate-x-1/2"
+        className="dark-only pointer-events-none absolute bottom-0 left-1/2 h-px w-3/5 -translate-x-1/2"
         style={{
           backgroundImage: "linear-gradient(90deg, transparent, var(--foreground), transparent)",
           boxShadow: "0 0 20px 2px color-mix(in oklab, var(--foreground) 40%, transparent)",
@@ -145,7 +146,7 @@ function IndexCard({ index }: { index: MarketIndex }) {
       {/* Glass: a faint sheen falling from the top-left corner. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10"
+        className="dark-only pointer-events-none absolute inset-0 -z-10"
         style={{ backgroundImage: "linear-gradient(150deg, color-mix(in oklab, var(--foreground) 8%, transparent), transparent 42%)" }}
       />
       <Beam />
@@ -196,7 +197,7 @@ export function MarketIndexes({ indexes }: { indexes: MarketIndex[] }) {
         {/* The beams spill a little light onto the page under the cards. */}
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-x-[6%] -bottom-10 -z-10 h-36 blur-3xl"
+          className="dark-only pointer-events-none absolute inset-x-[6%] -bottom-10 -z-10 h-36 blur-3xl"
           style={{ backgroundImage: "radial-gradient(60% 100% at 50% 100%, color-mix(in oklab, var(--foreground) 18%, transparent), transparent 70%)" }}
         />
         <div className="grid grid-cols-3 gap-4">
