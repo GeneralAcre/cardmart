@@ -13,7 +13,7 @@ const MIDDLE = Math.floor(VISIBLE / 2);
 // tone marks sit above the line and some vowels below it.
 const ROW_EM = { en: 1.15, th: 1.55 } as const;
 // Thai sits a touch smaller than English: its glyphs read larger at the same size.
-const FONT_SIZE = { en: "clamp(1.5rem, 5.5vw, 6rem)", th: "clamp(1.4rem, 5.25vw, 5.5rem)" } as const;
+const FONT_SIZE = { en: "clamp(1rem, 5vw, 6rem)", th: "clamp(1rem, 4.8vw, 5.5rem)" } as const;
 
 /**
  * "BUY / SELL / TRADE / … WITH CONFIDENCE": a column of things you can do on
@@ -60,7 +60,7 @@ export function ConfidenceWords() {
           phone. Centred, so it's balanced in both languages on any width. */}
       <div
         aria-hidden
-        className="mx-auto flex max-w-6xl items-center justify-center gap-[0.5em] px-4 leading-none font-black tracking-tight uppercase sm:px-6"
+        className="mx-auto flex max-w-6xl flex-row items-center justify-center gap-[0.65em] px-3 text-center leading-none font-black tracking-tight uppercase sm:gap-[0.5em] sm:px-6"
         style={{ fontSize: FONT_SIZE[locale] }}
       >
         <div

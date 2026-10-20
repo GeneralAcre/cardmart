@@ -45,7 +45,6 @@ function IndexIcon({ index }: { index: MarketIndex["key"] }) {
 const formatLevel = (v: number) => v.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const toneClass = (pct: number | null) =>
   pct == null || Math.abs(pct) < 0.05 ? "text-muted-foreground" : pct > 0 ? "text-success" : "text-destructive";
-const formatPct = (pct: number | null) => (pct == null ? "—" : `${pct > 0 ? "+" : ""}${pct.toFixed(1)}%`);
 
 /** The index's line is green when up and red when down, with a hover tooltip. */
 function Sparkline({ index, className, tooltip = true }: { index: MarketIndex; className: string; tooltip?: boolean }) {
@@ -186,34 +185,17 @@ function IndexCard({ index }: { index: MarketIndex }) {
   );
 }
 
-/** Phones: a small tile per index, three side by side, like a stock app's ticker strip. */
-function IndexTile({ index }: { index: MarketIndex }) {
-  const { tr: t } = useLanguage();
-  const last = index.points.at(-1);
-
-  return (
-    <Link href={HREF[index.key]} className="bg-card active:bg-accent group relative isolate flex min-w-0 flex-col gap-1.5 overflow-hidden p-2.5 pb-3.5">
-      <Beam strong />
-      <span className="min-h-8 text-xs leading-tight font-semibold">{t(NAMES[index.key])}</span>
-      <span className="flex items-center justify-between gap-1">
-        <span className="text-lg leading-tight font-bold tabular-nums">{last ? formatLevel(last.price) : "—"}</span>
-        <span className={cn("shrink-0 text-xs font-semibold tabular-nums", toneClass(index.change1d))}>{formatPct(index.change1d)}</span>
-      </span>
-    </Link>
-  );
-}
-
-/**
- * The indexes, like a stock market's headline indexes: one level for CardMart's
- * own cards and one each for the 50 most valuable Pokémon and One Piece cards.
- */
+/** The indexes, like a stock market's headline indexes. */
 export function MarketIndexes({ indexes }: { indexes: MarketIndex[] }) {
   if (indexes.every((i) => i.points.length === 0)) return null;
   return (
     <>
-      <div className="bg-border grid grid-cols-3 gap-px overflow-hidden rounded-xl border md:hidden">
+      {/* Phones: the same glass cards as desktop, in a row you swipe through, with the next card peeking in. */}
+      <div className="-mx-4 flex snap-x snap-mandatory scroll-pl-4 gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] md:hidden [&::-webkit-scrollbar]:hidden">
         {indexes.map((index) => (
-          <IndexTile key={index.key} index={index} />
+          <div key={index.key} className="w-[82%] shrink-0 snap-start">
+            <IndexCard index={index} />
+          </div>
         ))}
       </div>
       <section className="relative isolate hidden md:block">

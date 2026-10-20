@@ -52,7 +52,6 @@ export const LANDING_DICTIONARY = {
     showcase: {
       badge: "Inside CardMart",
       title: "See it before you sign in",
-      subtitle: "Price data, protected payments, live auctions and a buying agent — here is what each looks like.",
       sample: "Sample data",
       market: {
         eyebrow: "Market data",
@@ -201,7 +200,6 @@ export const LANDING_DICTIONARY = {
     showcase: {
       badge: "ภายใน CardMart",
       title: "ดูก่อนเข้าสู่ระบบ",
-      subtitle: "ข้อมูลราคา การชำระเงินที่ปลอดภัย การประมูลสด และเอเจนต์ช่วยซื้อ — หน้าตาเป็นแบบนี้",
       sample: "ข้อมูลตัวอย่าง",
       market: {
         eyebrow: "ข้อมูลตลาด",

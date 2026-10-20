@@ -462,7 +462,6 @@ export function FeatureShowcase() {
             {s.badge}
           </span>
           <h2 className="mt-5 text-3xl font-semibold tracking-tight text-balance sm:text-4xl">{s.title}</h2>
-          <p className="text-muted-foreground mt-4 text-balance">{s.subtitle}</p>
         </div>
 
         <div className="mt-16 flex flex-col gap-24 sm:mt-20 sm:gap-32">

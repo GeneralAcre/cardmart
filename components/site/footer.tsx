@@ -5,6 +5,7 @@ import { Logo } from "@/components/site/logo";
 import { getT } from "@/lib/i18n/server";
 
 const X_URL = "https://x.com/cardmartapp";
+const INSTAGRAM_URL = "https://www.instagram.com/cardmart_official/";
 
 const COLUMNS = [
   {
@@ -35,7 +36,7 @@ const COLUMNS = [
   },
 ];
 
-// Round icon buttons under the tagline. Add Discord, GitHub, etc. here.
+// Round icon buttons under the tagline (X, Instagram). Add more here.
 const SOCIAL_LINKS = [
   {
     label: "CardMart on X (@cardmartapp)",
@@ -43,6 +44,17 @@ const SOCIAL_LINKS = [
     icon: (
       <svg viewBox="0 0 24 24" aria-hidden className="size-4 fill-current">
         <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+      </svg>
+    ),
+  },
+  {
+    label: "CardMart on Instagram (@cardmart_official)",
+    href: INSTAGRAM_URL,
+    icon: (
+      <svg viewBox="0 0 24 24" aria-hidden className="size-4 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="5" />
+        <circle cx="12" cy="12" r="4" />
+        <circle cx="17.5" cy="6.5" r="0.6" className="fill-current" />
       </svg>
     ),
   },
