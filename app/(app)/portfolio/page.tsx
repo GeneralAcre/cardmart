@@ -80,6 +80,7 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
     <div className="mx-auto w-full max-w-screen-2xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-8">
         <ProfileHeader
+          userId={user.id}
           name={user.name ?? user.handle ?? t("Collector")}
           handle={user.handle}
           image={user.image}

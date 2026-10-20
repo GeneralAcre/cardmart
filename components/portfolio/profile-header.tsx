@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { WalletActions } from "@/components/portfolio/wallet-actions";
 import { ShippingInfoDialog } from "@/components/portfolio/shipping-info-dialog";
 import { IdentityBadge } from "@/components/portfolio/identity-card";
+import { ItemShareButton } from "@/components/item/share-button";
 import type { KycStatus } from "@prisma/client";
 import { PortfolioValueChart } from "@/components/portfolio/portfolio-value-chart";
 import { useWalletStore } from "@/lib/web3/wallet-store";
@@ -15,6 +16,8 @@ import { formatDate, shortSignature } from "@/lib/format";
 import { useT } from "@/components/landing/language-provider";
 
 interface ProfileHeaderProps {
+  /** The user's id, for the link to their public store page that the share icon copies. */
+  userId: string;
   name: string;
   handle: string | null;
   image: string | null;
@@ -36,6 +39,7 @@ interface ProfileHeaderProps {
 }
 
 export function ProfileHeader({
+  userId,
   name,
   handle,
   image,
@@ -80,6 +84,7 @@ export function ProfileHeader({
             <div className="flex min-w-0 items-center gap-2">
               <span className="truncate text-xl font-semibold sm:text-2xl">{name}</span>
               <IdentityBadge {...identity} />
+              <ItemShareButton path={`/store/${userId}`} />
             </div>
             <div className="text-muted-foreground flex flex-wrap items-center gap-x-1.5 text-sm">
               {handle && <span>@{handle}</span>}
