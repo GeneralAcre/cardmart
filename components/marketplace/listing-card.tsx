@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Check, Images, Scale } from "lucide-react";
 
 import { CardArt } from "@/components/asset/card-art";
+import { SlabFrame } from "@/components/asset/slab-frame";
 import { formatGrade, formatThb } from "@/lib/format";
 import type { AssetSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -35,6 +36,8 @@ export function ListingCard({
 }) {
   const photos = realPhotos(asset.verificationPhotos);
   const image = displayImage(asset);
+  // Graded cards without a real photo of the copy are drawn in a slab; a real photo already shows its own.
+  const slabbed = asset.gradingCompany !== "RAW" && image?.kind !== "photo";
   const t = useT();
   const sellerName = asset.seller.name ?? t("Collector");
 
@@ -46,7 +49,37 @@ export function ListingCard({
       {/* The card sits on a dark spotlight "stage", shown whole (contain)
           rather than cropped, the way a slab photo would be. */}
       <div className="card-stage relative aspect-[4/5] overflow-hidden">
-        {image ? (
+        {slabbed ? (
+          // A graded card shown from its reference picture sits in a drawn
+          // slab, label and all, the way collectors see it in hand.
+          <div className="absolute inset-0 flex items-center justify-center px-3 pt-10 pb-3 transition-transform duration-300 group-hover:scale-[1.03]">
+            <SlabFrame
+              name={asset.name}
+              subtitle={asset.subtitle}
+              game={asset.game}
+              cardNumber={asset.cardNumber}
+              serial={asset.serial}
+              gradingCompany={asset.gradingCompany}
+              grade={asset.grade}
+              isBlackLabel={asset.isBlackLabel}
+            >
+              {image ? (
+                <Image src={image.url} alt={asset.name} fill sizes="(max-width: 640px) 40vw, (max-width: 1280px) 25vw, 15vw" className="object-contain" />
+              ) : (
+                <CardArt
+                  themeIndex={asset.themeIndex}
+                  category={asset.category}
+                  gradingCompany={asset.gradingCompany}
+                  grade={asset.grade}
+                  isBlackLabel={asset.isBlackLabel}
+                  bordered={false}
+                  showGrade={false}
+                  className="h-full w-full rounded-sm"
+                />
+              )}
+            </SlabFrame>
+          </div>
+        ) : image ? (
           // Real live-camera capture instead of the generated digital-twin
           // art whenever one exists — this is what the item actually
           // looks like, not a placeholder. next/image handles resizing,
@@ -73,13 +106,27 @@ export function ListingCard({
           </div>
         )}
 
-        {/* Top corners, on dark chips that read over any artwork: the grade on
-            the left, and on the right how much the price last moved, the thing
-            buyers scan for after the price itself. */}
-        <GradeChip asset={asset} className={cn(CHIP, "absolute left-2.5 top-2.5 bg-black/70 py-1.5 font-normal")} />
+        {/* Chips on dark backgrounds that read over any artwork, each in the
+            same corner on every card: the grade top-left (left out when the
+            slab's own label already shows it), how much the price last moved
+            top-right, Compare bottom-right. A slab starts below that top row so
+            the chips never cover its label. */}
+        {!slabbed && <GradeChip asset={asset} className={cn(CHIP, "absolute left-2.5 top-2.5 bg-black/70 py-1.5 font-normal")} />}
         {asset.priceChangePct != null && (
-          <span className={cn(CHIP, "absolute right-2.5 top-2.5 bg-black/70 py-1.5")} title={t("Change since the last price")}>
-            <ChangeTag pct={asset.priceChangePct} className="text-[11px] leading-none" />
+          // A solid green or red chip with its own text colour: red text on a dark
+          // chip over artwork was too faint to read. Both pairs pass AA contrast.
+          <span
+            className={cn(
+              CHIP,
+              "absolute right-2.5 top-2.5 py-1.5 shadow-sm",
+              asset.priceChangePct >= 0 ? "bg-success" : "bg-destructive",
+            )}
+            title={t("Change since the last price")}
+          >
+            <ChangeTag
+              pct={asset.priceChangePct}
+              className={cn("text-[11px] leading-none", asset.priceChangePct >= 0 ? "text-success-foreground" : "text-white")}
+            />
           </span>
         )}
 

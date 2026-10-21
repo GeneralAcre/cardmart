@@ -32,22 +32,20 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
       <MarketHero />
       <div id="listings" className="mb-5 flex scroll-mt-20 items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold">{t("Market")}</h1>
-        {user && (
-          <>
-            <ActionButton href="/marketplace/sell" icon={Plus} className="hidden md:inline-flex">
-              {t("Sell a card")}
-            </ActionButton>
-            {/* Phones: a round + pinned bottom right, just above the bottom menu, like a floating add button. */}
-            <Link
-              href="/marketplace/sell"
-              aria-label={t("Sell a card")}
-              title={t("Sell a card")}
-              className="bg-primary text-primary-foreground fixed right-4 bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] z-30 flex size-14 items-center justify-center rounded-full shadow-lg transition-transform active:scale-95 md:hidden"
-            >
-              <Plus className="size-7" />
-            </Link>
-          </>
-        )}
+        {/* Shown to everyone, guests included: selling is a main reason to come
+            here, and a guest who taps it is sent to sign in first (proxy.ts). */}
+        <ActionButton href="/marketplace/sell" icon={Plus} className="hidden md:inline-flex">
+          {t("Sell a card")}
+        </ActionButton>
+        {/* Phones: a round + pinned bottom right, just above the bottom menu, like a floating add button. */}
+        <Link
+          href="/marketplace/sell"
+          aria-label={t("Sell a card")}
+          title={t("Sell a card")}
+          className="bg-primary text-primary-foreground fixed right-4 bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] z-30 flex size-14 items-center justify-center rounded-full shadow-lg transition-transform active:scale-95 md:hidden"
+        >
+          <Plus className="size-7" />
+        </Link>
       </div>
       {indexes.some((i) => i.points.length > 0) && (
         <div className="mb-6">
