@@ -4,10 +4,18 @@ import type { CardGame, CardLanguage, GradingCompany, CardRarity } from "@prisma
 import { GameIcon } from "@/components/ui/game-icon";
 
 import { Input } from "@/components/ui/input";
-import { CARD_GAMES, CARD_GAME_LABELS, CARD_LANGUAGES, CARD_LANGUAGE_LABELS, GRADING_COMPANY_LABELS } from "@/lib/labels";
+import {
+  CARD_GAMES,
+  CARD_GAME_BADGE_CLASS,
+  CARD_GAME_LABELS,
+  CARD_LANGUAGES,
+  CARD_LANGUAGE_BADGE_CLASS,
+  CARD_LANGUAGE_LABELS,
+  GRADING_COMPANY_LABELS,
+} from "@/lib/labels";
 import { EMPTY_FILTERS, type MarketplaceFilterState } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { RARITIES } from "@/lib/rarity";
+import { RARITIES, RARITY_STYLE } from "@/lib/rarity";
 import { useT } from "@/components/landing/language-provider";
 
 const GRADING_COMPANIES: GradingCompany[] = ["PSA", "BGS", "CGC", "RAW"];
@@ -33,11 +41,18 @@ function FilterPill({
   onClick,
   children,
   className,
+  activeClass = "bg-primary border-primary text-primary-foreground",
 }: {
   active: boolean;
   onClick: () => void;
   children: React.ReactNode;
   className?: string;
+  /**
+   * The picked look. Game, language and rarity pass the same colour as their
+   * tag on the cards (lib/labels.ts, lib/rarity.ts), so picking "SAR" here
+   * turns it the yellow every SAR card wears.
+   */
+  activeClass?: string;
 }) {
   return (
     <button
@@ -46,12 +61,11 @@ function FilterPill({
       onClick={onClick}
       className={cn(
         // Fills its grid cell (no fixed width), so a row of pills is always even and never overlaps.
-        "flex h-8 w-full items-center justify-center rounded-full border px-3 text-xs font-medium outline-none transition-colors",
+        "flex h-8 w-full items-center justify-center rounded-full border px-3 text-xs font-semibold outline-none transition-colors",
         className,
         "focus-visible:ring-ring focus-visible:ring-2",
-        active
-          ? "bg-primary text-primary-foreground border-primary"
-          : "text-muted-foreground hover:text-foreground hover:border-foreground/30",
+        // Picked: a solid fill with the fill's own text colour (black on white in dark mode), so the label stays readable.
+        active ? cn("border-transparent", activeClass) : "text-foreground hover:border-foreground/30",
       )}
     >
       {children}
@@ -139,28 +153,18 @@ export function FilterBar({
       {/* Game switcher — the first thing you pick, like a storefront tab. */}
       <FilterSection label="Card">
         <div className="grid grid-cols-2 gap-2">
-          {CARD_GAMES.map((game) => {
-            const active = filters.games.includes(game);
-            return (
-              <button
-                key={game}
-                type="button"
-                aria-pressed={active}
-                onClick={() => toggleGame(game)}
-                className={cn(
-                  // h-8, the same height as every FilterPill below.
-                  "flex h-8 items-center justify-center gap-1.5 rounded-full border px-3 text-xs font-medium outline-none transition-colors",
-                  "focus-visible:ring-ring focus-visible:ring-2",
-                  active
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "text-foreground hover:border-foreground/30",
-                )}
-              >
-                <GameIcon game={game} size={16} />
-                {t(CARD_GAME_LABELS[game])}
-              </button>
-            );
-          })}
+          {CARD_GAMES.map((game) => (
+            <FilterPill
+              key={game}
+              active={filters.games.includes(game)}
+              onClick={() => toggleGame(game)}
+              activeClass={CARD_GAME_BADGE_CLASS[game]}
+              className="gap-1.5"
+            >
+              <GameIcon game={game} size={16} />
+              {t(CARD_GAME_LABELS[game])}
+            </FilterPill>
+          ))}
         </div>
       </FilterSection>
 
@@ -171,6 +175,7 @@ export function FilterBar({
               key={language}
               active={filters.languages.includes(language)}
               onClick={() => toggleLanguage(language)}
+              activeClass={CARD_LANGUAGE_BADGE_CLASS[language]}
             >
               {t(CARD_LANGUAGE_LABELS[language])}
             </FilterPill>
@@ -186,6 +191,7 @@ export function FilterBar({
               key={r.value}
               active={filters.rarities.includes(r.value)}
               onClick={() => toggleRarity(r.value)}
+              activeClass={RARITY_STYLE[r.value]}
               className="px-0"
             >
               <span title={`${t(r.label)}: ${t(r.description)}`}>{r.short}</span>
@@ -195,32 +201,17 @@ export function FilterBar({
       </FilterSection>
 
       <FilterSection label="Grader">
-        <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-          {GRADING_COMPANIES.map((company) => {
-            const active = filters.gradingCompanies.includes(company);
-            return (
-              <button
-                key={company}
-                type="button"
-                role="checkbox"
-                aria-checked={active}
-                onClick={() => toggleGradingCompany(company)}
-                className="focus-visible:ring-ring flex items-center gap-2.5 rounded text-left text-sm outline-none focus-visible:ring-2"
-              >
-                <span
-                  className={cn(
-                    "flex size-[18px] shrink-0 items-center justify-center rounded-full border transition-colors",
-                    active ? "border-primary" : "border-muted-foreground/50",
-                  )}
-                >
-                  {active && <span className="bg-primary size-2.5 rounded-full" />}
-                </span>
-                <span className={active ? "text-foreground" : "text-muted-foreground"}>
-                  {t(company === "RAW" ? "Ungraded" : GRADING_COMPANY_LABELS[company])}
-                </span>
-              </button>
-            );
-          })}
+        {/* The same pill buttons as every other filter, two to a row like Card and Language, so "Ungraded" has room. */}
+        <div className="grid grid-cols-2 gap-2">
+          {GRADING_COMPANIES.map((company) => (
+            <FilterPill
+              key={company}
+              active={filters.gradingCompanies.includes(company)}
+              onClick={() => toggleGradingCompany(company)}
+            >
+              {t(company === "RAW" ? "Ungraded" : GRADING_COMPANY_LABELS[company])}
+            </FilterPill>
+          ))}
         </div>
       </FilterSection>
 

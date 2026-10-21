@@ -382,7 +382,7 @@ export function MarketPriceHistory({
                   CARDMART
                 </span>
                 {canDraw && (
-                  <div className="relative mb-3 flex flex-wrap items-center gap-2">
+                  <div className="relative mb-3 flex flex-wrap items-center justify-end gap-2">
                     {[
                       { key: "ma7" as const, label: t("7D avg"), swatch: "border-muted-foreground border-t-2 border-dashed", disabled: comparing },
                       { key: "ma30" as const, label: t("30D avg"), swatch: "border-foreground/55 border-t-2 border-dotted", disabled: comparing },

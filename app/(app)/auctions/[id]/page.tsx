@@ -1,6 +1,7 @@
 import Link from "next/link";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Gavel } from "lucide-react";
+import { Gavel } from "lucide-react";
 
 import { getAuctionById } from "@/lib/queries";
 import { getCurrentUser } from "@/lib/session";
@@ -47,13 +48,7 @@ export default async function AuctionDetailPage({ params }: { params: Promise<{ 
   return (
     <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6">
       {awaitingSettlement && <AutoSettle auctionIds={[auction.id]} />}
-      <Link
-        href="/auctions"
-        className="text-muted-foreground hover:text-foreground mb-6 inline-flex items-center gap-1.5 text-sm transition-colors"
-      >
-        <ArrowLeft className="size-4" />
-        {t("Back to Auctions")}
-      </Link>
+      <Breadcrumbs items={[{ label: t("Auctions"), href: "/auctions" }, { label: asset.name }]} />
 
       <div className="grid grid-cols-1 items-start gap-10 md:grid-cols-2">
         <ItemGallery

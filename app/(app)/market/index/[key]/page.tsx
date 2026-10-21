@@ -1,6 +1,6 @@
 import Link from "next/link";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 
 import { IndexMembers, IndexQuote, IndexSparkline } from "@/components/marketplace/index-detail";
 import { getIndexDetail, type IndexKey, type IndexMember } from "@/lib/stats";
@@ -99,12 +99,7 @@ export default async function IndexPage({ params }: { params: Promise<{ key: str
 
   return (
     <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
-      <Link
-        href="/marketplace"
-        className="text-muted-foreground hover:text-foreground mb-6 inline-flex items-center gap-1.5 text-sm transition-colors"
-      >
-        <ArrowLeft className="size-4" /> {t("Market")}
-      </Link>
+      <Breadcrumbs items={[{ label: t("Market"), href: "/marketplace" }, { label: t(info.title) }]} />
 
       <div className="mb-4 flex max-w-2xl flex-col gap-1">
         <h1 className="text-2xl font-semibold">{t(info.title)}</h1>

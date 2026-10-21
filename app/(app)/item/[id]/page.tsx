@@ -1,5 +1,6 @@
 import { GameIcon } from "@/components/ui/game-icon";
 import Link from "next/link";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
 
@@ -47,7 +48,7 @@ import { RatingStars } from "@/components/store/rating-stars";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ChevronDown, ChevronLeft, ExternalLink, Flame, Gavel, UserCheck } from "lucide-react";
+import { ChevronDown, ExternalLink, Flame, Gavel, UserCheck } from "lucide-react";
 
 import { formatDate, formatGrade, formatThb } from "@/lib/format";
 import {
@@ -68,6 +69,10 @@ import { cn } from "@/lib/utils";
 import { displayImage, realPhotos } from "@/lib/card-image";
 import { priceStats } from "@/lib/stats-math";
 import { ItemShareButton } from "@/components/item/share-button";
+
+// The game and language tags under the price, the same size as the rarity tag
+// (RarityTag) on the Market cards: one height, width fitted to the label.
+const TAG_PILL = "rounded-md border-0 px-2 py-1 text-[11px] leading-none font-extrabold tracking-wide";
 
 const PRELOADED_EBAY_TIERS: GradeTier[] = [
   { gradingCompany: "RAW", grade: null, isBlackLabel: false },
@@ -293,23 +298,20 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
   return (
     <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
       {/* Breadcrumb back link — where you came from, then this card. */}
-      <nav className="text-muted-foreground mb-6 flex min-w-0 items-center gap-1.5 text-sm">
-        <Link
-          href="/marketplace"
-          title={t("Back to Market")}
-          className="hover:text-foreground inline-flex shrink-0 items-center gap-1 transition-colors"
-        >
-          <ChevronLeft className="size-4" />
-          {t("Market")}
-        </Link>
-        <span>/</span>
-        <span className="inline-flex shrink-0 items-center gap-1.5">
-          <GameIcon game={asset.game} size={14} />
-          {t(CARD_GAME_LABELS[asset.game])}
-        </span>
-        <span>/</span>
-        <span className="text-foreground truncate">{asset.name}</span>
-      </nav>
+      <Breadcrumbs
+        items={[
+          { label: t("Market"), href: "/marketplace" },
+          {
+            label: (
+              <>
+                <GameIcon game={asset.game} size={14} />
+                {t(CARD_GAME_LABELS[asset.game])}
+              </>
+            ),
+          },
+          { label: asset.name },
+        ]}
+      />
 
       {/* items-start — without it, CSS Grid stretches the shorter info
           column to match the (usually much taller) image column's height,
@@ -369,11 +371,13 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
                   </div>
               </div>
             </div>
-            <div className="flex flex-nowrap items-center gap-2 border-t pt-3">
-              <Badge className={cn("rounded-md border-0", CARD_GAME_BADGE_CLASS[asset.game])}>
+            {/* Game, language and rarity as three tags of one height, each in its own colour, on the right. */}
+            <div className="flex flex-nowrap items-center justify-end gap-2 border-t pt-3">
+              <Badge className={cn(TAG_PILL, "gap-1", CARD_GAME_BADGE_CLASS[asset.game])}>
+                <GameIcon game={asset.game} size={11} />
                 {t(CARD_GAME_LABELS[asset.game])}
               </Badge>
-              <Badge className={cn("rounded-md border-0", CARD_LANGUAGE_BADGE_CLASS[asset.language])}>
+              <Badge className={cn(TAG_PILL, CARD_LANGUAGE_BADGE_CLASS[asset.language])}>
                 {t(CARD_LANGUAGE_LABELS[asset.language])}
               </Badge>
               {asset.rarity && <RarityTag rarity={asset.rarity} />}

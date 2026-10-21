@@ -1,6 +1,6 @@
 import Link from "next/link";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 
 import { getConversation } from "@/lib/queries";
 import { getCurrentUser } from "@/lib/session";
@@ -25,10 +25,8 @@ export default async function ConversationPage({
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 py-6 sm:px-6">
+      <Breadcrumbs className="mb-4" items={[{ label: t("Messages"), href: "/messages" }, { label: displayNameOf(otherUser) }]} />
       <div className="mb-4 flex items-center gap-3">
-        <Link href="/messages" className="text-muted-foreground hover:text-foreground" aria-label={t("Back to messages")}>
-          <ArrowLeft className="size-5" />
-        </Link>
         <Link href={`/store/${otherUser.id}`} className="flex min-w-0 items-center gap-3 hover:underline">
           <UserAvatar user={otherUser} className="size-9" />
           <div className="flex min-w-0 flex-col">
