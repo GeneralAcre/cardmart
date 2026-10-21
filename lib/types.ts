@@ -31,7 +31,7 @@ export interface AssetSummary {
   mintAddress: string | null;
   /** Whether the owner has a live delegate approval on file — see confirmListingApproval / lib/actions.ts::transferOwnership. */
   transferApproved: boolean;
-  seller: { id: string; name: string | null };
+  seller: { id: string; name: string | null; image?: string | null };
   owner: { id: string; name: string | null };
   /** Official catalogue image of the card (reference only) — see lib/card-image.ts. */
   catalogImageUrl: string | null;

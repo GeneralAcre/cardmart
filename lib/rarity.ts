@@ -1,15 +1,16 @@
 import type { CardRarity } from "@prisma/client";
 
-// Card rarity, grouped the way collectors talk about it: the chase rares
-// first, then the base and gameplay rares. Shared by the listing form, the
+// Card rarity, ranked rarest first: the order of the filter pills (left to
+// right), the listing form and the rarity meter, and the same order as the
+// colour scale in RARITY_STYLE below. Shared by the listing form, the
 // marketplace filter and the rarity tag on cards.
 
 export const RARITIES: { value: CardRarity; short: string; label: string; description: string }[] = [
   { value: "SAR", short: "SAR", label: "Special Art Rare", description: "SAR / SIR: full-art scenes with the character in its world." },
+  { value: "SEC", short: "SEC", label: "Secret Rare", description: "Numbered past the set total, e.g. 105/090." },
+  { value: "UR", short: "UR", label: "Ultra Rare", description: "UR / HR: gold or rainbow foil." },
   { value: "AR", short: "AR", label: "Art Rare", description: "AR / IR: full-art versions of regular cards." },
   { value: "SR", short: "SR", label: "Super Rare", description: "Full-art portraits on a textured background." },
-  { value: "UR", short: "UR", label: "Ultra Rare", description: "UR / HR: gold or rainbow foil." },
-  { value: "SEC", short: "SEC", label: "Secret Rare", description: "Numbered past the set total, e.g. 105/090." },
   { value: "RR", short: "RR", label: "Double Rare", description: "Core chase cards such as Pokémon ex." },
   { value: "R", short: "R", label: "Rare", description: "Regular holo or non-holo rares." },
   { value: "UC", short: "U/C", label: "Uncommon / Common", description: "The everyday cards in a pack." },

@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { displayImage, realPhotos } from "@/lib/card-image";
 import { useT } from "@/components/landing/language-provider";
 import { RarityTag } from "@/components/item/rarity-badge";
+import { UserAvatar } from "@/components/messages/user-avatar";
 
 const CHIP = "rounded-md px-2 py-1 text-[11px] font-semibold leading-none text-white backdrop-blur-sm";
 
@@ -91,13 +92,10 @@ export function ListingCard({
         {/* The set only; the card number and seller are on the item page. */}
         <p className="text-muted-foreground line-clamp-1 text-xs">{asset.subtitle}</p>
 
-        {/* Bottom row: who's selling it on the left, the price on the right. */}
+        {/* Bottom row: the seller's picture on the left (name on hover), the price on the right. */}
         <div className="mt-auto flex items-center justify-between gap-2 pt-3">
-          <span className="text-muted-foreground flex min-w-0 items-center gap-1.5 text-xs">
-            <span className="bg-secondary text-foreground flex size-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold uppercase">
-              {sellerName[0]}
-            </span>
-            <span className="truncate">{sellerName}</span>
+          <span title={sellerName} aria-label={t("Seller: {name}", { name: sellerName })}>
+            <UserAvatar user={{ name: sellerName, handle: null, image: asset.seller.image ?? null }} className="size-6 [&_*]:text-[10px]" />
           </span>
           <span
             className={cn("flex min-w-0 shrink-0 items-center gap-1 whitespace-nowrap font-bold tabular-nums", compact ? "text-sm sm:text-base" : "text-base sm:text-lg")}

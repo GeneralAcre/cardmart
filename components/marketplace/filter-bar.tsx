@@ -45,7 +45,8 @@ function FilterPill({
       aria-pressed={active}
       onClick={onClick}
       className={cn(
-        "rounded-full border px-4 py-1.5 text-sm font-medium outline-none transition-colors",
+        // Fills its grid cell (no fixed width), so a row of pills is always even and never overlaps.
+        "flex h-8 w-full items-center justify-center rounded-full border px-3 text-xs font-medium outline-none transition-colors",
         className,
         "focus-visible:ring-ring focus-visible:ring-2",
         active
@@ -147,14 +148,15 @@ export function FilterBar({
                 aria-pressed={active}
                 onClick={() => toggleGame(game)}
                 className={cn(
-                  "flex items-center justify-center gap-2 rounded-full border px-3 py-2 text-sm font-medium outline-none transition-colors",
+                  // h-8, the same height as every FilterPill below.
+                  "flex h-8 items-center justify-center gap-1.5 rounded-full border px-3 text-xs font-medium outline-none transition-colors",
                   "focus-visible:ring-ring focus-visible:ring-2",
                   active
                     ? "bg-primary text-primary-foreground border-primary"
                     : "text-foreground hover:border-foreground/30",
                 )}
               >
-                <GameIcon game={game} size={20} />
+                <GameIcon game={game} size={16} />
                 {t(CARD_GAME_LABELS[game])}
               </button>
             );
@@ -163,7 +165,7 @@ export function FilterBar({
       </FilterSection>
 
       <FilterSection label="Language">
-        <div className="flex flex-wrap gap-2">
+        <div className="grid grid-cols-2 gap-2">
           {CARD_LANGUAGES.map((language) => (
             <FilterPill
               key={language}
@@ -231,14 +233,14 @@ export function FilterBar({
         {options.grades.length === 0 ? (
           <p className="text-muted-foreground text-sm">{t("Ungraded cards have no grade.")}</p>
         ) : (
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-4 gap-2">
             {options.blackLabel && (
-              <FilterPill active={filters.blackLabelOnly} onClick={toggleBlackLabel}>
+              <FilterPill active={filters.blackLabelOnly} onClick={toggleBlackLabel} className="col-span-2 px-0">
                 Black Label
               </FilterPill>
             )}
             {options.grades.map((grade) => (
-              <FilterPill key={grade} active={filters.grades.includes(grade)} onClick={() => toggleGrade(grade)}>
+              <FilterPill key={grade} active={filters.grades.includes(grade)} onClick={() => toggleGrade(grade)} className="px-0">
                 {grade}
               </FilterPill>
             ))}

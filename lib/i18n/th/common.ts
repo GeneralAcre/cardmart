@@ -72,6 +72,7 @@ export const COMMON: Record<string, string> = {
   // Market status
   "Ready to Ship": "พร้อมส่ง",
   "In Vault": "อยู่ในห้องนิรภัย",
+  "Seller: {name}": "ผู้ขาย: {name}",
   "Sale Pending": "รอปิดการขาย",
   "Not Listed": "ไม่ได้ลงขาย",
   "Up for Auction": "กำลังประมูล",
