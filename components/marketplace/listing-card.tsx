@@ -11,8 +11,8 @@ import { cn } from "@/lib/utils";
 import { displayImage, realPhotos } from "@/lib/card-image";
 import { useT } from "@/components/landing/language-provider";
 import { RarityTag } from "@/components/item/rarity-badge";
-import { UserAvatar } from "@/components/messages/user-avatar";
 import { ChangeTag } from "@/components/ui/change-tag";
+import { UserAvatar } from "@/components/messages/user-avatar";
 
 const CHIP = "rounded-md px-2 py-1 text-[11px] font-semibold leading-none text-white backdrop-blur-sm";
 
@@ -73,13 +73,13 @@ export function ListingCard({
           </div>
         )}
 
-        {/* Top corners, like a slab label: the grade on a dark chip (reads over
-            any artwork) on the left, the rarity tag on the right. Keeping the
-            rarity off the name row lets the full name show. */}
+        {/* Top corners, on dark chips that read over any artwork: the grade on
+            the left, and on the right how much the price last moved, the thing
+            buyers scan for after the price itself. */}
         <GradeChip asset={asset} className={cn(CHIP, "absolute left-2.5 top-2.5 bg-black/70 py-1.5 font-normal")} />
-        {asset.rarity && (
-          <span className="absolute right-2.5 top-2.5 flex">
-            <RarityTag rarity={asset.rarity} />
+        {asset.priceChangePct != null && (
+          <span className={cn(CHIP, "absolute right-2.5 top-2.5 bg-black/70 py-1.5")} title={t("Change since the last price")}>
+            <ChangeTag pct={asset.priceChangePct} className="text-[11px] leading-none" />
           </span>
         )}
 
@@ -92,26 +92,24 @@ export function ListingCard({
       </div>
 
       <div className={cn("flex flex-1 flex-col gap-1", compact ? "p-3" : "p-3.5 sm:p-4")}>
-        {/* Up to two lines: edition and variant words ("1st Edition", "Alt Art") decide what a card is worth. */}
-        <h3 className={cn("line-clamp-2 leading-snug font-semibold", compact ? "text-[13px]" : "text-sm sm:text-[15px]")}>{asset.name}</h3>
-        {/* The set only; the card number and seller are on the item page. */}
-        <p className="text-muted-foreground line-clamp-1 text-xs">{asset.subtitle}</p>
+        {/* One line on every card, so the set line, rarity tag and price line up across a row with no gaps.
+            A long name ends in "…" and shows in full on hover. */}
+        <h3 title={asset.name} className={cn("truncate font-semibold", compact ? "text-[13px]" : "text-sm")}>{asset.name}</h3>
+        {/* The set, with the rarity tag on the right: the same tag (and the same
+            spot) on every card, matching the chips on the picture. */}
+        <div className="text-muted-foreground flex min-w-0 items-center justify-between gap-2 text-xs">
+          <span className="truncate">{asset.subtitle}</span>
+          {asset.rarity && <RarityTag rarity={asset.rarity} />}
+        </div>
 
         {/* Bottom row: the seller's picture on the left (name on hover), the price on the right. */}
         <div className="mt-auto flex items-center justify-between gap-2 pt-3">
           <span title={sellerName} aria-label={t("Seller: {name}", { name: sellerName })}>
             <UserAvatar user={{ name: sellerName, handle: null, image: asset.seller.image ?? null }} className="size-6 [&_*]:text-[10px]" />
           </span>
-          <span className="flex min-w-0 shrink-0 items-center gap-1.5">
-            {/* How much the asking price moved at its last change, right beside the price. */}
-            {asset.priceChangePct != null && (
-              <span title={t("Change since the last price")}>
-                <ChangeTag pct={asset.priceChangePct} className="text-[11px]" />
-              </span>
-            )}
-            <span className={cn("whitespace-nowrap font-bold tabular-nums", compact ? "text-sm sm:text-base" : "text-base sm:text-lg")}>
-              {asset.priceThb != null ? formatThb(asset.priceThb) : t("Price unavailable")}
-            </span>
+          {/* The price, the boldest thing on the card. */}
+          <span className={cn("shrink-0 whitespace-nowrap font-bold tabular-nums", compact ? "text-sm sm:text-base" : "text-base sm:text-lg")}>
+            {asset.priceThb != null ? formatThb(asset.priceThb) : t("Price unavailable")}
           </span>
         </div>
       </div>
