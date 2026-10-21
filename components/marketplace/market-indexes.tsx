@@ -141,7 +141,7 @@ function IndexCard({ index }: { index: MarketIndex }) {
   return (
     <Link
       href={HREF[index.key]}
-      className="bg-card hover:border-success/40 group relative isolate flex flex-col gap-5 overflow-hidden rounded-3xl border px-5 pt-5 pb-7 transition-[border-color,transform] duration-300 hover:-translate-y-0.5"
+      className="bg-card hover:border-success/40 group relative isolate flex w-full flex-col justify-between gap-5 overflow-hidden rounded-3xl border px-5 pt-5 pb-7 transition-[border-color,transform] duration-300 hover:-translate-y-0.5"
     >
       {/* Glass: a faint sheen falling from the top-left corner. */}
       <div
@@ -188,7 +188,7 @@ export function MarketIndexes({ indexes }: { indexes: MarketIndex[] }) {
       {/* Phones: the same glass cards as desktop, in a row you swipe through, with the next card peeking in. */}
       <div className="-mx-4 flex snap-x snap-mandatory scroll-pl-4 gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] md:hidden [&::-webkit-scrollbar]:hidden">
         {indexes.map((index) => (
-          <div key={index.key} className="w-[82%] shrink-0 snap-start">
+          <div key={index.key} className="flex w-[82%] shrink-0 snap-start">
             <IndexCard index={index} />
           </div>
         ))}

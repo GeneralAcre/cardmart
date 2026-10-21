@@ -170,10 +170,10 @@ export function MarketPulse({ rows }: { rows: LeaderboardRow[] }) {
     );
   };
 
-  // Side by side on wide screens (movers 40%, heatmap 60% of the full width); stacked on phones. One period picker, top right, drives both.
+  // Side by side on wide screens (movers 20%, heatmap 80% of the full width); stacked on phones. One period picker, top right, drives both.
   return (
     <section className="flex w-full flex-col gap-6 lg:flex-row">
-      <div className="flex min-w-0 flex-col gap-3 lg:flex-[2]">
+      <div className="flex min-w-0 flex-col gap-3 lg:flex-[1]">
         <div className="flex h-9 items-center justify-between gap-3">
           {sectionTitle(Activity, t("Trending"))}
           {/* Phones stack Trending above the heatmap, so the shared period picker sits up here; on wide screens it stays by the heatmap. */}
@@ -185,7 +185,7 @@ export function MarketPulse({ rows }: { rows: LeaderboardRow[] }) {
         </div>
       </div>
 
-      <div className="flex min-w-0 flex-col gap-3 lg:flex-[3]">
+      <div className="flex min-w-0 flex-col gap-3 lg:flex-[4]">
         <div className="flex h-9 items-center justify-between gap-3">
           {sectionTitle(LayoutGrid, t("Heatmap"))}
           <div className="hidden lg:block">{periodPicker}</div>

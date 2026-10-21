@@ -270,8 +270,11 @@ export function MarketHeatmap({
             const { background, inkOnDark, inkOnLight } = tileStyle(t.change);
             const minSide = Math.min(r.w, r.h);
             const big = r.w > 150 && r.h > 100;
-            const showCover = r.w > 190 && r.h > 190;
-            const coverWidth = Math.min(112, Math.max(48, Math.floor(Math.min(r.w * 0.24, r.h * 0.24))));
+            // As big as the tile allows while always leaving room under it for a
+            // two-line label, the change, the gap and the padding (covers are 3:4).
+            const textReserve = big ? 100 : 72;
+            const coverWidth = Math.floor(Math.min(280, r.w * 0.6, (r.h - textReserve) * 0.75));
+            const showCover = coverWidth >= 56;
             // Every tile gets a label and its change. Scale down for narrow
             // treemap cells instead of hiding the text behind a size cutoff.
             const fontSize = minSide < 44 ? 8 : minSide < 64 ? 9 : minSide < 90 ? 10 : undefined;
@@ -363,7 +366,7 @@ function CoverThumb({ card, className, style }: { card: LeaderboardRow; classNam
   return (
     <span style={style} className={cn("relative block aspect-[3/4] shrink-0 overflow-hidden rounded-md border border-black/30", className)}>
       {card.photoUrl ? (
-        <Image src={card.photoUrl} alt="" fill sizes="64px" className="object-cover" />
+        <Image src={card.photoUrl} alt="" fill sizes="280px" className="object-cover" />
       ) : (
         <CardArt
           themeIndex={card.themeIndex}
