@@ -55,7 +55,7 @@ export function CardGuide({ t }: { t: Translate }) {
           {RARITIES.map((r) => (
             <Row
               key={r.value}
-              tag={<span className={cn(pill, "rounded-md", RARITY_STYLE[r.value])}>{r.short}</span>}
+              tag={<span className={cn(pill, "w-12 rounded-md px-0", RARITY_STYLE[r.value])}>{r.short}</span>}
               title={t(r.label)}
               body={t(r.description)}
             />

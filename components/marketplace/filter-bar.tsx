@@ -32,10 +32,12 @@ function FilterPill({
   active,
   onClick,
   children,
+  className,
 }: {
   active: boolean;
   onClick: () => void;
   children: React.ReactNode;
+  className?: string;
 }) {
   return (
     <button
@@ -44,6 +46,7 @@ function FilterPill({
       onClick={onClick}
       className={cn(
         "rounded-full border px-4 py-1.5 text-sm font-medium outline-none transition-colors",
+        className,
         "focus-visible:ring-ring focus-visible:ring-2",
         active
           ? "bg-primary text-primary-foreground border-primary"
@@ -174,9 +177,15 @@ export function FilterBar({
       </FilterSection>
 
       <FilterSection label="Rarity">
-        <div className="flex flex-wrap gap-2">
+        {/* A grid, so every rarity pill is the same width however short its label. */}
+        <div className="grid grid-cols-4 gap-2">
           {RARITIES.map((r) => (
-            <FilterPill key={r.value} active={filters.rarities.includes(r.value)} onClick={() => toggleRarity(r.value)}>
+            <FilterPill
+              key={r.value}
+              active={filters.rarities.includes(r.value)}
+              onClick={() => toggleRarity(r.value)}
+              className="px-0"
+            >
               <span title={`${t(r.label)}: ${t(r.description)}`}>{r.short}</span>
             </FilterPill>
           ))}
