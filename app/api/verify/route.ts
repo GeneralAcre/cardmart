@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { prisma } from "@/lib/prisma";
@@ -18,7 +19,9 @@ function isAuthorized(req: NextRequest): boolean {
   if (!expected) return false;
   const auth = req.headers.get("authorization") ?? "";
   const provided = auth.replace(/^Bearer\s+/i, "").trim();
-  return provided.length > 0 && provided === expected;
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  return a.length > 0 && a.length === b.length && timingSafeEqual(a, b);
 }
 
 export async function POST(req: NextRequest) {

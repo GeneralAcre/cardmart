@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { PRIVY_ENFORCED } from "@/lib/privy-server";
+import { PRIVY_ENFORCED, verifyPrivySession } from "@/lib/privy-server";
 import { serverRpcUrl } from "@/lib/web3/rpc-url";
 
 /**
@@ -38,9 +38,9 @@ const MAX_BATCH = 5;
 type RpcCall = { jsonrpc?: string; id?: unknown; method?: unknown };
 
 export async function POST(request: NextRequest) {
-  // Same session check the rest of the site uses at the edge (proxy.ts);
-  // wallet transactions only happen after sign-in anyway.
-  if (PRIVY_ENFORCED && !request.cookies.get("privy-token")?.value) {
+  // The token is verified, not just present: a made-up cookie must not open
+  // a free relay on our RPC quota.
+  if (PRIVY_ENFORCED && !(await verifyPrivySession())) {
     return NextResponse.json({ error: "Sign in to use the wallet." }, { status: 401 });
   }
 

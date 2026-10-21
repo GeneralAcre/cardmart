@@ -408,7 +408,7 @@ model Bid {
   lockStatus      BidLockStatus?
   onChain         Boolean        @default(false)
   onChainTradeId  BigInt?
-  tradeAccount    String?
+  tradeAccount    String?        @unique
   lamportsLocked  BigInt?
   lockTxSignature String?
 
@@ -507,7 +507,7 @@ model TradeOffer {
   // fields and fallback rules as EscrowTransaction.
   cashOnChain      Boolean @default(false)
   cashTradeId      BigInt?
-  cashTradeAccount String?
+  cashTradeAccount String? @unique
   cashLamports     BigInt?
 
   proposerId       String
@@ -670,7 +670,7 @@ model EscrowTransaction {
   // wallet available), same pattern as ProvenanceEvent.onChain.
   onChain            Boolean @default(false)
   onChainTradeId     BigInt? // u64 seed used to derive the on-chain Trade PDA
-  tradeAccount       String? // base58 address of the Trade PDA, for convenience
+  tradeAccount       String? @unique // base58 address of the Trade PDA, for convenience
   lamportsLocked     BigInt? // actual lamports locked on-chain (THB -> SOL at lock time)
   // Buyer protection (BUYER_FEE_PERCENT) paid on top of amountThb, and the
   // lamports that went to the platform wallet for it — refunded with the

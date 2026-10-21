@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import type { CardGame, CardLanguage, GradingCompany } from "@prisma/client";
+import { GradingCompany, type CardGame, type CardLanguage } from "@prisma/client";
 
 import { isRarity } from "@/lib/rarity";
 
@@ -13,15 +13,22 @@ export async function GET(request: NextRequest) {
     .getAll("language")
     .filter((l): l is CardLanguage => l === "ENGLISH" || l === "JAPANESE");
   const rarities = sp.getAll("rarity").filter(isRarity);
-  const gradingCompanies = sp.getAll("gradingCompany") as GradingCompany[];
+  const gradingCompanies = sp
+    .getAll("gradingCompany")
+    .filter((c): c is GradingCompany => (Object.values(GradingCompany) as string[]).includes(c));
   const grades = sp
     .getAll("grade")
     .map(Number)
     .filter((n) => !Number.isNaN(n));
   const blackLabelOnly = sp.get("blackLabel") === "true";
-  const priceMin = sp.has("priceMin") ? Number(sp.get("priceMin")) : undefined;
-  const priceMax = sp.has("priceMax") ? Number(sp.get("priceMax")) : undefined;
-  const vaultedStatus = (sp.get("vaultedStatus") as "ALL" | "IN_VAULT" | "SHIPPING" | null) ?? "ALL";
+  const finiteOrUndefined = (key: string) => {
+    const n = sp.has(key) ? Number(sp.get(key)) : NaN;
+    return Number.isFinite(n) ? n : undefined;
+  };
+  const priceMin = finiteOrUndefined("priceMin");
+  const priceMax = finiteOrUndefined("priceMax");
+  const vaultedParam = sp.get("vaultedStatus");
+  const vaultedStatus = vaultedParam === "IN_VAULT" || vaultedParam === "SHIPPING" ? vaultedParam : "ALL";
   const q = sp.get("q") ?? undefined;
 
   const listings = await getMarketplaceListings({

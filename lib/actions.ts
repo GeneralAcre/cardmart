@@ -211,7 +211,14 @@ async function refundTradeCash(trade: {
 const verificationPhotoSchema = z.object({
   viewKey: z.string().min(1),
   viewLabel: z.string().min(1),
-  url: z.string().url(),
+  // Only photos uploaded through /api/blob/upload count as evidence.
+  url: z
+    .string()
+    .url()
+    .refine((u) => {
+      const { protocol, hostname } = new URL(u);
+      return protocol === "https:" && hostname.endsWith(".public.blob.vercel-storage.com");
+    }, "Use a photo taken in the listing form."),
 });
 
 const createListingSchema = z
