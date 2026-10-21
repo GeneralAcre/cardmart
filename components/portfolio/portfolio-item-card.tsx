@@ -38,7 +38,8 @@ import { RarityTag } from "@/components/item/rarity-badge";
 import type { AssetSummary } from "@/lib/types";
 import { displayImage } from "@/lib/card-image";
 import { useT } from "@/components/landing/language-provider";
-import { GainBadge, HoldingPnlBlock } from "@/components/portfolio/pnl";
+import { HoldingPnlBlock } from "@/components/portfolio/pnl";
+import { ChangeTag } from "@/components/ui/change-tag";
 import type { HoldingPnl } from "@/lib/pnl";
 
 export function PortfolioItemCard({
@@ -299,7 +300,7 @@ export function PortfolioItemCard({
               <span className="font-bold">{formatGrade(asset.grade)}</span>
             </>
           )}
-          {asset.isBlackLabel && <span className="font-semibold text-amber-500">· BL</span>}
+          {asset.isBlackLabel && <span className="font-semibold text-black-label">· BL</span>}
         </span>
         {/* Top-right corner: whether it's on the market, in words, matching the grade chip. */}
         {asset.marketStatus === "IN_AUCTION" ? (
@@ -332,7 +333,7 @@ export function PortfolioItemCard({
           same move as a percentage on the left. */}
       {pnl && (
         <div className="flex min-h-7 items-center justify-between gap-2">
-          {pnl.gainPct != null && <GainBadge pct={pnl.gainPct} className="text-sm" />}
+          {pnl.gainPct != null && <ChangeTag pct={pnl.gainPct} className="text-sm" />}
           <span className="ml-auto flex min-w-0 justify-end">
             <HoldingPnlBlock assetId={asset.id} pnl={pnl} />
           </span>

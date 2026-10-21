@@ -61,7 +61,8 @@ function FilterPill({
       onClick={onClick}
       className={cn(
         // Fills its grid cell (no fixed width), so a row of pills is always even and never overlaps.
-        "flex h-8 w-full items-center justify-center rounded-full border px-3 text-xs font-semibold outline-none transition-colors",
+        // 40px tall on phones for an easier tap, 32px from md up where a pointer is precise.
+        "flex h-10 w-full items-center justify-center rounded-full border px-3 text-xs font-semibold outline-none transition-colors md:h-8",
         className,
         "focus-visible:ring-ring focus-visible:ring-2",
         // Picked: a solid fill with the fill's own text colour (black on white in dark mode), so the label stays readable.

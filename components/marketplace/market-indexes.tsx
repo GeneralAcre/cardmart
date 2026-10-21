@@ -2,12 +2,13 @@
 
 import { GameIcon } from "@/components/ui/game-icon";
 import Link from "next/link";
-import { ArrowDown, ArrowUp, ChevronRight, Minus } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { Area, AreaChart, Tooltip, YAxis } from "recharts";
 
 import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
 import type { MarketIndex } from "@/lib/stats";
 import { cn } from "@/lib/utils";
+import { ChangeTag } from "@/components/ui/change-tag";
 import { useLanguage } from "@/components/landing/language-provider";
 
 const NAMES: Record<MarketIndex["key"], string> = {
@@ -38,8 +39,6 @@ function IndexIcon({ index }: { index: MarketIndex["key"] }) {
 }
 
 const formatLevel = (v: number) => v.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-const toneClass = (pct: number | null) =>
-  pct == null || Math.abs(pct) < 0.05 ? "text-muted-foreground" : pct > 0 ? "text-success" : "text-destructive";
 
 /** The index's line is green when up and red when down, with a hover tooltip. */
 function Sparkline({ index, className, tooltip = true }: { index: MarketIndex; className: string; tooltip?: boolean }) {
@@ -87,24 +86,6 @@ function Sparkline({ index, className, tooltip = true }: { index: MarketIndex; c
         />
       </AreaChart>
     </ChartContainer>
-  );
-}
-
-/** The change as a small pill: an arrow and the percentage, tinted green, red or neutral. */
-function ChangePill({ pct }: { pct: number | null }) {
-  const flat = pct == null || Math.abs(pct) < 0.05;
-  const Arrow = flat ? Minus : pct > 0 ? ArrowUp : ArrowDown;
-  return (
-    <span
-      className={cn(
-        "flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums",
-        toneClass(pct),
-        flat ? "bg-foreground/[0.06]" : pct > 0 ? "bg-success/15" : "bg-destructive/15",
-      )}
-    >
-      <Arrow className="size-3" />
-      {pct == null ? "—" : `${Math.abs(pct).toFixed(1)}%`}
-    </span>
   );
 }
 
@@ -157,7 +138,7 @@ function IndexCard({ index }: { index: MarketIndex }) {
           <span className="truncate">{t(NAMES[index.key])}</span>
           <ChevronRight className="text-muted-foreground size-3.5 shrink-0 transition-transform group-hover:translate-x-0.5" />
         </span>
-        <ChangePill pct={index.change1d} />
+        <ChangeTag pct={index.change1d} pill />
       </div>
 
       <div className="flex items-end justify-between gap-4">

@@ -3,6 +3,7 @@
 import type { CardRarity } from "@prisma/client";
 
 import { Badge } from "@/components/ui/badge";
+import { Tag } from "@/components/ui/tag";
 import { RARITIES, RARITY_SHORT, RARITY_STYLE } from "@/lib/rarity";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/components/landing/language-provider";
@@ -48,12 +49,12 @@ export function RarityTag({ rarity }: { rarity: CardRarity }) {
   const { tr: t } = useLanguage();
   const info = RARITIES.find((r) => r.value === rarity)!;
   return (
-    <span
+    <Tag
       title={`${t(info.label)}: ${t(info.description)}`}
       // Fixed width, so every rarity's tag is the same size however short its code.
-      className={cn("inline-flex w-11 shrink-0 items-center justify-center rounded-md py-1 text-[11px] leading-none font-extrabold tracking-wide", RARITY_STYLE[rarity])}
+      className={cn("w-11 px-0", RARITY_STYLE[rarity])}
     >
       {RARITY_SHORT[rarity]}
-    </span>
+    </Tag>
   );
 }

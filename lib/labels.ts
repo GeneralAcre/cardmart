@@ -45,7 +45,8 @@ export const CARD_LANGUAGE_LABELS: Record<CardLanguage, string> = {
 export const CARD_LANGUAGES: CardLanguage[] = ["ENGLISH", "JAPANESE"];
 
 export const CARD_LANGUAGE_BADGE_CLASS: Record<CardLanguage, string> = {
-  ENGLISH: "bg-[#F10291] text-white",
+  // A deeper pink than the brand #F10291, so white text passes AA contrast on a small tag.
+  ENGLISH: "bg-[#C70077] text-white",
   JAPANESE: "bg-[#FFCAE4] text-black",
 };
 

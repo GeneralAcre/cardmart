@@ -47,6 +47,7 @@ import { ShipToWarehouseTask } from "@/components/portfolio/ship-to-warehouse";
 import { RatingStars } from "@/components/store/rating-stars";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Tag } from "@/components/ui/tag";
 import { Separator } from "@/components/ui/separator";
 import { ChevronDown, ExternalLink, Flame, Gavel, UserCheck } from "lucide-react";
 
@@ -69,10 +70,6 @@ import { cn } from "@/lib/utils";
 import { displayImage, realPhotos } from "@/lib/card-image";
 import { priceStats } from "@/lib/stats-math";
 import { ItemShareButton } from "@/components/item/share-button";
-
-// The game and language tags under the price, the same size as the rarity tag
-// (RarityTag) on the Market cards: one height, width fitted to the label.
-const TAG_PILL = "rounded-md border-0 px-2 py-1 text-[11px] leading-none font-extrabold tracking-wide";
 
 const PRELOADED_EBAY_TIERS: GradeTier[] = [
   { gradingCompany: "RAW", grade: null, isBlackLabel: false },
@@ -373,13 +370,11 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
             </div>
             {/* Game, language and rarity as three tags of one height, each in its own colour, on the right. */}
             <div className="flex flex-nowrap items-center justify-end gap-2 border-t pt-3">
-              <Badge className={cn(TAG_PILL, "gap-1", CARD_GAME_BADGE_CLASS[asset.game])}>
+              <Tag className={CARD_GAME_BADGE_CLASS[asset.game]}>
                 <GameIcon game={asset.game} size={11} />
                 {t(CARD_GAME_LABELS[asset.game])}
-              </Badge>
-              <Badge className={cn(TAG_PILL, CARD_LANGUAGE_BADGE_CLASS[asset.language])}>
-                {t(CARD_LANGUAGE_LABELS[asset.language])}
-              </Badge>
+              </Tag>
+              <Tag className={CARD_LANGUAGE_BADGE_CLASS[asset.language]}>{t(CARD_LANGUAGE_LABELS[asset.language])}</Tag>
               {asset.rarity && <RarityTag rarity={asset.rarity} />}
             </div>
             <div className="flex items-center justify-between gap-3 border-t pt-3 text-sm">
@@ -389,7 +384,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
                   ? t("Ungraded — verified by camera")
                   : `${asset.gradingCompany} ${formatGrade(asset.grade)}`}
                 {asset.isBlackLabel && (
-                  <span className="rounded bg-amber-400 px-1 py-0.5 text-[9px] font-bold text-neutral-900">
+                  <span className="rounded bg-black-label px-1 py-0.5 text-[9px] font-bold text-background">
                     Black Label
                   </span>
                 )}

@@ -12,6 +12,7 @@ import { displayImage, realPhotos } from "@/lib/card-image";
 import { useT } from "@/components/landing/language-provider";
 import { RarityTag } from "@/components/item/rarity-badge";
 import { UserAvatar } from "@/components/messages/user-avatar";
+import { ChangeTag } from "@/components/ui/change-tag";
 
 const CHIP = "rounded-md px-2 py-1 text-[11px] font-semibold leading-none text-white backdrop-blur-sm";
 
@@ -72,8 +73,15 @@ export function ListingCard({
           </div>
         )}
 
-        {/* Top corner: the grade, on a dark chip so it reads over any artwork. */}
+        {/* Top corners, like a slab label: the grade on a dark chip (reads over
+            any artwork) on the left, the rarity tag on the right. Keeping the
+            rarity off the name row lets the full name show. */}
         <GradeChip asset={asset} className={cn(CHIP, "absolute left-2.5 top-2.5 bg-black/70 py-1.5 font-normal")} />
+        {asset.rarity && (
+          <span className="absolute right-2.5 top-2.5 flex">
+            <RarityTag rarity={asset.rarity} />
+          </span>
+        )}
 
         {photos.length > 1 && (
           <span className={cn(CHIP, "absolute bottom-2.5 left-2.5 inline-flex items-center gap-1 bg-black/70 font-medium")}>
@@ -84,11 +92,8 @@ export function ListingCard({
       </div>
 
       <div className={cn("flex flex-1 flex-col gap-1", compact ? "p-3" : "p-3.5 sm:p-4")}>
-        {/* Name on the left, the rarity beside it on the right. */}
-        <div className="flex items-center justify-between gap-2">
-          <h3 className={cn("min-w-0 truncate font-semibold", compact ? "text-[13px]" : "text-sm sm:text-[15px]")}>{asset.name}</h3>
-          {asset.rarity && <RarityTag rarity={asset.rarity} />}
-        </div>
+        {/* Up to two lines: edition and variant words ("1st Edition", "Alt Art") decide what a card is worth. */}
+        <h3 className={cn("line-clamp-2 leading-snug font-semibold", compact ? "text-[13px]" : "text-sm sm:text-[15px]")}>{asset.name}</h3>
         {/* The set only; the card number and seller are on the item page. */}
         <p className="text-muted-foreground line-clamp-1 text-xs">{asset.subtitle}</p>
 
@@ -97,19 +102,16 @@ export function ListingCard({
           <span title={sellerName} aria-label={t("Seller: {name}", { name: sellerName })}>
             <UserAvatar user={{ name: sellerName, handle: null, image: asset.seller.image ?? null }} className="size-6 [&_*]:text-[10px]" />
           </span>
-          <span
-            className={cn("flex min-w-0 shrink-0 items-center gap-1 whitespace-nowrap font-bold tabular-nums", compact ? "text-sm sm:text-base" : "text-base sm:text-lg")}
-          >
-            {/* Which way the price last moved, right where the price is. */}
-            {asset.priceDirection && (
-              <span
-                className={cn("text-[10px]", asset.priceDirection === "up" ? "text-success" : "text-destructive")}
-                aria-label={asset.priceDirection === "up" ? t("Price went up") : t("Price went down")}
-              >
-                {asset.priceDirection === "up" ? "▲" : "▼"}
+          <span className="flex min-w-0 shrink-0 items-center gap-1.5">
+            {/* How much the asking price moved at its last change, right beside the price. */}
+            {asset.priceChangePct != null && (
+              <span title={t("Change since the last price")}>
+                <ChangeTag pct={asset.priceChangePct} className="text-[11px]" />
               </span>
             )}
-            {asset.priceThb != null ? formatThb(asset.priceThb) : t("Price unavailable")}
+            <span className={cn("whitespace-nowrap font-bold tabular-nums", compact ? "text-sm sm:text-base" : "text-base sm:text-lg")}>
+              {asset.priceThb != null ? formatThb(asset.priceThb) : t("Price unavailable")}
+            </span>
           </span>
         </div>
       </div>
@@ -119,8 +121,8 @@ export function ListingCard({
 
   // The toggle sits beside the link, not inside it, so tapping it never
   // opens the listing; the overlay matches the picture's area so it lands
-  // in the picture's bottom-right corner. On desktop it only shows on hover
-  // (or once the card is in the comparison), so it doesn't cover the art.
+  // in the picture's bottom-right corner. On desktop it rests half-faded so
+  // people can find it without it covering the art, and comes up fully on hover.
   return (
     <div className={cn("group/compare relative flex", compare.selected && "[&>a]:border-success")}>
       {card}
@@ -137,7 +139,7 @@ export function ListingCard({
             "pointer-events-auto absolute right-2.5 bottom-2.5 inline-flex items-center gap-1 py-1.5 transition-[opacity,background-color] disabled:opacity-50",
             compare.selected
               ? "bg-success text-background"
-              : "bg-black/70 hover:bg-black/85 md:opacity-0 md:group-hover/compare:opacity-100 md:focus-visible:opacity-100",
+              : "bg-black/70 hover:bg-black/85 md:opacity-60 md:group-hover/compare:opacity-100 md:focus-visible:opacity-100",
           )}
         >
           {compare.selected ? <Check className="size-3" /> : <Scale className="size-3" />}
@@ -172,7 +174,7 @@ function GradeChip({ asset, className }: { asset: AssetSummary; className?: stri
           <span className="font-bold">{formatGrade(asset.grade)}</span>
         </>
       )}
-      {asset.isBlackLabel && <span className="font-semibold text-amber-500">· BL</span>}
+      {asset.isBlackLabel && <span className="font-semibold text-black-label">· BL</span>}
     </span>
   );
 }

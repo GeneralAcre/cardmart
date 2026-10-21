@@ -29,6 +29,8 @@
   --destructive: #D62828;
   /* Comparing against a different grade than the listing: informational, not a deal or a warning. */
   --compare: #3b9eff;
+  /* BGS Black Label: one amber for its text and tags everywhere. */
+  --black-label: #fbbf24;
   --border: #262626;
   --input: #2e2e2e;
   --ring: #737373;
@@ -72,6 +74,7 @@
   --success-foreground: #ffffff;
   --destructive: #dc2626;
   --compare: #1d6fd1;
+  --black-label: #b45309;
   --border: #e2e2e0;
   --input: #dcdcda;
   --ring: #a3a3a3;
@@ -109,6 +112,7 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-success: var(--success);
   --color-compare: var(--compare);
+  --color-black-label: var(--black-label);
   --color-success-foreground: var(--success-foreground);
   --color-destructive: var(--destructive);
   --color-highlight: var(--highlight);

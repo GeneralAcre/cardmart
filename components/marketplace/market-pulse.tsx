@@ -10,6 +10,7 @@ import { MarketHeatmap } from "@/components/marketplace/market-heatmap";
 import { formatGrade, formatThb } from "@/lib/format";
 import type { LeaderboardPeriod, LeaderboardRow } from "@/lib/queries";
 import { cn } from "@/lib/utils";
+import { ChangeTag } from "@/components/ui/change-tag";
 import { useT } from "@/components/landing/language-provider";
 
 const PERIODS: LeaderboardPeriod[] = ["24h", "7d", "30d"];
@@ -125,9 +126,7 @@ function MoversList({
                     <span className="tabular-nums">{formatThb(row.priceThb)}</span>
                   </span>
                 </span>
-                <span className={cn("shrink-0 text-sm font-semibold tabular-nums", change > 0 ? "text-success" : "text-destructive")}>
-                  {change > 0 ? "▲" : "▼"} {Math.abs(change).toFixed(1)}%
-                </span>
+                <ChangeTag pct={change} className="text-sm" />
               </Link>
             </li>
           );

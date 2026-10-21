@@ -24,20 +24,10 @@ import { formatDate, formatGrade, formatThb } from "@/lib/format";
 import type { HoldingPnl, SoldTrade } from "@/lib/pnl";
 import { cn } from "@/lib/utils";
 import { useT } from "@/components/landing/language-provider";
+import { ChangeTag } from "@/components/ui/change-tag";
 
 // Green for a gain, red for a loss, grey when it's flat.
 const toneClass = (v: number) => (v > 0 ? "text-success" : v < 0 ? "text-destructive" : "text-muted-foreground");
-
-/** "▲ 12.3%" in green, "▼ 4.0%" in red, or a grey "0.0%". */
-export function GainBadge({ pct, className }: { pct: number; className?: string }) {
-  const flat = Math.abs(pct) < 0.05;
-  return (
-    <span className={cn("font-semibold tabular-nums", toneClass(flat ? 0 : pct), className)}>
-      {flat ? "" : pct > 0 ? "▲ " : "▼ "}
-      {Math.abs(pct).toFixed(1)}%
-    </span>
-  );
-}
 
 const signedThb = (v: number) => (v === 0 ? formatThb(0) : `${v > 0 ? "+" : "−"}${formatThb(Math.abs(v))}`);
 
@@ -212,7 +202,7 @@ export function TradeHistory({ trades }: { trades: SoldTrade[] }) {
               <span className={cn("text-xl font-bold tabular-nums", toneClass(totalGain))}>
                 {signedThb(totalGain)}
               </span>
-              {totalCost > 0 && <GainBadge pct={(totalGain / totalCost) * 100} className="text-sm" />}
+              {totalCost > 0 && <ChangeTag pct={(totalGain / totalCost) * 100} className="text-sm" />}
             </span>
           ) : (
             <span className="text-muted-foreground text-sm">{t("Add what you paid to see it")}</span>
@@ -267,7 +257,7 @@ export function TradeHistory({ trades }: { trades: SoldTrade[] }) {
                   <span className={cn("tabular-nums", toneClass(tr.gainThb))}>
                     {signedThb(tr.gainThb)}
                   </span>
-                  <GainBadge pct={tr.gainPct} />
+                  <ChangeTag pct={tr.gainPct} />
                 </span>
               ) : (
                 <span className="text-muted-foreground text-xs">—</span>

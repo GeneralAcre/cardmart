@@ -21,6 +21,8 @@ export interface AssetSummary {
   priceThb: number | null;
   /** Direction of the latest listed price compared with the previous snapshot. */
   priceDirection?: "up" | "down" | null;
+  /** How much the latest listed price moved from the previous one, in percent. */
+  priceChangePct?: number | null;
   /** First recorded listing price and minter, used as the lifetime price baseline. */
   originalMintPriceThb?: number | null;
   originalMinterName?: string | null;

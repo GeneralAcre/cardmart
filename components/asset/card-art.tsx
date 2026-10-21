@@ -69,11 +69,11 @@ export function CardArt({
           isBlackLabel ? "border-neutral-700 bg-neutral-900/90" : "bg-white/85",
         )}
       >
-        <ShieldCheck className={cn("size-3", isBlackLabel ? "text-amber-400" : "text-primary")} />
+        <ShieldCheck className={cn("size-3", isBlackLabel ? "text-black-label" : "text-primary")} />
         <span
           className={cn(
             "text-[10px] font-semibold tracking-wide",
-            isBlackLabel ? "text-amber-400" : "text-neutral-800",
+            isBlackLabel ? "text-black-label" : "text-neutral-800",
           )}
         >
           {gradingCompany === "RAW" ? "RAW" : `${gradingCompany} ${formatGrade(grade)}`}

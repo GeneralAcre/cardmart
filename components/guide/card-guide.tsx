@@ -1,9 +1,9 @@
 import { RARITIES, RARITY_STYLE } from "@/lib/rarity";
 import { CARD_GAMES, CARD_GAME_BADGE_CLASS, CARD_GAME_LABELS, CARD_LANGUAGES, CARD_LANGUAGE_BADGE_CLASS, CARD_LANGUAGE_LABELS } from "@/lib/labels";
 import { cn } from "@/lib/utils";
+import { ChangeTag } from "@/components/ui/change-tag";
+import { Tag } from "@/components/ui/tag";
 import type { Translate } from "@/lib/i18n/translate";
-
-const pill = "inline-flex shrink-0 items-center justify-center rounded-full px-2.5 py-0.5 text-xs font-semibold";
 
 function Section({ title, intro, children }: { title: string; intro?: string; children: React.ReactNode }) {
   return (
@@ -39,7 +39,7 @@ export function CardGuide({ t }: { t: Translate }) {
           {CARD_GAMES.map((g) => (
             <Row
               key={g}
-              tag={<span className={cn(pill, "rounded", CARD_GAME_BADGE_CLASS[g])}>{t(CARD_GAME_LABELS[g])}</span>}
+              tag={<Tag className={CARD_GAME_BADGE_CLASS[g]}>{t(CARD_GAME_LABELS[g])}</Tag>}
               title={t(CARD_GAME_LABELS[g])}
               body={g === "POKEMON" ? t("Pokémon cards. Blue tag.") : t("One Piece cards. Ice blue tag.")}
             />
@@ -55,7 +55,7 @@ export function CardGuide({ t }: { t: Translate }) {
           {RARITIES.map((r) => (
             <Row
               key={r.value}
-              tag={<span className={cn(pill, "w-12 rounded-md px-0", RARITY_STYLE[r.value])}>{r.short}</span>}
+              tag={<Tag className={cn("w-11 px-0", RARITY_STYLE[r.value])}>{r.short}</Tag>}
               title={t(r.label)}
               body={t(r.description)}
             />
@@ -66,17 +66,17 @@ export function CardGuide({ t }: { t: Translate }) {
       <Section title={t("Grade")} intro={t("Shown on the top-left of the card photo: who graded it and the score out of 10.")}>
         <ul className="flex flex-col gap-3">
           <Row
-            tag={<span className={cn(pill, "bg-foreground/90 text-background text-[10px]")}>PSA 9</span>}
+            tag={<Tag className="bg-foreground/90 text-background">PSA 9</Tag>}
             title={t("Graded card")}
             body={t("A grading company (PSA, BGS or CGC) checked the card and gave it a score. Higher is better.")}
           />
           <Row
-            tag={<span className={cn(pill, "bg-neutral-900 text-[10px] text-amber-400")}>BL</span>}
+            tag={<Tag className="text-black-label bg-neutral-900">BL</Tag>}
             title={t("Black Label")}
             body={t("A perfect 10 on every sub-grade. The rarest grade a card can get.")}
           />
           <Row
-            tag={<span className={cn(pill, "bg-foreground/90 text-background text-[10px]")}>RAW</span>}
+            tag={<Tag className="bg-foreground/90 text-background">RAW</Tag>}
             title={t("Ungraded")}
             body={t("Not sent to a grading company. CardMart checks it by camera before it is listed.")}
           />
@@ -88,7 +88,7 @@ export function CardGuide({ t }: { t: Translate }) {
           {CARD_LANGUAGES.map((l) => (
             <Row
               key={l}
-              tag={<span className={cn(pill, "rounded", CARD_LANGUAGE_BADGE_CLASS[l])}>{t(CARD_LANGUAGE_LABELS[l])}</span>}
+              tag={<Tag className={CARD_LANGUAGE_BADGE_CLASS[l]}>{t(CARD_LANGUAGE_LABELS[l])}</Tag>}
               title={t(CARD_LANGUAGE_LABELS[l])}
               body={l === "ENGLISH" ? t("English print. Magenta tag.") : t("Japanese print. Pink tag.")}
             />
@@ -99,12 +99,12 @@ export function CardGuide({ t }: { t: Translate }) {
       <Section title={t("Price colours")} intro={t("Green means up, red means down, wherever you see a percentage.")}>
         <ul className="flex flex-col gap-3">
           <Row
-            tag={<span className="text-success text-sm font-bold tabular-nums">▲ 8.1%</span>}
+            tag={<ChangeTag pct={8.1} className="text-sm" />}
             title={t("Gain")}
             body={t("The card is worth more now than when it was bought or minted.")}
           />
           <Row
-            tag={<span className="text-destructive text-sm font-bold tabular-nums">▼ 1.0%</span>}
+            tag={<ChangeTag pct={-1} className="text-sm" />}
             title={t("Loss")}
             body={t("The card is worth less now than when it was bought or minted.")}
           />

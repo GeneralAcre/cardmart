@@ -34,9 +34,12 @@ function withPriceDirection<T extends { priceThb: number | null; priceSnapshots:
       : asset.priceThb > previousPrice
         ? "up"
         : "down";
+  // The size of that move, so cards can say "▲ 4.2%" instead of a bare arrow.
+  const priceChangePct =
+    priceDirection == null || !previousPrice ? null : ((asset.priceThb! - previousPrice) / previousPrice) * 100;
   const { priceSnapshots: _priceSnapshots, ...summary } = asset;
   void _priceSnapshots;
-  return { ...summary, priceDirection };
+  return { ...summary, priceDirection, priceChangePct };
 }
 
 export async function getMarketplaceListings(filters: MarketplaceFilters = {}) {
