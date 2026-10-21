@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from "react";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
-import { LineChart } from "lucide-react";
 
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -49,9 +48,6 @@ export function PortfolioValueChart({ initialHistory }: { initialHistory: ValueP
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-3">
         <div className="flex flex-col gap-0.5">
-          <span className="text-muted-foreground flex items-center gap-1.5 text-xs">
-            <LineChart className="size-3.5" /> {t("Portfolio Value")}
-          </span>
           <span className="text-xl font-semibold tabular-nums">{latest != null ? formatThb(latest) : "—"}</span>
         </div>
         <Tabs value={range} onValueChange={(v) => handleRangeChange(v as PriceHistoryRange)}>
