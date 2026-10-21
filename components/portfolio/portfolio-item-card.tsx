@@ -10,7 +10,6 @@ import { ChevronDown, Flame, Gavel, Loader2, Repeat, Tag, TagX, Truck } from "lu
 import { CardArt } from "@/components/asset/card-art";
 import { BidStepField, resolveBidStep } from "@/components/auction/bid-step-field";
 import { StartTimePicker } from "@/components/auction/start-time-picker";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,12 +34,11 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { auctionApprovalNeeded, delistAsset, startAuction, updateListingPrice, prepareVaultRedeem, vaultRedeem, vaultRelist } from "@/lib/actions";
 import { useWalletStore } from "@/lib/web3/wallet-store";
 import { formatGrade, formatThb } from "@/lib/format";
-import { CARD_GAME_BADGE_CLASS, CARD_GAME_LABELS } from "@/lib/labels";
+import { RarityTag } from "@/components/item/rarity-badge";
 import type { AssetSummary } from "@/lib/types";
-import { cn } from "@/lib/utils";
 import { displayImage } from "@/lib/card-image";
 import { useT } from "@/components/landing/language-provider";
-import { HoldingPnlBlock } from "@/components/portfolio/pnl";
+import { GainBadge, HoldingPnlBlock } from "@/components/portfolio/pnl";
 import type { HoldingPnl } from "@/lib/pnl";
 
 export function PortfolioItemCard({
@@ -291,61 +289,54 @@ export function PortfolioItemCard({
             />
           </div>
         )}
-        {/* The game tag, the same coloured chip as on the Market cards. */}
-        <span
-          className={cn(
-            "absolute left-2 top-2 rounded-md px-2 py-1 text-[11px] leading-none font-semibold backdrop-blur-sm",
-            CARD_GAME_BADGE_CLASS[asset.game],
+        {/* The grade in the picture's corner, the same dark chip as on the Market cards. */}
+        <span className="absolute left-2.5 top-2.5 flex items-center gap-1 rounded-md bg-black/70 px-2 py-1.5 text-[11px] leading-none text-white backdrop-blur-sm">
+          {asset.gradingCompany === "RAW" ? (
+            <span className="font-semibold">{t("Ungraded")}</span>
+          ) : (
+            <>
+              <span className="text-white/70">{asset.gradingCompany}</span>
+              <span className="font-bold">{formatGrade(asset.grade)}</span>
+            </>
           )}
-        >
-          {t(CARD_GAME_LABELS[asset.game])}
+          {asset.isBlackLabel && <span className="font-semibold text-amber-500">· BL</span>}
         </span>
+        {/* Top-right corner: whether it's on the market, in words, matching the grade chip. */}
+        {asset.marketStatus === "IN_AUCTION" ? (
+          <span className="absolute right-2.5 top-2.5 flex items-center gap-1 rounded-md bg-black/70 px-2 py-1.5 text-[11px] leading-none font-semibold text-white backdrop-blur-sm">
+            <Gavel className="size-3" /> {t("Up for Auction")}
+          </span>
+        ) : (
+          asset.forSale && (
+            <span
+              className="absolute right-2.5 top-2.5 flex items-center gap-1 rounded-md bg-black/70 px-2 py-1.5 text-[11px] leading-none font-semibold text-white tabular-nums backdrop-blur-sm"
+              title={t("Listed at {price}", { price: formatThb(asset.priceThb!) })}
+            >
+              <Tag className="size-3" /> {formatThb(asset.priceThb!)}
+            </span>
+          )
+        )}
       </Link>
-      {/* Gain or loss on the card, pinned over the image corner. A sibling of the
-          link (not inside it) because the badge can open a dialog. */}
-      {pnl && (
-        <div className="bg-background/90 absolute right-2 top-2 rounded-md px-2 py-0.5 shadow-sm backdrop-blur-sm">
-          <HoldingPnlBlock assetId={asset.id} pnl={pnl} />
-        </div>
-      )}
       <div className="flex flex-col gap-1">
+        {/* Name on the left; the rarity and sale status beside it on the right. */}
         <div className="flex min-w-0 items-center justify-between gap-2">
-          <Link href={`/item/${asset.id}`} className="line-clamp-1 min-w-0 text-sm font-semibold hover:underline">
+          <Link href={`/item/${asset.id}`} className="min-w-0 truncate text-sm font-semibold hover:underline">
             {asset.name}
           </Link>
-          {/* Who graded it and the score, on the right of the name, like the Market cards. */}
-          <span className="flex shrink-0 items-center gap-1 rounded-md border px-2 py-1 text-[11px] leading-none">
-            {asset.gradingCompany === "RAW" ? (
-              <span className="font-semibold">{t("Ungraded")}</span>
-            ) : (
-              <>
-                <span className="text-muted-foreground">{asset.gradingCompany}</span>
-                <span className="font-bold">{formatGrade(asset.grade)}</span>
-              </>
-            )}
-            {asset.isBlackLabel && <span className="font-semibold text-amber-500">· BL</span>}
-          </span>
+          {asset.rarity && <RarityTag rarity={asset.rarity} />}
         </div>
         <p className="text-muted-foreground line-clamp-1 text-xs">{asset.subtitle}</p>
       </div>
 
-      {asset.marketStatus === "IN_AUCTION" ? (
-        <Badge variant="secondary" className="w-fit">
-          <Gavel className="size-3" /> {t("Up for Auction")}
-        </Badge>
-      ) : (
-        asset.forSale && (
-          <Badge
-            variant="secondary"
-            className={cn(
-              "w-fit",
-              asset.priceDirection === "up" && "text-success",
-              asset.priceDirection === "down" && "text-destructive",
-            )}
-          >
-            {t("Listed at {price}", { price: formatThb(asset.priceThb!) })}
-          </Badge>
-        )
+      {/* The gain comes first: the amount on the right, never cut off, and the
+          same move as a percentage on the left. */}
+      {pnl && (
+        <div className="flex min-h-7 items-center justify-between gap-2">
+          {pnl.gainPct != null && <GainBadge pct={pnl.gainPct} className="text-sm" />}
+          <span className="ml-auto flex min-w-0 justify-end">
+            <HoldingPnlBlock assetId={asset.id} pnl={pnl} />
+          </span>
+        </div>
       )}
 
       {asset.marketStatus === "IN_AUCTION" ? (

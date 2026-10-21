@@ -29,7 +29,7 @@ import { useT } from "@/components/landing/language-provider";
 const toneClass = (v: number) => (v > 0 ? "text-success" : v < 0 ? "text-destructive" : "text-muted-foreground");
 
 /** "▲ 12.3%" in green, "▼ 4.0%" in red, or a grey "0.0%". */
-function GainBadge({ pct, className }: { pct: number; className?: string }) {
+export function GainBadge({ pct, className }: { pct: number; className?: string }) {
   const flat = Math.abs(pct) < 0.05;
   return (
     <span className={cn("font-semibold tabular-nums", toneClass(flat ? 0 : pct), className)}>
@@ -131,45 +131,48 @@ export function HoldingPnlBlock({ assetId, pnl }: { assetId: string; pnl: Holdin
       <PurchaseCostDialog assetId={assetId} costThb={null}>
         <button
           type="button"
-          className="text-muted-foreground hover:text-foreground inline-flex size-6 shrink-0 items-center justify-center rounded-full transition-colors"
-          aria-label={t("Add what you paid to see profit")}
+          className="text-muted-foreground hover:text-foreground flex min-w-0 items-center gap-1 text-xs transition-colors"
           title={t("Add what you paid to see profit")}
         >
-          <Plus className="size-4" />
+          <Plus className="size-3.5 shrink-0" />
+          <span className="truncate">{t("Add what you paid to see profit")}</span>
         </button>
       </PurchaseCostDialog>
     );
   }
 
-  // Just the percentage on the card; the prices behind it are on the card's
-  // page (and in the hover text), so the grid stays easy to scan.
+  // Just how much the card has made (or lost) in baht. What was paid and what
+  // it's worth are in the hover text and on the card's page.
+  const amount =
+    pnl.gainThb != null ? (
+      <span className={cn("text-lg leading-none font-bold whitespace-nowrap tabular-nums", toneClass(pnl.gainThb))}>{signedThb(pnl.gainThb)}</span>
+    ) : (
+      <span className="text-muted-foreground truncate text-sm leading-none">{t("No market price yet")}</span>
+    );
+  const title =
+    pnl.valueThb != null
+      ? t("Paid {paid} · Market {market}", { paid: formatThb(pnl.costThb), market: formatThb(pnl.valueThb) })
+      : t("Paid {paid}", { paid: formatThb(pnl.costThb) });
+
+  // Typed in by the owner: tapping the amount lets them change it.
+  if (pnl.costSource === "manual") {
+    return (
+      <PurchaseCostDialog assetId={assetId} costThb={pnl.costThb}>
+        <button
+          type="button"
+          className="flex min-w-0 items-center rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label={t("Edit what you paid")}
+          title={title}
+        >
+          {amount}
+        </button>
+      </PurchaseCostDialog>
+    );
+  }
   return (
-    <div
-      className="flex shrink-0 items-center"
-      title={
-        pnl.valueThb != null
-          ? t("Paid {paid} · Market {market}", { paid: formatThb(pnl.costThb), market: formatThb(pnl.valueThb) })
-          : t("Paid {paid}", { paid: formatThb(pnl.costThb) })
-      }
-    >
-      <span className="flex items-center">
-        {pnl.costSource === "manual" ? (
-          <PurchaseCostDialog assetId={assetId} costThb={pnl.costThb}>
-            <button type="button" className="rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={t("Edit what you paid")}>
-              {pnl.gainPct != null ? (
-                <GainBadge pct={pnl.gainPct} className="text-base" />
-              ) : (
-                <span className="text-muted-foreground text-sm" aria-hidden="true">—</span>
-              )}
-            </button>
-          </PurchaseCostDialog>
-        ) : pnl.gainPct != null ? (
-          <GainBadge pct={pnl.gainPct} className="text-base" />
-        ) : (
-          <span className="text-muted-foreground text-sm" title={t("No market price yet")}>—</span>
-        )}
-      </span>
-    </div>
+    <span className="flex min-w-0 items-center" title={title}>
+      {amount}
+    </span>
   );
 }
 
