@@ -39,7 +39,19 @@ export const RARITY_STYLE: Record<CardRarity, string> = {
   UC: "bg-[#007F5F] text-white",
 };
 
-export const isRarity = (value: string | null | undefined): value is CardRarity =>
+/** The same colours as RARITY_STYLE, as an outline only, for the quiet tag on listing cards. */
+export const RARITY_BORDER: Record<CardRarity, string> = {
+  SAR: "border-[#FFFF3F]",
+  SEC: "border-[#EEEF20]",
+  UR: "border-[#D4D700]",
+  AR: "border-[#AACC00]",
+  SR: "border-[#80B918]",
+  RR: "border-[#55A630]",
+  R: "border-[#2B9348]",
+  UC: "border-[#007F5F]",
+};
+
+export const isRarity =(value: string | null | undefined): value is CardRarity =>
   RARITIES.some((r) => r.value === value);
 
 // Catalog wording (TCGplayer data via TCG API) → our groups. Pokémon spells

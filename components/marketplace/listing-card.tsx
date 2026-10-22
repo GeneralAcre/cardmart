@@ -10,6 +10,7 @@ import type { AssetSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { displayImage, realPhotos } from "@/lib/card-image";
 import { useT } from "@/components/landing/language-provider";
+import { RarityTag } from "@/components/item/rarity-badge";
 import { ChangeTag } from "@/components/ui/change-tag";
 import { UserAvatar } from "@/components/messages/user-avatar";
 
@@ -103,8 +104,12 @@ export function ListingCard({
         {/* One line on every card, so the set line and price line up across a row with no gaps.
             A long name ends in "…" and shows in full on hover. */}
         <h3 title={asset.name} className={cn("truncate font-semibold", compact ? "text-[13px]" : "text-sm")}>{asset.name}</h3>
-        {/* Rarity stays off the card to keep it calm; it's still a filter and on the item page. */}
-        <p className="text-muted-foreground truncate text-xs">{asset.subtitle}</p>
+        {/* The set, with the rarity on the right: the same spot on every card, but a
+            coloured outline rather than a filled tag, so the price stays the headline. */}
+        <div className="text-muted-foreground flex min-w-0 items-center justify-between gap-2 text-xs">
+          <span className="truncate">{asset.subtitle}</span>
+          {asset.rarity && <RarityTag rarity={asset.rarity} quiet />}
+        </div>
 
         {/* Bottom row: the seller's picture on the left (name on hover), the price on the right. */}
         <div className="mt-auto flex items-center justify-between gap-2 pt-3">
