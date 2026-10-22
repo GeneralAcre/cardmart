@@ -17,6 +17,7 @@ import { EMPTY_FILTERS, type MarketplaceFilterState } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { RARITIES, RARITY_STYLE } from "@/lib/rarity";
 import { useT } from "@/components/landing/language-provider";
+import { SetFilter, type SetOption } from "@/components/marketplace/set-filter";
 
 const GRADING_COMPANIES: GradingCompany[] = ["PSA", "BGS", "CGC", "RAW"];
 const GRADES = [10, 9.5, 9, 8.5, 8, 7];
@@ -66,7 +67,7 @@ function FilterPill({
         className,
         "focus-visible:ring-ring focus-visible:ring-2",
         // Picked: a solid fill with the fill's own text colour (black on white in dark mode), so the label stays readable.
-        active ? cn("border-transparent", activeClass) : "text-foreground hover:border-foreground/30",
+        active ? cn("border-transparent", activeClass) : "text-foreground border-foreground/25 hover:border-foreground/50 hover:bg-foreground/5",
       )}
     >
       {children}
@@ -87,10 +88,13 @@ function FilterSection({ label, children }: { label: string; children: React.Rea
 export function FilterBar({
   filters,
   onChange,
+  setOptions,
   className,
 }: {
   filters: MarketplaceFilterState;
   onChange: (next: MarketplaceFilterState) => void;
+  /** Sets with cards listed, for the Set filter. */
+  setOptions: SetOption[];
   className?: string;
 }) {
   const t = useT();
@@ -167,6 +171,16 @@ export function FilterBar({
             </FilterPill>
           ))}
         </div>
+      </FilterSection>
+
+      {/* Type to find a set among hundreds; see SetFilter. */}
+      <FilterSection label="Set">
+        <SetFilter
+          options={setOptions}
+          selected={filters.sets}
+          games={filters.games}
+          onChange={(sets) => onChange({ ...filters, sets })}
+        />
       </FilterSection>
 
       <FilterSection label="Language">
@@ -246,7 +260,7 @@ export function FilterBar({
             type="number"
             inputMode="numeric"
             placeholder={t("Min")}
-            className="h-10 min-w-0 flex-1 rounded-lg"
+            className="h-10 min-w-0 flex-1 rounded-full border-foreground/25 focus-visible:border-foreground/50"
             value={filters.priceMin ?? ""}
             onChange={(e) =>
               onChange({
@@ -260,7 +274,7 @@ export function FilterBar({
             type="number"
             inputMode="numeric"
             placeholder={t("Max")}
-            className="h-10 min-w-0 flex-1 rounded-lg"
+            className="h-10 min-w-0 flex-1 rounded-full border-foreground/25 focus-visible:border-foreground/50"
             value={filters.priceMax ?? ""}
             onChange={(e) =>
               onChange({

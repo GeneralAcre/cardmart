@@ -5,6 +5,7 @@ import { ArrowRight, Grid3x3, LayoutGrid, PackageSearch, Scale, Search, SlidersH
 
 import { FilterBar } from "@/components/marketplace/filter-bar";
 import { ListingCard } from "@/components/marketplace/listing-card";
+import type { SetOption } from "@/components/marketplace/set-filter";
 import { MAX_COMPARE, PriceCompareTable, compareCardKey } from "@/components/marketplace/price-compare-table";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -33,6 +34,7 @@ function buildQuery(filters: MarketplaceFilterState) {
   filters.games.forEach((g) => sp.append("game", g));
   filters.languages.forEach((l) => sp.append("language", l));
   filters.rarities.forEach((r) => sp.append("rarity", r));
+  filters.sets.forEach((name) => sp.append("set", name));
   filters.gradingCompanies.forEach((c) => sp.append("gradingCompany", c));
   filters.grades.forEach((g) => sp.append("grade", String(g)));
   if (filters.blackLabelOnly) sp.set("blackLabel", "true");
@@ -48,6 +50,7 @@ function countActiveFilters(filters: MarketplaceFilterState): number {
     filters.games.length +
     filters.languages.length +
     filters.rarities.length +
+    filters.sets.length +
     filters.gradingCompanies.length +
     filters.grades.length +
     (filters.blackLabelOnly ? 1 : 0) +
@@ -94,6 +97,17 @@ export function MarketplaceExplorer({
   const t = useT();
   const itemCount = t(listings.length === 1 ? "{count} item" : "{count} items", { count: listings.length });
   const sortedListings = useMemo(() => sortListings(listings, sort), [listings, sort]);
+  // The Set filter offers every set with cards listed, counted from the full
+  // listing the page opened with (not the current results, which shrink as you filter).
+  const setOptions = useMemo<SetOption[]>(() => {
+    const bySet = new Map<string, SetOption>();
+    for (const a of initialListings) {
+      const held = bySet.get(a.subtitle);
+      if (held) held.count++;
+      else bySet.set(a.subtitle, { name: a.subtitle, game: a.game, count: 1 });
+    }
+    return [...bySet.values()];
+  }, [initialListings]);
 
   // Draw the grid a page at a time: with thousands of listings, rendering
   // every card at once makes the page slow. The limit belongs to one result
@@ -288,7 +302,7 @@ export function MarketplaceExplorer({
             <SheetTitle>{t("Filters")}</SheetTitle>
           </SheetHeader>
           <div className="overflow-y-auto px-4 pb-4">
-            <FilterBar filters={filters} onChange={setFilters} />
+            <FilterBar filters={filters} onChange={setFilters} setOptions={setOptions} />
           </div>
           <SheetFooter>
             <Button onClick={() => setFilterSheetOpen(false)} disabled={loading}>
@@ -304,7 +318,7 @@ export function MarketplaceExplorer({
         {sidebarOpen && (
           <aside className="hidden border-r lg:block">
             <div className="scrollbar-none sticky top-[72px] max-h-[calc(100vh-72px)] overflow-y-auto py-5 pr-5">
-              <FilterBar filters={filters} onChange={setFilters} />
+              <FilterBar filters={filters} onChange={setFilters} setOptions={setOptions} />
             </div>
           </aside>
         )}

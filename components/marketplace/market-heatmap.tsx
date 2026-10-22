@@ -50,7 +50,7 @@ const MIN_TILE_SHARE = 0.035;
  * Most tiles the map draws, by its width: a phone fits far fewer readable
  * tiles than a desktop. Smaller ones are merged into a single "+N more" tile.
  */
-const maxTiles = (width: number) => (width < 480 ? 8 : width < 768 ? 14 : 30);
+const maxTiles = (width: number) => (width < 480 ? 8 : 10);
 
 /**
  * Value-weighted change for a set of cards: (today's total − the total at the
@@ -236,6 +236,11 @@ export function MarketHeatmap({
   const rects = useMemo(() => {
     const total = sorted.reduce((a, t) => a + t.size, 0);
     const layoutSizes = sorted.map((t) => Math.max(t.size, total * MIN_TILE_SHARE));
+    // "+N more" can add up to more than any one series; drawn at that size it lands mid-map and
+    // breaks the biggest-first order. Cap it at the smallest named tile so it always sits last,
+    // bottom-right — its label still shows the real change.
+    const last = sorted.length - 1;
+    if (last > 0 && sorted[last].key === "__others") layoutSizes[last] = Math.min(layoutSizes[last], layoutSizes[last - 1]);
     return squarify(layoutSizes, { x: 0, y: 0, w: width, h: height });
   }, [sorted, width, height]);
 
@@ -340,8 +345,8 @@ export function MarketHeatmap({
         )}
       </div>
 
-      <div className="text-muted-foreground flex flex-wrap items-center justify-between gap-3 text-[11px]">
-        <div className="flex items-center gap-2">
+      <div className="text-muted-foreground flex flex-wrap items-center justify-between gap-3 text-[11px] xl:flex-nowrap">
+        <div className="flex shrink-0 items-center gap-2">
           <span>−{FULL_COLOR_PCT}%</span>
           <div
             className="h-2 w-40 rounded-full"
@@ -352,7 +357,7 @@ export function MarketHeatmap({
           />
           <span>+{FULL_COLOR_PCT}%</span>
         </div>
-        <p className="max-w-xl">
+        <p className="max-w-xl xl:max-w-none xl:truncate">
           {series == null && group === "series"
             ? tr("Each tile is a card series (set). Size = total value listed (market cap) or average price; colour = value-weighted price change. Click a series to see its cards.")
             : tr("Each tile is a card for sale. Size = asking price; colour = price change. Click a card to open it.")}

@@ -8,6 +8,8 @@ export interface MarketplaceFilters {
   games?: CardGame[];
   languages?: CardLanguage[];
   rarities?: CardRarity[];
+  /** Sets, matched exactly on Asset.subtitle. */
+  sets?: string[];
   gradingCompanies?: GradingCompany[];
   grades?: number[];
   blackLabelOnly?: boolean;
@@ -87,6 +89,9 @@ export async function getMarketplaceListings(filters: MarketplaceFilters = {}) {
   }
   if (filters.rarities?.length) {
     where.rarity = { in: filters.rarities };
+  }
+  if (filters.sets?.length) {
+    where.subtitle = { in: filters.sets };
   }
   if (filters.languages?.length) {
     where.language = { in: filters.languages };

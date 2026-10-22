@@ -46,6 +46,8 @@ export interface MarketplaceFilterState {
   games: CardGame[];
   languages: CardLanguage[];
   rarities: CardRarity[];
+  /** Sets (series), by the listing's subtitle, e.g. "Sword & Shield — Evolving Skies". */
+  sets: string[];
   gradingCompanies: GradingCompany[];
   grades: number[];
   /** BGS Black Label only — a separate toggle since it's not a distinct numeric grade (see Asset.isBlackLabel). */
@@ -60,6 +62,7 @@ export const EMPTY_FILTERS: MarketplaceFilterState = {
   games: [],
   languages: [],
   rarities: [],
+  sets: [],
   gradingCompanies: [],
   grades: [],
   blackLabelOnly: false,

@@ -10,7 +10,6 @@ import type { AssetSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { displayImage, realPhotos } from "@/lib/card-image";
 import { useT } from "@/components/landing/language-provider";
-import { RarityTag } from "@/components/item/rarity-badge";
 import { ChangeTag } from "@/components/ui/change-tag";
 import { UserAvatar } from "@/components/messages/user-avatar";
 
@@ -101,15 +100,11 @@ export function ListingCard({
       </div>
 
       <div className={cn("flex flex-1 flex-col gap-1", compact ? "p-3" : "p-3.5 sm:p-4")}>
-        {/* One line on every card, so the set line, rarity tag and price line up across a row with no gaps.
+        {/* One line on every card, so the set line and price line up across a row with no gaps.
             A long name ends in "…" and shows in full on hover. */}
         <h3 title={asset.name} className={cn("truncate font-semibold", compact ? "text-[13px]" : "text-sm")}>{asset.name}</h3>
-        {/* The set, with the rarity tag on the right: the same tag (and the same
-            spot) on every card, matching the chips on the picture. */}
-        <div className="text-muted-foreground flex min-w-0 items-center justify-between gap-2 text-xs">
-          <span className="truncate">{asset.subtitle}</span>
-          {asset.rarity && <RarityTag rarity={asset.rarity} />}
-        </div>
+        {/* Rarity stays off the card to keep it calm; it's still a filter and on the item page. */}
+        <p className="text-muted-foreground truncate text-xs">{asset.subtitle}</p>
 
         {/* Bottom row: the seller's picture on the left (name on hover), the price on the right. */}
         <div className="mt-auto flex items-center justify-between gap-2 pt-3">

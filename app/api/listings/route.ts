@@ -13,6 +13,8 @@ export async function GET(request: NextRequest) {
     .getAll("language")
     .filter((l): l is CardLanguage => l === "ENGLISH" || l === "JAPANESE");
   const rarities = sp.getAll("rarity").filter(isRarity);
+  // Capped so one request can't send an unbounded IN list.
+  const sets = sp.getAll("set").filter(Boolean).slice(0, 50);
   const gradingCompanies = sp
     .getAll("gradingCompany")
     .filter((c): c is GradingCompany => (Object.values(GradingCompany) as string[]).includes(c));
@@ -36,6 +38,7 @@ export async function GET(request: NextRequest) {
     games: games.length ? games : undefined,
     languages: languages.length ? languages : undefined,
     rarities: rarities.length ? rarities : undefined,
+    sets: sets.length ? sets : undefined,
     gradingCompanies: gradingCompanies.length ? gradingCompanies : undefined,
     grades: grades.length ? grades : undefined,
     blackLabelOnly,
