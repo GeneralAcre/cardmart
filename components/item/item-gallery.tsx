@@ -30,6 +30,64 @@ interface Props {
   referenceImageUrl?: string | null;
 }
 
+/** TCGplayer catalogue images come at 400×400; the same picture at 1000×1000 is sharp enough to zoom into. */
+function hiRes(url: string): string {
+  return url.replace("product-images.tcgplayer.com/fit-in/400x400/", "product-images.tcgplayer.com/fit-in/1000x1000/");
+}
+
+const ZOOM = 2.5;
+
+/**
+ * The picture at full size in the zoom window. Click or tap to magnify the
+ * spot under the pointer, move to look around, click again to zoom back out.
+ */
+function ZoomableImage({ src, alt, hint }: { src: string; alt: string; hint: string }) {
+  const [zoomed, setZoomed] = useState(false);
+  const [origin, setOrigin] = useState("50% 50%");
+
+  function pointAt(e: React.PointerEvent<HTMLDivElement>) {
+    const box = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - box.left) / box.width) * 100;
+    const y = ((e.clientY - box.top) / box.height) * 100;
+    setOrigin(`${Math.min(100, Math.max(0, x))}% ${Math.min(100, Math.max(0, y))}%`);
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div
+        role="button"
+        tabIndex={0}
+        aria-pressed={zoomed}
+        aria-label={hint}
+        onPointerDown={pointAt}
+        onClick={() => setZoomed((z) => !z)}
+        onPointerMove={(e) => zoomed && pointAt(e)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setZoomed((z) => !z);
+          }
+        }}
+        className={cn(
+          "relative h-[78vh] w-full overflow-hidden rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          // While zoomed, a finger drag pans the picture instead of scrolling the page.
+          zoomed ? "cursor-zoom-out touch-none" : "cursor-zoom-in",
+        )}
+      >
+        <Image
+          src={src}
+          alt={alt}
+          fill
+          sizes="(max-width: 896px) 94vw, 896px"
+          className="object-contain transition-transform duration-200 ease-out"
+          style={{ transform: zoomed ? `scale(${ZOOM})` : "none", transformOrigin: origin }}
+        />
+      </div>
+      <p className="text-muted-foreground text-center text-xs">{hint}</p>
+    </div>
+  );
+}
+
 // Combines the generated digital-twin art with the real live-camera
 // verification photos (front/back/cert-label/corner, however many the
 // checklist required) into one selectable gallery — previously only the
@@ -68,7 +126,7 @@ export function ItemGallery({
         {/* Shown whole on the dark stage (contain), never cropped. */}
         {selectedPhoto ? (
           <Image
-            src={selectedPhoto.url}
+            src={hiRes(selectedPhoto.url)}
             alt={selectedPhoto.viewLabel}
             fill
             sizes="(max-width: 1024px) 100vw, 55vw"
@@ -151,20 +209,17 @@ export function ItemGallery({
       )}
 
       <Dialog open={zoomOpen} onOpenChange={setZoomOpen}>
-        <DialogContent className="sm:max-w-md">
+        {/* Big enough to read the card: most of the screen, not a small box. */}
+        <DialogContent className="max-h-[92vh] w-[min(94vw,56rem)] max-w-none sm:max-w-none">
           <DialogTitle className="sr-only">
             {t("Zoomed {what}", { what: selectedPhoto ? t(selectedPhoto.viewLabel) : t("certificate artwork") })}
           </DialogTitle>
           {selectedPhoto ? (
-            <div className="relative aspect-square w-full">
-              <Image
-                src={selectedPhoto.url}
-                alt={selectedPhoto.viewLabel}
-                fill
-                sizes="(max-width: 448px) 100vw, 448px"
-                className={selectedPhoto.reference ? "rounded-lg object-contain" : "rounded-lg object-cover"}
-              />
-            </div>
+            <ZoomableImage
+              src={hiRes(selectedPhoto.url)}
+              alt={selectedPhoto.viewLabel}
+              hint={t("Click to zoom in, move to look around, click again to zoom out")}
+            />
           ) : (
             <CardArt
               themeIndex={themeIndex}

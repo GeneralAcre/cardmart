@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Bot, Gavel, Newspaper, Store, Trophy, Users, Wallet } from "lucide-react";
+import { Award, Bot, Gavel, Newspaper, Store, Trophy, Users, Wallet } from "lucide-react";
 
 export interface NavChild {
   href: string;
@@ -25,6 +25,7 @@ export interface NavLink {
 export const COMMUNITY_LINKS: NavChild[] = [
   { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
   { href: "/news", label: "News", icon: Newspaper },
+  { href: "/rewards", label: "Rewards", icon: Award },
 ];
 
 export const NAV_LINKS: NavLink[] = [

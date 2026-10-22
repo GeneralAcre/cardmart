@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Check, Images, Scale } from "lucide-react";
 
 import { CardArt } from "@/components/asset/card-art";
-import { formatGrade, formatThb } from "@/lib/format";
+import { formatThb } from "@/lib/format";
 import type { AssetSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { displayImage, realPhotos } from "@/lib/card-image";
@@ -73,10 +73,7 @@ export function ListingCard({
           </div>
         )}
 
-        {/* Chips on dark backgrounds that read over any artwork, each in the
-            same corner on every card: the grade top-left, how much the price
-            last moved top-right, Compare bottom-right. */}
-        <GradeChip asset={asset} className={cn(CHIP, "absolute left-2.5 top-2.5 bg-black/70 py-1.5 font-normal")} />
+        {/* Price movement and photo count sit over the artwork. */}
         {asset.priceChangePct != null && (
           // A solid green or red chip with its own text colour: red text on a dark
           // chip over artwork was too faint to read. Both pairs pass AA contrast.
@@ -161,30 +158,3 @@ export function ListingCard({
   );
 }
 
-/**
- * Grader and grade (or "Ungraded"), with JP and Black Label flags. Sits on the
- * picture, so its dimmed parts use white at lower opacity rather than the
- * theme's muted colour, which would vanish on the dark chip in light mode.
- */
-function GradeChip({ asset, className }: { asset: AssetSummary; className?: string }) {
-  const t = useT();
-  return (
-    <span className={cn("flex items-center gap-1", className)}>
-      {asset.language === "JAPANESE" && (
-        <span className="font-semibold text-white/70" title={t("Japanese")}>
-          JP ·
-        </span>
-      )}
-      {asset.gradingCompany === "RAW" ? (
-        <span className="font-semibold">{t("Ungraded")}</span>
-      ) : (
-        <>
-          <span className="sr-only">{t("Grade:")} </span>
-          <span className="text-white/70">{asset.gradingCompany}</span>
-          <span className="font-bold">{formatGrade(asset.grade)}</span>
-        </>
-      )}
-      {asset.isBlackLabel && <span className="font-semibold text-black-label">· BL</span>}
-    </span>
-  );
-}

@@ -14,6 +14,7 @@ import { MARKETPLACE } from "@/lib/i18n/th/marketplace";
 import { ORDERS } from "@/lib/i18n/th/orders";
 import { PAGES } from "@/lib/i18n/th/pages";
 import { PORTFOLIO } from "@/lib/i18n/th/portfolio";
+import { REWARDS } from "@/lib/i18n/th/rewards";
 
 export const TH: Record<string, string> = {
   // First, so an existing translation of a shared word ("Auctions") wins.
@@ -26,6 +27,7 @@ export const TH: Record<string, string> = {
   ...LISTING,
   ...PORTFOLIO,
   ...LEADERBOARD,
+  ...REWARDS,
   ...PAGES,
   ...ADMIN,
   ...BACKOFFICE,

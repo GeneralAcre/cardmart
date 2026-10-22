@@ -1,14 +1,17 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Expand, Gavel, Timer } from "lucide-react";
+import { Expand, Gavel, LayoutGrid, List, Search, Timer } from "lucide-react";
+import type { CardGame, GradingCompany } from "@prisma/client";
 
 import { CardArt } from "@/components/asset/card-art";
 import { CountdownTimer } from "@/components/auction/countdown-timer";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { UserAvatar } from "@/components/messages/user-avatar";
 import { CARD_GAME_BADGE_CLASS, CARD_GAME_LABELS } from "@/lib/labels";
 import { displayImage } from "@/lib/card-image";
 import { formatDateTime, formatGrade, formatThb } from "@/lib/format";
@@ -188,8 +191,8 @@ function AuctionRow({ auction }: { auction: Auction }) {
   );
 }
 
-/** Live auctions as rows: card, prices, bids and time left all readable without opening one. */
-export function AuctionList({ auctions }: { auctions: Auction[] }) {
+/** The live auctions as rows: card, prices, bids and time left all readable without opening one. */
+function AuctionRows({ auctions }: { auctions: Auction[] }) {
   const t = useT();
   const head = "text-muted-foreground text-[11px] font-medium tracking-wide uppercase";
   return (
@@ -207,6 +210,273 @@ export function AuctionList({ auctions }: { auctions: Auction[] }) {
           <AuctionRow key={auction.id} auction={auction} />
         ))}
       </ul>
+    </div>
+  );
+}
+
+const CHIP = "flex items-center gap-1 rounded-md bg-black/70 px-2 py-1.5 text-[11px] leading-none font-semibold text-white backdrop-blur-sm";
+
+/** One auction as a tile: the card big, the countdown on it, then the bid. */
+function AuctionTile({ auction }: { auction: Auction }) {
+  const t = useT();
+  const { asset } = auction;
+  const href = `/auctions/${auction.id}`;
+  const photo = displayImage(asset);
+  const count = auction._count.bids;
+  const sellerName = asset.seller.name ?? t("Collector");
+  const details = [asset.subtitle, asset.cardNumber && `#${asset.cardNumber}`, asset.language === "JAPANESE" && t("Japanese")]
+    .filter(Boolean)
+    .join(" · ");
+
+  return (
+    <li>
+      <Link
+        href={href}
+        className="group bg-card focus-visible:ring-ring flex h-full flex-col overflow-hidden rounded-2xl border outline-none transition-colors hover:border-foreground/30 focus-visible:ring-2"
+      >
+        <div className="card-stage relative aspect-[4/5] overflow-hidden">
+          {photo ? (
+            <Image
+              src={photo.url}
+              alt={asset.name}
+              fill
+              sizes="(max-width: 640px) 50vw, (max-width: 1280px) 33vw, 20vw"
+              className="photo-shadow object-contain p-4 transition-transform duration-300 group-hover:scale-[1.04] sm:p-5"
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center p-5">
+              <CardArt
+                themeIndex={asset.themeIndex}
+                category={asset.category}
+                gradingCompany={asset.gradingCompany}
+                grade={asset.grade}
+                isBlackLabel={asset.isBlackLabel}
+                bordered={false}
+                showGrade={false}
+                className="h-full w-auto rounded-lg"
+              />
+            </div>
+          )}
+          {/* Time left, top-left; where the bidding started, bottom-right. */}
+          <span className={cn(CHIP, "absolute top-2.5 left-2.5")}>
+            <Timer className="size-3.5" />
+            <CountdownTimer endTime={auction.endTime.toISOString()} className="tabular-nums" />
+          </span>
+          <span className={cn(CHIP, "absolute right-2.5 bottom-2.5 tabular-nums")}>
+            {t("Start {price}", { price: formatThb(auction.startPriceThb) })}
+          </span>
+        </div>
+
+        <div className="flex flex-1 flex-col gap-1 p-3.5 sm:p-4">
+          <h3 className="truncate text-sm font-semibold" title={asset.name}>
+            {asset.name}
+          </h3>
+          <p className="text-muted-foreground truncate text-xs">{details}</p>
+          {/* The current bid is the headline; with no bids yet, the opening price. */}
+          <div className="mt-1.5 flex items-baseline gap-2">
+            <span className="text-lg font-bold tabular-nums">{formatThb(auction.currentBidThb ?? auction.startPriceThb)}</span>
+            <span className="text-muted-foreground flex items-center gap-1 text-xs">
+              <Gavel className="size-3" />
+              {t("{count} bids", { count })}
+            </span>
+          </div>
+          <div className="mt-auto flex items-center justify-between gap-2 pt-2.5">
+            <span className="text-muted-foreground flex min-w-0 items-center gap-1.5 text-xs">
+              <UserAvatar user={{ name: sellerName, handle: null, image: asset.seller.image ?? null }} className="size-5 [&_*]:text-[9px]" />
+              <span className="truncate">{sellerName}</span>
+            </span>
+            <span className="flex shrink-0 items-center gap-1 rounded-md border px-2 py-1 text-[11px] leading-none">
+              {asset.gradingCompany === "RAW" ? (
+                <span className="font-semibold">{t("Ungraded")}</span>
+              ) : (
+                <>
+                  <span className="text-muted-foreground">{asset.gradingCompany}</span>
+                  <span className="font-bold">{formatGrade(asset.grade)}</span>
+                </>
+              )}
+            </span>
+          </div>
+        </div>
+      </Link>
+    </li>
+  );
+}
+
+type SortKey = "ending" | "bids" | "high" | "low" | "newest";
+type Window = "any" | "1h" | "24h" | "7d";
+const WINDOW_MS: Record<Window, number> = { any: Infinity, "1h": 3_600_000, "24h": 86_400_000, "7d": 7 * 86_400_000 };
+
+const currentBid = (a: Auction) => a.currentBidThb ?? a.startPriceThb;
+
+// The clock to the minute, as an external store: stable between renders, and it
+// re-renders the list once a minute so "Ending within" stays true over time.
+const currentMinute = () => Math.floor(Date.now() / 60_000) * 60_000;
+function subscribeMinute(onChange: () => void) {
+  const id = setInterval(onChange, 60_000);
+  return () => clearInterval(id);
+}
+
+/**
+ * Live auctions with a search box, sort, filters and a grid / list switch.
+ * Everything runs on the list already loaded, so filtering is instant.
+ */
+export function AuctionList({ auctions }: { auctions: Auction[] }) {
+  const t = useT();
+  const [q, setQ] = useState("");
+  const [sort, setSort] = useState<SortKey>("ending");
+  const [game, setGame] = useState<"ALL" | CardGame>("ALL");
+  const [grader, setGrader] = useState<"ALL" | GradingCompany>("ALL");
+  const [window, setWindow] = useState<Window>("any");
+  const [view, setView] = useState<"grid" | "list">("grid");
+  // "Ending within" needs the viewer's clock: null on the server, so it only applies after hydration.
+  const now = useSyncExternalStore(subscribeMinute, currentMinute, () => null);
+
+  const shown = useMemo(() => {
+    const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+    const list = auctions.filter((a) => {
+      const { asset } = a;
+      if (game !== "ALL" && asset.game !== game) return false;
+      if (grader !== "ALL" && asset.gradingCompany !== grader) return false;
+      if (now != null && window !== "any" && a.endTime.getTime() - now > WINDOW_MS[window]) return false;
+      const haystack = [asset.name, asset.subtitle, asset.cardNumber, asset.gradingCompany, asset.grade != null ? formatGrade(asset.grade) : ""]
+        .join(" ")
+        .toLowerCase();
+      return words.every((w) => haystack.includes(w));
+    });
+    const by: Record<SortKey, (a: Auction, b: Auction) => number> = {
+      ending: (a, b) => a.endTime.getTime() - b.endTime.getTime(),
+      bids: (a, b) => b._count.bids - a._count.bids,
+      high: (a, b) => currentBid(b) - currentBid(a),
+      low: (a, b) => currentBid(a) - currentBid(b),
+      newest: (a, b) => b.startTime.getTime() - a.startTime.getTime(),
+    };
+    return [...list].sort(by[sort]);
+  }, [auctions, q, sort, game, grader, window, now]);
+
+  const filtered = q !== "" || game !== "ALL" || grader !== "ALL" || window !== "any";
+  const trigger = "bg-card h-10 w-auto gap-2 rounded-lg px-3 text-sm font-semibold";
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Search and sort. */}
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <label className="bg-card focus-within:ring-ring flex h-11 min-w-0 flex-1 items-center gap-2.5 rounded-lg border px-3.5 focus-within:ring-2">
+          <Search className="text-muted-foreground size-4 shrink-0" />
+          <input
+            id="auction-search"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder={t("Try Umbreon PSA 10 or OP01-121")}
+            className="placeholder:text-muted-foreground min-w-0 flex-1 bg-transparent text-sm outline-none"
+          />
+        </label>
+        <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
+          <SelectTrigger className={cn(trigger, "h-11")} aria-label={t("Sort")}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent align="end">
+            <SelectItem value="ending">{t("Ending soonest")}</SelectItem>
+            <SelectItem value="bids">{t("Most bids")}</SelectItem>
+            <SelectItem value="high">{t("Highest bid")}</SelectItem>
+            <SelectItem value="low">{t("Lowest bid")}</SelectItem>
+            <SelectItem value="newest">{t("Newest")}</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Filters. */}
+      <div className="flex flex-wrap items-center gap-2">
+        <Select value={game} onValueChange={(v) => setGame(v as typeof game)}>
+          <SelectTrigger className={trigger} aria-label={t("Game")}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">{t("All games")}</SelectItem>
+            <SelectItem value="POKEMON">{t(CARD_GAME_LABELS.POKEMON)}</SelectItem>
+            <SelectItem value="ONE_PIECE">{t(CARD_GAME_LABELS.ONE_PIECE)}</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={window} onValueChange={(v) => setWindow(v as Window)}>
+          <SelectTrigger className={trigger} aria-label={t("Ending within")}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="any">{t("Any time")}</SelectItem>
+            <SelectItem value="1h">{t("Next hour")}</SelectItem>
+            <SelectItem value="24h">{t("Next 24 hours")}</SelectItem>
+            <SelectItem value="7d">{t("Next 7 days")}</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={grader} onValueChange={(v) => setGrader(v as typeof grader)}>
+          <SelectTrigger className={trigger} aria-label={t("Grader")}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">{t("All graders")}</SelectItem>
+            <SelectItem value="PSA">PSA</SelectItem>
+            <SelectItem value="BGS">BGS</SelectItem>
+            <SelectItem value="CGC">CGC</SelectItem>
+            <SelectItem value="RAW">{t("Ungraded")}</SelectItem>
+          </SelectContent>
+        </Select>
+        {filtered && (
+          <button
+            type="button"
+            onClick={() => {
+              setQ("");
+              setGame("ALL");
+              setGrader("ALL");
+              setWindow("any");
+            }}
+            className="text-muted-foreground hover:text-foreground px-1 text-sm underline underline-offset-4"
+          >
+            {t("Clear filters")}
+          </button>
+        )}
+      </div>
+
+      {/* Count and view switch. */}
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-muted-foreground text-sm">{t("{count} live auctions", { count: shown.length })}</span>
+        <div className="bg-card flex rounded-lg border p-0.5" role="group" aria-label={t("View")}>
+          {(
+            [
+              ["grid", LayoutGrid, t("Grid")],
+              ["list", List, t("List")],
+            ] as const
+          ).map(([key, Icon, label]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setView(key)}
+              aria-pressed={view === key}
+              aria-label={label}
+              title={label}
+              className={cn(
+                "flex size-8 items-center justify-center rounded-md transition-colors",
+                view === key ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <Icon className="size-4" />
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {shown.length === 0 ? (
+        <div className="text-muted-foreground flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed py-20 text-center">
+          <Gavel className="size-8" />
+          <p className="text-sm">{t("No auctions match these filters.")}</p>
+        </div>
+      ) : view === "grid" ? (
+        <ul className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          {shown.map((auction) => (
+            <AuctionTile key={auction.id} auction={auction} />
+          ))}
+        </ul>
+      ) : (
+        <AuctionRows auctions={shown} />
+      )}
     </div>
   );
 }

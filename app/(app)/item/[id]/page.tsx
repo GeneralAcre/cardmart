@@ -337,7 +337,6 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
                 </div>
                 <p className="text-muted-foreground text-sm">
                   {asset.subtitle}
-                  {asset.cardNumber && <span className="font-mono"> · #{asset.cardNumber}</span>}
                 </p>
               </div>
               <div className="flex shrink-0 flex-col items-end gap-3">
@@ -390,22 +389,19 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
                 )}
               </span>
             </div>
-            {asset.cardNumber && (
-              <div className="flex items-center justify-between gap-3 border-t pt-3 text-sm">
-                <span className="text-muted-foreground">{t("Card number")}</span>
-                <span className="font-mono font-medium">#{asset.cardNumber}</span>
-              </div>
-            )}
-            {cardYear && (
-              <div className="flex items-center justify-between gap-3 border-t pt-3 text-sm">
-                <span className="text-muted-foreground">{t("Year")}</span>
-                <span className="font-medium">{cardYear}</span>
-              </div>
-            )}
-            {asset.gradingCompany !== "RAW" && (
-              <div className="flex min-w-0 items-start justify-between gap-3 border-t pt-3 text-sm">
-                <span className="text-muted-foreground shrink-0">{t("Serial")}</span>
-                {psaCertNumber && isPsaCertNumber(psaCertNumber) ? (
+            {/* Every row is always shown, with "—" when a value isn't known yet, so
+                every card's table has the same rows in the same order. */}
+            <div className="flex items-center justify-between gap-3 border-t pt-3 text-sm">
+              <span className="text-muted-foreground">{t("Card number")}</span>
+              <span className="font-mono font-medium">{asset.cardNumber ? `#${asset.cardNumber}` : "—"}</span>
+            </div>
+            <div className="flex items-center justify-between gap-3 border-t pt-3 text-sm">
+              <span className="text-muted-foreground">{t("Year")}</span>
+              <span className="font-medium">{cardYear ?? "—"}</span>
+            </div>
+            <div className="flex min-w-0 items-start justify-between gap-3 border-t pt-3 text-sm">
+              <span className="text-muted-foreground shrink-0">{t("Serial")}</span>
+              {psaCertNumber && isPsaCertNumber(psaCertNumber) ? (
                   <a
                     href={psaCertUrl(psaCertNumber)}
                     target="_blank"
@@ -417,13 +413,12 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
                     <ExternalLink className="size-3 shrink-0" />
                   </a>
                 ) : (
-                  <span className="min-w-0 break-all text-right font-mono font-medium">{asset.serial}</span>
+                  <span className="min-w-0 break-all text-right font-mono font-medium">{asset.serial || "—"}</span>
                 )}
-              </div>
-            )}
-            {asset.mintAddress && (
-              <div className="flex min-w-0 items-start justify-between gap-3 border-t pt-3 text-sm">
-                <span className="text-muted-foreground shrink-0">{t("Mint Address")}</span>
+            </div>
+            <div className="flex min-w-0 items-start justify-between gap-3 border-t pt-3 text-sm">
+              <span className="text-muted-foreground shrink-0">{t("Mint Address")}</span>
+              {asset.mintAddress ? (
                 <a
                   href={`https://explorer.solana.com/address/${asset.mintAddress}?cluster=devnet`}
                   target="_blank"
@@ -435,8 +430,10 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
                   <span className="hidden sm:inline break-all">{asset.mintAddress}</span>
                   <ExternalLink className="size-3 shrink-0" />
                 </a>
-              </div>
-            )}
+              ) : (
+                <span className="font-mono font-medium">—</span>
+              )}
+            </div>
           </div>
 
           {/* Price stat box, same shape as the owner/serial row above: the

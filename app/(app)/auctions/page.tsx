@@ -17,9 +17,9 @@ export default async function AuctionsPage() {
   const dueForSettlement = auctions.filter((a) => a.endTime <= now).map((a) => a.id);
 
   return (
-    <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6">
+    <div className="mx-auto w-full max-w-screen-2xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
       <AutoSettle auctionIds={dueForSettlement} />
-      <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div className="flex flex-col gap-2">
           <h1 className="text-2xl font-semibold">{t("Auctions")}</h1>
           <p className="text-muted-foreground max-w-2xl text-sm">
