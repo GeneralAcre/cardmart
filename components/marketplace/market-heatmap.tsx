@@ -26,6 +26,8 @@ interface Tile {
   series?: string;
   /** The card whose picture represents this tile: itself, or a series' most valuable card. */
   cover: LeaderboardRow;
+  /** The cards inside the tile, so smaller tiles can be merged into "+N more". */
+  rows: LeaderboardRow[];
 }
 
 interface Rect {
@@ -44,6 +46,11 @@ const FULL_COLOR_PCT = 20;
  * readable, and its label still shows the real value.
  */
 const MIN_TILE_SHARE = 0.035;
+/**
+ * Most tiles the map draws, by its width: a phone fits far fewer readable
+ * tiles than a desktop. Smaller ones are merged into a single "+N more" tile.
+ */
+const maxTiles = (width: number) => (width < 480 ? 8 : width < 768 ? 14 : 30);
 
 /**
  * Value-weighted change for a set of cards: (today's total − the total at the
@@ -181,6 +188,7 @@ export function MarketHeatmap({
         count: 1,
         href: `/item/${r.id}`,
         cover: r,
+        rows: [r],
       }));
 
     if (series != null) return cardTiles(rows.filter((r) => r.subtitle === series));
@@ -198,11 +206,33 @@ export function MarketHeatmap({
         count: list.length,
         series: name,
         cover: list.reduce((a, b) => (b.priceThb > a.priceThb ? b : a)),
+        rows: list,
       };
     });
   }, [rows, period, group, sizeBy, series]);
 
-  const sorted = useMemo(() => [...tiles].filter((t) => t.size > 0).sort((a, b) => b.size - a.size), [tiles]);
+  // The biggest tiles (maxTiles, by width) get their own space; everything smaller shares
+  // one "+N more" tile, sized and coloured from all of them, so the map still
+  // adds up to the whole market without dozens of unreadable slivers.
+  const sorted = useMemo(() => {
+    const bySize = [...tiles].filter((t) => t.size > 0).sort((a, b) => b.size - a.size);
+    const limit = maxTiles(width);
+    if (bySize.length <= limit) return bySize;
+    const shown = bySize.slice(0, limit - 1);
+    const rest = bySize.slice(limit - 1);
+    const restRows = rest.flatMap((t) => t.rows);
+    const others: Tile = {
+      key: "__others",
+      label: tr("+{count} more", { count: rest.length }),
+      // Market cap adds up; an average doesn't, so series sized by "Avg price" use the average of the rest.
+      size: rest.reduce((a, t) => a + t.size, 0) / (series == null && group === "series" && sizeBy === "avg" ? rest.length : 1),
+      change: weightedChange(restRows, period),
+      count: restRows.length,
+      cover: restRows.reduce((a, b) => (b.priceThb > a.priceThb ? b : a)),
+      rows: restRows,
+    };
+    return [...shown, others];
+  }, [tiles, sizeBy, group, series, period, tr, width]);
   const rects = useMemo(() => {
     const total = sorted.reduce((a, t) => a + t.size, 0);
     const layoutSizes = sorted.map((t) => Math.max(t.size, total * MIN_TILE_SHARE));

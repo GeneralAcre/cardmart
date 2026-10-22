@@ -69,6 +69,9 @@ export const MARKETPLACE: Record<string, string> = {
   listings: "รายการ",
   "Clear search": "ล้างคำค้นหา",
   "Price went up": "ราคาขึ้น",
+  "Show more": "แสดงเพิ่ม",
+  "+{count} more": "+อีก {count}",
+  "Showing {shown} of {total}": "แสดง {shown} จาก {total}",
   "Change since the last price": "เปลี่ยนจากราคาก่อนหน้า",
   "Price went down": "ราคาลง",
   // Community (Leaderboard + News)

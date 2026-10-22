@@ -23,6 +23,8 @@ import { buildPriceInsights } from "@/lib/insights";
 import { PriceInsights } from "@/components/item/price-insights";
 import { WantedCardButton } from "@/components/wanted/wanted-card-form";
 import { VerifiedBadge } from "@/components/store/verified-badge";
+import { TopTierBadge } from "@/components/store/top-tier-badge";
+import { isTopTierSellerById } from "@/lib/rewards";
 import { getCurrentUser } from "@/lib/session";
 import { getT } from "@/lib/i18n/server";
 import { ItemGallery } from "@/components/item/item-gallery";
@@ -172,6 +174,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
   );
 
   const psaPopulation = psaCert?.specId != null ? await lookupPsaPopulation(psaCert.specId) : null;
+  const ownerTopTier = await isTopTierSellerById(asset.owner.id, asset.owner.kycStatus);
   const sellerInitials = (asset.owner.name ?? "?")
     .split(" ")
     .map((n) => n[0])
@@ -499,6 +502,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
                   <span className="flex min-w-0 items-center gap-2">
                     <span className="truncate text-sm font-semibold group-hover:underline">{asset.owner.name}</span>
                     <VerifiedBadge status={asset.owner.kycStatus} />
+                    <TopTierBadge topTier={ownerTopTier} />
                   </span>
                   <RatingStars average={sellerRating.average} count={sellerRating.count} />
                 </div>

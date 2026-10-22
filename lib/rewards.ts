@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
+import { isTopTierSeller, type SellerStanding } from "@/lib/seller-tier";
 
 // XP and levels for the Rewards page. Every point comes from something the
 // user has really done on CardMart, counted straight from their records each
@@ -82,6 +83,11 @@ export interface Rewards {
   level: Level;
   next: Level | null;
   tasks: RewardTask[];
+  /** The figures behind the Top Tier Seller badge. */
+  seller: SellerStanding;
+  topTier: boolean;
+  /** Leaderboard badges (lib/leaderboard/pipeline.ts), best one per category. */
+  leaderboard: EarnedLeaderboardBadge[];
 }
 
 export async function getRewards(user: { id: string; image: string | null; kycStatus: string }): Promise<Rewards> {
@@ -117,5 +123,59 @@ export async function getRewards(user: { id: string; image: string | null; kycSt
   const xp = tasks.reduce((sum, task) => sum + task.earnedXp, 0);
   const level = [...LEVELS].reverse().find((l) => xp >= l.minXp) ?? LEVELS[0];
   const next = LEVELS.find((l) => l.minXp > xp) ?? null;
-  return { xp, level, next, tasks };
+
+  const [ratingAgg, leaderboard] = await Promise.all([
+    prisma.review.aggregate({ where: { sellerId: user.id }, _avg: { rating: true }, _count: true }),
+    prisma.leaderboardBadge.findMany({
+      where: { userId: user.id },
+      orderBy: { awardedAt: "desc" },
+      select: { id: true, category: true, period: true, tier: true, rank: true, awardedAt: true },
+    }),
+  ]);
+  const seller: SellerStanding = {
+    sales: sold,
+    reviews: ratingAgg._count,
+    rating: ratingAgg._avg.rating,
+    verified: user.kycStatus === "VERIFIED",
+  };
+  return { xp, level, next, tasks, seller, topTier: isTopTierSeller(seller), leaderboard: bestLeaderboardBadges(leaderboard) };
+}
+
+/** Whether a seller has the Top Tier badge, for showing beside their name on store and card pages. */
+export async function isTopTierSellerById(userId: string, kycStatus: string): Promise<boolean> {
+  if (kycStatus !== "VERIFIED") return false; // skip the queries for the common case
+  const [sales, ratingAgg] = await Promise.all([
+    prisma.escrowTransaction.count({ where: { sellerId: userId, status: "RELEASED" } }),
+    prisma.review.aggregate({ where: { sellerId: userId }, _avg: { rating: true }, _count: true }),
+  ]);
+  return isTopTierSeller({ sales, reviews: ratingAgg._count, rating: ratingAgg._avg.rating, verified: true });
+}
+
+export interface EarnedLeaderboardBadge {
+  id: string;
+  category: string;
+  period: string;
+  tier: string;
+  rank: number;
+  awardedAt: Date;
+}
+
+const TIER_ORDER = ["TOP_10", "TOP_1_PERCENT", "TOP_50"];
+
+/**
+ * One badge per leaderboard category: the best tier ever reached there (then
+ * the best rank). The pipeline awards a row per period, so a regular could
+ * otherwise show dozens of near-identical badges.
+ */
+function bestLeaderboardBadges(rows: EarnedLeaderboardBadge[]): EarnedLeaderboardBadge[] {
+  const best = new Map<string, EarnedLeaderboardBadge>();
+  for (const row of rows) {
+    const held = best.get(row.category);
+    const better =
+      !held ||
+      TIER_ORDER.indexOf(row.tier) < TIER_ORDER.indexOf(held.tier) ||
+      (row.tier === held.tier && row.rank < held.rank);
+    if (better) best.set(row.category, row);
+  }
+  return [...best.values()];
 }

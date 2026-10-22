@@ -16,6 +16,9 @@ import { useT } from "@/components/landing/language-provider";
 import { EMPTY_FILTERS, type AssetSummary, type MarketplaceFilterState } from "@/lib/types";
 
 type SortKey = "recent" | "price-asc" | "price-desc";
+/** Cards drawn per page of the grid; more load as you scroll. */
+const PAGE_SIZE = 40;
+
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: "recent", label: "Recently Listed" },
   { value: "price-asc", label: "Price: Low to High" },
@@ -91,6 +94,24 @@ export function MarketplaceExplorer({
   const t = useT();
   const itemCount = t(listings.length === 1 ? "{count} item" : "{count} items", { count: listings.length });
   const sortedListings = useMemo(() => sortListings(listings, sort), [listings, sort]);
+
+  // Draw the grid a page at a time: with thousands of listings, rendering
+  // every card at once makes the page slow. The limit belongs to one result
+  // set, so a new search or sort starts back at the first page by itself.
+  const [paging, setPaging] = useState({ source: sortedListings, limit: PAGE_SIZE });
+  const limit = paging.source === sortedListings ? paging.limit : PAGE_SIZE;
+  const visibleListings = sortedListings.slice(0, limit);
+  const hasMore = limit < sortedListings.length;
+  const showMore = () => setPaging({ source: sortedListings, limit: limit + PAGE_SIZE });
+  const sentinel = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = sentinel.current;
+    if (!el || !hasMore) return;
+    // Load the next page a little before the bottom comes into view.
+    const observer = new IntersectionObserver(([entry]) => entry.isIntersecting && showMore(), { rootMargin: "600px" });
+    observer.observe(el);
+    return () => observer.disconnect();
+  });
 
   useEffect(() => {
     if (isFirstRender.current) {
@@ -307,8 +328,9 @@ export function MarketplaceExplorer({
               )}
             </div>
           ) : (
+            <>
             <div className={gridClass}>
-              {sortedListings.map((asset) => {
+              {visibleListings.map((asset) => {
                 const key = compareCardKey(asset);
                 const selected = compareCards.includes(key);
                 return (
@@ -330,6 +352,17 @@ export function MarketplaceExplorer({
                 );
               })}
             </div>
+            {hasMore && (
+              <div ref={sentinel} className="flex flex-col items-center gap-2 pt-8">
+                <span className="text-muted-foreground text-xs tabular-nums">
+                  {t("Showing {shown} of {total}", { shown: visibleListings.length, total: sortedListings.length })}
+                </span>
+                <Button variant="outline" size="sm" onClick={showMore}>
+                  {t("Show more")}
+                </Button>
+              </div>
+            )}
+            </>
           )}
         </div>
       </div>

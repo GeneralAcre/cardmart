@@ -13,6 +13,8 @@ import { ListingCard } from "@/components/marketplace/listing-card";
 import { RatingStars } from "@/components/store/rating-stars";
 import { SellerWalletAddress } from "@/components/store/seller-wallet-address";
 import { VerifiedBadge } from "@/components/store/verified-badge";
+import { TopTierBadge } from "@/components/store/top-tier-badge";
+import { isTopTierSeller } from "@/lib/seller-tier";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CARD_GAME_LABELS } from "@/lib/labels";
 import { formatDate, formatThb } from "@/lib/format";
@@ -45,6 +47,10 @@ export default async function StorePage({ params }: { params: Promise<{ id: stri
             <h1 className="truncate text-lg font-semibold">{displayName}</h1>
             {seller.handle && <span className="text-muted-foreground text-sm">@{seller.handle}</span>}
             <VerifiedBadge status={seller.kycStatus} className="self-center" />
+            <TopTierBadge
+              topTier={isTopTierSeller({ sales: saleCount, reviews: rating.count, rating: rating.average, verified: seller.kycStatus === "VERIFIED" })}
+              className="self-center"
+            />
           </div>
           <RatingStars average={rating.average} count={rating.count} size="md" />
           <span className="text-muted-foreground text-xs">

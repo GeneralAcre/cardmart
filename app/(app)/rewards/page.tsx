@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { ArrowRight, Check, Sparkles } from "lucide-react";
+import { ArrowRight, BadgeCheck, Check, Crown, Sparkles, Trophy } from "lucide-react";
 
 import { CommunityTabs } from "@/components/community/community-tabs";
 import { Progress } from "@/components/ui/progress";
-import { LEVELS, getRewards, type RewardTask } from "@/lib/rewards";
+import { LEVELS, getRewards, type RewardTask, type Rewards } from "@/lib/rewards";
+import { TOP_TIER_SELLER } from "@/lib/seller-tier";
 import { getCurrentUser } from "@/lib/session";
 import { getT } from "@/lib/i18n/server";
 import type { Translate } from "@/lib/i18n/translate";
@@ -13,7 +14,8 @@ import { cn } from "@/lib/utils";
 // Everything is counted from what they've actually done (lib/rewards.ts).
 export default async function RewardsPage() {
   const user = await getCurrentUser();
-  const [{ xp, level, next, tasks }, t] = await Promise.all([getRewards(user), getT()]);
+  const [rewards, t] = await Promise.all([getRewards(user), getT()]);
+  const { xp, level, next, tasks } = rewards;
 
   const span = next ? next.minXp - level.minXp : 1;
   const into = next ? xp - level.minXp : 1;
@@ -52,6 +54,7 @@ export default async function RewardsPage() {
             </p>
           </section>
 
+          <BadgesSection rewards={rewards} t={t} />
           <TaskSection title={t("Getting started")} tasks={start} t={t} />
           <TaskSection title={t("Trading")} tasks={trade} t={t} />
         </div>
@@ -82,6 +85,99 @@ export default async function RewardsPage() {
         </aside>
       </div>
     </div>
+  );
+}
+
+const CATEGORY_LABEL: Record<string, string> = {
+  WHALE: "Whale",
+  ALPHA: "Alpha",
+  CONSISTENCY: "Consistent",
+  MARKET_MAKER: "Market Maker",
+  SPECIALIST: "Specialist",
+};
+const TIER_LABEL: Record<string, string> = { TOP_10: "Top 10", TOP_1_PERCENT: "Top 1%", TOP_50: "Top 50" };
+const PERIOD_LABEL: Record<string, string> = { DAILY: "daily", WEEKLY: "weekly", MONTHLY: "monthly", ALL_TIME: "all-time" };
+
+/** The badges a user can hold: ID verified, Top Tier Seller, and leaderboard finishes. */
+function BadgesSection({ rewards, t }: { rewards: Rewards; t: Translate }) {
+  const { seller, topTier, leaderboard } = rewards;
+  // The Top Tier rule as a checklist, so a seller can see exactly what's left.
+  const checklist = [
+    { label: t("{n} completed sales", { n: TOP_TIER_SELLER.sales }), now: `${Math.min(seller.sales, TOP_TIER_SELLER.sales)}/${TOP_TIER_SELLER.sales}`, ok: seller.sales >= TOP_TIER_SELLER.sales },
+    { label: t("{n} reviews", { n: TOP_TIER_SELLER.reviews }), now: `${Math.min(seller.reviews, TOP_TIER_SELLER.reviews)}/${TOP_TIER_SELLER.reviews}`, ok: seller.reviews >= TOP_TIER_SELLER.reviews },
+    { label: t("{n}+ star rating", { n: TOP_TIER_SELLER.rating }), now: seller.rating != null ? seller.rating.toFixed(1) : "—", ok: (seller.rating ?? 0) >= TOP_TIER_SELLER.rating },
+    { label: t("ID verified"), now: seller.verified ? t("Yes") : t("No"), ok: seller.verified },
+  ];
+
+  return (
+    <section className="bg-card flex flex-col rounded-2xl border">
+      <h2 className="eyebrow text-muted-foreground border-b px-4 py-3">{t("Badges")}</h2>
+      <div className="grid grid-cols-1 divide-y sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+        {/* Top Tier Seller, with what's still needed. */}
+        <div className="flex flex-col gap-3 p-4">
+          <BadgeTitle icon={Crown} earned={topTier} title={t("Top Tier Seller")} />
+          <ul className="flex flex-col gap-1.5 text-sm">
+            {checklist.map((c) => (
+              <li key={c.label} className="flex items-center gap-2">
+                {c.ok ? <Check className="text-success size-3.5 shrink-0" /> : <span className="bg-muted-foreground/40 size-1.5 shrink-0 rounded-full mx-1" />}
+                <span className={cn("flex-1", c.ok ? "text-muted-foreground" : "")}>{c.label}</span>
+                <span className="text-muted-foreground text-xs tabular-nums">{c.now}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="flex flex-col gap-4 p-4">
+          {/* ID verified. */}
+          <div className="flex flex-col gap-1.5">
+            <BadgeTitle icon={BadgeCheck} earned={seller.verified} title={t("ID verified")} />
+            {!seller.verified && (
+              <Link href="/portfolio" className="text-muted-foreground hover:text-foreground w-fit text-xs underline underline-offset-4">
+                {t("Verify your identity")}
+              </Link>
+            )}
+          </div>
+          {/* Leaderboard finishes: the best one per category. */}
+          <div className="flex flex-col gap-2">
+            <BadgeTitle icon={Trophy} earned={leaderboard.length > 0} title={t("Leaderboard badges")} />
+            {leaderboard.length > 0 ? (
+              <ul className="flex flex-wrap gap-1.5">
+                {leaderboard.map((b) => (
+                  <li
+                    key={b.id}
+                    className="bg-success/15 text-success rounded-md px-2 py-1 text-xs font-semibold"
+                    title={t("Rank #{rank}, {period}", { rank: b.rank, period: t(PERIOD_LABEL[b.period] ?? b.period) })}
+                  >
+                    {t(TIER_LABEL[b.tier] ?? b.tier)} · {t(CATEGORY_LABEL[b.category] ?? b.category)}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <Link href="/leaderboard" className="text-muted-foreground hover:text-foreground w-fit text-xs underline underline-offset-4">
+                {t("Finish in a leaderboard's top 50 to earn one")}
+              </Link>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/** A badge name with its icon: green once earned, grey until then. */
+function BadgeTitle({ icon: Icon, earned, title }: { icon: typeof Crown; earned: boolean; title: string }) {
+  return (
+    <span className="flex items-center gap-2">
+      <span
+        className={cn(
+          "flex size-7 shrink-0 items-center justify-center rounded-full border",
+          earned ? "bg-success border-success text-success-foreground" : "text-muted-foreground",
+        )}
+      >
+        <Icon className="size-3.5" />
+      </span>
+      <span className={cn("text-sm font-semibold", !earned && "text-muted-foreground")}>{title}</span>
+    </span>
   );
 }
 

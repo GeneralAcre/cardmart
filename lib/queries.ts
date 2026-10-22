@@ -116,7 +116,8 @@ export async function getMarketplaceListings(filters: MarketplaceFilters = {}) {
     include: {
       seller: true,
       owner: true,
-      verificationPhotos: { orderBy: { createdAt: "asc" } },
+      // Only what a grid card uses: a Market page of 2,000+ listings would otherwise ship every photo column.
+      verificationPhotos: { orderBy: { createdAt: "asc" }, select: { id: true, viewLabel: true, url: true } },
       priceSnapshots: { orderBy: { createdAt: "desc" }, take: 2, select: { priceThb: true } },
     },
   });
