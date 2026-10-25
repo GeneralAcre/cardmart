@@ -44,16 +44,23 @@ interface BuyPanelProps {
 }
 
 /**
- * The card page's price row and seller row share one grid: the box takes the
- * rest, the button a fixed column. Same columns in both rows, so the boxes end
- * at the same edge and the two buttons (Buy now, Message Seller) are the same size.
+ * The card page's price box and seller box share one shape: the details on the
+ * left, the button inside the box on the right in a fixed-width slot, so both
+ * buttons (Buy now, Message Seller) are the same size and line up. On phones
+ * there's no room beside the details, so the button goes full width at the bottom.
  */
-export const ITEM_ACTION_ROW_CLASS = "grid grid-cols-[minmax(0,1fr)_10rem] items-center gap-3";
+export const ITEM_ACTION_BOX_CLASS = "detail-panel flex flex-col gap-3 rounded-2xl border p-4 sm:flex-row sm:items-center sm:gap-4";
+export const ITEM_ACTION_SLOT_CLASS = "shrink-0 sm:w-40";
 export const ITEM_ACTION_BUTTON_CLASS = "h-11 w-full rounded-xl text-sm font-semibold";
 
-/** The price box. Also used on its own when there's nothing to buy (auction, redeemed). */
-export function PricePanel({ summary }: { summary: React.ReactNode }) {
-  return <div className="detail-panel h-full rounded-2xl border p-4">{summary}</div>;
+/** The price box, with Buy inside when there is one. Also used on its own when there's nothing to buy (auction, redeemed). */
+export function PricePanel({ summary, action }: { summary: React.ReactNode; action?: React.ReactNode }) {
+  return (
+    <div className={ITEM_ACTION_BOX_CLASS}>
+      <div className="min-w-0 flex-1">{summary}</div>
+      {action && <div className={ITEM_ACTION_SLOT_CLASS}>{action}</div>}
+    </div>
+  );
 }
 
 // The default active tab (bg-background) is almost the same black as the
@@ -157,18 +164,20 @@ export function BuyPanel({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Prices on the left, Buy on the right, side by side but not in the same box.
-          The price is right beside it, so the button only says Buy. */}
-      <div className={ITEM_ACTION_ROW_CLASS}>
-        <PricePanel summary={priceSummary} />
-        <Button
-          size="lg"
-          onClick={() => setOpen(true)}
-          className={cn("bg-foreground text-background hover:bg-foreground/85", ITEM_ACTION_BUTTON_CLASS)}
-        >
-          {t("Buy now")}
-        </Button>
-      </div>
+      {/* Prices on the left, Buy inside the same box on the right. The price is
+          right beside it, so the button only says Buy. */}
+      <PricePanel
+        summary={priceSummary}
+        action={
+          <Button
+            size="lg"
+            onClick={() => setOpen(true)}
+            className={cn("bg-foreground text-background hover:bg-foreground/85", ITEM_ACTION_BUTTON_CLASS)}
+          >
+            {t("Buy now")}
+          </Button>
+        }
+      />
 
       {/* A vaulted card has nothing to choose: ownership just transfers. */}
       {!vaulted && (

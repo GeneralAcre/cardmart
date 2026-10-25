@@ -32,7 +32,7 @@ import { KeyStats } from "@/components/item/card-stats";
 import { ProfitCalculator } from "@/components/item/profit-calculator";
 import { RarityTag } from "@/components/item/rarity-badge";
 import { ProvenanceTimeline } from "@/components/item/provenance-timeline";
-import { BuyPanel, ITEM_ACTION_BUTTON_CLASS, ITEM_ACTION_ROW_CLASS, PricePanel } from "@/components/item/buy-panel";
+import { BuyPanel, ITEM_ACTION_BOX_CLASS, ITEM_ACTION_BUTTON_CLASS, ITEM_ACTION_SLOT_CLASS, PricePanel } from "@/components/item/buy-panel";
 import { WatchButton } from "@/components/item/watch-button";
 import { MessageSellerButton } from "@/components/messages/message-seller-button";
 import { AcceptedOfferBanner } from "@/components/item/accepted-offer-banner";
@@ -547,33 +547,33 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
               messaging sits right on the card. Messages go to the current
               owner — the person who can actually accept an offer or change
               the price. */}
-          {/* Same shape as the price row above: the card on the left, its button outside on the right. */}
-          <div className={isOwner ? undefined : ITEM_ACTION_ROW_CLASS}>
-            <div className="detail-panel flex min-w-0 items-center gap-3 rounded-2xl border p-4">
-              <Link href={`/store/${asset.owner.id}`} className="group flex min-w-0 flex-1 items-center gap-3">
-                <Avatar className="size-12 shrink-0">
-                  {asset.owner.image && <AvatarImage src={asset.owner.image} alt={asset.owner.name ?? ""} />}
-                  <AvatarFallback className="text-base font-medium">{sellerInitials}</AvatarFallback>
-                </Avatar>
-                <div className="flex min-w-0 flex-col gap-1">
-                  <span className="flex min-w-0 items-center gap-2">
-                    <span className="truncate text-lg font-semibold group-hover:underline">{asset.owner.name}</span>
-                    <VerifiedBadge status={asset.owner.kycStatus} />
-                    <TopTierBadge topTier={ownerTopTier} />
-                  </span>
-                  <RatingStars average={sellerRating.average} count={sellerRating.count} size="md" />
-                </div>
-              </Link>
-            </div>
+          {/* Same shape as the price box above: details on the left, the button inside on the right. */}
+          <div className={ITEM_ACTION_BOX_CLASS}>
+            <Link href={`/store/${asset.owner.id}`} className="group flex min-w-0 flex-1 items-center gap-3">
+              <Avatar className="size-12 shrink-0">
+                {asset.owner.image && <AvatarImage src={asset.owner.image} alt={asset.owner.name ?? ""} />}
+                <AvatarFallback className="text-base font-medium">{sellerInitials}</AvatarFallback>
+              </Avatar>
+              <div className="flex min-w-0 flex-col gap-1">
+                <span className="flex min-w-0 items-center gap-2">
+                  <span className="truncate text-lg font-semibold group-hover:underline">{asset.owner.name}</span>
+                  <VerifiedBadge status={asset.owner.kycStatus} />
+                  <TopTierBadge topTier={ownerTopTier} />
+                </span>
+                <RatingStars average={sellerRating.average} count={sellerRating.count} size="md" />
+              </div>
+            </Link>
             {!isOwner && (
-              <MessageSellerButton
-                sellerId={asset.owner.id}
-                assetId={asset.id}
-                variant="default"
-                size="lg"
-                icon={false}
-                className={cn("bg-highlight text-highlight-foreground hover:bg-highlight/85", ITEM_ACTION_BUTTON_CLASS)}
-              />
+              <div className={ITEM_ACTION_SLOT_CLASS}>
+                <MessageSellerButton
+                  sellerId={asset.owner.id}
+                  assetId={asset.id}
+                  variant="default"
+                  size="lg"
+                  icon={false}
+                  className={cn("bg-highlight text-highlight-foreground hover:bg-highlight/85", ITEM_ACTION_BUTTON_CLASS)}
+                />
+              </div>
             )}
           </div>
 
