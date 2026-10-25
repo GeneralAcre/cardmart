@@ -296,13 +296,14 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
   // the proof for the chip. Buy sits next to the box (see BuyPanel).
   const priceSummary = (
     <div className="flex min-w-0 flex-col gap-2">
-      {/* The label on the left, how far from market in the top-right corner. */}
-      <div className="flex min-w-0 items-center justify-between gap-2">
+      {/* The label on the left; how far from market is pinned to the price box's own
+          top-right corner (PricePanel is relative), above the Buy button. */}
+      <div className="flex min-w-0 items-center gap-2 pr-32">
         <span className="eyebrow text-muted-foreground">{t("Listing Price")}</span>
         {marketDeltaPct != null && (
           <span
             className={cn(
-              "rounded-md px-1.5 py-1 text-[11px] leading-none font-semibold whitespace-nowrap",
+              "absolute top-4 right-4 rounded-md px-1.5 py-1 text-[11px] leading-none font-semibold whitespace-nowrap",
               Math.abs(marketDeltaPct) < 3
                 ? "bg-muted text-muted-foreground"
                 : marketDeltaPct < 0

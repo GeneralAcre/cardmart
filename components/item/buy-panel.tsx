@@ -56,7 +56,9 @@ export const ITEM_ACTION_BUTTON_CLASS = "h-11 w-full rounded-xl text-sm font-sem
 /** The price box, with Buy inside when there is one. Also used on its own when there's nothing to buy (auction, redeemed). */
 export function PricePanel({ summary, action }: { summary: React.ReactNode; action?: React.ReactNode }) {
   return (
-    <div className={ITEM_ACTION_BOX_CLASS}>
+    // relative: the market chip sits in this box's top-right corner, so Buy goes to the
+    // bottom right instead of the middle, clear of it.
+    <div className={cn(ITEM_ACTION_BOX_CLASS, "relative sm:items-end")}>
       <div className="min-w-0 flex-1">{summary}</div>
       {action && <div className={ITEM_ACTION_SLOT_CLASS}>{action}</div>}
     </div>
