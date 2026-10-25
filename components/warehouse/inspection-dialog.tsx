@@ -17,9 +17,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { warehouseApproveShip, warehouseApproveVault, warehouseReject } from "@/lib/actions";
+import { saveWarehousePhotos, warehouseApproveShip, warehouseApproveVault, warehouseReject } from "@/lib/actions";
+import { CameraCaptureGrid, type CaptureMap } from "@/components/listing/camera-capture-grid";
+import { getWarehouseChecklist } from "@/lib/verification-checklist";
 import { formatGrade, formatThb } from "@/lib/format";
-import { extractPsaCertNumber, psaCertUrl } from "@/lib/psa-client";
+import { certLookup, certNumberFromSerial } from "@/lib/cert-lookup";
 import { cn } from "@/lib/utils";
 import { useT } from "@/components/landing/language-provider";
 
@@ -102,17 +104,31 @@ export function InspectionDialog({
   const [pending, startTransition] = useTransition();
   const [action, setAction] = useState<"ship" | "vault" | "reject" | null>(null);
   const [vaultLocation, setVaultLocation] = useState("");
+  const [captures, setCaptures] = useState<CaptureMap>({});
   const t = useT();
+  const raw = pkg.asset.gradingCompany === "RAW";
+  const photoViews = getWarehouseChecklist(pkg.asset.category, raw);
 
   const allMatch =
     pkg.declaredSerial === pkg.officialSerial &&
     pkg.declaredGradingCompany === pkg.officialGradingCompany &&
     pkg.declaredGrade === pkg.officialGrade;
+  // The grader's own cert page, to check the slab against by hand (only PSA has an API).
+  const cert = certLookup(pkg.officialGradingCompany, pkg.officialSerial);
+
+  // Saved with an approval, never a rejection: a rejected card goes back to the seller.
+  async function saveCapturedPhotos() {
+    const photos = photoViews
+      .filter((v) => captures[v.key])
+      .map((v) => ({ viewKey: v.key, viewLabel: v.label, url: captures[v.key] }));
+    if (photos.length > 0) await saveWarehousePhotos(pkg.id, photos);
+  }
 
   function run(kind: "ship" | "vault" | "reject", fn: () => Promise<void>) {
     setAction(kind);
     startTransition(async () => {
       try {
+        if (kind !== "reject") await saveCapturedPhotos();
         await fn();
         toast.success(
           kind === "ship"
@@ -133,7 +149,7 @@ export function InspectionDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !pending && onOpenChange(o)}>
-      <DialogContent className="sm:max-w-xl">
+      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>{pkg.asset.name}</DialogTitle>
           <DialogDescription>
@@ -198,16 +214,29 @@ export function InspectionDialog({
               {t("Mismatch detected — recommend rejecting this item.")}
             </p>
           )}
-          {pkg.officialGradingCompany === "PSA" && (
+          {cert && (
             <a
-              href={psaCertUrl(extractPsaCertNumber(pkg.officialSerial))}
+              href={cert.url}
               target="_blank"
               rel="noreferrer"
               className="text-muted-foreground hover:text-foreground mt-2 inline-flex items-center gap-1 text-xs underline underline-offset-2"
             >
-              {t("View cert on PSA")} <ExternalLink className="size-3" />
+              {t("View cert on {grader}", { grader: pkg.officialGradingCompany })} <ExternalLink className="size-3" />
             </a>
           )}
+          {/* Beckett's lookup has no per-cert link, so staff type the number in there. */}
+          {cert && !cert.direct && (
+            <p className="text-muted-foreground mt-1 text-xs">
+              {t("Enter cert number {cert} on the lookup page.", { cert: certNumberFromSerial(pkg.officialSerial) })}
+            </p>
+          )}
+        </div>
+
+        {/* Our own photos of the card in hand. Optional, but once saved they lead the card page
+            ahead of the seller's, as proof it was physically checked here. */}
+        <div className="flex flex-col gap-1.5">
+          <span className="text-muted-foreground text-xs font-medium">{t("Warehouse photos (recommended)")}</span>
+          <CameraCaptureGrid category={pkg.asset.category} raw={raw} views={photoViews} captures={captures} onChange={setCaptures} />
         </div>
 
         {pkg.escrowTx.fulfillmentChoice === "VAULT" && (

@@ -22,7 +22,7 @@ import { buyListing, updateListingPrice } from "@/lib/actions";
 import { useWalletStore } from "@/lib/web3/wallet-store";
 import { useEscrowLock, type EscrowLock } from "@/lib/web3/use-escrow-lock";
 import { PriceRows } from "@/components/item/complete-purchase-button";
-import { formatThb } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { useT } from "@/components/landing/language-provider";
 
 interface BuyPanelProps {
@@ -39,6 +39,21 @@ interface BuyPanelProps {
   platformWalletAddress: string | null;
   /** The card's NFT exists but its owner hasn't approved the transfer yet, so it can't be bought. */
   awaitingSellerApproval?: boolean;
+  /** The listing and market prices, shown in the box above the delivery choice and Buy button. */
+  priceSummary: React.ReactNode;
+}
+
+/**
+ * The card page's price row and seller row share one grid: the box takes the
+ * rest, the button a fixed column. Same columns in both rows, so the boxes end
+ * at the same edge and the two buttons (Buy now, Message Seller) are the same size.
+ */
+export const ITEM_ACTION_ROW_CLASS = "grid grid-cols-[minmax(0,1fr)_10rem] items-center gap-3";
+export const ITEM_ACTION_BUTTON_CLASS = "h-11 w-full rounded-xl text-sm font-semibold";
+
+/** The price box. Also used on its own when there's nothing to buy (auction, redeemed). */
+export function PricePanel({ summary }: { summary: React.ReactNode }) {
+  return <div className="detail-panel h-full rounded-2xl border p-4">{summary}</div>;
 }
 
 // The default active tab (bg-background) is almost the same black as the
@@ -56,6 +71,7 @@ export function BuyPanel({
   sellerWalletAddress,
   platformWalletAddress,
   awaitingSellerApproval = false,
+  priceSummary,
 }: BuyPanelProps) {
   const router = useRouter();
   const { lock, connecting } = useEscrowLock();
@@ -72,26 +88,37 @@ export function BuyPanel({
     // price at all. Rather than sending the owner off to hunt for this in
     // Portfolio, let them list it right here.
     if (!vaulted && marketStatus !== "IN_ESCROW" && !forSale) {
-      return <OwnerListForSaleForm assetId={assetId} assetName={assetName} />;
+      return (
+        <>
+          <PricePanel summary={priceSummary} />
+          <OwnerListForSaleForm assetId={assetId} assetName={assetName} />
+        </>
+      );
     }
-    return null;
+    return <PricePanel summary={priceSummary} />;
   }
 
   if (forSale && awaitingSellerApproval) {
     return (
-      <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
-        {t("Almost ready: the seller still needs to approve this card's NFT transfer before it can be bought.")}
-      </p>
+      <>
+        <PricePanel summary={priceSummary} />
+        <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
+          {t("Almost ready: the seller still needs to approve this card's NFT transfer before it can be bought.")}
+        </p>
+      </>
     );
   }
 
   if (!forSale || priceThb == null) {
     return (
-      <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
-        {marketStatus === "IN_ESCROW"
-          ? t("This item is on hold — another buyer is already purchasing it.")
-          : t("This item is not currently for sale.")}
-      </p>
+      <>
+        <PricePanel summary={priceSummary} />
+        <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
+          {marketStatus === "IN_ESCROW"
+            ? t("This item is on hold — another buyer is already purchasing it.")
+            : t("This item is not currently for sale.")}
+        </p>
+      </>
     );
   }
 
@@ -130,12 +157,21 @@ export function BuyPanel({
 
   return (
     <div className="flex flex-col gap-4">
-      {vaulted ? (
-        <div className="flex items-start gap-3 rounded-lg border bg-indigo-500/5 p-4 text-sm">
-          <Landmark className="mt-0.5 size-4 shrink-0 text-indigo-500" />
-          <p>{t("Already in our vault — ownership transfers instantly, no shipping. Redeem it anytime.")}</p>
-        </div>
-      ) : (
+      {/* Prices on the left, Buy on the right, side by side but not in the same box.
+          The price is right beside it, so the button only says Buy. */}
+      <div className={ITEM_ACTION_ROW_CLASS}>
+        <PricePanel summary={priceSummary} />
+        <Button
+          size="lg"
+          onClick={() => setOpen(true)}
+          className={cn("bg-foreground text-background hover:bg-foreground/85", ITEM_ACTION_BUTTON_CLASS)}
+        >
+          {t("Buy now")}
+        </Button>
+      </div>
+
+      {/* A vaulted card has nothing to choose: ownership just transfers. */}
+      {!vaulted && (
         <div className="flex flex-col gap-2">
           <span className="text-sm font-medium">{t("How do you want to receive it?")}</span>
           <Tabs value={fulfillment} onValueChange={(v) => setFulfillment(v as "SHIP" | "VAULT")}>
@@ -155,11 +191,6 @@ export function BuyPanel({
           </p>
         </div>
       )}
-
-      <Button size="lg" onClick={() => setOpen(true)}>
-        <ShieldCheck />
-        {t("Buy — {price}", { price: formatThb(priceThb) })}
-      </Button>
 
       <Dialog open={open} onOpenChange={(o) => !signing && !submitting && setOpen(o)}>
         <DialogContent>

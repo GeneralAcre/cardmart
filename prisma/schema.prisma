@@ -605,12 +605,19 @@ model VerificationPhoto {
   viewKey   String
   viewLabel String
   url       String
+  /// Who took it: the seller when listing, or warehouse staff at inspection (shown first once it exists).
+  source    PhotoSource @default(SELLER)
   createdAt DateTime @default(now())
 
   assetId String
   asset   Asset  @relation(fields: [assetId], references: [id])
 
   @@index([assetId])
+}
+
+enum PhotoSource {
+  SELLER
+  WAREHOUSE
 }
 
 model GradingSubmission {

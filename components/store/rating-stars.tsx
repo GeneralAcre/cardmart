@@ -38,7 +38,7 @@ export function RatingStars({ average, count, size = "sm", showCount = true, cla
         ))}
       </div>
       {showCount && (
-        <span className="text-muted-foreground text-xs">
+        <span className={cn("text-muted-foreground", size === "md" ? "text-sm" : "text-xs")}>
           {average.toFixed(1)} ({count})
         </span>
       )}

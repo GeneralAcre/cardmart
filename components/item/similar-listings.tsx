@@ -7,7 +7,8 @@ import type { AssetCategory, GradingCompany } from "@prisma/client";
 
 import { CardArt } from "@/components/asset/card-art";
 import { useLanguage } from "@/components/landing/language-provider";
-import { formatGrade, formatThb } from "@/lib/format";
+import { formatGrade } from "@/lib/format";
+import { useMoney } from "@/components/currency-provider";
 import { cn } from "@/lib/utils";
 
 export interface SimilarListing {
@@ -97,6 +98,7 @@ export function SimilarListings({ listings }: { listings: SimilarListing[] }) {
 }
 
 function ListingCard({ listing: l }: { listing: SimilarListing }) {
+  const money = useMoney();
   const { tr: t } = useLanguage();
   const pct = dealPct(l);
   const grade = l.gradingCompany === "RAW" ? t("Raw") : `${l.gradingCompany} ${formatGrade(l.grade)}${l.isBlackLabel ? " BL" : ""}`;
@@ -151,7 +153,7 @@ function ListingCard({ listing: l }: { listing: SimilarListing }) {
         )}
         {l.estimateThb != null && (
           <span className="absolute right-2.5 bottom-2.5 rounded-md bg-black/75 px-2 py-1 text-xs leading-none font-semibold tabular-nums backdrop-blur-sm">
-            {t("Est. {price}", { price: formatThb(l.estimateThb) })}
+            {t("Est. {price}", { price: money(l.estimateThb) })}
           </span>
         )}
       </div>
@@ -159,7 +161,7 @@ function ListingCard({ listing: l }: { listing: SimilarListing }) {
       <div className="flex flex-col gap-1 p-3.5">
         <span className="truncate text-sm font-semibold">{l.name}</span>
         <span className="text-muted-foreground truncate text-xs">{l.subtitle}</span>
-        <span className="mt-1 text-lg font-bold tabular-nums">{formatThb(l.priceThb)}</span>
+        <span className="mt-1 text-lg font-bold tabular-nums">{money(l.priceThb)}</span>
         <div className="mt-1 flex items-center justify-between gap-2">
           <span className="text-muted-foreground truncate text-xs">{l.sellerName}</span>
           <span className="shrink-0 rounded-md border px-1.5 py-0.5 text-[11px] font-semibold">{grade}</span>

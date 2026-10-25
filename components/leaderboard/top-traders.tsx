@@ -7,7 +7,8 @@ import { ChevronDown, Crown, Diamond } from "lucide-react";
 
 import { CardArt } from "@/components/asset/card-art";
 import { UserAvatar, displayNameOf } from "@/components/messages/user-avatar";
-import { formatDate, formatGrade, formatThb } from "@/lib/format";
+import { formatDate, formatGrade } from "@/lib/format";
+import { useMoney } from "@/components/currency-provider";
 import type { TraderPosition, TraderRow } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 import { useT } from "@/components/landing/language-provider";
@@ -23,11 +24,12 @@ function toneOf(n: number | null) {
 }
 
 function Gain({ thb, pct, className }: { thb: number | null; pct?: number | null; className?: string }) {
+  const money = useMoney();
   if (thb == null) return <span className={cn("text-muted-foreground", className)}>—</span>;
   return (
     <span className={cn("tabular-nums", toneOf(thb), className)}>
       {thb > 0 ? "+" : thb < 0 ? "−" : ""}
-      {formatThb(Math.abs(thb))}
+      {money(Math.abs(thb))}
       {pct != null && <span className="ml-1 text-xs">({pct > 0 ? "+" : ""}{pct.toFixed(1)}%)</span>}
     </span>
   );
@@ -86,6 +88,7 @@ function Watermark({ children, className }: { children: ReactNode; className?: s
 type Me = { id: string; name: string | null; handle: string | null; image: string | null };
 
 function YourStanding({ me, rows }: { me: Me; rows: TraderRow[] }) {
+  const money = useMoney();
   const t = useT();
   const idx = rows.findIndex((r) => r.userId === me.id);
   const row = idx >= 0 ? rows[idx] : null;
@@ -109,7 +112,7 @@ function YourStanding({ me, rows }: { me: Me; rows: TraderRow[] }) {
               {!row
                 ? t("Buy a card to get on the board")
                 : ahead
-                  ? t("{amount} to #{rank}", { amount: formatThb(Math.max(0, ahead.totalGainThb - row.totalGainThb)), rank: rank - 1 })
+                  ? t("{amount} to #{rank}", { amount: money(Math.max(0, ahead.totalGainThb - row.totalGainThb)), rank: rank - 1 })
                   : t("Top of the board")}
             </span>
           </div>
@@ -404,6 +407,7 @@ export function TopTraders({ rows, me }: { rows: TraderRow[]; me: Me }) {
 }
 
 function PositionRow({ p }: { p: TraderPosition }) {
+  const money = useMoney();
   const t = useT();
   const sold = p.soldThb != null;
   return (
@@ -437,11 +441,11 @@ function PositionRow({ p }: { p: TraderPosition }) {
           </span>
         </span>
         <span className="text-muted-foreground truncate text-xs">
-          {gradeSymbol(p)} · {t("Bought {price} on {date}", { price: formatThb(p.boughtThb), date: formatDate(p.boughtAt) })}
+          {gradeSymbol(p)} · {t("Bought {price} on {date}", { price: money(p.boughtThb), date: formatDate(p.boughtAt) })}
           {sold && p.soldAt
-            ? ` · ${t("Sold {price} on {date}", { price: formatThb(p.soldThb!), date: formatDate(p.soldAt) })}`
+            ? ` · ${t("Sold {price} on {date}", { price: money(p.soldThb!), date: formatDate(p.soldAt) })}`
             : p.currentThb != null
-              ? ` · ${t("Now {price}", { price: formatThb(p.currentThb) })}`
+              ? ` · ${t("Now {price}", { price: money(p.currentThb) })}`
               : ""}
         </span>
       </div>

@@ -7,7 +7,17 @@
 // generated CardArt). Demo seed data stores a 1×1 placeholder pixel as its
 // "photos"; those are never shown, since they render as a black square.
 
+import type { Prisma } from "@prisma/client";
+
 const PLACEHOLDER_MARKER = "/seed/placeholder";
+
+/**
+ * The order every query loads a card's photos in: warehouse staff's own shots
+ * first (proof it's physically with us), then the seller's, each in the order
+ * taken. Postgres sorts an enum by its declared order, SELLER before WAREHOUSE,
+ * so descending puts WAREHOUSE first.
+ */
+export const WAREHOUSE_FIRST: Prisma.VerificationPhotoOrderByWithRelationInput[] = [{ source: "desc" }, { createdAt: "asc" }];
 
 export function isRealPhotoUrl(url: string): boolean {
   return !url.includes(PLACEHOLDER_MARKER);

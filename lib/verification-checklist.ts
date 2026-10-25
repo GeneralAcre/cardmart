@@ -60,6 +60,14 @@ export const RAW_VERIFICATION_CHECKLIST: Record<AssetCategory, VerificationView[
   ],
 };
 
+/**
+ * What warehouse staff photograph at inspection: just the front and back (the
+ * first two views of the listing checklist), the shots a buyer looks at.
+ */
+export function getWarehouseChecklist(category: AssetCategory, raw = false): VerificationView[] {
+  return getVerificationChecklist(category, raw).slice(0, 2);
+}
+
 export function getVerificationChecklist(category: AssetCategory, raw = false): VerificationView[] {
   return raw ? RAW_VERIFICATION_CHECKLIST[category] : GRADED_VERIFICATION_CHECKLIST[category];
 }

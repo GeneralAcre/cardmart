@@ -7,7 +7,7 @@ import { Bot, Check, Gavel, Lock, Search, ShieldCheck, Timer, TrendingUp } from 
 
 import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
 import { useLanguage } from "@/components/landing/language-provider";
-import { formatThb } from "@/lib/format";
+import { useMoney } from "@/components/currency-provider";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -113,6 +113,7 @@ const GRADE_PRICES = [
 const chartConfig = { price: { label: "Price", color: "var(--success)" } } satisfies ChartConfig;
 
 function MarketMock() {
+  const money = useMoney();
   const { t, locale } = useLanguage();
   const [range, setRange] = useState<(typeof RANGES)[number]["key"]>("90d");
   const days = RANGES.find((r) => r.key === range)!.days;
@@ -129,7 +130,7 @@ function MarketMock() {
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <p className="text-muted-foreground text-xs">{t.showcase.market.chartLabel}</p>
-            <p className="text-2xl font-semibold tabular-nums">{formatThb(latest)}</p>
+            <p className="text-2xl font-semibold tabular-nums">{money(latest)}</p>
             <p className={cn("text-xs font-semibold tabular-nums", changePct >= 0 ? "text-success" : "text-destructive")}>
               {changePct >= 0 ? "+" : ""}
               {changePct.toFixed(1)}% {t.showcase.market.inRange}
@@ -175,7 +176,7 @@ function MarketMock() {
                     <p className="text-muted-foreground text-[11px]">
                       {new Date(p.t).toLocaleDateString(dateLocale, { month: "short", day: "numeric" })}
                     </p>
-                    <p className="text-sm font-bold tabular-nums">{formatThb(p.price)}</p>
+                    <p className="text-sm font-bold tabular-nums">{money(p.price)}</p>
                   </div>
                 );
               }}
@@ -209,7 +210,7 @@ function MarketMock() {
                     className={cn("h-full rounded-full", g.current ? "bg-success" : "bg-foreground/25")}
                   />
                 </div>
-                <span className="text-right font-semibold tabular-nums">{formatThb(g.price)}</span>
+                <span className="text-right font-semibold tabular-nums">{money(g.price)}</span>
               </div>
             ))}
           </div>
@@ -223,6 +224,7 @@ function MarketMock() {
 // 02 · Escrow: the buyer's order tracker, mid-inspection.
 
 function EscrowMock() {
+  const money = useMoney();
   const { t } = useLanguage();
   const e = t.showcase.escrow;
   const CURRENT = 2;
@@ -237,7 +239,7 @@ function EscrowMock() {
             </div>
             <div>
               <p className="text-muted-foreground text-xs">{e.held}</p>
-              <p className="text-lg font-semibold tabular-nums">{formatThb(12_900)}</p>
+              <p className="text-lg font-semibold tabular-nums">{money(12_900)}</p>
             </div>
           </div>
           <span className="text-muted-foreground font-mono text-[11px]">7xKX…9fQp</span>
@@ -301,6 +303,7 @@ function formatClock(totalSeconds: number) {
 }
 
 function AuctionMock() {
+  const money = useMoney();
   const { t } = useLanguage();
   const a = t.showcase.auction;
   const [seconds, setSeconds] = useState(2 * 3600 + 14 * 60 + 37);
@@ -339,7 +342,7 @@ function AuctionMock() {
                 exit={{ y: -12, opacity: 0 }}
                 className="mt-1 text-xl font-semibold tabular-nums"
               >
-                {formatThb(bids[0].amount)}
+                {money(bids[0].amount)}
               </motion.p>
             </AnimatePresence>
           </div>
@@ -376,7 +379,7 @@ function AuctionMock() {
                   </span>
                   <span className="flex items-center gap-3">
                     <span className="text-muted-foreground text-xs">{bid.ago}</span>
-                    <span className="font-semibold tabular-nums">{formatThb(bid.amount)}</span>
+                    <span className="font-semibold tabular-nums">{money(bid.amount)}</span>
                   </span>
                 </motion.li>
               ))}
@@ -385,7 +388,7 @@ function AuctionMock() {
         </div>
 
         <div aria-hidden className="bg-foreground text-background rounded-full py-2.5 text-center text-sm font-semibold">
-          {a.placeBid} · {formatThb(bids[0].amount + 200)}
+          {a.placeBid} · {money(bids[0].amount + 200)}
         </div>
       </div>
     </MockFrame>
@@ -396,6 +399,7 @@ function AuctionMock() {
 // 04 · Buying agent: a request, the agent's work, and a match to approve.
 
 function AgentMock() {
+  const money = useMoney();
   const { t } = useLanguage();
   const g = t.showcase.agent;
   const bubble = {
@@ -434,7 +438,7 @@ function AgentMock() {
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">Umbreon VMAX</p>
                 <p className="text-muted-foreground truncate text-xs">Evolving Skies · 215/203</p>
-                <p className="mt-1 text-sm font-semibold tabular-nums">{formatThb(24_900)}</p>
+                <p className="mt-1 text-sm font-semibold tabular-nums">{money(24_900)}</p>
               </div>
             </div>
             <div aria-hidden className="flex gap-2">

@@ -16,6 +16,8 @@ import {
   type UpdateShippingInfoState,
 } from "@/lib/profile-actions";
 import { useLanguage, useT } from "@/components/landing/language-provider";
+import { useCurrency } from "@/components/currency-provider";
+import { CURRENCIES } from "@/lib/currency";
 import { useTheme } from "@/components/site/theme-provider";
 import { cn } from "@/lib/utils";
 
@@ -137,11 +139,12 @@ function Choice<T extends string>({
   );
 }
 
-/** Screen mode (dark or light) and language; both apply instantly. */
+/** Screen mode (dark or light), language and price currency; all apply instantly. */
 export function AppearanceSettings() {
   const t = useT();
   const { theme, setTheme } = useTheme();
   const { locale, setLocale } = useLanguage();
+  const { currency, setCurrency } = useCurrency();
 
   return (
     <div className="flex flex-col gap-5">
@@ -166,6 +169,13 @@ export function AppearanceSettings() {
             { value: "th", label: "ไทย" },
           ]}
         />
+      </div>
+      <div className="flex flex-col gap-2">
+        <Label>{t("Currency")}</Label>
+        <Choice value={currency} onChange={setCurrency} options={CURRENCIES.map((c) => ({ value: c.value, label: c.value }))} />
+        <p className="text-muted-foreground text-xs">
+          {t("Prices are set and paid in baht. USD and SOL are shown at a fixed rate; SOL is what your wallet pays.")}
+        </p>
       </div>
     </div>
   );

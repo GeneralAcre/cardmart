@@ -1728,6 +1728,28 @@ export async function warehouseApproveVault(inboundPackageId: string, vaultLocat
   revalidateMarketplace(pkg.assetId);
 }
 
+/**
+ * Warehouse staff's own slab photos, taken during inspection. They're proof the
+ * card is physically here and are shown before the seller's photos from now on.
+ * Retaking replaces the earlier warehouse set; the seller's photos are kept.
+ */
+export async function saveWarehousePhotos(inboundPackageId: string, photos: { viewKey: string; viewLabel: string; url: string }[]) {
+  await requireAdmin();
+  const parsed = z.array(verificationPhotoSchema).min(1).safeParse(photos);
+  if (!parsed.success) throw new Error("Take the slab photos with the camera before saving.");
+  const problem = photoUrlProblem(parsed.data.map((p) => p.url));
+  if (problem) throw new Error(problem);
+  const pkg = await loadInboundPackage(inboundPackageId);
+
+  await prisma.$transaction([
+    prisma.verificationPhoto.deleteMany({ where: { assetId: pkg.assetId, source: "WAREHOUSE" } }),
+    prisma.verificationPhoto.createMany({
+      data: parsed.data.map((p) => ({ ...p, assetId: pkg.assetId, source: "WAREHOUSE" as const })),
+    }),
+  ]);
+  revalidateMarketplace(pkg.assetId);
+}
+
 /** Warehouse flags a mismatch: refund the buyer and return the item to the seller. */
 export async function warehouseReject(inboundPackageId: string) {
   await requireAdmin();

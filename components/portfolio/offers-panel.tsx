@@ -11,7 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { CompletePurchaseButton } from "@/components/item/complete-purchase-button";
 import { completeOfferPurchase, respondToOffer, withdrawOffer } from "@/lib/actions";
 import { OFFER_STATUS_LABELS } from "@/lib/labels";
-import { formatDateTime, formatThb } from "@/lib/format";
+import { formatDateTime } from "@/lib/format";
+import { useMoney } from "@/components/currency-provider";
 import { useT } from "@/components/landing/language-provider";
 
 interface OfferReceived {
@@ -66,6 +67,7 @@ export function OffersPanel({ received, made }: { received: OfferReceived[]; mad
 }
 
 function ReceivedOfferRow({ offer }: { offer: OfferReceived }) {
+  const money = useMoney();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const t = useT();
@@ -90,7 +92,7 @@ function ReceivedOfferRow({ offer }: { offer: OfferReceived }) {
         </Link>
         <p className="text-muted-foreground text-xs">
           {t("{buyer} offered", { buyer: offer.buyer.name ?? offer.buyer.handle ?? t("A buyer") })}{" "}
-          <span className="font-semibold">{formatThb(offer.amountThb)}</span> — {formatDateTime(offer.createdAt)}
+          <span className="font-semibold">{money(offer.amountThb)}</span> — {formatDateTime(offer.createdAt)}
         </p>
         {offer.message && <p className="text-muted-foreground text-xs italic">&quot;{offer.message}&quot;</p>}
       </div>
@@ -109,6 +111,7 @@ function ReceivedOfferRow({ offer }: { offer: OfferReceived }) {
 }
 
 function MadeOfferRow({ offer }: { offer: OfferMade }) {
+  const money = useMoney();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const t = useT();
@@ -132,7 +135,7 @@ function MadeOfferRow({ offer }: { offer: OfferMade }) {
           {offer.asset.name}
         </Link>
         <p className="text-muted-foreground text-xs">
-          {t("You offered")} <span className="font-semibold">{formatThb(offer.amountThb)}</span> —{" "}
+          {t("You offered")} <span className="font-semibold">{money(offer.amountThb)}</span> —{" "}
           {formatDateTime(offer.createdAt)}
         </p>
       </div>

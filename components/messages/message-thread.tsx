@@ -13,7 +13,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { markConversationRead, respondToOffer, sendMessage, sendOfferInChat, withdrawOffer } from "@/lib/actions";
-import { formatGrade, formatThb } from "@/lib/format";
+import { formatGrade } from "@/lib/format";
+import { useMoney } from "@/components/currency-provider";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/components/landing/language-provider";
 
@@ -79,6 +80,7 @@ function dayLabel(iso: string, locale: string, today: string, yesterday: string)
 
 /** A small card tile: image, name, grade and price, linking to the listing. */
 function CardChip({ asset, className }: { asset: ChatAsset; className?: string }) {
+  const money = useMoney();
   const { tr: t } = useLanguage();
   return (
     <Link
@@ -91,7 +93,7 @@ function CardChip({ asset, className }: { asset: ChatAsset; className?: string }
       <div className="flex min-w-0 flex-col">
         <span className="truncate text-sm font-semibold">{asset.name}</span>
         <span className="text-muted-foreground truncate text-xs">
-          {gradeOf(asset, t("Raw"))} · {asset.priceThb != null && asset.forSale ? formatThb(asset.priceThb) : t("Not for sale")}
+          {gradeOf(asset, t("Raw"))} · {asset.priceThb != null && asset.forSale ? money(asset.priceThb) : t("Not for sale")}
         </span>
       </div>
     </Link>
@@ -107,6 +109,7 @@ const OFFER_STATUS: Record<string, { label: string; className: string }> = {
 
 /** An offer in the chat: the amount against the asking price, its live status and what each side can do. */
 function OfferCard({ message, currentUserId }: { message: ThreadMessage; currentUserId: string }) {
+  const money = useMoney();
   const router = useRouter();
   const { tr: t } = useLanguage();
   const [busy, setBusy] = useState<string | null>(null);
@@ -141,7 +144,7 @@ function OfferCard({ message, currentUserId }: { message: ThreadMessage; current
       </div>
       <div className="flex flex-col gap-3 p-3">
         <div className="flex items-baseline justify-between gap-2">
-          <span className="text-2xl font-bold tabular-nums">{formatThb(offer.amountThb)}</span>
+          <span className="text-2xl font-bold tabular-nums">{money(offer.amountThb)}</span>
           {pctUnder != null && pctUnder !== 0 && (
             <span className="text-muted-foreground text-xs tabular-nums">
               {pctUnder > 0
@@ -205,6 +208,7 @@ function CardPicker({
   selectedId?: string | null;
   onPick: (card: ChatAsset) => void;
 }) {
+  const money = useMoney();
   const { tr: t } = useLanguage();
   return (
     <div className="flex max-h-80 flex-col gap-4 overflow-y-auto">
@@ -234,7 +238,7 @@ function CardPicker({
                   </span>
                 </div>
                 <span className="shrink-0 text-sm font-semibold tabular-nums">
-                  {card.priceThb != null ? formatThb(card.priceThb) : "—"}
+                  {card.priceThb != null ? money(card.priceThb) : "—"}
                 </span>
               </button>
             ))
@@ -261,6 +265,7 @@ function OfferDialog({
   initialAssetId: string | null;
   otherName: string;
 }) {
+  const money = useMoney();
   const router = useRouter();
   const { tr: t } = useLanguage();
   const [assetId, setAssetId] = useState<string | null>(initialAssetId ?? theirListings[0]?.id ?? null);
@@ -322,7 +327,7 @@ function OfferDialog({
                     onClick={() => setAmount(String(Math.floor((asking * (100 - pct)) / 100 / 100) * 100))}
                     className="hover:bg-muted rounded-full border px-3 py-1 text-xs font-medium tabular-nums"
                   >
-                    −{pct}% · {formatThb(Math.floor((asking * (100 - pct)) / 100 / 100) * 100)}
+                    −{pct}% · {money(Math.floor((asking * (100 - pct)) / 100 / 100) * 100)}
                   </button>
                 ))}
               </div>
@@ -337,7 +342,7 @@ function OfferDialog({
             />
             <Button onClick={submit} disabled={pending || !value || value < 100}>
               {pending ? <Loader2 className="animate-spin" /> : <HandCoins />}
-              {value ? t("Offer {amount}", { amount: formatThb(value) }) : t("Enter an amount")}
+              {value ? t("Offer {amount}", { amount: money(value) }) : t("Enter an amount")}
             </Button>
           </div>
         )}

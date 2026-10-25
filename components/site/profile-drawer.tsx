@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
-import { BookOpen, Check, ChevronRight, Copy, Globe, LogOut, MessageCircle, Settings, UserRound, Wallet } from "lucide-react";
+import { BookOpen, Check, ChevronRight, Coins, Copy, Globe, LogOut, MessageCircle, Settings, UserRound, Wallet } from "lucide-react";
 import { toast } from "sonner";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useLanguage } from "@/components/landing/language-provider";
 import { LOCALES } from "@/lib/i18n/landing";
+import { useCurrency } from "@/components/currency-provider";
+import { CURRENCIES } from "@/lib/currency";
 import { useWalletStore } from "@/lib/web3/wallet-store";
 import { cn } from "@/lib/utils";
 
@@ -38,6 +40,7 @@ export function ProfileDrawer({
   const router = useRouter();
   const { logout } = usePrivy();
   const { locale, setLocale, tr: t } = useLanguage();
+  const { currency, setCurrency } = useCurrency();
   const { connected, connecting, publicKey, connect } = useWalletStore();
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -152,6 +155,33 @@ export function ProfileDrawer({
                 )}
               >
                 {l.value.toUpperCase()}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Prices are stored and paid in baht; this only changes how they read. */}
+        <div className="flex items-center justify-between gap-2 border-b px-4 py-3.5 text-sm">
+          <span className="flex items-center gap-3 font-medium">
+            <span className="bg-muted flex size-9 items-center justify-center rounded-lg">
+              <Coins className="size-4" />
+            </span>
+            {t("Currency")}
+          </span>
+          <div className="bg-muted flex rounded-md p-0.5 text-xs font-semibold" role="group" aria-label={t("Currency")}>
+            {CURRENCIES.map((c) => (
+              <button
+                key={c.value}
+                type="button"
+                onClick={() => setCurrency(c.value)}
+                aria-pressed={c.value === currency}
+                title={t(c.label)}
+                className={cn(
+                  "rounded px-2.5 py-1 transition-colors",
+                  c.value === currency ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {c.value}
               </button>
             ))}
           </div>

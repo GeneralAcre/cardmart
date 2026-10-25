@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CompletePurchaseButton } from "@/components/item/complete-purchase-button";
 import { claimAuctionWin } from "@/lib/actions";
-import { formatDateTime, formatThb } from "@/lib/format";
+import { formatDateTime } from "@/lib/format";
+import { useMoney } from "@/components/currency-provider";
 import { useT } from "@/components/landing/language-provider";
 
 export function ClaimWinButton({
@@ -28,12 +29,13 @@ export function ClaimWinButton({
   claimDeadline: string | null;
   sellerWalletAddress: string | null;
 }) {
+  const money = useMoney();
   const t = useT();
   return (
     <div className="border-success/30 bg-success/5 flex flex-col gap-3 rounded-xl border p-4">
       <div className="flex items-center gap-2 text-sm font-medium">
         <Trophy className="text-success size-4" />
-        {t("You won this auction at {amount}", { amount: formatThb(amountThb) })}
+        {t("You won this auction at {amount}", { amount: money(amountThb) })}
       </div>
       {locked ? (
         vaulted ? (
@@ -52,7 +54,7 @@ export function ClaimWinButton({
             priceThb={amountThb}
             vaulted={vaulted}
             sellerWalletAddress={sellerWalletAddress}
-            ctaLabel={t("Claim & Pay — {amount}", { amount: formatThb(amountThb) })}
+            ctaLabel={t("Claim & Pay — {amount}", { amount: money(amountThb) })}
             dialogTitle={t("Claim Your Win")}
             dialogDescription={t("Payment stays protected until the item is verified.")}
             successMessage={t("Purchase complete — congratulations!")}

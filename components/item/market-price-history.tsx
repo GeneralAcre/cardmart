@@ -5,7 +5,8 @@ import { Area, CartesianGrid, ComposedChart, Line, Tooltip, XAxis, YAxis } from 
 
 import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { formatGrade, formatThb } from "@/lib/format";
+import { formatGrade } from "@/lib/format";
+import { useMoney } from "@/components/currency-provider";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/components/landing/language-provider";
 import { tierKey } from "@/lib/grade-tier";
@@ -123,6 +124,7 @@ export function MarketPriceHistory({
   // The card's game index, for the chart's comparison line.
   index: { name: string; points: { t: number; price: number }[] } | null;
 }) {
+  const money = useMoney();
   const { locale, tr: t } = useLanguage();
   const [tab, setTab] = useState<"history" | "compare" | "item">("history");
   const [overlays, setOverlays] = useState({ ma7: false, ma30: false, index: false });
@@ -297,7 +299,7 @@ export function MarketPriceHistory({
             </div>
             {tab === "history" && latest != null && (
               <div className="hidden flex-col items-start gap-1 sm:flex sm:items-end">
-                <span className="text-3xl font-bold tabular-nums">{formatThb(latest)}</span>
+                <span className="text-3xl font-bold tabular-nums">{money(latest)}</span>
                 {changePct != null && (
                   <span
                     className={cn(
@@ -343,7 +345,7 @@ export function MarketPriceHistory({
             <div className="flex flex-col items-end gap-3">
               {tab === "history" && latest != null && (
                 <div className="flex flex-col items-end gap-1 sm:hidden">
-                  <span className="text-2xl font-bold tabular-nums">{formatThb(latest)}</span>
+                  <span className="text-2xl font-bold tabular-nums">{money(latest)}</span>
                   {changePct != null && (
                     <span className={cn("text-sm font-semibold tabular-nums", !isOwnGrade ? "text-compare" : up ? "text-success" : "text-destructive")}>
                       {up ? "+" : ""}{changePct.toFixed(1)}% {t("in range")}
@@ -455,17 +457,17 @@ export function MarketPriceHistory({
                             <div className="bg-background/95 flex flex-col gap-0.5 rounded-lg border px-3 py-2 shadow-lg">
                               <p className="text-muted-foreground text-[11px]">{new Date(p.t).toLocaleDateString(dateLocale)}</p>
                               <p className="text-base font-bold tabular-nums">
-                                {formatThb(p.price)}
+                                {money(p.price)}
                                 {comparing && <span className="text-muted-foreground ml-1.5 text-xs font-medium">{formatTipPct(p.pct)}</span>}
                               </p>
                               {p.ma7 != null && (
                                 <p className="text-muted-foreground text-xs tabular-nums">
-                                  {t("7D avg")} {formatThb(p.ma7)}
+                                  {t("7D avg")} {money(p.ma7)}
                                 </p>
                               )}
                               {p.ma30 != null && (
                                 <p className="text-muted-foreground text-xs tabular-nums">
-                                  {t("30D avg")} {formatThb(p.ma30)}
+                                  {t("30D avg")} {money(p.ma30)}
                                 </p>
                               )}
                               {p.indexPct != null && index && (

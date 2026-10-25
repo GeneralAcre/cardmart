@@ -7,7 +7,8 @@ import { Activity, LayoutGrid, TrendingDown, TrendingUp } from "lucide-react";
 
 import { CardArt } from "@/components/asset/card-art";
 import { MarketHeatmap } from "@/components/marketplace/market-heatmap";
-import { formatGrade, formatThb } from "@/lib/format";
+import { formatGrade } from "@/lib/format";
+import { useMoney } from "@/components/currency-provider";
 import type { LeaderboardPeriod, LeaderboardRow } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 import { ChangeTag } from "@/components/ui/change-tag";
@@ -91,6 +92,7 @@ function MoversList({
   rows: LeaderboardRow[];
   period: LeaderboardPeriod;
 }) {
+  const money = useMoney();
   const t = useT();
   return (
     <section
@@ -123,7 +125,7 @@ function MoversList({
                   <span className="truncate text-sm font-medium">{row.name}</span>
                   <span className="text-muted-foreground truncate text-xs">
                     {row.gradingCompany === "RAW" ? t("Raw") : `${row.gradingCompany} ${formatGrade(row.grade)}`} ·{" "}
-                    <span className="tabular-nums">{formatThb(row.priceThb)}</span>
+                    <span className="tabular-nums">{money(row.priceThb)}</span>
                   </span>
                 </span>
                 <ChangeTag pct={change} className="text-sm" />

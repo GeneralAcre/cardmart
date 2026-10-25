@@ -7,7 +7,7 @@ import { Gavel, Loader2, Lock, Minus, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { placeBid } from "@/lib/actions";
-import { formatThb } from "@/lib/format";
+import { useMoney } from "@/components/currency-provider";
 import { useEscrowLock } from "@/lib/web3/use-escrow-lock";
 import { cn } from "@/lib/utils";
 import { useT } from "@/components/landing/language-provider";
@@ -30,6 +30,7 @@ export function BidPanel({
   /** The viewer's own standing (highest, locked) bid, if they're currently winning. */
   myLockedBidThb: number | null;
 }) {
+  const money = useMoney();
   const router = useRouter();
   const { lock, connecting } = useEscrowLock();
   const t = useT();
@@ -73,7 +74,7 @@ export function BidPanel({
       {myLockedBidThb != null && (
         <p className="border-success/30 bg-success/5 flex items-center gap-2 rounded-lg border px-3 py-2 text-xs">
           <Lock className="text-success size-3.5" />
-          {t("You're the highest bidder — {amount} is locked in escrow.", { amount: formatThb(myLockedBidThb) })}
+          {t("You're the highest bidder — {amount} is locked in escrow.", { amount: money(myLockedBidThb) })}
         </p>
       )}
       <div className="flex gap-2">
@@ -82,19 +83,19 @@ export function BidPanel({
             type="button"
             onClick={() => setSteps((s) => Math.max(0, s - 1))}
             disabled={busy || steps === 0}
-            aria-label={t("Lower bid by {amount}", { amount: formatThb(step) })}
+            aria-label={t("Lower bid by {amount}", { amount: money(step) })}
             className="text-muted-foreground hover:text-foreground flex h-full w-11 items-center justify-center disabled:opacity-40"
           >
             <Minus className="size-4" />
           </button>
           <output aria-label={t("Bid amount in THB")} aria-live="polite" className="flex-1 text-center text-lg font-semibold tabular-nums">
-            {formatThb(amount)}
+            {money(amount)}
           </output>
           <button
             type="button"
             onClick={() => setSteps((s) => s + 1)}
             disabled={busy}
-            aria-label={t("Raise bid by {amount}", { amount: formatThb(step) })}
+            aria-label={t("Raise bid by {amount}", { amount: money(step) })}
             className="text-muted-foreground hover:text-foreground flex h-full w-11 items-center justify-center disabled:opacity-40"
           >
             <Plus className="size-4" />
@@ -115,7 +116,7 @@ export function BidPanel({
             steps === 0 ? "bg-primary text-primary-foreground border-primary" : "text-muted-foreground hover:text-foreground",
           )}
         >
-          {t("Minimum")} {formatThb(minBid)}
+          {t("Minimum")} {money(minBid)}
         </button>
         {QUICK_STEPS.map((n) => (
           <button
@@ -128,12 +129,12 @@ export function BidPanel({
               steps === n ? "bg-primary text-primary-foreground border-primary" : "text-muted-foreground hover:text-foreground",
             )}
           >
-            +{formatThb(n * step)}
+            +{money(n * step)}
           </button>
         ))}
       </div>
       <p className="text-muted-foreground text-xs">
-        {t("Minimum bid: {amount}", { amount: formatThb(minBid) })} · {t("Bids go up in steps of {step}.", { step: formatThb(step) })}
+        {t("Minimum bid: {amount}", { amount: money(minBid) })} · {t("Bids go up in steps of {step}.", { step: money(step) })}
       </p>
       <p className="text-muted-foreground text-xs">
         {t("Your bid amount is locked in escrow when you bid, and returned automatically if someone outbids you. If you win, it pays for the card — no second payment.")}

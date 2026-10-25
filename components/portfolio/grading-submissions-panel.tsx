@@ -5,7 +5,8 @@ import type { GradingSubmissionStatus } from "@prisma/client";
 
 import type { getMyGradingSubmissions } from "@/lib/queries";
 import { CARD_GAME_LABELS, GRADING_SUBMISSION_STATUS_LABELS } from "@/lib/labels";
-import { formatDate, formatGrade, formatThb } from "@/lib/format";
+import { formatDate, formatGrade } from "@/lib/format";
+import { getMoney } from "@/lib/currency-server";
 import { cn } from "@/lib/utils";
 import { getT } from "@/lib/i18n/server";
 
@@ -16,6 +17,7 @@ export async function GradingSubmissionsPanel({
 }: {
   submissions: Awaited<ReturnType<typeof getMyGradingSubmissions>>;
 }) {
+  const money = await getMoney();
   const t = await getT();
   if (submissions.length === 0) {
     return (
@@ -70,7 +72,7 @@ export async function GradingSubmissionsPanel({
             )}
             <div className="text-muted-foreground flex flex-wrap items-center justify-between gap-2 text-xs">
               <span>
-                {t("Sent {date} · paid {price}", { date: formatDate(s.createdAt), price: formatThb(s.packagePriceThb) })}
+                {t("Sent {date} · paid {price}", { date: formatDate(s.createdAt), price: money(s.packagePriceThb) })}
                 {s.resolvedAt && ` · ${t("resolved {date}", { date: formatDate(s.resolvedAt) })}`}
               </span>
               {s.resultAsset && (

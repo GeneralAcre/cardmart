@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Check, Images, Scale } from "lucide-react";
 
 import { CardArt } from "@/components/asset/card-art";
-import { formatThb } from "@/lib/format";
+import { useMoney } from "@/components/currency-provider";
 import type { AssetSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { displayImage, realPhotos } from "@/lib/card-image";
@@ -33,6 +33,7 @@ export function ListingCard({
   compact?: boolean;
   compare?: CompareToggle;
 }) {
+  const money = useMoney();
   const photos = realPhotos(asset.verificationPhotos);
   const image = displayImage(asset);
   const t = useT();
@@ -118,7 +119,7 @@ export function ListingCard({
           </span>
           {/* The price, the boldest thing on the card. */}
           <span className={cn("shrink-0 whitespace-nowrap font-bold tabular-nums", compact ? "text-sm sm:text-base" : "text-base sm:text-lg")}>
-            {asset.priceThb != null ? formatThb(asset.priceThb) : t("Price unavailable")}
+            {asset.priceThb != null ? money(asset.priceThb) : t("Price unavailable")}
           </span>
         </div>
       </div>

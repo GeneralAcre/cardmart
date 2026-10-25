@@ -12,7 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { approveAgentDecision, declineAgentDecision, scanAgentMandate } from "@/lib/actions";
 import { setAgentTaskStatus } from "@/lib/agent-actions";
-import { formatDateTime, formatGrade, formatThb } from "@/lib/format";
+import { formatDateTime, formatGrade } from "@/lib/format";
+import { useMoney } from "@/components/currency-provider";
 import { cn } from "@/lib/utils";
 import { useT } from "@/components/landing/language-provider";
 
@@ -63,6 +64,7 @@ const STATUS_BADGE: Record<AgentTaskRow["status"], { label: string; variant: "de
 // The task's results so far: a funnel (reviewed → right card → bought) and
 // its best find, so the user sees what the agent did without reading the feed.
 function TaskReport({ report }: { report: AgentTaskRow["report"] }) {
+  const money = useMoney();
   const t = useT();
   if (report.reviewed === 0) {
     return <p className="text-muted-foreground text-xs">{t("No listings reviewed yet. New listings that fit are checked as they appear.")}</p>;
@@ -88,7 +90,7 @@ function TaskReport({ report }: { report: AgentTaskRow["report"] }) {
           <span>
             {t("Best find: {name} at {price}, {pct}% under fair value.", {
               name: report.best.name,
-              price: formatThb(report.best.priceThb),
+              price: money(report.best.priceThb),
               pct: report.best.pctUnder,
             })}
           </span>
@@ -96,7 +98,7 @@ function TaskReport({ report }: { report: AgentTaskRow["report"] }) {
       )}
       {report.savedThb > 0 && (
         <p className="text-success text-xs font-medium">
-          {t("Saved {amount} against fair value.", { amount: formatThb(report.savedThb) })}
+          {t("Saved {amount} against fair value.", { amount: money(report.savedThb) })}
         </p>
       )}
     </div>
@@ -104,6 +106,7 @@ function TaskReport({ report }: { report: AgentTaskRow["report"] }) {
 }
 
 function TaskCard({ task }: { task: AgentTaskRow }) {
+  const money = useMoney();
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [, startTransition] = useTransition();
@@ -135,7 +138,7 @@ function TaskCard({ task }: { task: AgentTaskRow }) {
       <dl className="grid grid-cols-3 gap-3 text-xs">
         <div>
           <dt className="text-muted-foreground">{t("Max / card")}</dt>
-          <dd className="font-medium">{formatThb(task.maxPriceThb)}</dd>
+          <dd className="font-medium">{money(task.maxPriceThb)}</dd>
         </div>
         <div>
           <dt className="text-muted-foreground">{t("Cards")}</dt>
@@ -152,7 +155,7 @@ function TaskCard({ task }: { task: AgentTaskRow }) {
         <div className="text-muted-foreground flex justify-between text-xs">
           <span>{t("Budget used")}</span>
           <span className="tabular-nums">
-            {formatThb(task.spentThb)} / {formatThb(task.budgetThb)}
+            {money(task.spentThb)} / {money(task.budgetThb)}
           </span>
         </div>
         <Progress value={Math.min(100, (task.spentThb / task.budgetThb) * 100)} />
@@ -270,6 +273,7 @@ function useDecisionActions(id: string) {
 // A pick waiting for the user's OK, laid out like a marketplace deal: the
 // card up front, the discount against fair value as the headline number.
 function DealCard({ d }: { d: AgentDecisionRow }) {
+  const money = useMoney();
   const t = useT();
   const { busy, approve, decline } = useDecisionActions(d.id);
   const deal = dealPct(d);
@@ -295,10 +299,10 @@ function DealCard({ d }: { d: AgentDecisionRow }) {
           {d.asset.name}
         </Link>
         <div className="flex items-baseline justify-between gap-2">
-          <span className="text-lg font-semibold tabular-nums">{formatThb(d.priceThb)}</span>
+          <span className="text-lg font-semibold tabular-nums">{money(d.priceThb)}</span>
           {d.fairValueThb != null && (
             <span className="text-muted-foreground text-xs tabular-nums">
-              {t("Fair {price}", { price: formatThb(d.fairValueThb) })}
+              {t("Fair {price}", { price: money(d.fairValueThb) })}
             </span>
           )}
         </div>
@@ -341,6 +345,7 @@ export function AgentDeals({ decisions }: { decisions: AgentDecisionRow[] }) {
 }
 
 function DecisionCard({ d }: { d: AgentDecisionRow }) {
+  const money = useMoney();
   const t = useT();
   const badge = DECISION_BADGE[d.status];
   const deal = dealPct(d);
@@ -360,8 +365,8 @@ function DecisionCard({ d }: { d: AgentDecisionRow }) {
               {gradeLabel(d.asset, t("Raw"))}
               {d.asset.isBlackLabel ? " · Black Label" : ""} ·{" "}
               {d.offerThb != null
-                ? t("offered {offer} (asking {price})", { offer: formatThb(d.offerThb), price: formatThb(d.priceThb) })
-                : formatThb(d.priceThb)}
+                ? t("offered {offer} (asking {price})", { offer: money(d.offerThb), price: money(d.priceThb) })
+                : money(d.priceThb)}
               {deal != null && (
                 <span className={cn("ml-1", deal >= 0 ? "text-success" : "text-destructive")}>
                   ({deal >= 0 ? t("{pct}% under fair value", { pct: deal }) : t("{pct}% over fair value", { pct: -deal })})

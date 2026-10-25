@@ -17,10 +17,12 @@ import { TopTierBadge } from "@/components/store/top-tier-badge";
 import { isTopTierSeller } from "@/lib/seller-tier";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CARD_GAME_LABELS } from "@/lib/labels";
-import { formatDate, formatThb } from "@/lib/format";
+import { formatDate } from "@/lib/format";
+import { getMoney } from "@/lib/currency-server";
 import { displayImage } from "@/lib/card-image";
 
 export default async function StorePage({ params }: { params: Promise<{ id: string }> }) {
+  const money = await getMoney();
   const { id } = await params;
   const [profile, currentUser, t] = await Promise.all([getSellerProfile(id), getCurrentUser(), getT()]);
 
@@ -127,7 +129,7 @@ export default async function StorePage({ params }: { params: Promise<{ id: stri
                         {t("Sold {date}", { date: formatDate(tx.releasedAt ?? tx.createdAt) })}
                       </span>
                     </div>
-                    <span className="text-sm font-semibold">{formatThb(tx.amountThb)}</span>
+                    <span className="text-sm font-semibold">{money(tx.amountThb)}</span>
                   </Link>
                 );
               })}

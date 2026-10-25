@@ -13,7 +13,6 @@ import {
   getCardMarketStats,
   getCardAcrossGrades,
   getCardDemand,
-  getPriceHistory,
   getSellerRating,
   getSimilarAssets,
   isAssetWatched,
@@ -33,7 +32,7 @@ import { KeyStats } from "@/components/item/card-stats";
 import { ProfitCalculator } from "@/components/item/profit-calculator";
 import { RarityTag } from "@/components/item/rarity-badge";
 import { ProvenanceTimeline } from "@/components/item/provenance-timeline";
-import { BuyPanel } from "@/components/item/buy-panel";
+import { BuyPanel, ITEM_ACTION_BUTTON_CLASS, ITEM_ACTION_ROW_CLASS, PricePanel } from "@/components/item/buy-panel";
 import { WatchButton } from "@/components/item/watch-button";
 import { MessageSellerButton } from "@/components/messages/message-seller-button";
 import { AcceptedOfferBanner } from "@/components/item/accepted-offer-banner";
@@ -53,7 +52,8 @@ import { Tag } from "@/components/ui/tag";
 import { Separator } from "@/components/ui/separator";
 import { ChevronDown, ExternalLink, Flame, Gavel, UserCheck } from "lucide-react";
 
-import { formatDate, formatGrade, formatThb } from "@/lib/format";
+import { formatDate, formatGrade } from "@/lib/format";
+import { getMoney } from "@/lib/currency-server";
 import {
   CARD_GAME_BADGE_CLASS,
   CARD_GAME_LABELS,
@@ -62,7 +62,8 @@ import {
   MARKET_STATUS_BADGE_CLASS,
   MARKET_STATUS_LABELS,
 } from "@/lib/labels";
-import { extractPsaCertNumber, isPsaCertNumber, lookupPsaCert, lookupPsaPopulation, psaCertUrl } from "@/lib/psa";
+import { extractPsaCertNumber, lookupPsaCert, lookupPsaPopulation } from "@/lib/psa";
+import { certLookup } from "@/lib/cert-lookup";
 import { lookupCardPrice } from "@/lib/tcg-price";
 import { buildMarketQuery, lookupEbayPrice } from "@/lib/ebay";
 import { getMarketPriceHistory, recordMarketPrice } from "@/lib/market-history";
@@ -80,6 +81,7 @@ const PRELOADED_EBAY_TIERS: GradeTier[] = [
 ];
 
 export default async function ItemDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const money = await getMoney();
   const { id } = await params;
   // Cancel any sale whose seller missed the shipping deadline before reading
   // the item, so its status below is never stale.
@@ -88,7 +90,8 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
 
   if (!asset) notFound();
 
-  const psaCertNumber = asset.gradingCompany === "PSA" ? extractPsaCertNumber(asset.serial) : null;
+  // The grader's own cert page (PSA, BGS or CGC), so a buyer can check the slab is real.
+  const cert = certLookup(asset.gradingCompany, asset.serial);
 
   // This exact card: name, set, grader + grade (+ Black Label), e.g.
   // "Lugia Holo 1st Edition Neo Genesis PSA 10". Every price source below
@@ -113,7 +116,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
   // page load, which is what was pushing this page to 5-10s and occasionally
   // outrunning the client's patience ("destination stream closed early").
   // Running them concurrently caps the wait at the slowest single call.
-  const [psaCert, priceQuote, ebayQuote, priceHistory, sellerRating, similarAssets, cardMarket, insightData, gradeData, otherTierEbay, ebayHistory, depth, gameIndexPoints] = await Promise.all([
+  const [psaCert, priceQuote, ebayQuote, sellerRating, similarAssets, cardMarket, insightData, gradeData, otherTierEbay, ebayHistory, depth, gameIndexPoints] = await Promise.all([
     // Live PSA cert lookup for display — best-effort, and never blocks the
     // page: it silently returns null whenever PSA isn't configured, the
     // account isn't approved for live access yet, or the request fails.
@@ -128,8 +131,6 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
     // Best-effort: null whenever eBay isn't configured or nothing matched
     // exactly; ebaySoldListingsUrl below still gives a verifiable reference.
     lookupEbayPrice(marketCard),
-    // Only feeds the Previous Price box; the full history comes from insightData.
-    getPriceHistory(asset.id, "7d"),
     getSellerRating(asset.owner.id),
     getSimilarAssets({ id: asset.id, name: asset.name, subtitle: asset.subtitle }),
     getCardMarketStats(marketCard, asset.id),
@@ -289,11 +290,48 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
     blackLabelOnly: asset.isBlackLabel,
   };
 
-  // The price snapshot immediately before the current one, from the same
-  // real PriceSnapshot rows the chart below uses — null for a brand-new
-  // listing with only one snapshot so far (shown as "—", not fabricated).
-  const previousPriceThb =
-    priceHistory.length >= 2 ? priceHistory[priceHistory.length - 2].priceThb : null;
+  // One comparison, read top to bottom: the asking price, how far it is from
+  // market in a chip in the top-right corner, then the market price for this
+  // exact card and grade (see marketPriceFor) as one quiet line underneath,
+  // the proof for the chip. Buy sits next to the box (see BuyPanel).
+  const priceSummary = (
+    <div className="flex min-w-0 flex-col gap-2">
+      {/* The label on the left, how far from market in the top-right corner. */}
+      <div className="flex min-w-0 items-center justify-between gap-2">
+        <span className="eyebrow text-muted-foreground">{t("Listing Price")}</span>
+        {marketDeltaPct != null && (
+          <span
+            className={cn(
+              "rounded-md px-1.5 py-1 text-[11px] leading-none font-semibold whitespace-nowrap",
+              Math.abs(marketDeltaPct) < 3
+                ? "bg-muted text-muted-foreground"
+                : marketDeltaPct < 0
+                  ? "bg-success/15 text-success"
+                  : "bg-amber-400/15 text-amber-400",
+            )}
+          >
+            {Math.abs(marketDeltaPct) < 3
+              ? t("At market price")
+              : marketDeltaPct < 0
+                ? t("{pct}% below market", { pct: -marketDeltaPct })
+                : t("{pct}% above market", { pct: marketDeltaPct })}
+          </span>
+        )}
+      </div>
+      <span className="text-2xl leading-none font-bold tabular-nums sm:text-3xl">
+        {asset.priceThb != null ? money(asset.priceThb) : "—"}
+      </span>
+      <span className="text-muted-foreground text-sm">
+        {t("Market Price")}{" "}
+        <span
+          className="text-foreground/80 font-medium tabular-nums"
+          title={marketPrice?.usd != null ? `US$${marketPrice.usd.toFixed(2)} × ${THB_PER_USD} THB/USD` : undefined}
+        >
+          {marketPrice ? money(marketPrice.thb) : "—"}
+        </span>
+      </span>
+    </div>
+  );
 
   return (
     <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
@@ -404,12 +442,16 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
             </div>
             <div className="flex min-w-0 items-start justify-between gap-3 border-t pt-3 text-sm">
               <span className="text-muted-foreground shrink-0">{t("Serial")}</span>
-              {psaCertNumber && isPsaCertNumber(psaCertNumber) ? (
+              {cert ? (
                   <a
-                    href={psaCertUrl(psaCertNumber)}
+                    href={cert.url}
                     target="_blank"
                     rel="noreferrer"
-                    title={t("View on PSA")}
+                    title={
+                      cert.direct
+                        ? t("View on {grader}", { grader: asset.gradingCompany })
+                        : t("Look up this cert number on {grader}", { grader: asset.gradingCompany })
+                    }
                     className="text-foreground hover:text-muted-foreground inline-flex min-w-0 items-center justify-end gap-1 break-all text-right font-mono font-medium underline decoration-foreground/30 underline-offset-2"
                   >
                     {asset.serial}
@@ -439,122 +481,38 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
             </div>
           </div>
 
-          {/* Price stat box, same shape as the owner/serial row above: the
-              asking price next to the market price for this exact card and
-              grade (see marketPriceFor), so a buyer can see at a glance
-              whether it's a fair ask. The "was" figure is a real prior
-              PriceSnapshot, not a fabricated "last sale". */}
-          <div className="detail-panel grid grid-cols-2 divide-x rounded-2xl border">
-            <div className="flex min-w-0 flex-col gap-1.5 p-4">
-              <span className="eyebrow text-muted-foreground">{t("Listing Price")}</span>
-              <span className="text-2xl leading-none font-bold tabular-nums sm:text-3xl">
-                {asset.priceThb != null ? formatThb(asset.priceThb) : "—"}
-              </span>
-              {marketDeltaPct != null && (
-                <span
-                  className={cn(
-                    "text-xs font-medium",
-                    Math.abs(marketDeltaPct) < 3
-                      ? "text-muted-foreground"
-                      : marketDeltaPct < 0
-                        ? "text-success"
-                        : "text-amber-400",
-                  )}
-                >
-                  {Math.abs(marketDeltaPct) < 3
-                    ? t("At market price")
-                    : marketDeltaPct < 0
-                      ? t("{pct}% below market", { pct: -marketDeltaPct })
-                      : t("{pct}% above market", { pct: marketDeltaPct })}
-                </span>
-              )}
-              {previousPriceThb != null && (
-                <span className="text-muted-foreground text-xs">
-                  {t("Was {amount}", { amount: formatThb(previousPriceThb) })}
-                </span>
-              )}
-            </div>
-            <div className="flex min-w-0 flex-col gap-1.5 p-4">
-              <span className="eyebrow text-muted-foreground">{t("Market Price")}</span>
-              <span
-                className="text-2xl leading-none font-bold tabular-nums sm:text-3xl"
-                title={marketPrice?.usd != null ? `US$${marketPrice.usd.toFixed(2)} × ${THB_PER_USD} THB/USD` : undefined}
-              >
-                {marketPrice ? formatThb(marketPrice.thb) : "—"}
-              </span>
-            </div>
-          </div>
-
-          {/* Seller card, kept above the buy actions since who you're buying
-              from matters before you pay: the name links to their store, and
-              messaging sits right on the card. Messages go to the current
-              owner — the person who can actually accept an offer or change
-              the price. */}
-          <div className="flex flex-col gap-2">
-            <div className="detail-panel flex items-center gap-3 rounded-2xl border p-4">
-              <Link href={`/store/${asset.owner.id}`} className="group flex min-w-0 flex-1 items-center gap-3">
-                <Avatar className="size-10 shrink-0">
-                  {asset.owner.image && <AvatarImage src={asset.owner.image} alt={asset.owner.name ?? ""} />}
-                  <AvatarFallback className="text-sm font-medium">{sellerInitials}</AvatarFallback>
-                </Avatar>
-                <div className="flex min-w-0 flex-col gap-0.5">
-                  <span className="text-muted-foreground text-xs">{t("Owned by")}</span>
-                  <span className="flex min-w-0 items-center gap-2">
-                    <span className="truncate text-sm font-semibold group-hover:underline">{asset.owner.name}</span>
-                    <VerifiedBadge status={asset.owner.kycStatus} />
-                    <TopTierBadge topTier={ownerTopTier} />
+          {asset.redeemedAt ? (
+            <>
+              <PricePanel summary={priceSummary} />
+              <div className="flex items-start gap-3 rounded-xl border border-dashed p-4 text-sm">
+                <Flame className="text-muted-foreground mt-0.5 size-4 shrink-0" />
+                <p>
+                  <span className="font-semibold">{t("Redeemed on {date}.", { date: formatDate(asset.redeemedAt) })}</span>{" "}
+                  <span className="text-muted-foreground">
+                    {t("The physical card was shipped to its owner and its digital twin was burned, so it can no longer be bought, auctioned or swapped here.")}
                   </span>
-                  <RatingStars average={sellerRating.average} count={sellerRating.count} />
+                </p>
+              </div>
+            </>
+          ) : activeAuction ? (
+            <>
+              <PricePanel summary={priceSummary} />
+              <Link
+                href={`/auctions/${activeAuction.id}`}
+                className="bg-foreground text-background flex items-center gap-3 rounded-2xl p-4 transition-opacity hover:opacity-90"
+              >
+                <Gavel className="size-5 shrink-0" />
+                <div className="flex flex-col">
+                  <span className="font-semibold">{t("This item is up for auction")}</span>
+                  <span className="text-background/80 text-sm">
+                    {activeAuction.currentBidThb != null
+                      ? t("Current bid {amount}", { amount: money(activeAuction.currentBidThb) })
+                      : t("Starting at {amount}", { amount: money(activeAuction.startPriceThb) })}{" "}
+                    — {t("view the live auction to bid")}
+                  </span>
                 </div>
               </Link>
-              {!isOwner && (
-                <MessageSellerButton
-                  sellerId={asset.owner.id}
-                  assetId={asset.id}
-                  variant="default"
-                  className="bg-highlight text-highlight-foreground hover:bg-highlight/85 shrink-0"
-                />
-              )}
-            </div>
-          </div>
-
-          <KeyStats
-            stats={cardStats}
-            watchers={statsWatchers}
-            lastSale={statsSales.at(-1)?.amountThb ?? null}
-            recentSales={statsSales.slice(-5).reverse().map((sale) => ({
-              id: sale.id,
-              amountThb: sale.amountThb,
-              soldAt: sale.soldAt.toISOString(),
-            }))}
-          />
-
-          {asset.redeemedAt ? (
-            <div className="flex items-start gap-3 rounded-xl border border-dashed p-4 text-sm">
-              <Flame className="text-muted-foreground mt-0.5 size-4 shrink-0" />
-              <p>
-                <span className="font-semibold">{t("Redeemed on {date}.", { date: formatDate(asset.redeemedAt) })}</span>{" "}
-                <span className="text-muted-foreground">
-                  {t("The physical card was shipped to its owner and its digital twin was burned, so it can no longer be bought, auctioned or swapped here.")}
-                </span>
-              </p>
-            </div>
-          ) : activeAuction ? (
-            <Link
-              href={`/auctions/${activeAuction.id}`}
-              className="bg-foreground text-background flex items-center gap-3 rounded-2xl p-4 transition-opacity hover:opacity-90"
-            >
-              <Gavel className="size-5 shrink-0" />
-              <div className="flex flex-col">
-                <span className="font-semibold">{t("This item is up for auction")}</span>
-                <span className="text-background/80 text-sm">
-                  {activeAuction.currentBidThb != null
-                    ? t("Current bid {amount}", { amount: formatThb(activeAuction.currentBidThb) })
-                    : t("Starting at {amount}", { amount: formatThb(activeAuction.startPriceThb) })}{" "}
-                  — {t("view the live auction to bid")}
-                </span>
-              </div>
-            </Link>
+            </>
           ) : (
             <>
               {acceptedOffer && (
@@ -579,9 +537,56 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
                 awaitingSellerApproval={Boolean(
                   asset.mintAddress && !asset.transferApproved && asset.owner.walletAddress && escrowAuthorityAddress,
                 )}
+                priceSummary={priceSummary}
               />
             </>
           )}
+
+          {/* Seller card, right under the price and Buy: who you're buying
+              from matters before you pay. The name links to their store, and
+              messaging sits right on the card. Messages go to the current
+              owner — the person who can actually accept an offer or change
+              the price. */}
+          {/* Same shape as the price row above: the card on the left, its button outside on the right. */}
+          <div className={isOwner ? undefined : ITEM_ACTION_ROW_CLASS}>
+            <div className="detail-panel flex min-w-0 items-center gap-3 rounded-2xl border p-4">
+              <Link href={`/store/${asset.owner.id}`} className="group flex min-w-0 flex-1 items-center gap-3">
+                <Avatar className="size-12 shrink-0">
+                  {asset.owner.image && <AvatarImage src={asset.owner.image} alt={asset.owner.name ?? ""} />}
+                  <AvatarFallback className="text-base font-medium">{sellerInitials}</AvatarFallback>
+                </Avatar>
+                <div className="flex min-w-0 flex-col gap-1">
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span className="truncate text-lg font-semibold group-hover:underline">{asset.owner.name}</span>
+                    <VerifiedBadge status={asset.owner.kycStatus} />
+                    <TopTierBadge topTier={ownerTopTier} />
+                  </span>
+                  <RatingStars average={sellerRating.average} count={sellerRating.count} size="md" />
+                </div>
+              </Link>
+            </div>
+            {!isOwner && (
+              <MessageSellerButton
+                sellerId={asset.owner.id}
+                assetId={asset.id}
+                variant="default"
+                size="lg"
+                icon={false}
+                className={cn("bg-highlight text-highlight-foreground hover:bg-highlight/85", ITEM_ACTION_BUTTON_CLASS)}
+              />
+            )}
+          </div>
+
+          <KeyStats
+            stats={cardStats}
+            watchers={statsWatchers}
+            lastSale={statsSales.at(-1)?.amountThb ?? null}
+            recentSales={statsSales.slice(-5).reverse().map((sale) => ({
+              id: sale.id,
+              amountThb: sale.amountThb,
+              soldAt: sale.soldAt.toISOString(),
+            }))}
+          />
 
           {myOpenOrder?.inboundPackage && (
             <OrderProgress

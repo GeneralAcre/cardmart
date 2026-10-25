@@ -4,7 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { ZoomIn } from "lucide-react";
-import type { AssetCategory, GradingCompany } from "@prisma/client";
+import type { AssetCategory, GradingCompany, PhotoSource } from "@prisma/client";
 
 import { CardArt } from "@/components/asset/card-art";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -17,6 +17,8 @@ interface Photo {
   url: string;
   /** Official catalogue image of the card, not a photo of this copy. */
   reference?: boolean;
+  /** Who took it: the seller when listing, or our warehouse at inspection. */
+  source?: PhotoSource;
 }
 
 interface Props {
@@ -146,9 +148,9 @@ export function ItemGallery({
             />
           </div>
         )}
-        {selectedPhoto?.reference && (
+        {(selectedPhoto?.reference || selectedPhoto?.source === "WAREHOUSE") && (
           <span className="absolute bottom-3 left-3 rounded-md bg-black/70 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur-sm">
-            {t("Reference image")}
+            {selectedPhoto.reference ? t("Reference image") : t("Photo by CardMart warehouse")}
           </span>
         )}
         <span className="absolute right-3 top-3 flex size-9 items-center justify-center rounded-md bg-black/70 text-white opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100">
@@ -203,7 +205,11 @@ export function ItemGallery({
       {!selectedPhoto?.reference && (
         <p className="text-muted-foreground text-center text-xs">
           {selectedPhoto
-            ? `${t(selectedPhoto.viewLabel)} — ${t("live camera capture, click to zoom")}`
+            ? `${t(selectedPhoto.viewLabel)} — ${
+                selectedPhoto.source === "WAREHOUSE"
+                  ? t("taken by our warehouse at inspection, click to zoom")
+                  : t("live camera capture by the seller, click to zoom")
+              }`
             : t("Generated certificate artwork — click to zoom")}
         </p>
       )}

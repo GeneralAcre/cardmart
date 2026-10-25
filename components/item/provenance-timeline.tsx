@@ -2,7 +2,8 @@ import { ExternalLink } from "lucide-react";
 import type { ProvenanceType } from "@prisma/client";
 
 import { PROVENANCE_LABELS } from "@/lib/labels";
-import { formatDate, formatThb, shortSignature } from "@/lib/format";
+import { formatDate, shortSignature } from "@/lib/format";
+import { getMoney } from "@/lib/currency-server";
 import { getT } from "@/lib/i18n/server";
 import { cn } from "@/lib/utils";
 
@@ -40,6 +41,7 @@ function explorerTxUrl(signature: string) {
  * from the payment held just before it. The full note is on hover.
  */
 export async function ProvenanceTimeline({ events }: { events: Entry[] }) {
+  const money = await getMoney();
   const t = await getT();
 
   // Walk oldest → newest so each sale can pick up the payment before it.
@@ -86,7 +88,7 @@ export async function ProvenanceTimeline({ events }: { events: Entry[] }) {
                 <td className={cn("px-4 py-3", KEY_TYPES.has(row.type) ? "text-foreground font-semibold" : "text-muted-foreground font-medium")}>
                   {row.label}
                 </td>
-                <td className="px-4 py-3 tabular-nums">{row.price != null ? formatThb(row.price) : ""}</td>
+                <td className="px-4 py-3 tabular-nums">{row.price != null ? money(row.price) : ""}</td>
                 <td className="text-muted-foreground hidden truncate px-4 py-3 md:table-cell">{row.actor?.name ?? ""}</td>
                 <td className="hidden px-4 py-3 sm:table-cell">
                   {row.onChain && (

@@ -6,7 +6,8 @@ import Link from "next/link";
 import { Area, AreaChart, CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis } from "recharts";
 
 import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
-import { formatGrade, formatThb } from "@/lib/format";
+import { formatGrade } from "@/lib/format";
+import { useMoney } from "@/components/currency-provider";
 import type { IndexMember, MarketIndex } from "@/lib/stats";
 import type { PricePoint } from "@/lib/stats-math";
 import { cn } from "@/lib/utils";
@@ -209,6 +210,7 @@ type SortKey = (typeof SORTS)[number]["key"];
 
 /** Every card inside the index with its price and moves, sortable. */
 export function IndexMembers({ members, longLabel }: { members: IndexMember[]; longLabel: string }) {
+  const money = useMoney();
   const { tr: t } = useLanguage();
   const [sort, setSort] = useState<SortKey>("price");
 
@@ -272,11 +274,11 @@ export function IndexMembers({ members, longLabel }: { members: IndexMember[]; l
                 <span className="hidden sm:block">
                   <MemberSparkline member={m} />
                 </span>
-                <span className="hidden text-right text-sm font-semibold tabular-nums sm:block">{formatThb(m.latestThb)}</span>
+                <span className="hidden text-right text-sm font-semibold tabular-nums sm:block">{money(m.latestThb)}</span>
                 <span className={cn("hidden text-right text-sm tabular-nums sm:block", toneClass(m.change1d))}>{formatPct(m.change1d)}</span>
                 {/* Phones: price above the longer-term move, in the last column. */}
                 <span className="flex flex-col items-end sm:block sm:text-right">
-                  <span className="text-sm font-semibold tabular-nums sm:hidden">{formatThb(m.latestThb)}</span>
+                  <span className="text-sm font-semibold tabular-nums sm:hidden">{money(m.latestThb)}</span>
                   <span className={cn("text-sm font-semibold tabular-nums", toneClass(m.change30dOrSince))}>
                     {formatPct(m.change30dOrSince)}
                   </span>

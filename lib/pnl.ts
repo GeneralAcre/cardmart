@@ -1,7 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
-import { displayImage } from "@/lib/card-image";
+import { WAREHOUSE_FIRST, displayImage } from "@/lib/card-image";
 import { marketCardKey } from "@/lib/market-history";
 import { tierKey } from "@/lib/grade-tier";
 import { THB_PER_USD } from "@/lib/pricing";
@@ -120,7 +120,7 @@ export async function getSoldTrades(userId: string): Promise<SoldTrade[]> {
           grade: true,
           isBlackLabel: true,
           catalogImageUrl: true,
-          verificationPhotos: { orderBy: { createdAt: "asc" }, select: { url: true } },
+          verificationPhotos: { orderBy: WAREHOUSE_FIRST, select: { url: true } },
         },
       },
     },
@@ -194,7 +194,7 @@ export async function getSaleReceipt(escrowId: string): Promise<SaleReceipt | nu
           grade: true,
           isBlackLabel: true,
           catalogImageUrl: true,
-          verificationPhotos: { orderBy: { createdAt: "asc" }, select: { url: true } },
+          verificationPhotos: { orderBy: WAREHOUSE_FIRST, select: { url: true } },
         },
       },
     },

@@ -3,7 +3,8 @@
 import { ArrowDownRight, ArrowUpRight, ExternalLink, Loader2 } from "lucide-react";
 
 import type { EbayPriceQuote } from "@/lib/ebay";
-import { formatThb, formatUsd } from "@/lib/format";
+import { formatUsd } from "@/lib/format";
+import { useMoney } from "@/components/currency-provider";
 import { THB_PER_USD } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/components/landing/language-provider";
@@ -112,6 +113,7 @@ export function GradeCompare({
   tcg: { marketPriceUsd: number; matchedName: string } | null;
   query: string;
 }) {
+  const money = useMoney();
   const { tr: t } = useLanguage();
 
   const lowAsk = asks.length ? Math.min(...asks) : null;
@@ -127,7 +129,7 @@ export function GradeCompare({
       source: "cardmart",
       kind: "Asking",
       pointThb: listingThb,
-      price: listingThb != null ? formatThb(listingThb) : null,
+      price: listingThb != null ? money(listingThb) : null,
       note: listingThb != null ? listingGradeName : t("Not listed for sale right now"),
       highlight: true,
     },
@@ -138,7 +140,7 @@ export function GradeCompare({
       kind: "Asking",
       pointThb: askRange ? null : lowAsk,
       rangeThb: askRange,
-      price: lowAsk == null ? null : askRange ? `${formatThb(askRange[0])} – ${formatThb(askRange[1])}` : formatThb(lowAsk),
+      price: lowAsk == null ? null : askRange ? `${money(askRange[0])} – ${money(askRange[1])}` : money(lowAsk),
       note:
         asks.length > 0
           ? t(asks.length === 1 ? "{count} live listing" : "{count} live listings", { count: asks.length })
@@ -150,7 +152,7 @@ export function GradeCompare({
       source: "cardmart",
       kind: "Sold",
       pointThb: medianSale,
-      price: medianSale != null ? formatThb(medianSale) : null,
+      price: medianSale != null ? money(medianSale) : null,
       note:
         sorted.length > 0
           ? t(sorted.length === 1 ? "{count} sale" : "{count} sales", {
@@ -166,7 +168,7 @@ export function GradeCompare({
       pointThb: ebay ? usdToThb(ebay.medianPriceUsd) : null,
       rangeThb: ebay && ebay.itemCount > 1 ? [usdToThb(ebay.lowPriceUsd), usdToThb(ebay.highPriceUsd)] : undefined,
       price: ebay ? formatUsd(ebay.medianPriceUsd) : null,
-      approx: ebay ? `≈ ${formatThb(usdToThb(ebay.medianPriceUsd))}` : undefined,
+      approx: ebay ? `≈ ${money(usdToThb(ebay.medianPriceUsd))}` : undefined,
       note:
         ebay === undefined
           ? t("Checking eBay…")
@@ -185,7 +187,7 @@ export function GradeCompare({
             kind: "Market",
             pointThb: usdToThb(tcg.marketPriceUsd),
             price: formatUsd(tcg.marketPriceUsd),
-            approx: `≈ ${formatThb(usdToThb(tcg.marketPriceUsd))}`,
+            approx: `≈ ${money(usdToThb(tcg.marketPriceUsd))}`,
             note: `${t("Ungraded (raw) card")} · ${tcg.matchedName}`,
             href: searchUrl("https://www.tcgplayer.com/search/all/product", "q", tcg.matchedName),
           } satisfies Lane,
@@ -223,7 +225,7 @@ export function GradeCompare({
                   })}
             </span>
             <span className="text-2xl leading-none font-bold tabular-nums">
-              {listingThb != null ? formatThb(listingThb) : "—"}
+              {listingThb != null ? money(listingThb) : "—"}
             </span>
           </div>
           {diffPct != null && reference && (
@@ -242,7 +244,7 @@ export function GradeCompare({
                       })}
                 </span>{" "}
                 <span className="text-muted-foreground">
-                  {isOwnGrade ? reference.label : `${reference.label}, ${tierName}`} ({formatThb(reference.thb)})
+                  {isOwnGrade ? reference.label : `${reference.label}, ${tierName}`} ({money(reference.thb)})
                 </span>
                 {reference.count < MIN_RELIABLE_PRICES && (
                   <span className="block text-right text-xs text-amber-400">
@@ -306,7 +308,7 @@ export function GradeCompare({
                             left: pos(lane.rangeThb[0]),
                             width: `calc(${pos(lane.rangeThb[1])} - ${pos(lane.rangeThb[0])})`,
                           }}
-                          title={`${formatThb(lane.rangeThb[0])} – ${formatThb(lane.rangeThb[1])}`}
+                          title={`${money(lane.rangeThb[0])} – ${money(lane.rangeThb[1])}`}
                         />
                       )}
                       {lane.pointThb != null && (
@@ -320,7 +322,7 @@ export function GradeCompare({
                                 : "bg-compare size-2.5",
                           )}
                           style={{ left: pos(lane.pointThb) }}
-                          title={`${lane.name}: ${formatThb(lane.pointThb)}`}
+                          title={`${lane.name}: ${money(lane.pointThb)}`}
                         />
                       )}
                     </>
@@ -355,7 +357,7 @@ export function GradeCompare({
                   className={cn("absolute", i === 0 ? "" : i === ticks.length - 1 ? "-translate-x-full" : "-translate-x-1/2")}
                   style={{ left: pos(v) }}
                 >
-                  {formatThb(v)}
+                  {money(v)}
                 </span>
               ))}
             </div>

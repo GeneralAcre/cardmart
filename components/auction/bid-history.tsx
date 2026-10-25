@@ -1,6 +1,7 @@
 "use client";
 
-import { formatDateTime, formatThb } from "@/lib/format";
+import { formatDateTime } from "@/lib/format";
+import { useMoney } from "@/components/currency-provider";
 import { useT } from "@/components/landing/language-provider";
 
 interface BidRow {
@@ -11,6 +12,7 @@ interface BidRow {
 }
 
 export function BidHistory({ bids }: { bids: BidRow[] }) {
+  const money = useMoney();
   const t = useT();
   if (bids.length === 0) {
     return <p className="text-muted-foreground text-sm">{t("No bids yet — be the first.")}</p>;
@@ -24,7 +26,7 @@ export function BidHistory({ bids }: { bids: BidRow[] }) {
             {i === 0 && <span className="text-muted-foreground ml-1.5 text-xs font-normal">({t("highest")})</span>}
           </span>
           <div className="flex items-center gap-3">
-            <span className="font-mono font-semibold tabular-nums">{formatThb(bid.amountThb)}</span>
+            <span className="font-mono font-semibold tabular-nums">{money(bid.amountThb)}</span>
             <span className="text-muted-foreground text-xs">{formatDateTime(bid.createdAt)}</span>
           </div>
         </div>

@@ -12,7 +12,7 @@ import { displayImage } from "@/lib/card-image";
 import { isAgentAiConfigured } from "@/lib/agent/ai";
 import { getAgentBalanceLamports, getOrCreateAgentWallet, lamportsToSol } from "@/lib/agent/wallet";
 import { getTaskReports } from "@/lib/agent/report";
-import { formatThb } from "@/lib/format";
+import { getMoney } from "@/lib/currency-server";
 
 // A scan can wait on the AI for a while; give the Server Actions on this page room.
 export const maxDuration = 60;
@@ -36,6 +36,7 @@ const WONT_DO = [
 
 // ?alert=<wanted card id> starts the chat (or form) from that card alert (Portfolio → Alerts).
 export default async function AgentPage({ searchParams }: { searchParams: Promise<{ alert?: string }> }) {
+  const money = await getMoney();
   const [user, t, { alert }] = await Promise.all([getCurrentUser(), getT(), searchParams]);
   const [wallet, dashboard, alerts] = await Promise.all([
     getOrCreateAgentWallet(user.id),
@@ -85,7 +86,7 @@ export default async function AgentPage({ searchParams }: { searchParams: Promis
     { label: t("Tasks watching"), value: String(dashboard.mandates.filter((m) => m.status === "ACTIVE").length) },
     { label: t("Listings reviewed"), value: totals.reviewed.toLocaleString() },
     { label: t("Cards bought"), value: String(totals.bought) },
-    { label: t("Saved vs fair value"), value: formatThb(totals.savedThb), accent: totals.savedThb > 0 },
+    { label: t("Saved vs fair value"), value: money(totals.savedThb), accent: totals.savedThb > 0 },
   ];
 
   return (

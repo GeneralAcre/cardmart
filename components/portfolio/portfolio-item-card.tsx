@@ -33,7 +33,8 @@ import {
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { auctionApprovalNeeded, delistAsset, startAuction, updateListingPrice, prepareVaultRedeem, vaultRedeem, vaultRelist } from "@/lib/actions";
 import { useWalletStore } from "@/lib/web3/wallet-store";
-import { formatGrade, formatThb } from "@/lib/format";
+import { formatGrade } from "@/lib/format";
+import { useMoney } from "@/components/currency-provider";
 import { RarityTag } from "@/components/item/rarity-badge";
 import type { AssetSummary } from "@/lib/types";
 import { displayImage } from "@/lib/card-image";
@@ -55,6 +56,7 @@ export function PortfolioItemCard({
   /** The owner's saved shipping details, pre-filled into the redeem dialog. */
   shipping: { address: string | null; phone: string | null };
 }) {
+  const money = useMoney();
   const router = useRouter();
   const { connected, connect, sendMemo, approveDelegate, revokeDelegate, burnDigitalTwin } = useWalletStore();
   const [relistOpen, setRelistOpen] = useState(false);
@@ -311,9 +313,9 @@ export function PortfolioItemCard({
           asset.forSale && (
             <span
               className="absolute right-2.5 top-2.5 flex items-center gap-1 rounded-md bg-black/70 px-2 py-1.5 text-[11px] leading-none font-semibold text-white tabular-nums backdrop-blur-sm"
-              title={t("Listed at {price}", { price: formatThb(asset.priceThb!) })}
+              title={t("Listed at {price}", { price: money(asset.priceThb!) })}
             >
-              <Tag className="size-3" /> {formatThb(asset.priceThb!)}
+              <Tag className="size-3" /> {money(asset.priceThb!)}
             </span>
           )
         )}

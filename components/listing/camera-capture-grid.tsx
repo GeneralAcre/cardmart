@@ -22,10 +22,12 @@ interface CameraCaptureGridProps {
   raw?: boolean;
   captures: CaptureMap;
   onChange: (captures: CaptureMap) => void;
+  /** Shots to take instead of the full listing checklist, e.g. just front and back at warehouse inspection. */
+  views?: VerificationView[];
 }
 
-export function CameraCaptureGrid({ category, raw = false, captures, onChange }: CameraCaptureGridProps) {
-  const checklist = getVerificationChecklist(category, raw);
+export function CameraCaptureGrid({ category, raw = false, captures, onChange, views }: CameraCaptureGridProps) {
+  const checklist = views ?? getVerificationChecklist(category, raw);
   const [activeView, setActiveView] = useState<VerificationView | null>(null);
   const t = useT();
 
@@ -49,7 +51,7 @@ export function CameraCaptureGrid({ category, raw = false, captures, onChange }:
           {t("{done} / {total} captured", { done: completedCount, total: checklist.length })}
         </span>
       </div>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className={cn("grid grid-cols-2 gap-3", checklist.length > 2 && "sm:grid-cols-4")}>
         {checklist.map((view) => {
           const captured = captures[view.key];
           return (

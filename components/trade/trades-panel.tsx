@@ -13,7 +13,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useTradeSigning } from "@/components/trade/use-trade-signing";
 import { respondToTrade, withdrawTrade } from "@/lib/actions";
-import { formatDateTime, formatGrade, formatThb } from "@/lib/format";
+import { formatDateTime, formatGrade } from "@/lib/format";
+import { useMoney } from "@/components/currency-provider";
 import { TRADE_OFFER_STATUS_LABELS } from "@/lib/labels";
 import { displayImage } from "@/lib/card-image";
 import { useT } from "@/components/landing/language-provider";
@@ -154,6 +155,7 @@ function TradeRow({
   perspective: "received" | "sent";
   escrowAuthorityAddress: string | null;
 }) {
+  const money = useMoney();
   const router = useRouter();
   const { ensureConnected, approveCard, lockCash } = useTradeSigning();
   const [pending, setPending] = useState<null | "accept" | "reject" | "withdraw">(null);
@@ -171,8 +173,8 @@ function TradeRow({
     trade.cashThb === 0
       ? null
       : viewerReceivesCash
-        ? t("+ you receive {amount}", { amount: formatThb(cash) })
-        : t("+ you pay {amount}", { amount: formatThb(cash) });
+        ? t("+ you receive {amount}", { amount: money(cash) })
+        : t("+ you pay {amount}", { amount: money(cash) });
 
   async function accept() {
     setPending("accept");

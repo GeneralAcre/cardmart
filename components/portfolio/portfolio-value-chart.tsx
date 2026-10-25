@@ -6,7 +6,7 @@ import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getMyPortfolioPriceHistory } from "@/lib/actions";
-import { formatThb } from "@/lib/format";
+import { useMoney } from "@/components/currency-provider";
 import type { PriceHistoryRange } from "@/lib/queries";
 import { useLanguage } from "@/components/landing/language-provider";
 
@@ -22,6 +22,7 @@ const RANGE_LABELS: Record<PriceHistoryRange, string> = { "1d": "24H", "7d": "7D
 // real PriceSnapshot rows across every asset the user owns — nothing
 // fabricated, and it starts sparse until real pricing events accumulate.
 export function PortfolioValueChart({ initialHistory }: { initialHistory: ValuePoint[] }) {
+  const money = useMoney();
   const [range, setRange] = useState<PriceHistoryRange>("7d");
   const [history, setHistory] = useState(initialHistory);
   const [pending, startTransition] = useTransition();
@@ -48,7 +49,7 @@ export function PortfolioValueChart({ initialHistory }: { initialHistory: ValueP
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-3">
         <div className="flex flex-col gap-0.5">
-          <span className="text-xl font-semibold tabular-nums">{latest != null ? formatThb(latest) : "—"}</span>
+          <span className="text-xl font-semibold tabular-nums">{latest != null ? money(latest) : "—"}</span>
         </div>
         <Tabs value={range} onValueChange={(v) => handleRangeChange(v as PriceHistoryRange)}>
           <TabsList>

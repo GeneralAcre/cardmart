@@ -7,7 +7,7 @@ import { marketCardKey } from "@/lib/market-history";
 import { tierKey } from "@/lib/grade-tier";
 import { THB_PER_USD } from "@/lib/pricing";
 import { buildIndex, buildMembershipIndex, changeOver, changeSincePrevious, changeWithin, type PricePoint } from "@/lib/stats-math";
-import { displayImage } from "@/lib/card-image";
+import { WAREHOUSE_FIRST, displayImage } from "@/lib/card-image";
 import { TOP_N } from "@/lib/top-index";
 import type { HoldingPnl } from "@/lib/pnl";
 import { formatGrade } from "@/lib/format";
@@ -112,7 +112,7 @@ async function loadCardMartMembers(): Promise<IndexMember[]> {
       isBlackLabel: true,
       rarity: true,
       catalogImageUrl: true,
-      verificationPhotos: { orderBy: { createdAt: "asc" }, take: 1, select: { url: true } },
+      verificationPhotos: { orderBy: WAREHOUSE_FIRST, take: 1, select: { url: true } },
     },
   });
   const series = await priceSeries(assets);

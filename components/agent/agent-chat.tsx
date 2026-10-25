@@ -12,7 +12,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { agentChat, type MarketSnapshot } from "@/lib/agent-actions";
 import { draftProblem, summarizeDraft, type TaskDraft } from "@/lib/agent/task";
 import { AGENT_TASK_FEE_THB } from "@/lib/pricing";
-import { formatGrade, formatThb } from "@/lib/format";
+import { formatGrade } from "@/lib/format";
+import { useMoney } from "@/components/currency-provider";
 import { useT } from "@/components/landing/language-provider";
 import { Choice, NewTaskForm, fromAlert, type AlertPreset } from "@/components/agent/new-task-form";
 import { useStartTask } from "@/components/agent/use-start-task";
@@ -39,18 +40,19 @@ function gradeLabel(c: { gradingCompany: string; grade: number | null; isBlackLa
 
 /** What the card being discussed sells for on CardMart right now, with the cheapest listings. */
 function MarketCard({ market }: { market: MarketSnapshot }) {
+  const money = useMoney();
   const t = useT();
   return (
     <div className="bg-background/60 flex flex-col gap-2 rounded-xl border p-3 text-sm">
       <div className="flex flex-wrap gap-x-4 gap-y-1">
         <span>
           {market.forSale > 0
-            ? t("{count} for sale · from {price}", { count: market.forSale, price: formatThb(market.lowestThb!) })
+            ? t("{count} for sale · from {price}", { count: market.forSale, price: money(market.lowestThb!) })
             : t("None for sale now")}
         </span>
         {market.medianSaleThb != null && (
           <span className="text-muted-foreground">
-            {t("Sold for {price} (median of {count})", { price: formatThb(market.medianSaleThb), count: market.recentSales })}
+            {t("Sold for {price} (median of {count})", { price: money(market.medianSaleThb), count: market.recentSales })}
           </span>
         )}
       </div>
@@ -68,7 +70,7 @@ function MarketCard({ market }: { market: MarketSnapshot }) {
               <div className="flex min-w-0 flex-col">
                 <span className="truncate text-xs font-medium">{c.name}</span>
                 <span className="text-muted-foreground truncate text-[11px]">
-                  {gradeLabel(c, t("Raw"))} · {formatThb(c.priceThb)}
+                  {gradeLabel(c, t("Raw"))} · {money(c.priceThb)}
                 </span>
               </div>
             </Link>

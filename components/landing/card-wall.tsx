@@ -1,7 +1,8 @@
 import Image from "next/image";
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 
-import { formatGrade, formatThb } from "@/lib/format";
+import { formatGrade } from "@/lib/format";
+import { useMoney } from "@/components/currency-provider";
 import type { LandingShowcaseItem } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 
@@ -11,6 +12,7 @@ const COLUMNS = 5;
 const MIN_PER_COLUMN = 6;
 
 function WallTile({ item }: { item: LandingShowcaseItem }) {
+  const money = useMoney();
   const grade =
     item.gradingCompany === "RAW"
       ? "RAW"
@@ -34,7 +36,7 @@ function WallTile({ item }: { item: LandingShowcaseItem }) {
         >
           {item.priceDirection === "up" && <ArrowUpRight className="size-3" />}
           {item.priceDirection === "down" && <ArrowDownRight className="size-3" />}
-          {item.priceThb != null ? formatThb(item.priceThb) : "—"}
+          {item.priceThb != null ? money(item.priceThb) : "—"}
         </span>
       </div>
     </div>

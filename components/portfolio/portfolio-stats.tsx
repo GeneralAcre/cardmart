@@ -5,7 +5,7 @@ import { Cell, Pie, PieChart } from "recharts";
 import { ChartContainer } from "@/components/ui/chart";
 import Link from "next/link";
 
-import { formatThb } from "@/lib/format";
+import { useMoney } from "@/components/currency-provider";
 import { CARD_GAME_COLOR, CARD_GAME_LABELS } from "@/lib/labels";
 import type { PortfolioStats as Stats } from "@/lib/stats";
 import { cn } from "@/lib/utils";
@@ -107,6 +107,7 @@ function Donut({ title, slices }: { title: string; slices: Slice[] }) {
  * and how the collection splits by game and grade.
  */
 export function PortfolioStats({ stats }: { stats: Stats }) {
+  const money = useMoney();
   const t = useT();
   if (stats.heldCount === 0) return null;
 
@@ -119,7 +120,7 @@ export function PortfolioStats({ stats }: { stats: Stats }) {
           <span className={tone(stats.unrealizedThb)}>
             {stats.unrealizedThb == null
               ? "—"
-              : `${stats.unrealizedThb > 0 ? "+" : stats.unrealizedThb < 0 ? "−" : ""}${formatThb(Math.abs(stats.unrealizedThb))}`}
+              : `${stats.unrealizedThb > 0 ? "+" : stats.unrealizedThb < 0 ? "−" : ""}${money(Math.abs(stats.unrealizedThb))}`}
           </span>
         </Tile>
         <Tile label={t("Best / worst card")} valueClassName="text-base">

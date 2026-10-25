@@ -17,10 +17,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { CARD_GAME_LABELS, gradeTierLabel } from "@/lib/labels";
-import { formatGrade, formatThb } from "@/lib/format";
+import { formatGrade } from "@/lib/format";
+import { getMoney } from "@/lib/currency-server";
 import { bidStep, minNextBid } from "@/lib/auction-rules";
 
 export default async function AuctionDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const money = await getMoney();
   const { id } = await params;
   const [auction, user, t] = await Promise.all([getAuctionById(id), getCurrentUser(), getT()]);
 
@@ -97,10 +99,10 @@ export default async function AuctionDetailPage({ params }: { params: Promise<{ 
             {[
               {
                 label: auction.currentBidThb != null ? t("Current Bid") : t("Starting Bid"),
-                value: formatThb(auction.currentBidThb ?? auction.startPriceThb),
+                value: money(auction.currentBidThb ?? auction.startPriceThb),
               },
-              { label: t("Next minimum bid"), value: hasEnded ? "—" : formatThb(minBid) },
-              { label: t("Bid step"), value: formatThb(bidStep(auction)) },
+              { label: t("Next minimum bid"), value: hasEnded ? "—" : money(minBid) },
+              { label: t("Bid step"), value: money(bidStep(auction)) },
               { label: t("Bids"), value: String(auction.bids.length) },
             ].map((stat) => (
               <div key={stat.label} className="detail-panel flex flex-col gap-0.5 p-3">
@@ -141,9 +143,9 @@ export default async function AuctionDetailPage({ params }: { params: Promise<{ 
               {auction.status === "ENDED_UNCLAIMED"
                 ? t("This auction ended, but the winner didn't claim it in time. The card went back to the seller.")
                 : awaitingSettlement
-                  ? t("Bidding closed at {amount} — waiting on the winner's delivery choice.", { amount: formatThb(topBid.amountThb) })
+                  ? t("Bidding closed at {amount} — waiting on the winner's delivery choice.", { amount: money(topBid.amountThb) })
                   : topBid
-                    ? t("This auction ended — sold to the highest bidder for {amount}.", { amount: formatThb(topBid.amountThb) })
+                    ? t("This auction ended — sold to the highest bidder for {amount}.", { amount: money(topBid.amountThb) })
                     : t("This auction ended with no bids.")}
             </p>
           ) : (

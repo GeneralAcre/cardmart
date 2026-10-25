@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ChevronDown, Download } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { formatThb } from "@/lib/format";
+import { useMoney } from "@/components/currency-provider";
 import { useLanguage } from "@/components/landing/language-provider";
 
 export interface HistoryRow {
@@ -19,6 +19,7 @@ const ROWS_SHOWN = 10;
 
 /** Yahoo-style historical data: one row per saved day, newest first, downloadable as CSV. */
 export function HistoricalData({ rows, fileName }: { rows: HistoryRow[]; fileName: string }) {
+  const money = useMoney();
   const { locale, tr: t } = useLanguage();
   const [showAll, setShowAll] = useState(false);
   if (rows.length === 0) return null;
@@ -69,9 +70,9 @@ export function HistoricalData({ rows, fileName }: { rows: HistoryRow[]; fileNam
             {shown.map((r) => (
               <tr key={r.t}>
                 <td className="text-muted-foreground px-3 py-2">{day(r.t)}</td>
-                <td className="px-3 py-2 text-right font-semibold tabular-nums">{formatThb(r.median)}</td>
-                <td className="hidden px-3 py-2 text-right tabular-nums sm:table-cell">{formatThb(r.low)}</td>
-                <td className="hidden px-3 py-2 text-right tabular-nums sm:table-cell">{formatThb(r.high)}</td>
+                <td className="px-3 py-2 text-right font-semibold tabular-nums">{money(r.median)}</td>
+                <td className="hidden px-3 py-2 text-right tabular-nums sm:table-cell">{money(r.low)}</td>
+                <td className="hidden px-3 py-2 text-right tabular-nums sm:table-cell">{money(r.high)}</td>
                 <td className="px-3 py-2 text-right tabular-nums">{r.count}</td>
               </tr>
             ))}

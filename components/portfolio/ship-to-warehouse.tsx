@@ -10,7 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { markShippedToWarehouse } from "@/lib/actions";
-import { formatDateTime, formatThb } from "@/lib/format";
+import { formatDateTime } from "@/lib/format";
+import { useMoney } from "@/components/currency-provider";
 import { COMMON_CARRIERS, WAREHOUSE_ADDRESS } from "@/lib/shipping";
 import { cn } from "@/lib/utils";
 import { useT } from "@/components/landing/language-provider";
@@ -83,6 +84,7 @@ function TrackingForm({ sale, onDone }: { sale: SaleToShip; onDone?: () => void 
 
 /** One sale the seller has to send in — the steps, the address and the tracking form. */
 export function ShipToWarehouseTask({ sale }: { sale: SaleToShip }) {
+  const money = useMoney();
   const [copied, setCopied] = useState(false);
   const [editing, setEditing] = useState(false);
   const t = useT();
@@ -100,7 +102,7 @@ export function ShipToWarehouseTask({ sale }: { sale: SaleToShip }) {
         </div>
         <p className="text-muted-foreground text-xs">
           {sale.sellerCarrier} <span className="font-mono">{sale.sellerTrackingNumber}</span> ·{" "}
-          {t("You're paid {amount} once it passes inspection.", { amount: formatThb(sale.amountThb) })}
+          {t("You're paid {amount} once it passes inspection.", { amount: money(sale.amountThb) })}
         </p>
         {editing ? (
           <TrackingForm sale={sale} onDone={() => setEditing(false)} />
@@ -137,7 +139,7 @@ export function ShipToWarehouseTask({ sale }: { sale: SaleToShip }) {
     <div className={cn("bg-card flex flex-col gap-4 rounded-xl border p-4 sm:p-5", urgent ? "border-destructive/60" : "border-highlight/50")}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="flex flex-col">
-          <span className="text-muted-foreground text-xs">{t("Sold for {amount}", { amount: formatThb(sale.amountThb) })}</span>
+          <span className="text-muted-foreground text-xs">{t("Sold for {amount}", { amount: money(sale.amountThb) })}</span>
           <Link href={`/item/${sale.asset.id}`} className="font-semibold hover:underline">
             {sale.asset.name}
           </Link>

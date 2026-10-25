@@ -7,6 +7,8 @@ import { Toaster } from "@/components/ui/sonner";
 import { PrivyProvider } from "@/components/providers/privy-provider";
 import { LanguageProvider } from "@/components/landing/language-provider";
 import { getLocale } from "@/lib/i18n/server";
+import { CurrencyProvider } from "@/components/currency-provider";
+import { getCurrency } from "@/lib/currency-server";
 import { ThemeProvider } from "@/components/site/theme-provider";
 import { DEFAULT_THEME, THEME_COOKIE, isColorTheme } from "@/lib/color-theme";
 import { cookies } from "next/headers";
@@ -52,7 +54,7 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
-  const [locale, cookieStore] = await Promise.all([getLocale(), cookies()]);
+  const [locale, currency, cookieStore] = await Promise.all([getLocale(), getCurrency(), cookies()]);
   const savedTheme = cookieStore.get(THEME_COOKIE)?.value;
   const theme = isColorTheme(savedTheme) ? savedTheme : DEFAULT_THEME;
   return (
@@ -64,10 +66,12 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         <ThemeProvider initialTheme={theme}>
           <LanguageProvider initialLocale={locale}>
-            <PrivyProvider>
-              {children}
-              <Toaster position="bottom-right" />
-            </PrivyProvider>
+            <CurrencyProvider initialCurrency={currency}>
+              <PrivyProvider>
+                {children}
+                <Toaster position="bottom-right" />
+              </PrivyProvider>
+            </CurrencyProvider>
           </LanguageProvider>
         </ThemeProvider>
         <Analytics />

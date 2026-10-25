@@ -14,7 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { UserAvatar } from "@/components/messages/user-avatar";
 import { CARD_GAME_BADGE_CLASS, CARD_GAME_LABELS } from "@/lib/labels";
 import { displayImage } from "@/lib/card-image";
-import { formatDateTime, formatGrade, formatThb } from "@/lib/format";
+import { formatDateTime, formatGrade } from "@/lib/format";
+import { useMoney } from "@/components/currency-provider";
 import type { getActiveAuctions } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 import { useT } from "@/components/landing/language-provider";
@@ -85,6 +86,7 @@ function Thumbnail({ auction }: { auction: Auction }) {
 }
 
 function AuctionRow({ auction }: { auction: Auction }) {
+  const money = useMoney();
   const t = useT();
   const { asset } = auction;
   const href = `/auctions/${auction.id}`;
@@ -127,7 +129,7 @@ function AuctionRow({ auction }: { auction: Auction }) {
         {/* Starting bid */}
         <div className="flex flex-col gap-0.5">
           <span className={label}>{t("Starting Bid")}</span>
-          <span className="text-sm font-medium tabular-nums">{formatThb(auction.startPriceThb)}</span>
+          <span className="text-sm font-medium tabular-nums">{money(auction.startPriceThb)}</span>
         </div>
 
         {/* Current bid + leader */}
@@ -135,7 +137,7 @@ function AuctionRow({ auction }: { auction: Auction }) {
           <span className={label}>{t("Current Bid")}</span>
           {auction.currentBidThb != null ? (
             <>
-              <span className="text-success text-base font-bold tabular-nums">{formatThb(auction.currentBidThb)}</span>
+              <span className="text-success text-base font-bold tabular-nums">{money(auction.currentBidThb)}</span>
               {leader && (
                 <span className="text-muted-foreground truncate text-xs">
                   {t("Leading: {name}", { name: bidderName(leader.bidder, t("A bidder")) })}
@@ -182,7 +184,7 @@ function AuctionRow({ auction }: { auction: Auction }) {
           {auction.bids.map((bid, i) => (
             <span key={bid.id} className={cn("flex items-center gap-1.5", i > 0 && "text-muted-foreground")}>
               <span className="max-w-32 truncate">{bidderName(bid.bidder, t("A bidder"))}</span>
-              <span className="font-semibold tabular-nums">{formatThb(bid.amountThb)}</span>
+              <span className="font-semibold tabular-nums">{money(bid.amountThb)}</span>
             </span>
           ))}
         </div>
@@ -218,6 +220,7 @@ const CHIP = "flex items-center gap-1 rounded-md bg-black/70 px-2 py-1.5 text-[1
 
 /** One auction as a tile: the card big, the countdown on it, then the bid. */
 function AuctionTile({ auction }: { auction: Auction }) {
+  const money = useMoney();
   const t = useT();
   const { asset } = auction;
   const href = `/auctions/${auction.id}`;
@@ -263,7 +266,7 @@ function AuctionTile({ auction }: { auction: Auction }) {
             <CountdownTimer endTime={auction.endTime.toISOString()} className="tabular-nums" />
           </span>
           <span className={cn(CHIP, "absolute right-2.5 bottom-2.5 tabular-nums")}>
-            {t("Start {price}", { price: formatThb(auction.startPriceThb) })}
+            {t("Start {price}", { price: money(auction.startPriceThb) })}
           </span>
         </div>
 
@@ -274,7 +277,7 @@ function AuctionTile({ auction }: { auction: Auction }) {
           <p className="text-muted-foreground truncate text-xs">{details}</p>
           {/* The current bid is the headline; with no bids yet, the opening price. */}
           <div className="mt-1.5 flex items-baseline gap-2">
-            <span className="text-lg font-bold tabular-nums">{formatThb(auction.currentBidThb ?? auction.startPriceThb)}</span>
+            <span className="text-lg font-bold tabular-nums">{money(auction.currentBidThb ?? auction.startPriceThb)}</span>
             <span className="text-muted-foreground flex items-center gap-1 text-xs">
               <Gavel className="size-3" />
               {t("{count} bids", { count })}

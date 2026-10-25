@@ -16,7 +16,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useEscrowLock, type EscrowLock } from "@/lib/web3/use-escrow-lock";
-import { formatThb } from "@/lib/format";
+import { useCurrency } from "@/components/currency-provider";
+import { formatMoney } from "@/lib/currency";
 import { useT } from "@/components/landing/language-provider";
 import { BUYER_FEE_PERCENT, buyerFeeThb } from "@/lib/pricing";
 
@@ -134,26 +135,34 @@ export function CompletePurchaseButton({
 
 /** Price, the buyer-protection fee and the total, for the checkout dialogs. */
 export function PriceRows({ priceThb, withFee }: { priceThb: number; withFee: boolean }) {
+  const { currency, money } = useCurrency();
   const t = useT();
   const fee = withFee ? buyerFeeThb(priceThb) : 0;
   return (
     <>
       <div className="flex justify-between">
         <span className="text-muted-foreground">{t("Price")}</span>
-        <span>{formatThb(priceThb)}</span>
+        <span>{money(priceThb)}</span>
       </div>
       {withFee && (
         <div className="flex justify-between">
           <span className="text-muted-foreground" title={t("Covers escrow and our inspection of the card. Refunded if the sale is cancelled.")}>
             {t("Buyer protection ({percent}%)", { percent: BUYER_FEE_PERCENT })}
           </span>
-          <span>{formatThb(fee)}</span>
+          <span>{money(fee)}</span>
         </div>
       )}
       <div className="flex justify-between border-t pt-2">
         <span className="font-medium">{t("Total")}</span>
-        <span className="font-semibold">{formatThb(priceThb + fee)}</span>
+        <span className="font-semibold">{money(priceThb + fee)}</span>
       </div>
+      {/* Payment is locked in SOL at the escrow rate, so say exactly what the wallet sends. */}
+      {currency !== "SOL" && (
+        <div className="text-muted-foreground flex justify-between text-xs">
+          <span>{t("Paid from your wallet")}</span>
+          <span className="tabular-nums">{formatMoney(priceThb + fee, "SOL")}</span>
+        </div>
+      )}
     </>
   );
 }

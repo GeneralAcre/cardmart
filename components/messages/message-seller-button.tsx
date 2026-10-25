@@ -19,6 +19,7 @@ export function MessageSellerButton({
   size = "sm",
   variant = "outline",
   className,
+  icon = true,
 }: {
   sellerId: string;
   assetId?: string;
@@ -26,6 +27,8 @@ export function MessageSellerButton({
   size?: "sm" | "default" | "lg";
   variant?: "outline" | "secondary" | "default";
   className?: string;
+  /** False for a text-only button, e.g. paired with Buy now on the item page. The spinner still shows while it opens. */
+  icon?: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -44,7 +47,7 @@ export function MessageSellerButton({
 
   return (
     <Button type="button" size={size} variant={variant} className={className} onClick={open} disabled={pending}>
-      {pending ? <Loader2 className="animate-spin" /> : <MessageCircle />}
+      {pending ? <Loader2 className="animate-spin" /> : icon && <MessageCircle />}
       {label ?? t("Message Seller")}
     </Button>
   );

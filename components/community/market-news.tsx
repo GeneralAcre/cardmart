@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Activity } from "lucide-react";
 
-import { formatThb } from "@/lib/format";
+import { useMoney } from "@/components/currency-provider";
 import type { getMarketOverview } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 import { useT } from "@/components/landing/language-provider";
@@ -19,13 +19,14 @@ const UPDATE_KIND_LABELS: Record<Overview["updates"][number]["kind"], string> = 
 
 /** Headline market figures: listings, asking and sale prices, 30-day volume. */
 export function MarketStats({ overview }: { overview: Overview }) {
+  const money = useMoney();
   const t = useT();
   const stats = [
     { label: "Live listings", value: overview.activeListings.toLocaleString() },
-    { label: "Median asking price", value: overview.medianAskThb != null ? formatThb(overview.medianAskThb) : "—" },
+    { label: "Median asking price", value: overview.medianAskThb != null ? money(overview.medianAskThb) : "—" },
     { label: "Sales · 30 days", value: overview.sales30d.toLocaleString() },
-    { label: "Median sale · 30 days", value: overview.medianSale30dThb != null ? formatThb(overview.medianSale30dThb) : "—" },
-    { label: "Volume · 30 days", value: formatThb(overview.volume30dThb) },
+    { label: "Median sale · 30 days", value: overview.medianSale30dThb != null ? money(overview.medianSale30dThb) : "—" },
+    { label: "Volume · 30 days", value: money(overview.volume30dThb) },
   ];
 
   return (
@@ -42,6 +43,7 @@ export function MarketStats({ overview }: { overview: Overview }) {
 
 /** The latest real listings, price changes and sales, newest first. */
 export function RecentActivity({ updates }: { updates: Overview["updates"] }) {
+  const money = useMoney();
   const t = useT();
   return (
     <section className="bg-card flex min-w-0 flex-col rounded-2xl border">
@@ -70,7 +72,7 @@ export function RecentActivity({ updates }: { updates: Overview["updates"] }) {
                     {t(UPDATE_KIND_LABELS[update.kind])}
                   </span>
                 </span>
-                <span className="shrink-0 text-sm font-semibold tabular-nums">{formatThb(update.priceThb)}</span>
+                <span className="shrink-0 text-sm font-semibold tabular-nums">{money(update.priceThb)}</span>
               </Link>
             </li>
           ))}

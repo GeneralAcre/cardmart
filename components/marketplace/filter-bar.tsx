@@ -260,7 +260,7 @@ export function FilterBar({
             type="number"
             inputMode="numeric"
             placeholder={t("Min")}
-            className="h-10 min-w-0 flex-1 rounded-full border-foreground/25 focus-visible:border-foreground/50"
+            className="text-foreground placeholder:text-foreground h-10 min-w-0 flex-1 rounded-full border-foreground/25 px-4 text-xs font-semibold focus-visible:border-foreground/50 md:h-8 md:text-xs"
             value={filters.priceMin ?? ""}
             onChange={(e) =>
               onChange({
@@ -269,12 +269,12 @@ export function FilterBar({
               })
             }
           />
-          <span className="text-muted-foreground">–</span>
+          <span className="text-foreground">–</span>
           <Input
             type="number"
             inputMode="numeric"
             placeholder={t("Max")}
-            className="h-10 min-w-0 flex-1 rounded-full border-foreground/25 focus-visible:border-foreground/50"
+            className="text-foreground placeholder:text-foreground h-10 min-w-0 flex-1 rounded-full border-foreground/25 px-4 text-xs font-semibold focus-visible:border-foreground/50 md:h-8 md:text-xs"
             value={filters.priceMax ?? ""}
             onChange={(e) =>
               onChange({

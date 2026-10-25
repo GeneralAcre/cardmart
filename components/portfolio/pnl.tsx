@@ -20,7 +20,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { setPurchaseCost } from "@/lib/actions";
-import { formatDate, formatGrade, formatThb } from "@/lib/format";
+import { formatDate, formatGrade } from "@/lib/format";
+import { useMoney } from "@/components/currency-provider";
+import type { Money } from "@/lib/currency";
 import type { HoldingPnl, SoldTrade } from "@/lib/pnl";
 import { cn } from "@/lib/utils";
 import { useT } from "@/components/landing/language-provider";
@@ -29,7 +31,7 @@ import { ChangeTag } from "@/components/ui/change-tag";
 // Green for a gain, red for a loss, grey when it's flat.
 const toneClass = (v: number) => (v > 0 ? "text-success" : v < 0 ? "text-destructive" : "text-muted-foreground");
 
-const signedThb = (v: number) => (v === 0 ? formatThb(0) : `${v > 0 ? "+" : "−"}${formatThb(Math.abs(v))}`);
+const signedThb = (money: Money, v: number) => (v === 0 ? money(0) : `${v > 0 ? "+" : "−"}${money(Math.abs(v))}`);
 
 /** Lets the owner enter, change or clear what they paid for a card. */
 function PurchaseCostDialog({
@@ -113,6 +115,7 @@ function PurchaseCostDialog({
  * profit figure yet, just what was paid.
  */
 export function HoldingPnlBlock({ assetId, pnl }: { assetId: string; pnl: HoldingPnl | undefined }) {
+  const money = useMoney();
   const t = useT();
   if (!pnl) return null;
 
@@ -135,14 +138,14 @@ export function HoldingPnlBlock({ assetId, pnl }: { assetId: string; pnl: Holdin
   // it's worth are in the hover text and on the card's page.
   const amount =
     pnl.gainThb != null ? (
-      <span className={cn("text-lg leading-none font-bold whitespace-nowrap tabular-nums", toneClass(pnl.gainThb))}>{signedThb(pnl.gainThb)}</span>
+      <span className={cn("text-lg leading-none font-bold whitespace-nowrap tabular-nums", toneClass(pnl.gainThb))}>{signedThb(money, pnl.gainThb)}</span>
     ) : (
       <span className="text-muted-foreground truncate text-sm leading-none">{t("No market price yet")}</span>
     );
   const title =
     pnl.valueThb != null
-      ? t("Paid {paid} · Market {market}", { paid: formatThb(pnl.costThb), market: formatThb(pnl.valueThb) })
-      : t("Paid {paid}", { paid: formatThb(pnl.costThb) });
+      ? t("Paid {paid} · Market {market}", { paid: money(pnl.costThb), market: money(pnl.valueThb) })
+      : t("Paid {paid}", { paid: money(pnl.costThb) });
 
   // Typed in by the owner: tapping the amount lets them change it.
   if (pnl.costSource === "manual") {
@@ -168,6 +171,7 @@ export function HoldingPnlBlock({ assetId, pnl }: { assetId: string; pnl: Holdin
 
 /** Every card the user has sold: paid, sold for, and the profit or loss on each. */
 export function TradeHistory({ trades }: { trades: SoldTrade[] }) {
+  const money = useMoney();
   const t = useT();
 
   if (trades.length === 0) {
@@ -193,14 +197,14 @@ export function TradeHistory({ trades }: { trades: SoldTrade[] }) {
         </div>
         <div className="bg-card flex flex-col gap-0.5 p-4">
           <span className="text-muted-foreground text-xs">{t("Total sales")}</span>
-          <span className="text-xl font-bold tabular-nums">{formatThb(totalSold)}</span>
+          <span className="text-xl font-bold tabular-nums">{money(totalSold)}</span>
         </div>
         <div className="bg-card flex flex-col gap-0.5 p-4">
           <span className="text-muted-foreground text-xs">{t("Profit / loss")}</span>
           {known.length > 0 ? (
             <span className="flex items-baseline gap-2">
               <span className={cn("text-xl font-bold tabular-nums", toneClass(totalGain))}>
-                {signedThb(totalGain)}
+                {signedThb(money, totalGain)}
               </span>
               {totalCost > 0 && <ChangeTag pct={(totalGain / totalCost) * 100} className="text-sm" />}
             </span>
@@ -232,7 +236,7 @@ export function TradeHistory({ trades }: { trades: SoldTrade[] }) {
               <span className="text-muted-foreground flex items-center gap-1 text-xs">
                 {tr.costThb != null ? (
                   <>
-                    {t("Paid")} <span className="text-foreground tabular-nums">{formatThb(tr.costThb)}</span>
+                    {t("Paid")} <span className="text-foreground tabular-nums">{money(tr.costThb)}</span>
                     {tr.costSource === "manual" && (
                       <PurchaseCostDialog assetId={tr.assetId} costThb={tr.costThb}>
                         <button type="button" className="hover:text-foreground" aria-label={t("Edit what you paid")}>
@@ -251,11 +255,11 @@ export function TradeHistory({ trades }: { trades: SoldTrade[] }) {
               </span>
             </div>
             <div className="flex shrink-0 flex-col items-end gap-0.5 text-right">
-              <span className="text-sm font-semibold tabular-nums">{formatThb(tr.soldThb)}</span>
+              <span className="text-sm font-semibold tabular-nums">{money(tr.soldThb)}</span>
               {tr.gainPct != null && tr.gainThb != null ? (
                 <span className="flex items-center gap-1.5 text-xs">
                   <span className={cn("tabular-nums", toneClass(tr.gainThb))}>
-                    {signedThb(tr.gainThb)}
+                    {signedThb(money, tr.gainThb)}
                   </span>
                   <ChangeTag pct={tr.gainPct} />
                 </span>

@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { IndexMembers, IndexQuote, IndexSparkline } from "@/components/marketplace/index-detail";
 import { getIndexDetail, type IndexKey, type IndexMember } from "@/lib/stats";
 import { priceStats } from "@/lib/stats-math";
-import { formatThb } from "@/lib/format";
+import { getMoney } from "@/lib/currency-server";
 import { getCurrentUser } from "@/lib/session";
 import { getLocale, getT } from "@/lib/i18n/server";
 import { cn } from "@/lib/utils";
@@ -69,6 +69,7 @@ function MoverList({ title, members }: { title: string; members: IndexMember[] }
 }
 
 export default async function IndexPage({ params }: { params: Promise<{ key: string }> }) {
+  const money = await getMoney();
   const { key: slug } = await params;
   const key = SLUGS[slug];
   if (!key) notFound();
@@ -166,7 +167,7 @@ export default async function IndexPage({ params }: { params: Promise<{ key: str
               <Row label={t("Start date")} value={points[0] ? day(points[0].t) : "—"} />
               <Row label={t("Cards in this index")} value={index.constituents} />
               <Row label={t("Daily swing")} value={stats.volatility != null ? `±${stats.volatility.toFixed(2)}%` : "—"} />
-              <Row label={t("Combined value")} value={formatThb(combinedValue)} />
+              <Row label={t("Combined value")} value={money(combinedValue)} />
             </div>
           </section>
         </aside>

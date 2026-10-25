@@ -14,10 +14,12 @@ import {
   type RankingRow,
   type RankingTier,
 } from "@/lib/queries";
-import { formatDateTime, formatGrade, formatThb } from "@/lib/format";
+import { formatDateTime, formatGrade } from "@/lib/format";
+import { getMoney } from "@/lib/currency-server";
 import { cn } from "@/lib/utils";
 import { getT } from "@/lib/i18n/server";
 import type { Translate } from "@/lib/i18n/translate";
+import type { Money } from "@/lib/currency";
 
 function gradeText(a: { gradingCompany: string; grade: number | null; isBlackLabel: boolean }, t: Translate) {
   if (a.gradingCompany === "RAW") return t("Raw");
@@ -25,6 +27,7 @@ function gradeText(a: { gradingCompany: string; grade: number | null; isBlackLab
 }
 
 export default async function MarketPage({ searchParams }: { searchParams: Promise<{ tier?: string }> }) {
+  const money = await getMoney();
   const { tier: tierParam } = await searchParams;
   const tier: RankingTier = RANKING_TIERS.find((t) => t.key === tierParam)?.key ?? "grade-10";
   const tierInfo = RANKING_TIERS.find((t) => t.key === tier)!;
@@ -34,10 +37,10 @@ export default async function MarketPage({ searchParams }: { searchParams: Promi
 
   const stats = [
     { label: "Live listings", value: overview.activeListings.toLocaleString() },
-    { label: "Median asking price", value: overview.medianAskThb != null ? formatThb(overview.medianAskThb) : "—" },
+    { label: "Median asking price", value: overview.medianAskThb != null ? money(overview.medianAskThb) : "—" },
     { label: "Sales · 30 days", value: overview.sales30d.toLocaleString() },
-    { label: "Median sale · 30 days", value: overview.medianSale30dThb != null ? formatThb(overview.medianSale30dThb) : "—" },
-    { label: "Volume · 30 days", value: formatThb(overview.volume30dThb) },
+    { label: "Median sale · 30 days", value: overview.medianSale30dThb != null ? money(overview.medianSale30dThb) : "—" },
+    { label: "Volume · 30 days", value: money(overview.volume30dThb) },
   ];
 
   return (
@@ -146,7 +149,7 @@ export default async function MarketPage({ searchParams }: { searchParams: Promi
                         <VerifiedBadge status={r.owner.kycStatus} className="hidden sm:inline-flex" />
                       </span>
                     </div>
-                    {byPopularity ? <PopularityColumn row={r} tier={tier} t={t} /> : <ValueColumn row={r} t={t} />}
+                    {byPopularity ? <PopularityColumn row={r} tier={tier} t={t} money={money} /> : <ValueColumn row={r} t={t} money={money} />}
                   </Link>
                 </li>
               ))}
@@ -168,7 +171,7 @@ export default async function MarketPage({ searchParams }: { searchParams: Promi
           ) : (
             <ul className="bg-card divide-y rounded-xl border">
               {overview.updates.map((u, i) => (
-                <UpdateRow key={`${u.kind}-${u.asset.id}-${i}`} update={u} t={t} />
+                <UpdateRow key={`${u.kind}-${u.asset.id}-${i}`} update={u} t={t} money={money} />
               ))}
             </ul>
           )}
@@ -182,10 +185,10 @@ export default async function MarketPage({ searchParams }: { searchParams: Promi
 }
 
 /** Price, its 30-day change, and where it comes from. */
-function ValueColumn({ row, t }: { row: RankingRow; t: Translate }) {
+function ValueColumn({ row, t, money }: { row: RankingRow; t: Translate; money: Money }) {
   return (
     <div className="flex shrink-0 flex-col items-end gap-0.5">
-      <span className="text-sm font-bold tabular-nums">{row.valueThb != null ? formatThb(row.valueThb) : "—"}</span>
+      <span className="text-sm font-bold tabular-nums">{row.valueThb != null ? money(row.valueThb) : "—"}</span>
       <span className="text-muted-foreground flex items-center gap-1.5 text-[11px]">
         {row.change30dPct != null && (
           <span className={row.change30dPct > 0 ? "text-success" : "text-destructive"}>
@@ -200,7 +203,7 @@ function ValueColumn({ row, t }: { row: RankingRow; t: Translate }) {
 }
 
 /** How many people bookmarked it (this week, or overall), with the price underneath. */
-function PopularityColumn({ row, tier, t }: { row: RankingRow; tier: RankingTier; t: Translate }) {
+function PopularityColumn({ row, tier, t, money }: { row: RankingRow; tier: RankingTier; t: Translate; money: Money }) {
   const trending = tier === "trending";
   return (
     <div className="flex shrink-0 flex-col items-end gap-0.5">
@@ -212,7 +215,7 @@ function PopularityColumn({ row, tier, t }: { row: RankingRow; tier: RankingTier
       </span>
       <span className="text-muted-foreground text-[11px] tabular-nums">
         {row.valueThb != null
-          ? `${formatThb(row.valueThb)} · ${row.valueSource === "ask" ? t("asking") : t("last sale")}`
+          ? `${money(row.valueThb)} · ${row.valueSource === "ask" ? t("asking") : t("last sale")}`
           : t("Not for sale")}
       </span>
     </div>
@@ -226,7 +229,7 @@ const UPDATE_META = {
   sold: { icon: CircleDollarSign, label: "Sold", className: "text-foreground" },
 } as const;
 
-function UpdateRow({ update, t }: { update: MarketUpdate; t: Translate }) {
+function UpdateRow({ update, t, money }: { update: MarketUpdate; t: Translate; money: Money }) {
   const meta = UPDATE_META[update.kind];
   const Icon = meta.icon;
   return (
@@ -240,8 +243,8 @@ function UpdateRow({ update, t }: { update: MarketUpdate; t: Translate }) {
               {t(meta.label)}
             </Badge>
             {update.previousThb != null && update.kind !== "listed"
-              ? `${formatThb(update.previousThb)} → ${formatThb(update.priceThb)}`
-              : formatThb(update.priceThb)}
+              ? `${money(update.previousThb)} → ${money(update.priceThb)}`
+              : money(update.priceThb)}
           </span>
           <span className="text-muted-foreground text-[11px]">
             {gradeText(update.asset, t)} · {formatDateTime(update.at)}

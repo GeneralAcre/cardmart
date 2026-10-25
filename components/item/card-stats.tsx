@@ -1,6 +1,6 @@
 "use client";
 
-import { formatThb } from "@/lib/format";
+import { useMoney } from "@/components/currency-provider";
 import { FULL_SERVICE_PACKAGE_PRICE_THB, THB_PER_USD } from "@/lib/pricing";
 import type { PriceStats } from "@/lib/stats-math";
 import type { EbayPriceQuote } from "@/lib/ebay";
@@ -29,6 +29,7 @@ export function KeyStats({
   lastSale: number | null;
   recentSales: { id: string; amountThb: number; soldAt: string }[];
 }) {
+  const money = useMoney();
   const { locale, tr: t } = useLanguage();
   const day = (ms: number) =>
     new Date(ms).toLocaleDateString(locale === "th" ? "th-TH" : "en-US", { day: "numeric", month: "short", year: "2-digit" });
@@ -38,13 +39,13 @@ export function KeyStats({
     { label: t("Change · 30 days"), value: <span className={tone(stats.change30d)}>{pct(stats.change30d)}</span> },
     {
       label: t("All-time high"),
-      value: stats.high ? formatThb(stats.high.price) : "—",
+      value: stats.high ? money(stats.high.price) : "—",
     },
-    { label: t("All-time low"), value: stats.low ? formatThb(stats.low.price) : "—" },
+    { label: t("All-time low"), value: stats.low ? money(stats.low.price) : "—" },
     { label: t("Watching"), value: watchers },
     {
       label: t("Last sale"),
-      value: lastSale != null ? formatThb(lastSale) : "—",
+      value: lastSale != null ? money(lastSale) : "—",
     },
   ];
 
@@ -69,7 +70,7 @@ export function KeyStats({
           {recentSales.map((sale) => (
             <div key={sale.id} className="flex items-center justify-between gap-3 border-b py-2 text-sm last:border-b-0">
               <span className="text-muted-foreground">{day(new Date(sale.soldAt).getTime())}</span>
-              <span className="font-semibold tabular-nums">{formatThb(sale.amountThb)}</span>
+              <span className="font-semibold tabular-nums">{money(sale.amountThb)}</span>
             </div>
           ))}
         </div>
@@ -84,6 +85,7 @@ export function KeyStats({
  * once graded, if it gets that grade.
  */
 export function GradingValue({ ebay }: { ebay: Record<string, EbayPriceQuote | null | undefined> }) {
+  const money = useMoney();
   const { tr: t } = useLanguage();
   const thb = (q: EbayPriceQuote | null | undefined) => (q ? Math.round(q.medianPriceUsd * THB_PER_USD) : null);
   const raw = thb(ebay["RAW::"]);
@@ -98,7 +100,7 @@ export function GradingValue({ ebay }: { ebay: Record<string, EbayPriceQuote | n
         <h3 className="text-sm font-semibold">{t("Is grading worth it?")}</h3>
         <p className="text-muted-foreground text-xs">
           {t("An ungraded copy against PSA 9 and PSA 10, after our {fee} grading package. Assumes the card gets that grade.", {
-            fee: formatThb(FULL_SERVICE_PACKAGE_PRICE_THB),
+            fee: money(FULL_SERVICE_PACKAGE_PRICE_THB),
           })}
         </p>
       </div>
@@ -108,7 +110,7 @@ export function GradingValue({ ebay }: { ebay: Record<string, EbayPriceQuote | n
         <div className="flex flex-col divide-y text-sm">
           <div className="flex items-center justify-between py-2">
             <span>{t("Ungraded")}</span>
-            <span className="font-semibold tabular-nums">{formatThb(raw)}</span>
+            <span className="font-semibold tabular-nums">{money(raw)}</span>
           </div>
           {rows.map((row) => {
             const net = row.price != null ? row.price - raw - FULL_SERVICE_PACKAGE_PRICE_THB : null;
@@ -117,14 +119,14 @@ export function GradingValue({ ebay }: { ebay: Record<string, EbayPriceQuote | n
                 <span className="flex flex-col">
                   <span>{row.label}</span>
                   <span className="text-muted-foreground text-xs tabular-nums">
-                    {row.price != null ? formatThb(row.price) : t("No market price yet")}
+                    {row.price != null ? money(row.price) : t("No market price yet")}
                   </span>
                 </span>
                 {net != null && (
                   <span className="flex flex-col items-end">
                     <span className={cn("font-semibold tabular-nums", tone(net))}>
                       {net >= 0 ? "+" : "−"}
-                      {formatThb(Math.abs(net))}
+                      {money(Math.abs(net))}
                     </span>
                     <span className="text-muted-foreground text-[11px]">
                       {net > 0 ? t("Worth grading") : t("Not worth it at this grade")}

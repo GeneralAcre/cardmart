@@ -11,7 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { WantedCardButton } from "@/components/wanted/wanted-card-form";
 import { deleteWantedCard } from "@/lib/actions";
-import { formatDateTime, formatThb } from "@/lib/format";
+import { formatDateTime } from "@/lib/format";
+import { useMoney } from "@/components/currency-provider";
 import { useT } from "@/components/landing/language-provider";
 
 interface WantedCard {
@@ -56,6 +57,7 @@ export function WantedCardsPanel({ cards }: { cards: WantedCard[] }) {
 }
 
 function WantedCardRow({ card }: { card: WantedCard }) {
+  const money = useMoney();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const t = useT();
@@ -64,7 +66,7 @@ function WantedCardRow({ card }: { card: WantedCard }) {
     card.gradingCompany === "RAW" ? t("Ungraded") : card.gradingCompany,
     card.minGrade != null && t("Grade {grade}+", { grade: card.minGrade }),
     card.blackLabelOnly && "Black Label",
-    card.maxPriceThb != null && t("Up to {price}", { price: formatThb(card.maxPriceThb) }),
+    card.maxPriceThb != null && t("Up to {price}", { price: money(card.maxPriceThb) }),
     card.trustedOnly && t("Trusted sellers"),
   ].filter(Boolean) as string[];
 

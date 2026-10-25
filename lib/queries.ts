@@ -1,7 +1,7 @@
 import "server-only";
 import type { AssetCategory, CardGame, CardLanguage, CardRarity, GradingCompany, Prisma, ProvenanceType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { displayImage } from "@/lib/card-image";
+import { WAREHOUSE_FIRST, displayImage } from "@/lib/card-image";
 
 export interface MarketplaceFilters {
   q?: string;
@@ -122,7 +122,7 @@ export async function getMarketplaceListings(filters: MarketplaceFilters = {}) {
       seller: true,
       owner: true,
       // Only what a grid card uses: a Market page of 2,000+ listings would otherwise ship every photo column.
-      verificationPhotos: { orderBy: { createdAt: "asc" }, select: { id: true, viewLabel: true, url: true } },
+      verificationPhotos: { orderBy: WAREHOUSE_FIRST, select: { id: true, viewLabel: true, url: true } },
       priceSnapshots: { orderBy: { createdAt: "desc" }, take: 2, select: { priceThb: true } },
     },
   });
@@ -147,7 +147,7 @@ export async function getLandingShowcase(limit = 30) {
       isBlackLabel: true,
       priceThb: true,
       catalogImageUrl: true,
-      verificationPhotos: { orderBy: { createdAt: "asc" }, select: { url: true } },
+      verificationPhotos: { orderBy: WAREHOUSE_FIRST, select: { url: true } },
       priceSnapshots: { orderBy: { createdAt: "desc" }, take: 2, select: { priceThb: true } },
     },
   });
@@ -176,7 +176,7 @@ export async function getSellerProfile(sellerId: string) {
       include: {
         seller: true,
         owner: true,
-        verificationPhotos: { orderBy: { createdAt: "asc" } },
+        verificationPhotos: { orderBy: WAREHOUSE_FIRST },
         priceSnapshots: { orderBy: { createdAt: "desc" }, take: 2, select: { priceThb: true } },
       },
     }),
@@ -203,7 +203,7 @@ export async function getSellerProfile(sellerId: string) {
             category: true,
             game: true,
             catalogImageUrl: true,
-            verificationPhotos: { orderBy: { createdAt: "asc" } },
+            verificationPhotos: { orderBy: WAREHOUSE_FIRST },
           },
         },
       },
@@ -229,7 +229,7 @@ export async function getAssetById(id: string) {
       owner: true,
       provenance: { orderBy: { createdAt: "asc" }, include: { actor: true } },
       escrowTxs: { orderBy: { createdAt: "desc" }, include: { review: true, dispute: true, inboundPackage: true } },
-      verificationPhotos: { orderBy: { createdAt: "asc" } },
+      verificationPhotos: { orderBy: WAREHOUSE_FIRST },
     },
   });
 }
@@ -255,7 +255,7 @@ export async function getSimilarAssets(asset: { id: string; name: string; subtit
     include: {
       seller: true,
       owner: true,
-      verificationPhotos: { orderBy: { createdAt: "asc" } },
+      verificationPhotos: { orderBy: WAREHOUSE_FIRST },
       priceSnapshots: { orderBy: { createdAt: "desc" }, take: 2, select: { priceThb: true } },
     },
   });
@@ -352,7 +352,7 @@ export async function getVaultAssets(userId: string) {
     include: {
       seller: true,
       owner: true,
-      verificationPhotos: { orderBy: { createdAt: "asc" } },
+      verificationPhotos: { orderBy: WAREHOUSE_FIRST },
       priceSnapshots: { orderBy: { createdAt: "desc" }, take: 2, select: { priceThb: true } },
       provenance: {
         where: { type: "MINTED_DIGITAL_TWIN" },
@@ -465,7 +465,7 @@ export async function getWatchlist(userId: string) {
         include: {
           seller: true,
           owner: true,
-          verificationPhotos: { orderBy: { createdAt: "asc" } },
+          verificationPhotos: { orderBy: WAREHOUSE_FIRST },
           priceSnapshots: { orderBy: { createdAt: "desc" }, take: 2, select: { priceThb: true } },
         },
       },
@@ -533,7 +533,7 @@ const CHAT_ASSET_SELECT = {
   forSale: true,
   ownerId: true,
   catalogImageUrl: true,
-  verificationPhotos: { orderBy: { createdAt: "asc" }, take: 1, select: { url: true } },
+  verificationPhotos: { orderBy: WAREHOUSE_FIRST, take: 1, select: { url: true } },
 } as const;
 
 function chatAsset(a: Prisma.AssetGetPayload<{ select: typeof CHAT_ASSET_SELECT }>) {
@@ -696,7 +696,7 @@ export async function getActiveAuctions() {
     where: { status: "ACTIVE", startTime: { lte: new Date() } },
     orderBy: { endTime: "asc" },
     include: {
-      asset: { include: { seller: true, owner: true, verificationPhotos: { orderBy: { createdAt: "asc" } } } },
+      asset: { include: { seller: true, owner: true, verificationPhotos: { orderBy: WAREHOUSE_FIRST } } },
     },
   });
   await Promise.all(auctions.map(settleIfExpiredNoBids));
@@ -706,7 +706,7 @@ export async function getActiveAuctions() {
     where: { status: "ACTIVE", startTime: { lte: new Date() } },
     orderBy: { endTime: "asc" },
     include: {
-      asset: { include: { seller: true, owner: true, verificationPhotos: { orderBy: { createdAt: "asc" } } } },
+      asset: { include: { seller: true, owner: true, verificationPhotos: { orderBy: WAREHOUSE_FIRST } } },
       _count: { select: { bids: true } },
       // Highest few, for the list page's leader and recent-bids strip.
       bids: {
@@ -719,7 +719,7 @@ export async function getActiveAuctions() {
 }
 
 const AUCTION_DETAIL_INCLUDE = {
-  asset: { include: { seller: true, owner: true, verificationPhotos: { orderBy: { createdAt: "asc" as const } } } },
+  asset: { include: { seller: true, owner: true, verificationPhotos: { orderBy: WAREHOUSE_FIRST } } },
   bids: { orderBy: { amountThb: "desc" as const }, include: { bidder: true } },
 };
 
@@ -1021,7 +1021,7 @@ function rankingWhere(tier: ValueTier): Prisma.AssetWhereInput {
 const rankingInclude = (since30: Date) =>
   ({
     owner: { select: { id: true, name: true, handle: true, kycStatus: true } },
-    verificationPhotos: { orderBy: { createdAt: "asc" } },
+    verificationPhotos: { orderBy: WAREHOUSE_FIRST },
     escrowTxs: { where: { status: "RELEASED" }, orderBy: { releasedAt: "desc" }, take: 1, select: { amountThb: true } },
     priceSnapshots: {
       where: { createdAt: { gte: since30 } },
@@ -1203,7 +1203,7 @@ const TRADE_ASSET_SELECT = {
   category: true,
   mintAddress: true,
   catalogImageUrl: true,
-  verificationPhotos: { orderBy: { createdAt: "asc" as const }, select: { url: true } },
+  verificationPhotos: { orderBy: WAREHOUSE_FIRST, select: { url: true } },
 } as const;
 
 const TRADE_USER_SELECT = { id: true, name: true, handle: true, walletAddress: true } as const;
@@ -1327,7 +1327,7 @@ export async function getLeaderboard(viewerId: string): Promise<LeaderboardRow[]
       redeemedAt: null,
     },
     include: {
-      verificationPhotos: { orderBy: { createdAt: "asc" }, select: { url: true } },
+      verificationPhotos: { orderBy: WAREHOUSE_FIRST, select: { url: true } },
       priceSnapshots: { orderBy: { createdAt: "asc" }, select: { priceThb: true, createdAt: true } },
       watchedBy: { where: { userId: viewerId }, select: { id: true } },
       _count: { select: { watchedBy: true } },
@@ -1460,7 +1460,7 @@ export async function getTopTraders(limit = 25): Promise<TraderRow[]> {
           ownerId: true,
           redeemedAt: true,
           catalogImageUrl: true,
-          verificationPhotos: { orderBy: { createdAt: "asc" }, select: { url: true } },
+          verificationPhotos: { orderBy: WAREHOUSE_FIRST, select: { url: true } },
         },
       },
     },
@@ -1694,7 +1694,7 @@ export async function getAgentDashboard(userId: string) {
             grade: true,
             isBlackLabel: true,
             catalogImageUrl: true,
-            verificationPhotos: { orderBy: { createdAt: "asc" }, take: 1, select: { url: true } },
+            verificationPhotos: { orderBy: WAREHOUSE_FIRST, take: 1, select: { url: true } },
           },
         },
       },

@@ -2,7 +2,8 @@ import { Check, ExternalLink, Receipt } from "lucide-react";
 import type { InboundPackage } from "@prisma/client";
 
 import { getT } from "@/lib/i18n/server";
-import { formatDateTime, formatThb } from "@/lib/format";
+import { formatDateTime } from "@/lib/format";
+import { getMoney } from "@/lib/currency-server";
 import { trackingUrl } from "@/lib/shipping";
 import { cn } from "@/lib/utils";
 
@@ -22,6 +23,7 @@ export async function OrderProgress({
   fulfillment: "SHIP" | "VAULT";
   paidAt: Date;
 }) {
+  const money = await getMoney();
   const t = await getT();
   const shipped = pkg.status !== "AWAITING_SELLER_SHIPMENT";
   const url = trackingUrl(pkg.sellerCarrier, pkg.sellerTrackingNumber);
@@ -63,7 +65,7 @@ export async function OrderProgress({
           <Receipt className="size-4" />
           {t("Your order")}
         </span>
-        <span className="text-muted-foreground text-xs">{formatThb(amountThb)}</span>
+        <span className="text-muted-foreground text-xs">{money(amountThb)}</span>
       </div>
       <ol className="flex flex-col">
         {steps.map((s, i) => (

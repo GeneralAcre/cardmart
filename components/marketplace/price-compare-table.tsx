@@ -11,7 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { displayImage } from "@/lib/card-image";
-import { formatGrade, formatThb } from "@/lib/format";
+import { formatGrade } from "@/lib/format";
+import { useMoney } from "@/components/currency-provider";
 import { cn } from "@/lib/utils";
 import type { AssetSummary } from "@/lib/types";
 import { useT } from "@/components/landing/language-provider";
@@ -88,6 +89,7 @@ export function PriceCompareTable({
   selected: string[];
   onSelectedChange: (next: string[]) => void;
 }) {
+  const money = useMoney();
   const [institutes, setInstitutes] = useState<Record<string, Institute>>({});
   const [picking, setPicking] = useState(selected.length === 0);
   const [search, setSearch] = useState("");
@@ -225,10 +227,10 @@ export function PriceCompareTable({
                       </span>
                       <div className="flex items-center justify-between gap-2 sm:block sm:text-right">
                         <div className="tabular-nums">
-                          <div className={cn("font-semibold", isBest && "text-success")}>{formatThb(result.min)}</div>
+                          <div className={cn("font-semibold", isBest && "text-success")}>{money(result.min)}</div>
                           <div className="text-muted-foreground text-[11px]">
                             {result.count > 1
-                              ? t("up to {max} · {count} listings", { max: formatThb(result.max), count: result.count })
+                              ? t("up to {max} · {count} listings", { max: money(result.max), count: result.count })
                               : t("1 listing")}
                           </div>
                         </div>
@@ -332,7 +334,7 @@ export function PriceCompareTable({
                     <span className="line-clamp-1 text-xs font-medium">{card.name}</span>
                     <span className="text-muted-foreground line-clamp-1 text-[11px]">{card.subtitle}</span>
                     <span className="text-[11px] font-semibold tabular-nums">
-                      {t("from {price}", { price: formatThb(card.minPrice) })}
+                      {t("from {price}", { price: money(card.minPrice) })}
                     </span>
                   </button>
                 );
