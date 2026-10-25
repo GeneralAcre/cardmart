@@ -291,19 +291,18 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
   };
 
   // One comparison, read top to bottom: the asking price, how far it is from
-  // market in a chip in the top-right corner, then the market price for this
+  // market in a chip next to its label, then the market price for this
   // exact card and grade (see marketPriceFor) as one quiet line underneath,
   // the proof for the chip. Buy sits next to the box (see BuyPanel).
   const priceSummary = (
     <div className="flex min-w-0 flex-col gap-2">
-      {/* The label on the left; how far from market is pinned to the price box's own
-          top-right corner (PricePanel is relative), above the Buy button. */}
-      <div className="flex min-w-0 items-center gap-2 pr-32">
+      {/* How far from market sits right next to the label. */}
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
         <span className="eyebrow text-muted-foreground">{t("Listing Price")}</span>
         {marketDeltaPct != null && (
           <span
             className={cn(
-              "absolute top-4 right-4 rounded-md px-1.5 py-1 text-[11px] leading-none font-semibold whitespace-nowrap",
+              "rounded-md px-1.5 py-1 text-[11px] leading-none font-semibold whitespace-nowrap",
               Math.abs(marketDeltaPct) < 3
                 ? "bg-muted text-muted-foreground"
                 : marketDeltaPct < 0
