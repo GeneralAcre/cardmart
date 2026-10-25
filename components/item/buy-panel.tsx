@@ -23,6 +23,7 @@ import { useWalletStore } from "@/lib/web3/wallet-store";
 import { useEscrowLock, type EscrowLock } from "@/lib/web3/use-escrow-lock";
 import { PriceRows } from "@/components/item/complete-purchase-button";
 import { cn } from "@/lib/utils";
+import { ITEM_ACTION_BOX_CLASS, ITEM_ACTION_BUTTON_CLASS, ITEM_ACTION_SLOT_CLASS } from "@/lib/item-actions";
 import { useT } from "@/components/landing/language-provider";
 
 interface BuyPanelProps {
@@ -42,16 +43,6 @@ interface BuyPanelProps {
   /** The listing and market prices, shown in the box above the delivery choice and Buy button. */
   priceSummary: React.ReactNode;
 }
-
-/**
- * The card page's price box and seller box share one shape: the details on the
- * left, the button inside the box on the right in a fixed-width slot, so both
- * buttons (Buy now, Message Seller) are the same size and line up, at every
- * screen size; on phones the slot is just narrower.
- */
-export const ITEM_ACTION_BOX_CLASS = "detail-panel flex items-center gap-3 rounded-2xl border p-4 sm:gap-4";
-export const ITEM_ACTION_SLOT_CLASS = "w-32 shrink-0 sm:w-40";
-export const ITEM_ACTION_BUTTON_CLASS = "h-11 w-full rounded-xl text-sm font-semibold";
 
 /** The price box, with Buy inside when there is one. Also used on its own when there's nothing to buy (auction, redeemed). */
 export function PricePanel({ summary, action }: { summary: React.ReactNode; action?: React.ReactNode }) {
