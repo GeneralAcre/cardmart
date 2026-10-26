@@ -63,15 +63,6 @@ export function SetReleases({
     () => (view === "upcoming" ? upcoming : recent).filter((s) => game === "all" || s.game === game),
     [view, game, upcoming, recent],
   );
-  const byDay = useMemo(() => {
-    const groups: { date: string; sets: SetRelease[] }[] = [];
-    for (const s of list) {
-      const last = groups[groups.length - 1];
-      if (last?.date === s.releaseDate) last.sets.push(s);
-      else groups.push({ date: s.releaseDate, sets: [s] });
-    }
-    return groups;
-  }, [list]);
 
   if (!configured) {
     return (
@@ -133,58 +124,66 @@ export function SetReleases({
         </p>
       )}
 
-      {byDay.length === 0 ? (
+      {list.length === 0 ? (
         <div className="text-muted-foreground flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed py-16 text-center text-sm">
           <PackageOpen className="size-6" />
           {view === "upcoming" ? t("No announced upcoming sets for this game.") : t("No sets released in the last 90 days.")}
         </div>
       ) : (
-        <div className="flex flex-col gap-6">
-          {byDay.map((day) => (
-            <section key={day.date} className="flex flex-col gap-2">
-              <div className="flex items-baseline gap-2 border-b pb-2">
-                <h3 className="text-sm font-semibold">{formatDay(day.date)}</h3>
-                <span
-                  className={cn(
-                    "text-xs font-medium",
-                    daysBetween(today, day.date) >= 0 && daysBetween(today, day.date) <= 7 ? "text-success" : "text-muted-foreground",
-                  )}
+        // One tile per set, soonest first: the artwork big on top with the date
+        // and countdown on it, then the name, game and card count.
+        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          {list.map((s) => {
+            const days = daysBetween(today, s.releaseDate);
+            const soon = days >= 0 && days <= 7;
+            const day = new Date(`${s.releaseDate}T00:00:00Z`);
+            return (
+              <li key={`${s.game}-${s.id}`}>
+                <a
+                  href={s.tcgplayerUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={formatDay(s.releaseDate)}
+                  className="bg-card hover:border-foreground/30 group flex h-full flex-col overflow-hidden rounded-2xl border transition-colors"
                 >
-                  {relative(day.date, today, t)}
-                </span>
-              </div>
-              <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {day.sets.map((s) => (
-                  <li key={`${s.game}-${s.id}`}>
-                    <a
-                      href={s.tcgplayerUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="bg-card hover:bg-accent flex items-center gap-3 rounded-xl border p-3 transition-colors"
+                  <div className="relative aspect-[4/3]">
+                    <SetArtwork imageUrl={s.imageUrl} iconUrl={s.iconUrl} />
+                    {/* A small calendar page: day number over the month. */}
+                    <span className="bg-background/85 absolute top-2 left-2 flex w-11 flex-col items-center rounded-lg py-1 leading-none backdrop-blur-sm">
+                      <span className="text-lg font-bold tabular-nums">{day.getUTCDate()}</span>
+                      <span className="text-muted-foreground text-[10px] font-semibold uppercase">
+                        {day.toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" })}
+                      </span>
+                    </span>
+                    <span
+                      className={cn(
+                        "absolute top-2 right-2 rounded-md px-1.5 py-1 text-[11px] leading-none font-semibold backdrop-blur-sm",
+                        soon ? "bg-success text-success-foreground" : "bg-background/85 text-foreground",
+                      )}
                     >
-                      <SetArtwork imageUrl={s.imageUrl} iconUrl={s.iconUrl} />
-                      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                        <span className="line-clamp-2 text-sm font-semibold">{s.name}</span>
-                        <span className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
-                          <span
-                            className={cn(
-                              "rounded px-1.5 py-0.5 text-[10px] leading-none font-semibold",
-                              GAME_CLASS[s.game] ?? "bg-muted text-foreground",
-                            )}
-                          >
-                            {t(s.gameLabel)}
-                          </span>
-                          {s.cardCount ? t("{count} cards listed so far", { count: s.cardCount }) : null}
-                        </span>
-                      </div>
-                      <ExternalLink className="text-muted-foreground size-3.5 shrink-0" />
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))}
-        </div>
+                      {relative(s.releaseDate, today, t)}
+                    </span>
+                  </div>
+                  <div className="flex flex-1 flex-col gap-2 p-3">
+                    <span className="line-clamp-2 text-sm leading-snug font-semibold">{s.name}</span>
+                    <span className="text-muted-foreground mt-auto flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+                      <span
+                        className={cn(
+                          "rounded px-1.5 py-0.5 text-[10px] leading-none font-semibold",
+                          GAME_CLASS[s.game] ?? "bg-muted text-foreground",
+                        )}
+                      >
+                        {t(s.gameLabel)}
+                      </span>
+                      {s.cardCount ? t("{count} cards listed so far", { count: s.cardCount }) : null}
+                      <ExternalLink className="ml-auto size-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />
+                    </span>
+                  </div>
+                </a>
+              </li>
+            );
+          })}
+        </ul>
       )}
 
       <p className="text-muted-foreground text-[11px]">
@@ -206,20 +205,22 @@ function SetArtwork({ imageUrl, iconUrl }: { imageUrl: string | null; iconUrl: s
   const isIcon = src != null && src === iconUrl;
 
   return (
-    <div className="bg-muted relative flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-lg">
+    // Fills the tile's picture area; a set icon (small, often with transparency)
+    // is shown whole with room around it instead of being stretched.
+    <div className="bg-muted absolute inset-0 flex items-center justify-center overflow-hidden">
       {src ? (
         <Image
           key={src}
           src={src}
           alt=""
           fill
-          sizes="56px"
+          sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
           unoptimized
           onError={() => setIndex((i) => i + 1)}
-          className={isIcon ? "object-contain p-1.5" : "object-cover"}
+          className={isIcon ? "object-contain p-8" : "object-cover transition-transform duration-300 group-hover:scale-[1.03]"}
         />
       ) : (
-        <PackageOpen className="text-muted-foreground size-5" />
+        <PackageOpen className="text-muted-foreground size-7" />
       )}
     </div>
   );
