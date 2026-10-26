@@ -9,6 +9,8 @@ import type { SetRelease } from "@/lib/tcg-releases";
 import { cn } from "@/lib/utils";
 import { useT } from "@/components/landing/language-provider";
 import type { Translate } from "@/lib/i18n/translate";
+import { GameIcon } from "@/components/ui/game-icon";
+import type { CardGame } from "@prisma/client";
 
 type View = "upcoming" | "recent";
 
@@ -16,6 +18,12 @@ type View = "upcoming" | "recent";
 const GAME_CLASS: Record<string, string> = {
   pokemon: CARD_GAME_BADGE_CLASS.POKEMON,
   "one-piece-card-game": CARD_GAME_BADGE_CLASS.ONE_PIECE,
+};
+
+// TCG API's game slugs → our game, for its icon (Poké Ball / straw-hat skull).
+const GAME_ICON: Record<string, CardGame> = {
+  pokemon: "POKEMON",
+  "one-piece-card-game": "ONE_PIECE",
 };
 
 function daysBetween(from: string, to: string) {
@@ -63,6 +71,21 @@ export function SetReleases({
     () => (view === "upcoming" ? upcoming : recent).filter((s) => game === "all" || s.game === game),
     [view, game, upcoming, recent],
   );
+  const byMonth = useMemo(() => {
+    const groups: { key: string; label: string; sets: SetRelease[] }[] = [];
+    for (const s of list) {
+      const key = s.releaseDate.slice(0, 7);
+      const last = groups[groups.length - 1];
+      if (last?.key === key) last.sets.push(s);
+      else
+        groups.push({
+          key,
+          label: new Date(`${key}-01T00:00:00Z`).toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" }),
+          sets: [s],
+        });
+    }
+    return groups;
+  }, [list]);
 
   if (!configured) {
     return (
@@ -82,12 +105,13 @@ export function SetReleases({
               type="button"
               onClick={() => setGame(g.slug)}
               className={cn(
-                "shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors",
+                "flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors",
                 game === g.slug
                   ? (GAME_CLASS[g.slug] ?? "bg-foreground text-background")
                   : "text-muted-foreground hover:bg-accent hover:text-foreground",
               )}
             >
+              {GAME_ICON[g.slug] && <GameIcon game={GAME_ICON[g.slug]} size={16} />}
               {t(g.label)}
             </button>
           ))}
@@ -130,60 +154,76 @@ export function SetReleases({
           {view === "upcoming" ? t("No announced upcoming sets for this game.") : t("No sets released in the last 90 days.")}
         </div>
       ) : (
-        // One tile per set, soonest first: the artwork big on top with the date
-        // and countdown on it, then the name, game and card count.
-        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {list.map((s) => {
-            const days = daysBetween(today, s.releaseDate);
-            const soon = days >= 0 && days <= 7;
-            const day = new Date(`${s.releaseDate}T00:00:00Z`);
-            return (
-              <li key={`${s.game}-${s.id}`}>
-                <a
-                  href={s.tcgplayerUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title={formatDay(s.releaseDate)}
-                  className="bg-card hover:border-foreground/30 group flex h-full flex-col overflow-hidden rounded-2xl border transition-colors"
-                >
-                  <div className="relative aspect-[4/3]">
-                    <SetArtwork imageUrl={s.imageUrl} iconUrl={s.iconUrl} />
-                    {/* A small calendar page: day number over the month. */}
-                    <span className="bg-background/85 absolute top-2 left-2 flex w-11 flex-col items-center rounded-lg py-1 leading-none backdrop-blur-sm">
-                      <span className="text-lg font-bold tabular-nums">{day.getUTCDate()}</span>
-                      <span className="text-muted-foreground text-[10px] font-semibold uppercase">
-                        {day.toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" })}
-                      </span>
-                    </span>
-                    <span
-                      className={cn(
-                        "absolute top-2 right-2 rounded-md px-1.5 py-1 text-[11px] leading-none font-semibold backdrop-blur-sm",
-                        soon ? "bg-success text-success-foreground" : "bg-background/85 text-foreground",
-                      )}
-                    >
-                      {relative(s.releaseDate, today, t)}
-                    </span>
-                  </div>
-                  <div className="flex flex-1 flex-col gap-2 p-3">
-                    <span className="line-clamp-2 text-sm leading-snug font-semibold">{s.name}</span>
-                    <span className="text-muted-foreground mt-auto flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
-                      <span
-                        className={cn(
-                          "rounded px-1.5 py-0.5 text-[10px] leading-none font-semibold",
-                          GAME_CLASS[s.game] ?? "bg-muted text-foreground",
-                        )}
+        // One section per month, each a grid of tiles, soonest first: the artwork
+        // big on top with the date and countdown on it, then name, game and count.
+        <div className="flex flex-col gap-8">
+          {byMonth.map((month) => (
+            <section key={month.key} className="flex flex-col gap-3">
+              <div className="flex items-center gap-3">
+                <h3 className="text-sm font-semibold whitespace-nowrap">{month.label}</h3>
+                <span className="text-muted-foreground text-xs whitespace-nowrap">
+                  {t("{count} sets", { count: month.sets.length })}
+                </span>
+                <span aria-hidden className="bg-border h-px flex-1" />
+              </div>
+              <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                {month.sets.map((s) => {
+                  const days = daysBetween(today, s.releaseDate);
+                  const soon = days >= 0 && days <= 7;
+                  const day = new Date(`${s.releaseDate}T00:00:00Z`);
+                  return (
+                    <li key={`${s.game}-${s.id}`}>
+                      <a
+                        href={s.tcgplayerUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={formatDay(s.releaseDate)}
+                        className="bg-card hover:border-foreground/30 group flex h-full flex-col overflow-hidden rounded-2xl border transition-colors"
                       >
-                        {t(s.gameLabel)}
-                      </span>
-                      {s.cardCount ? t("{count} cards listed so far", { count: s.cardCount }) : null}
-                      <ExternalLink className="ml-auto size-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />
-                    </span>
-                  </div>
-                </a>
-              </li>
-            );
-          })}
-        </ul>
+                        <div className="relative aspect-[4/3]">
+                          <SetArtwork imageUrl={s.imageUrl} iconUrl={s.iconUrl} />
+                          {/* A small calendar page: day number over the month. */}
+                          <span className="bg-background/85 absolute top-2 left-2 flex w-11 flex-col items-center rounded-lg py-1 leading-none backdrop-blur-sm">
+                            <span className="text-lg font-bold tabular-nums">{day.getUTCDate()}</span>
+                            <span className="text-muted-foreground text-[10px] font-semibold uppercase">
+                              {day.toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" })}
+                            </span>
+                          </span>
+                          <span
+                            className={cn(
+                              "absolute top-2 right-2 rounded-md px-1.5 py-1 text-[11px] leading-none font-semibold backdrop-blur-sm",
+                              soon ? "bg-success text-success-foreground" : "bg-background/85 text-foreground",
+                            )}
+                          >
+                            {relative(s.releaseDate, today, t)}
+                          </span>
+                        </div>
+                        <div className="flex flex-1 flex-col gap-2 p-3">
+                          <span className="line-clamp-2 text-sm leading-snug font-semibold">{s.name}</span>
+                          <span className="text-muted-foreground mt-auto flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+                            <span className="flex items-center gap-1.5">
+                              {GAME_ICON[s.game] && <GameIcon game={GAME_ICON[s.game]} size={14} />}
+                              <span
+                                className={cn(
+                                  "rounded px-1.5 py-0.5 text-[10px] leading-none font-semibold",
+                                  GAME_CLASS[s.game] ?? "bg-muted text-foreground",
+                                )}
+                              >
+                                {t(s.gameLabel)}
+                              </span>
+                            </span>
+                            {s.cardCount ? t("{count} cards listed so far", { count: s.cardCount }) : null}
+                            <ExternalLink className="ml-auto size-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />
+                          </span>
+                        </div>
+                      </a>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          ))}
+        </div>
       )}
 
       <p className="text-muted-foreground text-[11px]">

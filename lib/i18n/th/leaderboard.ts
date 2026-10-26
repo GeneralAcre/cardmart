@@ -93,6 +93,7 @@ export const LEADERBOARD: Record<string, string> = {
 
   // Set releases
   "In {days} days": "อีก {days} วัน",
+  "{count} sets": "{count} ชุด",
   "{days} days ago": "{days} วันที่แล้ว",
   "The release calendar needs TCG_API_KEY to be set.": "ปฏิทินการออกชุดใหม่ต้องตั้งค่า TCG_API_KEY ก่อน",
   "All games": "ทุกเกม",
