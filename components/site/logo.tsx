@@ -12,7 +12,7 @@ export function Logo({ className }: { className?: string }) {
       <Image
         src="/cardmart-logo.png"
         alt="CardMart"
-        width={390}
+        width={484}
         height={77}
         unoptimized
         priority
