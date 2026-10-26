@@ -170,34 +170,34 @@ export function BuyPanel({
         }
       />
 
-      {/* A vaulted card has nothing to choose: ownership just transfers. */}
-      {!vaulted && (
-        <div className="flex flex-col gap-2">
-          <span className="text-sm font-medium">{t("How do you want to receive it?")}</span>
-          <Tabs value={fulfillment} onValueChange={(v) => setFulfillment(v as "SHIP" | "VAULT")}>
-            <TabsList className="w-full">
-              <TabsTrigger value="SHIP" className={ACTIVE_TAB_CLASS}>
-                <Truck className="size-4" /> {t("Ship to My Address")}
-              </TabsTrigger>
-              <TabsTrigger value="VAULT" className={ACTIVE_TAB_CLASS}>
-                <Landmark className="size-4" /> {t("Keep in Vault")}
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-          <p className="text-muted-foreground text-xs">
-            {fulfillment === "SHIP"
-              ? t("Ships to your address after inspection.")
-              : t("Stored safely in the vault after inspection.")}
-          </p>
-        </div>
-      )}
-
       <Dialog open={open} onOpenChange={(o) => !signing && !submitting && setOpen(o)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t("Confirm Purchase")}</DialogTitle>
             <DialogDescription>{t("Payment stays protected until the item is verified.")}</DialogDescription>
           </DialogHeader>
+          {/* The delivery choice lives here, at the moment of paying, not on the page.
+              A vaulted card has nothing to choose: ownership just transfers. */}
+          {!vaulted && (
+            <div className="flex flex-col gap-2">
+              <span className="text-sm font-medium">{t("How do you want to receive it?")}</span>
+              <Tabs value={fulfillment} onValueChange={(v) => setFulfillment(v as "SHIP" | "VAULT")}>
+                <TabsList className="w-full">
+                  <TabsTrigger value="SHIP" className={ACTIVE_TAB_CLASS}>
+                    <Truck className="size-4" /> {t("Ship to My Address")}
+                  </TabsTrigger>
+                  <TabsTrigger value="VAULT" className={ACTIVE_TAB_CLASS}>
+                    <Landmark className="size-4" /> {t("Keep in Vault")}
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+              <p className="text-muted-foreground text-xs">
+                {fulfillment === "SHIP"
+                  ? t("Ships to your address after inspection.")
+                  : t("Stored safely in the vault after inspection.")}
+              </p>
+            </div>
+          )}
           <div className="bg-muted/40 flex flex-col gap-2 rounded-lg border p-3 text-sm">
             <PriceRows priceThb={priceThb} withFee />
             <div className="flex justify-between">
