@@ -18,7 +18,7 @@ const HEIGHT = 1350;
 const LIME = "#CCEF20";
 const RED = "#FF4D4D";
 
-// The CardMart star, traced from public/cardmart-logo.png (5 tips, 5 inner
+// The CardMart star, traced from public/cardmart-star.png (5 tips, 5 inner
 // corners), so the background can draw it large and sharp at any size.
 const STAR_POINTS = "120,0 154,50 278,13 182,112 204,196 112,160 1,217 60,130 24,100 85,76";
 const Star = ({ size, fill, stroke, strokeWidth = 0 }: { size: number; fill: string; stroke?: string; strokeWidth?: number }) => (
@@ -57,7 +57,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const [bold, black, logo] = await Promise.all([
     readFile(join(process.cwd(), "assets/fonts/Geist-Bold.ttf")),
     readFile(join(process.cwd(), "assets/fonts/Geist-Black.ttf")),
-    readFile(join(process.cwd(), "public/cardmart-logo.png"), "base64"),
+    readFile(join(process.cwd(), "public/cardmart-star.png"), "base64"),
   ]);
 
   const grade =

@@ -64,7 +64,7 @@ function SourceMark({ source, size = "md" }: { source: Source; size?: "sm" | "md
       {source === "cardmart" ? (
         // The star sits in a lot of padding; scale it up to fill the tile.
         // eslint-disable-next-line @next/next/no-img-element
-        <img src="/cardmart-logo.png" alt="" className="size-full scale-[1.7] object-contain" />
+        <img src="/cardmart-star.png" alt="" className="size-full scale-[1.7] object-contain" />
       ) : source === "ebay" ? (
         <span className={cn("leading-none font-bold tracking-[-0.06em]", small ? "text-[8px]" : "text-[11px]")}>
           {EBAY_LETTERS.map(([letter, color]) => (

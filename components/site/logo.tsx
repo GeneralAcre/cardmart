@@ -3,18 +3,21 @@ import Image from "next/image";
 
 // The CardMart wordmark — one definition so the app header, landing page and
 // standalone pages (onboarding, terms, privacy) always show the same logo.
+// The image is the whole wordmark (star and name), white on transparent, so
+// logo-adaptive turns it dark on the light theme. The star alone, for small
+// icon spots, is public/cardmart-star.png.
 export function Logo({ className }: { className?: string }) {
   return (
-    <span className={cn("inline-flex items-center gap-1.5 text-lg font-black italic tracking-tight uppercase sm:text-2xl", className)}>
+    <span className={cn("inline-flex items-center", className)}>
       <Image
         src="/cardmart-logo.png"
-        alt="CardMart logo"
-        width={22}
-        height={17}
+        alt="CardMart"
+        width={390}
+        height={77}
         unoptimized
-        className="h-[17px] w-[22px] object-contain sm:h-5 sm:w-[27px]"
+        priority
+        className="logo-adaptive h-6 w-auto sm:h-7"
       />
-      CardMart
     </span>
   );
 }

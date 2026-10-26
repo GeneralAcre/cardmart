@@ -30,7 +30,7 @@ function IndexIcon({ index }: { index: MarketIndex["key"] }) {
     <span aria-hidden className="flex size-7 shrink-0 items-center justify-center">
       {index === "ALL" ? (
         // eslint-disable-next-line @next/next/no-img-element -- tiny static logo
-        <img src="/cardmart-logo.png" alt="" className="logo-adaptive size-3.5 object-contain" />
+        <img src="/cardmart-star.png" alt="" className="logo-adaptive size-3.5 object-contain" />
       ) : (
         <GameIcon game={index} size={20} />
       )}
