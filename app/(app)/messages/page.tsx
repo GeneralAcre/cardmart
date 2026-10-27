@@ -14,11 +14,13 @@ export default async function MessagesPage() {
   const conversations = await getMyConversations(user.id);
 
   return (
-    <div className="mx-auto w-full max-w-3xl flex-1 px-4 py-10 sm:px-6">
+    // The same page frame as Portfolio and Market, so it starts at the same left
+    // edge; the list itself keeps a readable width instead of spanning the screen.
+    <div className="mx-auto w-full max-w-screen-2xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
       <h1 className="mb-6 text-2xl font-semibold">{t("Messages")}</h1>
 
       {conversations.length === 0 ? (
-        <div className="text-muted-foreground flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed py-24 text-center">
+        <div className="text-muted-foreground flex max-w-3xl flex-col items-center justify-center gap-3 rounded-xl border border-dashed py-24 text-center">
           <MessageCircle className="size-8" />
           <p className="text-sm">{t("No conversations yet.")}</p>
           <p className="max-w-xs text-xs">
@@ -29,7 +31,7 @@ export default async function MessagesPage() {
           </Link>
         </div>
       ) : (
-        <div className="flex flex-col gap-2">
+        <div className="flex max-w-3xl flex-col gap-2">
           {conversations.map((c) => {
             const unread = c.unreadCount > 0;
             return (
