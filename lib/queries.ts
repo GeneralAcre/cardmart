@@ -326,6 +326,12 @@ export async function getPortfolioPriceHistory(userId: string, range: PriceHisto
     latestPriceByAsset.set(s.assetId, s.priceThb);
     points.push({ createdAt: s.createdAt, totalThb: sumPrices() });
   }
+  // End every window at "now" with today's value, so each range draws a line
+  // even when nothing was repriced inside it (a flat line is still the truth).
+  const now = new Date();
+  if (points.length > 0 && points[points.length - 1].createdAt < now) {
+    points.push({ createdAt: now, totalThb: sumPrices() });
+  }
   return points;
 }
 

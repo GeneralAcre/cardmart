@@ -41,6 +41,13 @@ export function formatMoney(amountThb: number, currency: Currency): string {
   return formatThb(amountThb);
 }
 
+/** A baht amount as a short label for chart axes in the chosen currency: "22K", "$667", "4.4 SOL". */
+export function formatMoneyCompact(amountThb: number, currency: Currency): string {
+  const value = currency === "USD" ? amountThb / THB_PER_USD : currency === "SOL" ? amountThb / THB_PER_SOL : amountThb;
+  const short = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(value);
+  return currency === "USD" ? `$${short}` : currency === "SOL" ? `${short} SOL` : short;
+}
+
 /** formatMoney with the currency already picked: what useMoney() and getMoney() hand out. */
 export type Money = (amountThb: number) => string;
 
