@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
-import { BookOpen, Check, ChevronRight, Coins, Copy, Globe, LogOut, MessageCircle, Settings, UserRound, Wallet } from "lucide-react";
+import { BookOpen, Check, ChevronRight, Coins, Copy, Globe, LogOut, MessageCircle, Moon, Settings, Sun, UserRound, Wallet } from "lucide-react";
 import { toast } from "sonner";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -15,14 +15,16 @@ import { LOCALES } from "@/lib/i18n/landing";
 import { useCurrency } from "@/components/currency-provider";
 import { CURRENCIES } from "@/lib/currency";
 import { useWalletStore } from "@/lib/web3/wallet-store";
+import { useTheme } from "@/components/site/theme-provider";
 import { cn } from "@/lib/utils";
 
 const short = (key: string) => `${key.slice(0, 4)}…${key.slice(-4)}`;
 
 /**
  * The profile panel: the avatar in the header opens it from the right edge,
- * nearly the full width on a phone. Account links, the wallet address,
- * language and sign out in one place.
+ * nearly the full width on a phone. Account links (Messages with its unread
+ * count), the wallet address, language, currency, light/dark and sign out in
+ * one place; the header keeps only the alerts bell and this avatar.
  */
 export function ProfileDrawer({
   name,
@@ -30,17 +32,20 @@ export function ProfileDrawer({
   email,
   image,
   initials,
+  unreadMessageCount = 0,
 }: {
   name: string;
   handle: string | null;
   email: string | null;
   image: string | null;
   initials: string;
+  unreadMessageCount?: number;
 }) {
   const router = useRouter();
   const { logout } = usePrivy();
   const { locale, setLocale, tr: t } = useLanguage();
   const { currency, setCurrency } = useCurrency();
+  const { theme, setTheme } = useTheme();
   const { connected, connecting, publicKey, connect } = useWalletStore();
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -64,7 +69,7 @@ export function ProfileDrawer({
 
   const links = [
     { href: "/portfolio", icon: UserRound, label: t("Portfolio") },
-    { href: "/messages", icon: MessageCircle, label: t("Messages") },
+    { href: "/messages", icon: MessageCircle, label: t("Messages"), badge: unreadMessageCount },
     { href: "/settings", icon: Settings, label: t("Settings") },
     { href: "/guide", icon: BookOpen, label: t("Getting started guide") },
   ];
@@ -72,11 +77,17 @@ export function ProfileDrawer({
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="rounded-full" aria-label={t("Profile")}>
+        <Button variant="ghost" size="icon" className="relative rounded-full" aria-label={t("Profile")}>
           <Avatar>
             {image && <AvatarImage src={image} alt={name} />}
             <AvatarFallback>{initials}</AvatarFallback>
           </Avatar>
+          {/* Messages moved in here from the header, so a dot says there's something unread. */}
+          {unreadMessageCount > 0 && (
+            <span className="bg-destructive ring-background absolute top-0 right-0 size-2.5 rounded-full ring-2">
+              <span className="sr-only">{t("Unread messages")}</span>
+            </span>
+          )}
         </Button>
       </SheetTrigger>
       <SheetContent side="right" className="w-[88vw] max-w-sm gap-0 overflow-y-auto p-0 sm:w-96">
@@ -121,13 +132,18 @@ export function ProfileDrawer({
         </div>
 
         <nav className="flex flex-col border-b">
-          {links.map(({ href, icon: Icon, label }) => (
+          {links.map(({ href, icon: Icon, label, badge }) => (
             <SheetClose asChild key={href}>
               <Link href={href} className="hover:bg-accent flex items-center gap-3 px-4 py-3.5 text-sm font-medium transition-colors">
                 <span className="bg-muted flex size-9 items-center justify-center rounded-lg">
                   <Icon className="size-4" />
                 </span>
                 <span className="flex-1">{label}</span>
+                {badge ? (
+                  <span className="bg-destructive min-w-5 rounded-full px-1.5 py-0.5 text-center text-[10px] leading-none font-semibold text-white">
+                    {badge > 9 ? "9+" : badge}
+                  </span>
+                ) : null}
                 <ChevronRight className="text-muted-foreground size-4" />
               </Link>
             </SheetClose>
@@ -182,6 +198,37 @@ export function ProfileDrawer({
                 )}
               >
                 {c.value}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Light or dark, the same small switch as Language and Currency. */}
+        <div className="flex items-center justify-between gap-2 border-b px-4 py-3.5 text-sm">
+          <span className="flex items-center gap-3 font-medium">
+            <span className="bg-muted flex size-9 items-center justify-center rounded-lg">
+              {theme === "dark" ? <Moon className="size-4" /> : <Sun className="size-4" />}
+            </span>
+            {t("Screen mode")}
+          </span>
+          <div className="bg-muted flex rounded-md p-0.5 text-xs font-semibold" role="group" aria-label={t("Screen mode")}>
+            {(
+              [
+                { value: "light", label: t("Light") },
+                { value: "dark", label: t("Dark") },
+              ] as const
+            ).map((m) => (
+              <button
+                key={m.value}
+                type="button"
+                onClick={() => setTheme(m.value)}
+                aria-pressed={m.value === theme}
+                className={cn(
+                  "rounded px-2.5 py-1 transition-colors",
+                  m.value === theme ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {m.label}
               </button>
             ))}
           </div>

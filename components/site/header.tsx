@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { MessageCircle } from "lucide-react";
 
 import { getOptionalUser } from "@/lib/session";
 import { getT } from "@/lib/i18n/server";
@@ -9,8 +8,6 @@ import { MobileBottomNav } from "@/components/site/mobile-bottom-nav";
 import { NotificationBell } from "@/components/site/notification-bell";
 import { ProfileDrawer } from "@/components/site/profile-drawer";
 import { ThemeToggleButton } from "@/components/site/theme-toggle";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/site/logo";
 import { LoginButton } from "@/components/onboarding/login-button";
 
@@ -41,17 +38,6 @@ export async function SiteHeader() {
             <NavLinks />
           </div>
           <div className="flex shrink-0 items-center gap-1 sm:gap-3">
-            <Button asChild variant="ghost" size="icon" className="relative rounded-full">
-              <Link href="/messages">
-                <MessageCircle className="size-4" />
-                {unreadMessageCount > 0 && (
-                  <Badge className="absolute -right-0.5 -top-0.5 size-4 min-w-4 justify-center rounded-full p-0 text-[10px]">
-                    {unreadMessageCount > 9 ? "9+" : unreadMessageCount}
-                  </Badge>
-                )}
-                <span className="sr-only">{t("Messages")}</span>
-              </Link>
-            </Button>
             <NotificationBell
               initialNotifications={notifications.map((n) => ({
                 id: n.id,
@@ -63,8 +49,15 @@ export async function SiteHeader() {
               }))}
               initialUnreadCount={unreadCount}
             />
-            <ThemeToggleButton />
-            <ProfileDrawer name={displayName} handle={user.handle} email={user.email} image={user.image} initials={initials} />
+            {/* Messages and light/dark are in the profile panel. */}
+            <ProfileDrawer
+              name={displayName}
+              handle={user.handle}
+              email={user.email}
+              image={user.image}
+              initials={initials}
+              unreadMessageCount={unreadMessageCount}
+            />
           </div>
         </div>
       </header>
