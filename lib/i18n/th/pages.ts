@@ -40,8 +40,6 @@ export const PAGES: Record<string, string> = {
   Settings: "ตั้งค่า",
   Appearance: "การแสดงผล",
   "Screen mode": "โหมดหน้าจอ",
-  "Light": "สว่าง",
-  "Dark": "มืด",
   "Unread messages": "ข้อความที่ยังไม่ได้อ่าน",
   "Currency": "สกุลเงิน",
   "Thai baht": "บาท",
