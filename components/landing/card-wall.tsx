@@ -1,7 +1,6 @@
 import Image from "next/image";
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 
-import { formatGrade } from "@/lib/format";
 import { useMoney } from "@/components/currency-provider";
 import type { LandingShowcaseItem } from "@/lib/queries";
 import { cn } from "@/lib/utils";
@@ -13,10 +12,6 @@ const MIN_PER_COLUMN = 6;
 
 function WallTile({ item }: { item: LandingShowcaseItem }) {
   const money = useMoney();
-  const grade =
-    item.gradingCompany === "RAW"
-      ? "RAW"
-      : `${item.gradingCompany} ${formatGrade(item.grade)}${item.isBlackLabel ? " BL" : ""}`;
 
   return (
     <div className="bg-card rounded-xl border p-3">
@@ -26,7 +21,6 @@ function WallTile({ item }: { item: LandingShowcaseItem }) {
       <p className="mt-3 truncate text-sm font-medium">{item.name}</p>
       <p className="text-muted-foreground truncate text-xs">{item.subtitle}</p>
       <div className="mt-2 flex items-center justify-between gap-2 text-xs">
-        <span className="text-muted-foreground font-mono">{grade}</span>
         <span
           className={cn(
             "flex items-center gap-0.5 font-semibold tabular-nums",

@@ -109,7 +109,7 @@ export function ListingCard({
             coloured outline rather than a filled tag, so the price stays the headline. */}
         <div className="text-muted-foreground flex min-w-0 items-center justify-between gap-2 text-xs">
           <span className="truncate">{asset.subtitle}</span>
-          {asset.rarity && <RarityTag rarity={asset.rarity} quiet />}
+          {asset.rarity && <RarityTag rarity={asset.rarity} />}
         </div>
 
         {/* Bottom row: the seller's picture on the left (name on hover), the price on the right. */}

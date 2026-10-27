@@ -33,7 +33,6 @@ import {
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { auctionApprovalNeeded, delistAsset, startAuction, updateListingPrice, prepareVaultRedeem, vaultRedeem, vaultRelist } from "@/lib/actions";
 import { useWalletStore } from "@/lib/web3/wallet-store";
-import { formatGrade } from "@/lib/format";
 import { useMoney } from "@/components/currency-provider";
 import { RarityTag } from "@/components/item/rarity-badge";
 import type { AssetSummary } from "@/lib/types";
@@ -292,19 +291,8 @@ export function PortfolioItemCard({
             />
           </div>
         )}
-        {/* The grade in the picture's corner, the same dark chip as on the Market cards. */}
-        <span className="absolute left-2.5 top-2.5 flex items-center gap-1 rounded-md bg-black/70 px-2 py-1.5 text-[11px] leading-none text-white backdrop-blur-sm">
-          {asset.gradingCompany === "RAW" ? (
-            <span className="font-semibold">{t("Ungraded")}</span>
-          ) : (
-            <>
-              <span className="text-white/70">{asset.gradingCompany}</span>
-              <span className="font-bold">{formatGrade(asset.grade)}</span>
-            </>
-          )}
-          {asset.isBlackLabel && <span className="font-semibold text-black-label">· BL</span>}
-        </span>
-        {/* Top-right corner: whether it's on the market, in words, matching the grade chip. */}
+        {/* No grade chip: the slab photo already shows the grade. */}
+        {/* Top-right corner: whether it's on the market, in words. */}
         {asset.marketStatus === "IN_AUCTION" ? (
           <span className="absolute right-2.5 top-2.5 flex items-center gap-1 rounded-md bg-black/70 px-2 py-1.5 text-[11px] leading-none font-semibold text-white backdrop-blur-sm">
             <Gavel className="size-3" /> {t("Up for Auction")}

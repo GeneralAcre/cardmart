@@ -7,7 +7,6 @@ import type { AssetCategory, GradingCompany } from "@prisma/client";
 
 import { CardArt } from "@/components/asset/card-art";
 import { useLanguage } from "@/components/landing/language-provider";
-import { formatGrade } from "@/lib/format";
 import { useMoney } from "@/components/currency-provider";
 import { cn } from "@/lib/utils";
 
@@ -101,7 +100,6 @@ function ListingCard({ listing: l }: { listing: SimilarListing }) {
   const money = useMoney();
   const { tr: t } = useLanguage();
   const pct = dealPct(l);
-  const grade = l.gradingCompany === "RAW" ? t("Raw") : `${l.gradingCompany} ${formatGrade(l.grade)}${l.isBlackLabel ? " BL" : ""}`;
 
   return (
     <Link
@@ -164,7 +162,6 @@ function ListingCard({ listing: l }: { listing: SimilarListing }) {
         <span className="mt-1 text-lg font-bold tabular-nums">{money(l.priceThb)}</span>
         <div className="mt-1 flex items-center justify-between gap-2">
           <span className="text-muted-foreground truncate text-xs">{l.sellerName}</span>
-          <span className="shrink-0 rounded-md border px-1.5 py-0.5 text-[11px] font-semibold">{grade}</span>
         </div>
       </div>
     </Link>

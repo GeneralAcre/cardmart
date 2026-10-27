@@ -288,16 +288,6 @@ function AuctionTile({ auction }: { auction: Auction }) {
               <UserAvatar user={{ name: sellerName, handle: null, image: asset.seller.image ?? null }} className="size-5 [&_*]:text-[9px]" />
               <span className="truncate">{sellerName}</span>
             </span>
-            <span className="flex shrink-0 items-center gap-1 rounded-md border px-2 py-1 text-[11px] leading-none">
-              {asset.gradingCompany === "RAW" ? (
-                <span className="font-semibold">{t("Ungraded")}</span>
-              ) : (
-                <>
-                  <span className="text-muted-foreground">{asset.gradingCompany}</span>
-                  <span className="font-bold">{formatGrade(asset.grade)}</span>
-                </>
-              )}
-            </span>
           </div>
         </div>
       </Link>

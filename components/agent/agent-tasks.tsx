@@ -289,10 +289,6 @@ function DealCard({ d }: { d: AgentDecisionRow }) {
             -{deal}%
           </span>
         )}
-        <span className="bg-background/85 absolute top-2 right-2 rounded-md px-2 py-0.5 text-[11px] font-semibold backdrop-blur">
-          {gradeLabel(d.asset, t("Raw"))}
-          {d.asset.isBlackLabel ? " BL" : ""}
-        </span>
       </Link>
       <div className="flex flex-1 flex-col gap-2 p-3">
         <Link href={`/item/${d.asset.id}`} className="line-clamp-2 text-sm font-semibold hover:underline">

@@ -42,30 +42,18 @@ export function RarityBadge({ rarity }: { rarity: CardRarity | null | undefined 
 }
 
 /**
- * The rarity as a small coloured tag for a card in a grid: just the code (SAR),
- * short enough to sit beside the price. Hover for the full name.
+ * The rarity as a small tag for a card: just the code (SAR), short enough to
+ * sit beside the price, hover for the full name. An outline in the rarity's
+ * colour, not a filled tag, the same everywhere so it never outshouts the price.
  */
-export function RarityTag({
-  rarity,
-  quiet = false,
-}: {
-  rarity: CardRarity;
-  /**
-   * An outline in the rarity's colour with plain text, instead of a filled tag,
-   * for places where rarity is a detail and something else (the price) should lead.
-   */
-  quiet?: boolean;
-}) {
+export function RarityTag({ rarity }: { rarity: CardRarity }) {
   const { tr: t } = useLanguage();
   const info = RARITIES.find((r) => r.value === rarity)!;
   return (
     <Tag
       title={`${t(info.label)}: ${t(info.description)}`}
       // Fixed width, so every rarity's tag is the same size however short its code.
-      className={cn(
-        "w-11 px-0",
-        quiet ? cn("text-foreground/80 border font-semibold", RARITY_BORDER[rarity]) : RARITY_STYLE[rarity],
-      )}
+      className={cn("text-foreground/80 w-11 border px-0 font-semibold", RARITY_BORDER[rarity])}
     >
       {RARITY_SHORT[rarity]}
     </Tag>
