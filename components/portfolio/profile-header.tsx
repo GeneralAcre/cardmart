@@ -109,7 +109,6 @@ export function ProfileHeader({
         </div>
 
         <div className="flex flex-col gap-3 sm:items-end">
-          <Stat label={t("SOL Balance")} value={solBalance != null ? `${solBalance.toFixed(4)} SOL` : "—"} />
           {/* Phones: the buttons share the width equally on one row; from sm up they sit right-aligned. */}
           <div className="flex gap-2 sm:justify-end [&_button]:flex-1 sm:[&_button]:flex-none">
             {connected && <WalletActions solBalance={solBalance} />}
@@ -119,15 +118,6 @@ export function ProfileHeader({
       </div>
 
       <PortfolioValueChart initialHistory={portfolioValueHistory} />
-    </div>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex flex-col gap-1 sm:items-end">
-      <span className="eyebrow text-muted-foreground">{label}</span>
-      <span className="text-3xl leading-none font-bold tracking-tight tabular-nums">{value}</span>
     </div>
   );
 }

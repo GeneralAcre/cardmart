@@ -27,7 +27,7 @@ import { themeIndexForSerial } from "@/lib/theme";
 import { getVerificationChecklist } from "@/lib/verification-checklist";
 import { BGS_BLACK_LABEL_GRADE, gradeTierLabel } from "@/lib/labels";
 import { bidAmountProblem, bidStepProblem } from "@/lib/auction-rules";
-import { requestDevnetAirdrop } from "@/lib/solana";
+import { getDevnetSolBalance, requestDevnetAirdrop } from "@/lib/solana";
 import { runMandate, runMandatesForListing, withdrawAgentOffers } from "@/lib/agent/engine";
 import { taskReportText } from "@/lib/agent/report";
 import { agentLockPayment, isAgentChainEnabled } from "@/lib/agent/wallet";
@@ -3969,4 +3969,14 @@ export async function setPurchaseCost(assetId: string, costThb: number | null) {
     });
   }
   revalidatePath("/portfolio");
+}
+
+/**
+ * The signed-in buyer's wallet balance in SOL, for the Confirm Purchase dialog:
+ * payment goes out in SOL, so that's where the balance is shown (not on the
+ * portfolio). Null when there's no wallet or the network call fails.
+ */
+export async function getMyWalletBalanceSol(): Promise<number | null> {
+  const user = await getCurrentUser();
+  return getDevnetSolBalance(user.walletAddress);
 }

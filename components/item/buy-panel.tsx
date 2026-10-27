@@ -18,7 +18,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { buyListing, updateListingPrice } from "@/lib/actions";
+import { buyListing, getMyWalletBalanceSol, updateListingPrice } from "@/lib/actions";
+import { THB_PER_SOL, buyerFeeThb } from "@/lib/pricing";
 import { useWalletStore } from "@/lib/web3/wallet-store";
 import { useEscrowLock, type EscrowLock } from "@/lib/web3/use-escrow-lock";
 import { PriceRows } from "@/components/item/complete-purchase-button";
@@ -79,6 +80,15 @@ export function BuyPanel({
   const [open, setOpen] = useState(false);
   const [signing, setSigning] = useState(false);
   const [submitting, startSubmit] = useTransition();
+  // The buyer's SOL balance, loaded when the dialog opens: undefined while
+  // loading, null when unknown (no wallet, or the network call failed).
+  const [balanceSol, setBalanceSol] = useState<number | null | undefined>(undefined);
+
+  function openCheckout() {
+    setOpen(true);
+    setBalanceSol(undefined);
+    getMyWalletBalanceSol().then(setBalanceSol, () => setBalanceSol(null));
+  }
 
   if (isOwner) {
     // Not vaulted, not mid-sale, and not currently listed — e.g. a
@@ -162,7 +172,7 @@ export function BuyPanel({
         action={
           <Button
             size="lg"
-            onClick={() => setOpen(true)}
+            onClick={openCheckout}
             className={cn("bg-foreground text-background hover:bg-foreground/85", ITEM_ACTION_BUTTON_CLASS)}
           >
             {t("Buy now")}
@@ -204,6 +214,8 @@ export function BuyPanel({
               <span className="text-muted-foreground">{t("Delivery")}</span>
               <span>{t(vaulted ? "Instant Vault Transfer" : fulfillment === "SHIP" ? "Ship to Address" : "Deposit to Vault")}</span>
             </div>
+            {/* The wallet balance shows here, where it matters, rather than on the portfolio. */}
+            <WalletBalanceRow balanceSol={balanceSol} totalThb={priceThb + buyerFeeThb(priceThb)} />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)} disabled={signing || submitting}>
@@ -273,5 +285,30 @@ function OwnerListForSaleForm({ assetId, assetName }: { assetId: string; assetNa
         {t("Or manage it from Portfolio")}
       </a>
     </div>
+  );
+}
+
+/**
+ * The buyer's SOL balance in the Confirm Purchase dialog, with a heads-up when
+ * it's short of the total. Only a heads-up: demo wallets pay through the
+ * simulated escrow, so it never blocks the purchase.
+ */
+function WalletBalanceRow({ balanceSol, totalThb }: { balanceSol: number | null | undefined; totalThb: number }) {
+  const t = useT();
+  if (balanceSol === null) return null;
+  const neededSol = totalThb / THB_PER_SOL;
+  const short = balanceSol !== undefined && balanceSol < neededSol;
+  return (
+    <>
+      <div className="flex justify-between border-t pt-2">
+        <span className="text-muted-foreground">{t("Your wallet balance")}</span>
+        <span className={cn("tabular-nums", short && "text-destructive font-medium")}>
+          {balanceSol === undefined ? <Loader2 className="size-3.5 animate-spin" /> : `${balanceSol.toFixed(4)} SOL`}
+        </span>
+      </div>
+      {short && (
+        <p className="text-destructive text-xs">{t("Not enough SOL for this purchase. Deposit more from your Portfolio first.")}</p>
+      )}
+    </>
   );
 }

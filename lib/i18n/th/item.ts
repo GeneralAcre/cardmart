@@ -186,6 +186,8 @@ export const ITEM: Record<string, string> = {
   "Price": "ราคา",
   "Buyer protection ({percent}%)": "ค่าคุ้มครองผู้ซื้อ ({percent}%)",
   "Paid from your wallet": "ชำระจากกระเป๋าเงินของคุณ",
+  "Your wallet balance": "ยอดเงินในกระเป๋าของคุณ",
+  "Not enough SOL for this purchase. Deposit more from your Portfolio first.": "SOL ไม่พอสำหรับการซื้อนี้ ฝากเพิ่มจากหน้าพอร์ตโฟลิโอก่อน",
   "Total": "รวม",
   "Covers escrow and our inspection of the card. Refunded if the sale is cancelled.": "ครอบคลุมเอสโครว์และการตรวจสอบการ์ด คืนเงินให้หากการขายถูกยกเลิก",
   "Almost ready: the seller still needs to approve this card's NFT transfer before it can be bought.":
