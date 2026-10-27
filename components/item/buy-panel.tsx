@@ -26,6 +26,7 @@ import { PriceRows } from "@/components/item/complete-purchase-button";
 import { cn } from "@/lib/utils";
 import { ITEM_ACTION_BOX_CLASS, ITEM_ACTION_BUTTON_CLASS, ITEM_ACTION_SLOT_CLASS } from "@/lib/item-actions";
 import { useT } from "@/components/landing/language-provider";
+import { useCurrency } from "@/components/currency-provider";
 
 interface BuyPanelProps {
   assetId: string;
@@ -295,6 +296,7 @@ function OwnerListForSaleForm({ assetId, assetName }: { assetId: string; assetNa
  */
 function WalletBalanceRow({ balanceSol, totalThb }: { balanceSol: number | null | undefined; totalThb: number }) {
   const t = useT();
+  const { currency, money } = useCurrency();
   if (balanceSol === null) return null;
   const neededSol = totalThb / THB_PER_SOL;
   const short = balanceSol !== undefined && balanceSol < neededSol;
@@ -302,8 +304,18 @@ function WalletBalanceRow({ balanceSol, totalThb }: { balanceSol: number | null 
     <>
       <div className="flex justify-between border-t pt-2">
         <span className="text-muted-foreground">{t("Your wallet balance")}</span>
-        <span className={cn("tabular-nums", short && "text-destructive font-medium")}>
-          {balanceSol === undefined ? <Loader2 className="size-3.5 animate-spin" /> : `${balanceSol.toFixed(4)} SOL`}
+        {/* In the chosen currency, at the escrow rate; the exact SOL is on hover. */}
+        <span
+          className={cn("tabular-nums", short && "text-destructive font-medium")}
+          title={balanceSol === undefined ? undefined : `${balanceSol.toFixed(4)} SOL`}
+        >
+          {balanceSol === undefined ? (
+            <Loader2 className="size-3.5 animate-spin" />
+          ) : currency === "SOL" ? (
+            `${balanceSol.toFixed(4)} SOL`
+          ) : (
+            money(balanceSol * THB_PER_SOL)
+          )}
         </span>
       </div>
       {short && (
