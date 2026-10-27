@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { notFound } from "next/navigation";
+import { ChevronLeft } from "lucide-react";
 
 import { getConversation } from "@/lib/queries";
 import { getCurrentUser } from "@/lib/session";
@@ -24,8 +24,12 @@ export default async function ConversationPage({
   const { otherUser } = conversation;
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 py-6 sm:px-6">
-      <Breadcrumbs className="mb-4" items={[{ label: t("Messages"), href: "/messages" }, { label: displayNameOf(otherUser) }]} />
+    // The right pane of Messages (see layout.tsx): the list sits beside it on
+    // desktop, so only phones need a way back to it.
+    <div className="flex flex-1 flex-col">
+      <Link href="/messages" className="text-muted-foreground hover:text-foreground mb-3 inline-flex w-fit items-center gap-1 text-sm lg:hidden">
+        <ChevronLeft className="size-4" /> {t("Messages")}
+      </Link>
       <div className="mb-4 flex items-center gap-3">
         <Link href={`/store/${otherUser.id}`} className="flex min-w-0 items-center gap-3 hover:underline">
           <UserAvatar user={otherUser} className="size-9" />

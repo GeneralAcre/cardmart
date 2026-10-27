@@ -54,6 +54,7 @@ export const PAGES: Record<string, string> = {
   "Profile updated.": "อัปเดตโปรไฟล์แล้ว",
   // Messages
   "No conversations yet.": "ยังไม่มีการสนทนา",
+  "Select a conversation to read and reply.": "เลือกบทสนทนาเพื่ออ่านและตอบกลับ",
   "Open a seller's profile or a listing and tap “Message Seller” to ask a question or negotiate a price.":
     "เปิดโปรไฟล์ผู้ขายหรือรายการขาย แล้วแตะ “ส่งข้อความหาผู้ขาย” เพื่อสอบถามหรือต่อรองราคา",
   "You:": "คุณ:",
