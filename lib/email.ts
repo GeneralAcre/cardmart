@@ -1,6 +1,8 @@
 import "server-only";
 import type { NotificationType } from "@prisma/client";
 
+import { siteUrl } from "@/lib/referral";
+
 // Transactional email through Resend's HTTP API (https://resend.com/docs/api-reference/emails/send-email)
 // — plain fetch, no SDK. Mirrors the in-app notification a user just got, so
 // email is never the only record of anything. Without RESEND_API_KEY every
@@ -11,11 +13,6 @@ export function isEmailConfigured() {
   return Boolean(process.env.RESEND_API_KEY?.trim());
 }
 
-function siteUrl() {
-  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-  return "http://localhost:3000";
-}
 
 // Notifications worth an email — things someone would want to know while
 // away from the site. Price-drop and wanted-card alerts stay in-app only,

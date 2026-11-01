@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 
 import { getSessionUser } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
@@ -142,4 +143,36 @@ export async function updateProfileImage(url: string | null): Promise<{ error?: 
   }
   await prisma.user.update({ where: { id: user.id }, data: { image: url } });
   return {};
+}
+
+/** Sets (or, with null, clears) the banner behind the user's profile; same rule as the picture. */
+export async function updateCoverImage(url: string | null): Promise<{ error?: string }> {
+  const user = await getSessionUser();
+  if (url !== null && !isOwnUploadUrl(url)) {
+    return { error: "The cover must be uploaded here, not linked from elsewhere." };
+  }
+  await prisma.user.update({ where: { id: user.id }, data: { coverImage: url } });
+  revalidatePath("/portfolio");
+  revalidatePath(`/store/${user.id}`);
+  return {};
+}
+
+/** Matches the textarea's maxLength in components/portfolio/profile-header.tsx. */
+const BIO_MAX = 160;
+
+/** Saves the short line under the user's name; a blank one removes it. */
+export async function updateBio(bio: string): Promise<{ bio: string | null }> {
+  const user = await getSessionUser();
+  // Keep line breaks (at most one blank line in a row), tidy everything else.
+  const clean =
+    bio
+      .replace(/[^\S\n]+/g, " ")
+      .replace(/ *\n */g, "\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim()
+      .slice(0, BIO_MAX) || null;
+  await prisma.user.update({ where: { id: user.id }, data: { bio: clean } });
+  revalidatePath("/portfolio");
+  revalidatePath(`/store/${user.id}`);
+  return { bio: clean };
 }

@@ -21,16 +21,19 @@ export function LandingNav({ authenticated }: { authenticated: boolean }) {
         <Link href="/" className="flex shrink-0 items-center gap-2">
           <Logo />
         </Link>
+        {/* Signed out: just the Login button. Signed in: the way into the app, plus language and light/dark. */}
         <div className="flex items-center gap-2">
           {authenticated ? (
-            <Button asChild size="sm">
-              <Link href="/marketplace">{t.nav.goToMarketplace}</Link>
-            </Button>
+            <>
+              <Button asChild size="sm">
+                <Link href="/marketplace">{t.nav.goToMarketplace}</Link>
+              </Button>
+              <LanguageSwitcher />
+              <ThemeToggleButton />
+            </>
           ) : (
             <LoginButton size="sm" className="w-auto" label="Login" />
           )}
-          <LanguageSwitcher />
-          <ThemeToggleButton />
         </div>
       </div>
     </header>

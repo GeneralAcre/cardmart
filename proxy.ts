@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { REF_COOKIE, REF_COOKIE_MAX_AGE, REF_HANDLE } from "@/lib/referral";
+
 // Viewable without signing in — legal pages and the marketing landing page
 // must stay readable by anyone, signed in or not. There's no separate
 // /login route anymore: "/" IS the sign-in surface (it embeds the real
@@ -45,6 +47,18 @@ function notFound(req: NextRequest) {
 // /onboarding redirect) at the data layer, as defense in depth — per
 // Privy's own guidance not to rely on middleware alone.
 export function proxy(req: NextRequest) {
+  const res = route(req) ?? NextResponse.next();
+  // An invite link (/?ref=<handle>): remember who sent it until the visitor
+  // first signs in, when lib/session.ts saves it. The first link opened wins,
+  // and people already signed in are past being referred.
+  const ref = req.nextUrl.searchParams.get("ref")?.toLowerCase();
+  if (ref && REF_HANDLE.test(ref) && !req.cookies.has("privy-token") && !req.cookies.has(REF_COOKIE)) {
+    res.cookies.set(REF_COOKIE, ref, { maxAge: REF_COOKIE_MAX_AGE, httpOnly: true, sameSite: "lax", path: "/" });
+  }
+  return res;
+}
+
+function route(req: NextRequest) {
   const { pathname } = req.nextUrl;
   // "privy-token", not "privy-id-token" — see lib/privy-server.ts for why.
   const hasSession = Boolean(req.cookies.get("privy-token")?.value);

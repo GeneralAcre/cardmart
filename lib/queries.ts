@@ -165,7 +165,17 @@ export type LandingShowcaseItem = Awaited<ReturnType<typeof getLandingShowcase>>
 export async function getSellerProfile(sellerId: string) {
   const seller = await prisma.user.findUnique({
     where: { id: sellerId },
-    select: { id: true, name: true, handle: true, image: true, createdAt: true, walletAddress: true, kycStatus: true },
+    select: {
+      id: true,
+      name: true,
+      handle: true,
+      image: true,
+      coverImage: true,
+      bio: true,
+      createdAt: true,
+      walletAddress: true,
+      kycStatus: true,
+    },
   });
   if (!seller) return null;
 

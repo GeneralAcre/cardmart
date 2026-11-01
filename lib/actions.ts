@@ -2500,6 +2500,67 @@ export async function getMyPortfolioPriceHistory(range: PriceHistoryRange) {
   return points.map((p) => ({ totalThb: p.totalThb, createdAt: p.createdAt.toISOString() }));
 }
 
+const MY_INDEX_NAME_MAX = 32;
+
+/** Names the current user's own index; a blank name goes back to the default, "My Index". */
+export async function renameMyIndex(name: string): Promise<{ name: string | null }> {
+  const user = await getCurrentUser();
+  const clean = name.replace(/\s+/g, " ").trim().slice(0, MY_INDEX_NAME_MAX) || null;
+  await prisma.user.update({ where: { id: user.id }, data: { myIndexName: clean } });
+  revalidatePath("/marketplace");
+  revalidatePath("/market/index/mine");
+  return { name: clean };
+}
+
+/** Extra indexes one user can build beside their watchlist one. */
+const USER_INDEX_MAX = 12;
+
+/** The current user's extra index, or a thrown error when it isn't theirs. */
+async function ownUserIndex(indexId: string) {
+  const user = await getCurrentUser();
+  const index = await prisma.userIndex.findFirst({ where: { id: indexId, userId: user.id }, select: { id: true } });
+  if (!index) throw new Error("Index not found.");
+  return index;
+}
+
+/** Starts another index for the current user, with no cards yet. */
+export async function createUserIndex(): Promise<{ id: string }> {
+  const user = await getCurrentUser();
+  const count = await prisma.userIndex.count({ where: { userId: user.id } });
+  if (count >= USER_INDEX_MAX) throw new Error(`You can build up to ${USER_INDEX_MAX + 1} indexes.`);
+  const index = await prisma.userIndex.create({ data: { userId: user.id }, select: { id: true } });
+  revalidatePath("/marketplace");
+  return index;
+}
+
+/** Names one of the current user's extra indexes; a blank name shows the default, "My Index". */
+export async function renameUserIndex(indexId: string, name: string): Promise<{ name: string | null }> {
+  const { id } = await ownUserIndex(indexId);
+  const clean = name.replace(/\s+/g, " ").trim().slice(0, MY_INDEX_NAME_MAX) || null;
+  await prisma.userIndex.update({ where: { id }, data: { name: clean } });
+  revalidatePath("/marketplace");
+  revalidatePath(`/market/index/mine-${id}`);
+  return { name: clean };
+}
+
+/** Deletes one of the current user's extra indexes. */
+export async function deleteUserIndex(indexId: string) {
+  const { id } = await ownUserIndex(indexId);
+  await prisma.userIndex.delete({ where: { id } });
+  revalidatePath("/marketplace");
+}
+
+/** Adds or removes a card from one of the current user's extra indexes; returns the new state. */
+export async function toggleUserIndexCard(indexId: string, assetId: string): Promise<{ watching: boolean }> {
+  const { id } = await ownUserIndex(indexId);
+  const existing = await prisma.userIndexCard.findUnique({ where: { indexId_assetId: { indexId: id, assetId } } });
+  if (existing) await prisma.userIndexCard.delete({ where: { id: existing.id } });
+  else await prisma.userIndexCard.create({ data: { indexId: id, assetId } });
+  revalidatePath("/marketplace");
+  revalidatePath(`/market/index/mine-${id}`);
+  return { watching: !existing };
+}
+
 /** Adds or removes an item from the current user's watchlist; returns the new state. */
 export async function toggleWatchlist(assetId: string): Promise<{ watching: boolean }> {
   const user = await getCurrentUser();

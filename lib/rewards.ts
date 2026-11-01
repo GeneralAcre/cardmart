@@ -91,7 +91,7 @@ export interface Rewards {
 }
 
 export async function getRewards(user: { id: string; image: string | null; kycStatus: string }): Promise<Rewards> {
-  const [watching, wanted, messages, listed, bought, sold, bids, reviews, agentTasks] = await Promise.all([
+  const [watching, wanted, messages, listed, bought, sold, bids, reviews, agentTasks, invited] = await Promise.all([
     prisma.watchlistItem.count({ where: { userId: user.id } }),
     prisma.wantedCard.count({ where: { userId: user.id } }),
     prisma.message.count({ where: { senderId: user.id } }),
@@ -101,6 +101,8 @@ export async function getRewards(user: { id: string; image: string | null; kycSt
     prisma.bid.count({ where: { bidderId: user.id } }),
     prisma.review.count({ where: { buyerId: user.id } }),
     prisma.agentMandate.count({ where: { userId: user.id } }),
+    // Friends who signed up from their invite link and finished their profile.
+    prisma.user.count({ where: { referredById: user.id, profileComplete: true } }),
   ]);
 
   const tiered: TieredTask[] = [
@@ -117,6 +119,7 @@ export async function getRewards(user: { id: string; image: string | null; kycSt
     { id: "bid", group: "trade", titleOne: "Place your first bid", title: "Place {n} bids", description: "Bid in live auctions.", href: "/auctions", tiers: [{ target: 1, xp: 50 }, { target: 10, xp: 200 }, { target: 50, xp: 500 }], count: bids },
     { id: "review", group: "trade", titleOne: "Review your first seller", title: "Review {n} sellers", description: "Rate a seller after a purchase.", href: "/portfolio", tiers: [{ target: 1, xp: 75 }, { target: 5, xp: 200 }], count: reviews },
     { id: "agent", group: "trade", titleOne: "Start your first agent task", title: "Start {n} agent tasks", description: "Let the buying agent hunt for a card.", href: "/agent", tiers: [{ target: 1, xp: 75 }, { target: 5, xp: 200 }], count: agentTasks },
+    { id: "invite", group: "trade", titleOne: "Invite your first friend", title: "Invite {n} friends", description: "Friends who sign up from your invite link or QR code.", href: "#invite", tiers: [{ target: 1, xp: 100 }, { target: 5, xp: 300 }, { target: 20, xp: 800 }], count: invited },
   ];
 
   const tasks = tiered.map(toTask);

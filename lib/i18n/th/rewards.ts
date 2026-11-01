@@ -72,4 +72,11 @@ export const REWARDS: Record<string, string> = {
   weekly: "รายสัปดาห์",
   monthly: "รายเดือน",
   "all-time": "ตลอดกาล",
+  "Invite your first friend": "ชวนเพื่อนคนแรก",
+  "Invite {n} friends": "ชวนเพื่อน {n} คน",
+  "Friends who sign up from your invite link or QR code.": "เพื่อนที่สมัครผ่านลิงก์ชวนหรือ QR code ของคุณ",
+  "Invite friends": "ชวนเพื่อน",
+  "Invite QR code": "QR code ชวนเพื่อน",
+  "Friends who sign up from this link or QR code count as your invites. It's also on every profit card you share.":
+    "เพื่อนที่สมัครผ่านลิงก์หรือ QR code นี้จะนับเป็นเพื่อนที่คุณชวน และ QR นี้อยู่บนการ์ดกำไรทุกใบที่คุณแชร์ด้วย",
 };

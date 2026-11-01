@@ -2,7 +2,10 @@ import Link from "next/link";
 import { ArrowRight, BadgeCheck, Check, Crown, Sparkles, Trophy } from "lucide-react";
 
 import { CommunityTabs } from "@/components/community/community-tabs";
+import { ItemShareButton } from "@/components/item/share-button";
 import { Progress } from "@/components/ui/progress";
+import { qrPath } from "@/lib/qr";
+import { referralUrl } from "@/lib/referral";
 import { LEVELS, getRewards, type RewardTask, type Rewards } from "@/lib/rewards";
 import { TOP_TIER_SELLER } from "@/lib/seller-tier";
 import { getCurrentUser } from "@/lib/session";
@@ -59,32 +62,58 @@ export default async function RewardsPage() {
           <TaskSection title={t("Trading")} tasks={trade} t={t} />
         </div>
 
-        {/* Every level and what it takes. */}
-        <aside className="bg-card flex h-fit flex-col rounded-2xl border">
-          <h2 className="eyebrow text-muted-foreground border-b px-4 py-3">{t("Levels")}</h2>
-          <ol className="flex flex-col divide-y">
-            {LEVELS.map((l) => {
-              const reached = xp >= l.minXp;
-              const current = l.level === level.level;
-              return (
-                <li key={l.level} className={cn("flex items-center gap-3 px-4 py-3", current && "bg-secondary/60")}>
-                  <span
-                    className={cn(
-                      "flex size-7 shrink-0 items-center justify-center rounded-full border text-xs font-bold tabular-nums",
-                      reached ? "bg-success border-success text-success-foreground" : "text-muted-foreground",
-                    )}
-                  >
-                    {l.level}
-                  </span>
-                  <span className={cn("flex-1 text-sm font-medium", !reached && "text-muted-foreground")}>{t(l.name)}</span>
-                  <span className="text-muted-foreground text-xs tabular-nums">{l.minXp.toLocaleString()} XP</span>
-                </li>
-              );
-            })}
-          </ol>
-        </aside>
+        <div className="flex h-fit flex-col gap-6">
+          {/* Every level and what it takes. */}
+          <aside className="bg-card flex flex-col rounded-2xl border">
+            <h2 className="eyebrow text-muted-foreground border-b px-4 py-3">{t("Levels")}</h2>
+            <ol className="flex flex-col divide-y">
+              {LEVELS.map((l) => {
+                const reached = xp >= l.minXp;
+                const current = l.level === level.level;
+                return (
+                  <li key={l.level} className={cn("flex items-center gap-3 px-4 py-3", current && "bg-secondary/60")}>
+                    <span
+                      className={cn(
+                        "flex size-7 shrink-0 items-center justify-center rounded-full border text-xs font-bold tabular-nums",
+                        reached ? "bg-success border-success text-success-foreground" : "text-muted-foreground",
+                      )}
+                    >
+                      {l.level}
+                    </span>
+                    <span className={cn("flex-1 text-sm font-medium", !reached && "text-muted-foreground")}>{t(l.name)}</span>
+                    <span className="text-muted-foreground text-xs tabular-nums">{l.minXp.toLocaleString()} XP</span>
+                  </li>
+                );
+              })}
+            </ol>
+          </aside>
+          {user.handle && <InviteCard handle={user.handle} t={t} />}
+        </div>
       </div>
     </div>
+  );
+}
+
+/** The user's invite link and its QR code, the same one their shared profit cards carry. */
+function InviteCard({ handle, t }: { handle: string; t: Translate }) {
+  const url = referralUrl(handle);
+  const qr = qrPath(url);
+  return (
+    <section id="invite" className="bg-card flex scroll-mt-24 flex-col rounded-2xl border">
+      <h2 className="eyebrow text-muted-foreground border-b px-4 py-3">{t("Invite friends")}</h2>
+      <div className="flex flex-col items-center gap-3 p-4">
+        <svg viewBox={`0 0 ${qr.size} ${qr.size}`} className="size-40 rounded-lg bg-white" shapeRendering="crispEdges" aria-label={t("Invite QR code")}>
+          <path d={qr.d} fill="#000" />
+        </svg>
+        <p className="text-muted-foreground text-center text-xs">
+          {t("Friends who sign up from this link or QR code count as your invites. It's also on every profit card you share.")}
+        </p>
+        <div className="bg-secondary flex w-full items-center gap-1 rounded-lg pl-3">
+          <span className="min-w-0 flex-1 truncate text-xs">{url.replace(/^https?:\/\//, "")}</span>
+          <ItemShareButton path={`/?ref=${handle}`} />
+        </div>
+      </div>
+    </section>
   );
 }
 

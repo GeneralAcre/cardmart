@@ -2,11 +2,18 @@
 
 import { GameIcon } from "@/components/ui/game-icon";
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { useId, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { Bookmark, ChevronRight, Loader2, Pencil, Plus } from "lucide-react";
 import { Area, AreaChart, Tooltip, YAxis } from "recharts";
 
+import { MyIndexEditor } from "@/components/marketplace/my-index-editor";
+import { createUserIndex } from "@/lib/actions";
+import { Button } from "@/components/ui/button";
 import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
-import type { MarketIndex } from "@/lib/stats";
+import type { LeaderboardRow } from "@/lib/queries";
+import type { MarketIndex, MyIndex } from "@/lib/stats";
 import { cn } from "@/lib/utils";
 import { ChangeTag } from "@/components/ui/change-tag";
 import { useLanguage } from "@/components/landing/language-provider";
@@ -15,6 +22,7 @@ const NAMES: Record<MarketIndex["key"], string> = {
   ALL: "CardMart Index",
   POKEMON: "Pokémon Index",
   ONE_PIECE: "One Piece Index",
+  MINE: "My Index",
 };
 
 // Each index opens its own page listing the cards inside it.
@@ -22,15 +30,18 @@ const HREF: Record<MarketIndex["key"], string> = {
   ALL: "/market/index/cardmart",
   POKEMON: "/market/index/pokemon",
   ONE_PIECE: "/market/index/one-piece",
+  MINE: "/market/index/mine",
 };
 
-// Small tile for an index: the CardMart star, a Poké Ball, or an anchor.
+// Small tile for an index: the CardMart star, a Poké Ball, an anchor, or a bookmark for your own.
 function IndexIcon({ index }: { index: MarketIndex["key"] }) {
   return (
     <span aria-hidden className="flex size-7 shrink-0 items-center justify-center">
       {index === "ALL" ? (
         // eslint-disable-next-line @next/next/no-img-element -- tiny static logo
         <img src="/cardmart-star.png" alt="" className="logo-adaptive size-3.5 object-contain" />
+      ) : index === "MINE" ? (
+        <Bookmark className="size-3.5 fill-current" />
       ) : (
         <GameIcon game={index} size={20} />
       )}
@@ -48,7 +59,8 @@ function Sparkline({ index, className, tooltip = true }: { index: MarketIndex; c
   const up = (last?.price ?? 0) >= (first?.price ?? 0);
   const config = { price: { label: t(NAMES[index.key]), color: up ? "var(--success)" : "var(--destructive)" } } satisfies ChartConfig;
   const dateLocale = locale === "th" ? "th-TH" : "en-US";
-  const fillId = `indexFill-${index.key}-${tooltip ? "card" : "row"}`;
+  // Unique per chart: several of your own indexes share the "MINE" key.
+  const fillId = `indexFill-${useId().replace(/:/g, "")}`;
 
   return (
     <ChartContainer config={config} className={cn("aspect-auto", className)}>
@@ -114,16 +126,10 @@ function Beam({ strong }: { strong?: boolean }) {
   );
 }
 
-/** Desktop: a glass card per index, lit from below. */
-function IndexCard({ index }: { index: MarketIndex }) {
-  const { tr: t } = useLanguage();
-  const last = index.points.at(-1);
-
+/** The glass card's frame: sheen, beam and hover lift. */
+function CardShell({ children }: { children: React.ReactNode }) {
   return (
-    <Link
-      href={HREF[index.key]}
-      className="bg-card hover:border-success/40 group relative isolate flex w-full flex-col justify-between gap-5 overflow-hidden rounded-3xl border px-5 pt-5 pb-7 transition-[border-color,transform] duration-300 hover:-translate-y-0.5"
-    >
+    <div className="bg-card hover:border-success/40 group relative isolate flex w-full flex-col justify-between gap-5 overflow-hidden rounded-3xl border px-5 pt-5 pb-7 transition-[border-color,transform] duration-300 has-[a:hover]:-translate-y-0.5">
       {/* Glass: a faint sheen falling from the top-left corner. */}
       <div
         aria-hidden
@@ -131,21 +137,57 @@ function IndexCard({ index }: { index: MarketIndex }) {
         style={{ backgroundImage: "linear-gradient(150deg, color-mix(in oklab, var(--foreground) 8%, transparent), transparent 42%)" }}
       />
       <Beam />
+      {children}
+    </div>
+  );
+}
+
+function NamePill({ index, label, chevron = true }: { index: MarketIndex["key"]; label?: string; chevron?: boolean }) {
+  const { tr: t } = useLanguage();
+  return (
+    <span className="bg-foreground/[0.05] flex min-w-0 items-center gap-2 rounded-full border py-1 pr-3 pl-1 text-sm font-medium">
+      <IndexIcon index={index} />
+      <span className="truncate">{label ?? t(NAMES[index])}</span>
+      {chevron && <ChevronRight className="text-muted-foreground size-3.5 shrink-0 transition-transform group-hover:translate-x-0.5" />}
+    </span>
+  );
+}
+
+/**
+ * A glass card per index, lit from below. The whole card links to the index's
+ * page; `action` sits above that link (the Edit button on your own index).
+ */
+function IndexCard({
+  index,
+  href = HREF[index.key],
+  label,
+  subtitle,
+  action,
+}: {
+  index: MarketIndex;
+  href?: string;
+  label?: string;
+  subtitle: string;
+  action?: React.ReactNode;
+}) {
+  const { tr: t } = useLanguage();
+  const last = index.points.at(-1);
+
+  return (
+    <CardShell>
+      <Link href={href} aria-label={label ?? t(NAMES[index.key])} className="absolute inset-0 z-[1] rounded-3xl" />
 
       <div className="flex min-w-0 items-center justify-between gap-3">
-        <span className="bg-foreground/[0.05] flex min-w-0 items-center gap-2 rounded-full border py-1 pr-3 pl-1 text-sm font-medium">
-          <IndexIcon index={index.key} />
-          <span className="truncate">{t(NAMES[index.key])}</span>
-          <ChevronRight className="text-muted-foreground size-3.5 shrink-0 transition-transform group-hover:translate-x-0.5" />
+        <NamePill index={index.key} label={label} />
+        <span className="flex shrink-0 items-center gap-2">
+          {action && <span className="relative z-[2]">{action}</span>}
+          <ChangeTag pct={index.change1d} pill />
         </span>
-        <ChangeTag pct={index.change1d} pill />
       </div>
 
       <div className="flex items-end justify-between gap-4">
         <div className="flex min-w-0 flex-col gap-2">
-          <span className="text-muted-foreground text-xs tabular-nums">
-            {index.key === "ALL" ? t("Top 10 listed on CardMart") : t("Top 50 by market cap")}
-          </span>
+          <span className="text-muted-foreground truncate text-xs tabular-nums">{subtitle}</span>
           <span className="text-4xl leading-none font-semibold tracking-tight tabular-nums">{last ? formatLevel(last.price) : "—"}</span>
         </div>
         {index.points.length >= 2 ? (
@@ -157,20 +199,146 @@ function IndexCard({ index }: { index: MarketIndex }) {
           </svg>
         )}
       </div>
-    </Link>
+    </CardShell>
   );
 }
 
-/** The indexes, like a stock market's headline indexes. */
-export function MarketIndexes({ indexes }: { indexes: MarketIndex[] }) {
-  if (indexes.every((i) => i.points.length === 0)) return null;
+/** Your own index: the cards you picked, with an Edit button; an invitation to build one when it's empty. */
+function MyIndexCard({ mine, listings, autoOpen = false }: { mine: MyIndexCardData; listings: LeaderboardRow[]; autoOpen?: boolean }) {
+  const { tr: t } = useLanguage();
+  // A just-created index opens its editor straight away.
+  const [editing, setEditing] = useState(autoOpen);
+  const { id, name, index, cards } = mine;
+  const label = name ?? undefined;
+  const priced = cards.filter((c) => c.priced).length;
+  const editor = <MyIndexEditor indexId={id} open={editing} onOpenChange={setEditing} name={name} cards={cards} listings={listings} />;
+
+  if (cards.length === 0) {
+    return (
+      <CardShell>
+        <div className="flex min-w-0 items-center justify-between gap-3">
+          <NamePill index="MINE" label={label} chevron={false} />
+        </div>
+        <div className="flex items-end justify-between gap-4">
+          <p className="text-muted-foreground max-w-[16rem] text-sm">{t("Pick any cards and track them as your own index.")}</p>
+          <Button size="sm" onClick={() => setEditing(true)} className="shrink-0">
+            <Plus />
+            {id ? t("Add cards") : t("Create")}
+          </Button>
+        </div>
+        {editor}
+      </CardShell>
+    );
+  }
+
+  return (
+    <>
+      <IndexCard
+        index={index}
+        href={id ? `/market/index/mine-${id}` : HREF.MINE}
+        label={label}
+        subtitle={
+          priced === cards.length
+            ? t("{count} cards you picked", { count: cards.length })
+            : t("{priced} of {count} cards priced", { priced, count: cards.length })
+        }
+        action={
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            aria-label={t("Edit My Index")}
+            title={t("Edit My Index")}
+            className="bg-foreground/[0.05] hover:bg-foreground/10 text-muted-foreground hover:text-foreground flex size-7 items-center justify-center rounded-full border transition-colors"
+          >
+            <Pencil className="size-3.5" />
+          </button>
+        }
+      />
+      {editor}
+    </>
+  );
+}
+
+/** A dashed tile at the end of the row that starts another index of your own. */
+function NewIndexCard({ onCreated }: { onCreated: (id: string) => void }) {
+  const { tr: t } = useLanguage();
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+
+  function create() {
+    startTransition(async () => {
+      try {
+        const { id } = await createUserIndex();
+        onCreated(id);
+        router.refresh();
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : t("Could not create an index."));
+      }
+    });
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={create}
+      disabled={pending}
+      className="text-muted-foreground hover:text-foreground hover:border-foreground/30 flex w-full flex-col items-center justify-center gap-2 rounded-3xl border border-dashed px-5 py-10 text-sm font-medium transition-colors disabled:opacity-60"
+    >
+      <span className="bg-foreground/[0.05] flex size-9 items-center justify-center rounded-full border">
+        {pending ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
+      </span>
+      {t("New index")}
+    </button>
+  );
+}
+
+export type MyIndexCardData = Pick<MyIndex, "id" | "name" | "index" | "cards">;
+
+/** Your watchlist index plus the extras allowed by USER_INDEX_MAX in lib/actions.ts. */
+const MAX_OWN_INDEXES = 13;
+
+/** Card widths in the desktop row: up to four across on wide screens (two on mid-size ones), more scroll sideways. */
+function rowWidth(count: number) {
+  if (count === 1) return "w-full";
+  if (count === 2) return "w-[calc((100%-1rem)/2)]";
+  if (count === 3) return "w-[calc((100%-2rem)/3)]";
+  return "w-[calc((100%-1rem)/2)] xl:w-[calc((100%-3rem)/4)]";
+}
+
+/**
+ * The indexes, like a stock market's headline indexes. Signed-in viewers also
+ * get their own (`mine`: the watchlist one first, then any extras they built).
+ */
+export function MarketIndexes({
+  indexes,
+  mine = [],
+  listings = [],
+}: {
+  indexes: MarketIndex[];
+  mine?: MyIndexCardData[];
+  listings?: LeaderboardRow[];
+}) {
+  const { tr: t } = useLanguage();
+  const [justCreated, setJustCreated] = useState<string | null>(null);
+  if (mine.length === 0 && indexes.every((i) => i.points.length === 0)) return null;
+  const subtitle = (index: MarketIndex) => (index.key === "ALL" ? t("Top 10 listed on CardMart") : t("Top 50 by market cap"));
+  // Offer another index once the first has cards, so an empty row doesn't show two invitations.
+  const canAdd = mine.length > 0 && mine.length < MAX_OWN_INDEXES && (mine.length > 1 || mine[0].cards.length > 0);
+  const cards = [
+    ...indexes.map((index) => ({ key: index.key, node: <IndexCard index={index} subtitle={subtitle(index)} /> })),
+    ...mine.map((m) => ({
+      key: m.id ?? "MINE",
+      node: <MyIndexCard mine={m} listings={listings} autoOpen={m.id != null && m.id === justCreated} />,
+    })),
+    ...(canAdd ? [{ key: "NEW", node: <NewIndexCard onCreated={setJustCreated} /> }] : []),
+  ];
   return (
     <>
       {/* Phones: the same glass cards as desktop, in a row you swipe through, with the next card peeking in. */}
       <div className="-mx-4 flex snap-x snap-mandatory scroll-pl-4 gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] md:hidden [&::-webkit-scrollbar]:hidden">
-        {indexes.map((index) => (
-          <div key={index.key} className="flex w-[82%] shrink-0 snap-start">
-            <IndexCard index={index} />
+        {cards.map((c) => (
+          <div key={c.key} className="flex w-[82%] shrink-0 snap-start">
+            {c.node}
           </div>
         ))}
       </div>
@@ -181,9 +349,12 @@ export function MarketIndexes({ indexes }: { indexes: MarketIndex[] }) {
           className="dark-only pointer-events-none absolute inset-x-[6%] -bottom-10 -z-10 h-36 blur-3xl"
           style={{ backgroundImage: "radial-gradient(60% 100% at 50% 100%, color-mix(in oklab, var(--foreground) 18%, transparent), transparent 70%)" }}
         />
-        <div className="grid grid-cols-3 gap-4">
-          {indexes.map((index) => (
-            <IndexCard key={index.key} index={index} />
+        {/* A little room above and below so the hover lift isn't clipped by the scroll box. */}
+        <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pt-1 pb-3 [scrollbar-width:thin]">
+          {cards.map((c) => (
+            <div key={c.key} className={cn("flex shrink-0 snap-start", rowWidth(cards.length))}>
+              {c.node}
+            </div>
           ))}
         </div>
       </section>

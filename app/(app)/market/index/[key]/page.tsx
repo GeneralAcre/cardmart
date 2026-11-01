@@ -3,7 +3,7 @@ import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { notFound } from "next/navigation";
 
 import { IndexMembers, IndexQuote, IndexSparkline } from "@/components/marketplace/index-detail";
-import { getIndexDetail, type IndexKey, type IndexMember } from "@/lib/stats";
+import { getIndexDetail, getMarketIndexes, getMyIndex, getUserIndex, type IndexMember, type MarketIndex } from "@/lib/stats";
 import { priceStats } from "@/lib/stats-math";
 import { getMoney } from "@/lib/currency-server";
 import { getCurrentUser } from "@/lib/session";
@@ -11,10 +11,10 @@ import { getLocale, getT } from "@/lib/i18n/server";
 import { cn } from "@/lib/utils";
 
 // URL slug → index. The links come from the index cards on the Market page.
-const SLUGS: Record<string, IndexKey> = { cardmart: "ALL", pokemon: "POKEMON", "one-piece": "ONE_PIECE" };
-const SLUG_OF: Record<IndexKey, string> = { ALL: "cardmart", POKEMON: "pokemon", ONE_PIECE: "one-piece" };
+const SLUGS: Record<string, MarketIndex["key"]> = { cardmart: "ALL", pokemon: "POKEMON", "one-piece": "ONE_PIECE", mine: "MINE" };
+const SLUG_OF: Record<MarketIndex["key"], string> = { ALL: "cardmart", POKEMON: "pokemon", ONE_PIECE: "one-piece", MINE: "mine" };
 
-const INFO: Record<IndexKey, { title: string; description: string }> = {
+const INFO: Record<MarketIndex["key"], { title: string; description: string }> = {
   ALL: {
     title: "CardMart Index",
     description: "Every card on CardMart that has a market price, each in its own grade, weighted equally.",
@@ -29,7 +29,20 @@ const INFO: Record<IndexKey, { title: string; description: string }> = {
     description:
       "The 50 most valuable One Piece cards right now, by TCGplayer market price. A card that falls out of the top 50 leaves the index and the next most valuable one joins.",
   },
+  MINE: {
+    title: "My Index",
+    description:
+      "The cards you picked, each in its own grade, weighted equally. Only you can see it. Edit it from its card on the Market page.",
+  },
 };
+
+/** Your own index plus the three market ones; the market ones on their own otherwise. `ownId` picks one of your extra indexes. */
+async function loadDetail(key: MarketIndex["key"], userId: string, ownId: string | null) {
+  if (key !== "MINE") return { name: null, ...(await getIndexDetail(key)) };
+  const [mine, all] = await Promise.all([ownId ? getUserIndex(userId, ownId) : getMyIndex(userId), getMarketIndexes()]);
+  if (!mine) notFound();
+  return { name: mine.name, index: mine.index, members: mine.members, all };
+}
 
 const DAY = 86_400_000;
 const formatLevel = (v: number) => v.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -71,11 +84,15 @@ function MoverList({ title, members }: { title: string; members: IndexMember[] }
 export default async function IndexPage({ params }: { params: Promise<{ key: string }> }) {
   const money = await getMoney();
   const { key: slug } = await params;
-  const key = SLUGS[slug];
+  // Your extra indexes live at /market/index/mine-<id>.
+  const ownId = slug.startsWith("mine-") ? slug.slice("mine-".length) : null;
+  const key = ownId ? "MINE" : SLUGS[slug];
   if (!key) notFound();
-  await getCurrentUser();
-  const [{ index, members, all }, t, locale] = await Promise.all([getIndexDetail(key), getT(), getLocale()]);
+  const user = await getCurrentUser();
+  const [{ name, index, members, all }, t, locale] = await Promise.all([loadDetail(key, user.id, ownId), getT(), getLocale()]);
   const info = INFO[key];
+  // Your own index shows the name you gave it.
+  const title = name ?? t(info.title);
   const dateLocale = locale === "th" ? "th-TH" : "en-US";
   const day = (ms: number) => new Date(ms).toLocaleDateString(dateLocale, { day: "numeric", month: "short", year: "numeric" });
 
@@ -100,24 +117,24 @@ export default async function IndexPage({ params }: { params: Promise<{ key: str
 
   return (
     <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
-      <Breadcrumbs items={[{ label: t("Market"), href: "/marketplace" }, { label: t(info.title) }]} />
+      <Breadcrumbs items={[{ label: t("Market"), href: "/marketplace" }, { label: title }]} />
 
       <div className="mb-4 flex max-w-2xl flex-col gap-1">
-        <h1 className="text-2xl font-semibold">{t(info.title)}</h1>
+        <h1 className="text-2xl font-semibold">{title}</h1>
         <p className="text-muted-foreground text-sm">{t(info.description)}</p>
       </div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="contents lg:flex lg:min-w-0 lg:flex-col lg:gap-8">
           <div className="order-1 lg:order-none">
-            <IndexQuote index={index} name={t(info.title)} />
+            <IndexQuote index={index} name={title} />
           </div>
 
           <section className="order-3 flex flex-col gap-2 lg:order-none">
             <h2 className="text-lg font-semibold">{t("Cards in this index")}</h2>
             <IndexMembers members={members} longLabel={longLabel} />
             <p className="text-muted-foreground text-[11px]">
-              {key === "ALL"
+              {key === "ALL" || key === "MINE"
                 ? t("Prices are eBay's daily median asking price for each card and grade, converted to baht.")
                 : t("Prices are TCGplayer's market price for the ungraded card, in baht. The top 50 is re-ranked once a day.")}
             </p>

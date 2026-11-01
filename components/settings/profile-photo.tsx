@@ -9,24 +9,11 @@ import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { updateProfileImage } from "@/lib/profile-actions";
+import { cropToJpeg } from "@/lib/crop-image";
 import { useT } from "@/components/landing/language-provider";
 
-const SIZE = 512;
-
-/** Crops the middle square out of a photo and re-encodes it as a 512px JPEG. */
-async function squareAvatar(file: File): Promise<Blob> {
-  const bitmap = await createImageBitmap(file);
-  const side = Math.min(bitmap.width, bitmap.height);
-  const canvas = document.createElement("canvas");
-  canvas.width = canvas.height = Math.min(SIZE, side);
-  canvas
-    .getContext("2d")
-    ?.drawImage(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side, 0, 0, canvas.width, canvas.height);
-  bitmap.close();
-  return new Promise((resolve, reject) =>
-    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("Could not read that photo."))), "image/jpeg", 0.88),
-  );
-}
+/** The middle square of a photo, as a 512px JPEG. */
+export const squareAvatar = (file: File) => cropToJpeg(file, 512, 512);
 
 /** The profile picture, with a button to pick a new one from the gallery or camera, and one to remove it. */
 export function ProfilePhoto({ image, name, initials }: { image: string | null; name: string; initials: string }) {

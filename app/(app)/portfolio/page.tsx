@@ -84,6 +84,8 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
           name={user.name ?? user.handle ?? t("Collector")}
           handle={user.handle}
           image={user.image}
+          coverImage={user.coverImage}
+          bio={user.bio}
           walletAddress={walletAddress}
           createdAt={user.createdAt}
           solBalance={solBalance}

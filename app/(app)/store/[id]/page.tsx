@@ -8,7 +8,7 @@ import { getSellerProfile } from "@/lib/queries";
 import { getCurrentUser } from "@/lib/session";
 import { getT } from "@/lib/i18n/server";
 import { MessageSellerButton } from "@/components/messages/message-seller-button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ProfileAvatar, ProfileBio, ProfileCover } from "@/components/profile/profile-cover";
 import { ListingCard } from "@/components/marketplace/listing-card";
 import { RatingStars } from "@/components/store/rating-stars";
 import { SellerWalletAddress } from "@/components/store/seller-wallet-address";
@@ -39,12 +39,16 @@ export default async function StorePage({ params }: { params: Promise<{ id: stri
 
   return (
     <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6">
-      <div className="bg-card mb-8 flex flex-wrap items-center gap-4 rounded-xl border p-5">
-        <Avatar className="ring-border size-14 shrink-0 ring-2 ring-offset-2">
-          {seller.image && <AvatarImage src={seller.image} alt={displayName} />}
-          <AvatarFallback className="text-base font-medium">{initials}</AvatarFallback>
-        </Avatar>
-        <div className="flex min-w-[12rem] flex-1 flex-col gap-1">
+      {/* Their cover across the top, their picture overlapping its lower edge, like a social profile. */}
+      <div className="mb-8 flex flex-col">
+        <ProfileCover cover={seller.coverImage} editable={currentUser.id === seller.id} />
+        <div className="flex items-start justify-between gap-4 px-4 sm:px-6">
+          <div className="-mt-12 shrink-0 sm:-mt-16">
+            <ProfileAvatar image={seller.image} name={displayName} initials={initials} />
+          </div>
+          {currentUser.id !== seller.id && <MessageSellerButton sellerId={seller.id} className="mt-3 shrink-0" />}
+        </div>
+        <div className="mt-3 flex min-w-0 flex-col gap-1 px-4 sm:px-6">
           <div className="flex flex-wrap items-baseline gap-x-2">
             <h1 className="truncate text-lg font-semibold">{displayName}</h1>
             {seller.handle && <span className="text-muted-foreground text-sm">@{seller.handle}</span>}
@@ -54,6 +58,7 @@ export default async function StorePage({ params }: { params: Promise<{ id: stri
               className="self-center"
             />
           </div>
+          <ProfileBio bio={seller.bio} className="my-1" />
           <RatingStars average={rating.average} count={rating.count} size="md" />
           <span className="text-muted-foreground text-xs">
             {t("Member since {date}", { date: formatDate(seller.createdAt) })} &middot;{" "}
@@ -62,9 +67,6 @@ export default async function StorePage({ params }: { params: Promise<{ id: stri
           </span>
           {seller.walletAddress && <SellerWalletAddress address={seller.walletAddress} />}
         </div>
-        {currentUser.id !== seller.id && (
-          <MessageSellerButton sellerId={seller.id} className="shrink-0" />
-        )}
       </div>
 
       {/* Tabs instead of three always-stacked sections — a brand-new

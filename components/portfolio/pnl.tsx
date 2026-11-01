@@ -134,11 +134,11 @@ export function HoldingPnlBlock({ assetId, pnl }: { assetId: string; pnl: Holdin
     );
   }
 
-  // Just how much the card has made (or lost) in baht. What was paid and what
-  // it's worth are in the hover text and on the card's page.
+  // Just how much the card has made (or lost), as a percentage. What was paid
+  // and what it's worth are in the hover text and on the card's page.
   const amount =
-    pnl.gainThb != null ? (
-      <span className={cn("text-lg leading-none font-bold whitespace-nowrap tabular-nums", toneClass(pnl.gainThb))}>{signedThb(money, pnl.gainThb)}</span>
+    pnl.gainPct != null ? (
+      <ChangeTag pct={pnl.gainPct} className="text-base leading-none font-bold" />
     ) : (
       <span className="text-muted-foreground truncate text-sm leading-none">{t("No market price yet")}</span>
     );

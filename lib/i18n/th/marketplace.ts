@@ -115,4 +115,26 @@ export const MARKETPLACE: Record<string, string> = {
   "Core chase cards such as Pokémon ex.": "การ์ดล่าหลัก เช่น Pokémon ex",
   "Regular holo or non-holo rares.": "การ์ดแรร์ทั่วไป ทั้งโฮโลและไม่โฮโล",
   "The everyday cards in a pack.": "การ์ดทั่วไปในซอง",
+  // My Index (components/marketplace/market-indexes.tsx, my-index-editor.tsx)
+  "My Index": "ดัชนีของฉัน",
+  Create: "สร้าง",
+  "Pick any cards and track them as your own index.": "เลือกการ์ดที่ต้องการแล้วติดตามเป็นดัชนีของคุณเอง",
+  "{count} cards you picked": "การ์ดที่คุณเลือก {count} ใบ",
+  "{priced} of {count} cards priced": "มีราคาตลาด {priced} จาก {count} ใบ",
+  "Edit My Index": "แก้ไขดัชนีของฉัน",
+  "Pick the cards to track. Your index moves with their market prices, each card weighted equally.":
+    "เลือกการ์ดที่ต้องการติดตาม ดัชนีของคุณจะขยับตามราคาตลาดของการ์ดเหล่านั้น โดยแต่ละใบมีน้ำหนักเท่ากัน",
+  "No listed cards match.": "ไม่มีการ์ดที่วางขายตรงกับคำค้นหา",
+  "Search for a card to add it to your index.": "ค้นหาการ์ดเพื่อเพิ่มลงในดัชนีของคุณ",
+  "Remove from index": "นำออกจากดัชนี",
+  "Add to index": "เพิ่มลงในดัชนี",
+  "Could not rename your index.": "เปลี่ยนชื่อดัชนีไม่สำเร็จ",
+  "New index": "ดัชนีใหม่",
+  "Add cards": "เพิ่มการ์ด",
+  "Could not create an index.": "สร้างดัชนีไม่สำเร็จ",
+  "Delete index": "ลบดัชนี",
+  "Delete this index?": "ลบดัชนีนี้ใช่ไหม",
+  "Could not delete your index.": "ลบดัชนีไม่สำเร็จ",
+  "The cards you picked, each in its own grade, weighted equally. Only you can see it. Edit it from its card on the Market page.":
+    "การ์ดที่คุณเลือก แยกตามเกรดของแต่ละใบ โดยมีน้ำหนักเท่ากัน มีเพียงคุณที่เห็นดัชนีนี้ แก้ไขได้จากการ์ดดัชนีในหน้าตลาด",
 };

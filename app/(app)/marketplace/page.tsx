@@ -10,16 +10,17 @@ import { ActionButton } from "@/components/ui/action-button";
 import { getLeaderboard, getMarketplaceListings } from "@/lib/queries";
 import { getOptionalUser } from "@/lib/session";
 import { getT } from "@/lib/i18n/server";
-import { getMarketIndexes } from "@/lib/stats";
+import { getMarketIndexes, getMyIndex, getUserIndexes } from "@/lib/stats";
 import { CARD_GAMES } from "@/lib/labels";
 import { EMPTY_FILTERS } from "@/lib/types";
 
 export default async function MarketplacePage({ searchParams }: { searchParams: Promise<{ q?: string; game?: string }> }) {
   const [{ q, game }, user] = await Promise.all([searchParams, getOptionalUser()]);
-  const [listings, movers, indexes, t] = await Promise.all([
+  const [listings, movers, indexes, mine, t] = await Promise.all([
     getMarketplaceListings(),
     getLeaderboard(user?.id ?? ""),
     getMarketIndexes(),
+    user ? Promise.all([getMyIndex(user.id), getUserIndexes(user.id)]).then(([first, extras]) => [first, ...extras]) : [],
     getT(),
   ]);
 
@@ -47,9 +48,14 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
           <Plus className="size-7" />
         </Link>
       </div>
-      {indexes.some((i) => i.points.length > 0) && (
+      {/* Signed-in viewers also get their own indexes, from cards they pick. */}
+      {(mine.length > 0 || indexes.some((i) => i.points.length > 0)) && (
         <div className="mb-6">
-          <MarketIndexes indexes={indexes} />
+          <MarketIndexes
+            indexes={indexes}
+            mine={mine.map(({ id, name, index, cards }) => ({ id, name, index, cards }))}
+            listings={movers}
+          />
         </div>
       )}
       {/* Trending movers and the heatmap sit right under the indexes, above the filters and listings. */}

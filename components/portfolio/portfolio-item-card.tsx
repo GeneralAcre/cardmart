@@ -39,7 +39,6 @@ import type { AssetSummary } from "@/lib/types";
 import { displayImage } from "@/lib/card-image";
 import { useT } from "@/components/landing/language-provider";
 import { HoldingPnlBlock } from "@/components/portfolio/pnl";
-import { ChangeTag } from "@/components/ui/change-tag";
 import type { HoldingPnl } from "@/lib/pnl";
 
 export function PortfolioItemCard({
@@ -319,14 +318,10 @@ export function PortfolioItemCard({
         <p className="text-muted-foreground line-clamp-1 text-xs">{asset.subtitle}</p>
       </div>
 
-      {/* The gain comes first: the amount on the right, never cut off, and the
-          same move as a percentage on the left. */}
+      {/* The gain as a percentage only; the amounts are in its hover text and on the card's page. */}
       {pnl && (
-        <div className="flex min-h-7 items-center justify-between gap-2">
-          {pnl.gainPct != null && <ChangeTag pct={pnl.gainPct} className="text-sm" />}
-          <span className="ml-auto flex min-w-0 justify-end">
-            <HoldingPnlBlock assetId={asset.id} pnl={pnl} />
-          </span>
+        <div className="flex min-h-7 min-w-0 items-center">
+          <HoldingPnlBlock assetId={asset.id} pnl={pnl} />
         </div>
       )}
 

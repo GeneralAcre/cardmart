@@ -1,8 +1,10 @@
 import "server-only";
 import { cache } from "react";
+import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
+import { REF_COOKIE } from "@/lib/referral";
 import { PRIVY_ENFORCED, getPrivyUserProfile, primarySolanaWallet, verifyPrivySession } from "@/lib/privy-server";
 
 // Privy sign-in is wired up but not enforced until NEXT_PUBLIC_PRIVY_APP_ID
@@ -53,6 +55,12 @@ export const getSessionUser = cache(async () => {
   const privyUser = await getPrivyUserProfile(session.userId);
   if (!privyUser) redirect("/");
 
+  // The invite link they came in on, if any (proxy.ts set the cookie).
+  const refHandle = (await cookies()).get(REF_COOKIE)?.value;
+  const referrer = refHandle
+    ? await prisma.user.findUnique({ where: { handle: refHandle }, select: { id: true } })
+    : null;
+
   return prisma.user.create({
     data: {
       privyUserId: privyUser.id,
@@ -60,6 +68,7 @@ export const getSessionUser = cache(async () => {
       email: privyUser.email?.address ?? privyUser.google?.email ?? null,
       image: null,
       walletAddress: primarySolanaWallet(privyUser),
+      referredById: referrer?.id ?? null,
     },
   });
 });

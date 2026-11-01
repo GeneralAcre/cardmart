@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { CardGame } from "@prisma/client";
+import type { CardGame, Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { marketCardKey } from "@/lib/market-history";
@@ -19,7 +19,8 @@ import { formatGrade } from "@/lib/format";
 export type IndexKey = "ALL" | CardGame;
 
 export interface MarketIndex {
-  key: IndexKey;
+  /** MINE is the viewer's own index, built from the cards on their watchlist. */
+  key: IndexKey | "MINE";
   points: PricePoint[];
   /** Since the previous saved day. */
   change1d: number | null;
@@ -93,6 +94,22 @@ const memberChanges = (points: PricePoint[]) => ({
   change30dOrSince: changeWithin(points, 30),
 });
 
+const MEMBER_SELECT = {
+  id: true,
+  name: true,
+  subtitle: true,
+  cardNumber: true,
+  language: true,
+  gradingCompany: true,
+  grade: true,
+  isBlackLabel: true,
+  rarity: true,
+  catalogImageUrl: true,
+  verificationPhotos: { orderBy: WAREHOUSE_FIRST, take: 1, select: { url: true } },
+} satisfies Prisma.AssetSelect;
+
+type MemberAsset = Prisma.AssetGetPayload<{ select: typeof MEMBER_SELECT }>;
+
 /**
  * The CardMart Index: every card and grade on CardMart with a saved market
  * price (eBay's daily median asking price for that card in that grade).
@@ -101,21 +118,13 @@ async function loadCardMartMembers(): Promise<IndexMember[]> {
   const assets = await prisma.asset.findMany({
     where: { redeemedAt: null },
     orderBy: { updatedAt: "desc" },
-    select: {
-      id: true,
-      name: true,
-      subtitle: true,
-      cardNumber: true,
-      language: true,
-      gradingCompany: true,
-      grade: true,
-      isBlackLabel: true,
-      rarity: true,
-      catalogImageUrl: true,
-      verificationPhotos: { orderBy: WAREHOUSE_FIRST, take: 1, select: { url: true } },
-    },
+    select: MEMBER_SELECT,
   });
-  const series = await priceSeries(assets);
+  return toMembers(assets, await priceSeries(assets));
+}
+
+/** One member per card-and-grade that has a saved market price; copies of the same card count once. */
+function toMembers(assets: MemberAsset[], series: Map<string, PricePoint[]>): IndexMember[] {
   const members: IndexMember[] = [];
   const seen = new Set<string>();
   for (const a of assets) {
@@ -204,7 +213,7 @@ async function loadTopIndex(game: CardGame): Promise<TopIndex> {
   return value;
 }
 
-function summarize(key: IndexKey, members: IndexMember[], points: PricePoint[]): MarketIndex {
+function summarize(key: MarketIndex["key"], members: IndexMember[], points: PricePoint[]): MarketIndex {
   return {
     key,
     points,
@@ -252,6 +261,87 @@ export async function getIndexDetail(
     members: [...byKey[key].members].sort((x, y) => rank(y) - rank(x)),
     all: INDEX_KEYS.map((k) => summarize(k, byKey[k].members, byKey[k].points)),
   };
+}
+
+/** A card the viewer picked for their own index. */
+export interface PickedCard {
+  id: string;
+  name: string;
+  gradingCompany: string;
+  grade: number | null;
+  isBlackLabel: boolean;
+  /** The asking price, or null when it isn't listed right now. */
+  priceThb: number | null;
+  /** Whether it has a saved market price, which is what puts it in the index. */
+  priced: boolean;
+}
+
+export interface MyIndex {
+  /** The extra index's id; null for the first one, built from the watchlist. */
+  id: string | null;
+  /** What they named it; null shows the default, "My Index". */
+  name: string | null;
+  index: MarketIndex;
+  /** The cards inside it, best performer first. */
+  members: IndexMember[];
+  /** Every picked card, newest first, including ones with no market price yet. */
+  cards: PickedCard[];
+}
+
+const PICKED_SELECT = { ...MEMBER_SELECT, forSale: true, priceThb: true, marketStatus: true } as const;
+type PickedAsset = Prisma.AssetGetPayload<{ select: typeof PICKED_SELECT }>;
+
+/** One user index from its cards (newest first), built exactly like the CardMart Index. */
+async function buildMyIndex(id: string | null, name: string | null, assets: PickedAsset[]): Promise<MyIndex> {
+  const series = await priceSeries(assets);
+  const members = toMembers(assets, series);
+  const rank = (m: IndexMember) => m.change30dOrSince ?? -Infinity;
+  return {
+    id,
+    name,
+    index: summarize("MINE", members, buildIndex(members.map((m) => m.points))),
+    members: members.sort((x, y) => rank(y) - rank(x)),
+    cards: assets.map((a) => ({
+      id: a.id,
+      name: a.name,
+      gradingCompany: a.gradingCompany,
+      grade: a.grade,
+      isBlackLabel: a.isBlackLabel,
+      priceThb: a.forSale && a.marketStatus !== "IN_ESCROW" ? a.priceThb : null,
+      priced: series.has(seriesKey(a)),
+    })),
+  };
+}
+
+/**
+ * The viewer's own index: the cards on their watchlist, built exactly like the
+ * CardMart Index (equal weight, from 1,000). A card brings its whole saved
+ * price history with it, so a new index has a line from the start.
+ */
+export async function getMyIndex(userId: string): Promise<MyIndex> {
+  const [rows, user] = await Promise.all([
+    prisma.watchlistItem.findMany({ where: { userId }, orderBy: { createdAt: "desc" }, select: { asset: { select: PICKED_SELECT } } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { myIndexName: true } }),
+  ]);
+  return buildMyIndex(null, user?.myIndexName ?? null, rows.map((r) => r.asset));
+}
+
+const USER_INDEX_SELECT = {
+  id: true,
+  name: true,
+  cards: { orderBy: { createdAt: "desc" }, select: { asset: { select: PICKED_SELECT } } },
+} as const satisfies Prisma.UserIndexSelect;
+
+/** The extra indexes the viewer built beside their watchlist one, oldest first. */
+export async function getUserIndexes(userId: string): Promise<MyIndex[]> {
+  const rows = await prisma.userIndex.findMany({ where: { userId }, orderBy: { createdAt: "asc" }, select: USER_INDEX_SELECT });
+  return Promise.all(rows.map((r) => buildMyIndex(r.id, r.name, r.cards.map((c) => c.asset))));
+}
+
+/** One of the viewer's extra indexes, or null when it isn't theirs. */
+export async function getUserIndex(userId: string, id: string): Promise<MyIndex | null> {
+  const row = await prisma.userIndex.findFirst({ where: { id, userId }, select: USER_INDEX_SELECT });
+  return row && buildMyIndex(row.id, row.name, row.cards.map((c) => c.asset));
 }
 
 export interface PortfolioStats {

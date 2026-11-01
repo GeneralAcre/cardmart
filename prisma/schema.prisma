@@ -200,6 +200,25 @@ model User {
   // anywhere on the buyer/seller side beyond a plain rejection message.
   isBanned Boolean @default(false)
 
+  // Who invited them: the user whose referral link (/?ref=<handle>, the QR
+  // on shared profit cards) they opened before first signing in. Set once,
+  // when their row is created (lib/session.ts), never changed after.
+  referredById String?
+  referredBy   User?   @relation("Referrals", fields: [referredById], references: [id], onDelete: SetNull)
+  referrals    User[]  @relation("Referrals")
+
+  // The name they gave their own index on the Market page (its cards are
+  // their watchlist). Null shows the default, "My Index".
+  myIndexName String?
+
+  // The wide banner behind their profile, and a short line about themselves,
+  // both shown on their portfolio and public store page.
+  coverImage String?
+  bio        String?
+
+  // Further indexes they built beside it, each with its own cards.
+  indexes     UserIndex[]
+
   // Identity verification (KYC): the details below plus two live camera
   // photos — the ID card itself and a selfie holding it. The photos live in a
   // separate PRIVATE Vercel Blob store (KYC_BLOB_READ_WRITE_TOKEN) and are
@@ -246,6 +265,7 @@ model User {
   agentMandates       AgentMandate[]
 
   @@index([kycStatus])
+  @@index([referredById])
 }
 
 model Asset {
@@ -328,6 +348,7 @@ model Asset {
   priceSnapshots     PriceSnapshot[]
   purchaseCosts      PurchaseCost[]
   watchedBy          WatchlistItem[]
+  inUserIndexes      UserIndexCard[]
   // Every auction this item has ever had, not just the current one — an
   // asset can be re-auctioned after a no-bid ending or a no-bids
   // cancellation, so this is intentionally one-to-many, not one-to-one.
@@ -448,6 +469,33 @@ model Offer {
 
 // A buyer saving a listing to keep an eye on — one row per (user, asset),
 // so watching twice is a no-op rather than a duplicate row.
+// An extra index a user built on the Market page, beside their watchlist one
+// ("My Index"). Built the same way: its cards, equal weight, from 1,000.
+model UserIndex {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  // Null shows the default, "My Index".
+  name      String?
+
+  userId String
+  user   User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cards  UserIndexCard[]
+
+  @@index([userId])
+}
+
+model UserIndexCard {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  indexId String
+  index   UserIndex @relation(fields: [indexId], references: [id], onDelete: Cascade)
+  assetId String
+  asset   Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([indexId, assetId])
+}
+
 model WatchlistItem {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
@@ -601,13 +649,13 @@ model MarketPriceSnapshot {
 // the seller physically held the item at mint time (no gallery uploads).
 // The file itself lives in Vercel Blob storage — this only stores its URL.
 model VerificationPhoto {
-  id        String   @id @default(cuid())
+  id        String      @id @default(cuid())
   viewKey   String
   viewLabel String
   url       String
   /// Who took it: the seller when listing, or warehouse staff at inspection (shown first once it exists).
   source    PhotoSource @default(SELLER)
-  createdAt DateTime @default(now())
+  createdAt DateTime    @default(now())
 
   assetId String
   asset   Asset  @relation(fields: [assetId], references: [id])
