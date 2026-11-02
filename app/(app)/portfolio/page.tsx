@@ -18,6 +18,8 @@ import { prisma } from "@/lib/prisma";
 import { isKycPhotoStorageConfigured } from "@/lib/kyc-storage";
 import { getCurrentUser } from "@/lib/session";
 import { getUserLevel } from "@/lib/rewards";
+import { getAchievements } from "@/lib/achievements";
+import { Achievements } from "@/components/profile/achievements";
 import { getT } from "@/lib/i18n/server";
 import { getDevnetSolBalance } from "@/lib/solana";
 import { getEscrowAuthorityAddress } from "@/lib/web3/escrow-server";
@@ -31,7 +33,7 @@ import { expireOverdueSellerShipments } from "@/lib/actions";
 import { toSaleToShip } from "@/lib/shipping";
 import { formatDate, formatGrade } from "@/lib/format";
 
-const TABS = ["cards", "listed", "history", "watchlist", "alerts"] as const;
+const TABS = ["cards", "listed", "history", "watchlist", "alerts", "badges"] as const;
 
 export default async function PortfolioPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const { tab } = await searchParams;
@@ -54,6 +56,7 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
     soldTrades,
     indexes,
     level,
+    achievements,
   ] = await Promise.all([
     getVaultAssets(user.id),
     getDevnetSolBalance(user.walletAddress), // real balance only for real (Privy) wallets, not the mock demo ones
@@ -68,6 +71,7 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
     getSoldTrades(user.id),
     getMarketIndexes(),
     getUserLevel(user),
+    getAchievements(user),
   ]);
   const pnl = await getHoldingPnl(user.id, assets);
   const portfolioStats = await getPortfolioStats(
@@ -135,6 +139,9 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
           </TabsTrigger>
           <TabsTrigger value="watchlist">{t("Watchlist")} ({watchlist.length})</TabsTrigger>
           <TabsTrigger value="alerts">{t("Alerts")} ({wantedCards.length})</TabsTrigger>
+          <TabsTrigger value="badges">
+            {t("Badges")} ({achievements.filter((a) => a.earned).length}/{achievements.length})
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="listed" className="pt-6">
@@ -191,6 +198,9 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
         </TabsContent>
         <TabsContent value="alerts" className="pt-6">
           <WantedCardsPanel cards={wantedCards} />
+        </TabsContent>
+        <TabsContent value="badges" className="pt-6">
+          <Achievements achievements={achievements} />
         </TabsContent>
       </Tabs>
     </div>

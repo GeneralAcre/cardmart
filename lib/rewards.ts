@@ -88,6 +88,8 @@ export interface Rewards {
   topTier: boolean;
   /** Leaderboard badges (lib/leaderboard/pipeline.ts), best one per category. */
   leaderboard: EarnedLeaderboardBadge[];
+  /** How many times the user has done each task, by task id (uncapped). */
+  counts: Record<string, number>;
 }
 
 type RewardsUser = { id: string; image: string | null; kycStatus: string };
@@ -129,7 +131,8 @@ async function getProgress(user: RewardsUser) {
   const xp = tasks.reduce((sum, task) => sum + task.earnedXp, 0);
   const level = [...LEVELS].reverse().find((l) => xp >= l.minXp) ?? LEVELS[0];
   const next = LEVELS.find((l) => l.minXp > xp) ?? null;
-  return { xp, level, next, tasks, sold };
+  const counts = Object.fromEntries(tiered.map((t) => [t.id, t.count]));
+  return { xp, level, next, tasks, sold, counts };
 }
 
 /** Just the user's level and XP, for the level badge beside their name on profile pages. */
@@ -139,7 +142,7 @@ export async function getUserLevel(user: RewardsUser): Promise<{ level: Level; x
 }
 
 export async function getRewards(user: RewardsUser): Promise<Rewards> {
-  const { xp, level, next, tasks, sold } = await getProgress(user);
+  const { xp, level, next, tasks, sold, counts } = await getProgress(user);
   const [ratingAgg, leaderboard] = await Promise.all([
     prisma.review.aggregate({ where: { sellerId: user.id }, _avg: { rating: true }, _count: true }),
     prisma.leaderboardBadge.findMany({
@@ -154,7 +157,7 @@ export async function getRewards(user: RewardsUser): Promise<Rewards> {
     rating: ratingAgg._avg.rating,
     verified: user.kycStatus === "VERIFIED",
   };
-  return { xp, level, next, tasks, seller, topTier: isTopTierSeller(seller), leaderboard: bestLeaderboardBadges(leaderboard) };
+  return { xp, level, next, tasks, seller, topTier: isTopTierSeller(seller), leaderboard: bestLeaderboardBadges(leaderboard), counts };
 }
 
 /** Whether a seller has the Top Tier badge, for showing beside their name on store and card pages. */
