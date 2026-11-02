@@ -17,6 +17,7 @@ import {
 import { prisma } from "@/lib/prisma";
 import { isKycPhotoStorageConfigured } from "@/lib/kyc-storage";
 import { getCurrentUser } from "@/lib/session";
+import { getUserLevel } from "@/lib/rewards";
 import { getT } from "@/lib/i18n/server";
 import { getDevnetSolBalance } from "@/lib/solana";
 import { getEscrowAuthorityAddress } from "@/lib/web3/escrow-server";
@@ -52,6 +53,7 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
     salesToShip,
     soldTrades,
     indexes,
+    level,
   ] = await Promise.all([
     getVaultAssets(user.id),
     getDevnetSolBalance(user.walletAddress), // real balance only for real (Privy) wallets, not the mock demo ones
@@ -65,6 +67,7 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
     getMySalesToShip(user.id),
     getSoldTrades(user.id),
     getMarketIndexes(),
+    getUserLevel(user),
   ]);
   const pnl = await getHoldingPnl(user.id, assets);
   const portfolioStats = await getPortfolioStats(
@@ -103,6 +106,7 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
             completedSales,
             photoStorageReady: isKycPhotoStorageConfigured(),
           }}
+          level={level}
         />
       </div>
 

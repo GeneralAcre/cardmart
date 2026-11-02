@@ -15,6 +15,8 @@ import { SellerWalletAddress } from "@/components/store/seller-wallet-address";
 import { VerifiedBadge } from "@/components/store/verified-badge";
 import { TopTierBadge } from "@/components/store/top-tier-badge";
 import { isTopTierSeller } from "@/lib/seller-tier";
+import { getUserLevel } from "@/lib/rewards";
+import { LevelBadge } from "@/components/profile/level-badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CARD_GAME_LABELS } from "@/lib/labels";
 import { formatDate } from "@/lib/format";
@@ -28,6 +30,7 @@ export default async function StorePage({ params }: { params: Promise<{ id: stri
 
   if (!profile) notFound();
   const { seller, listings, rating, reviews, soldHistory, saleCount } = profile;
+  const level = await getUserLevel(seller);
 
   const displayName = seller.name ?? seller.handle ?? t("Collector");
   const initials = displayName
@@ -57,6 +60,7 @@ export default async function StorePage({ params }: { params: Promise<{ id: stri
               topTier={isTopTierSeller({ sales: saleCount, reviews: rating.count, rating: rating.average, verified: seller.kycStatus === "VERIFIED" })}
               className="self-center"
             />
+            <LevelBadge level={level.level} xp={level.xp} className="self-center" />
           </div>
           <ProfileBio bio={seller.bio} className="my-1" />
           <RatingStars average={rating.average} count={rating.count} size="md" />

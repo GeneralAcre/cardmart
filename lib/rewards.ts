@@ -90,7 +90,10 @@ export interface Rewards {
   leaderboard: EarnedLeaderboardBadge[];
 }
 
-export async function getRewards(user: { id: string; image: string | null; kycStatus: string }): Promise<Rewards> {
+type RewardsUser = { id: string; image: string | null; kycStatus: string };
+
+/** XP, level and task progress, counted from the user's real records. */
+async function getProgress(user: RewardsUser) {
   const [watching, wanted, messages, listed, bought, sold, bids, reviews, agentTasks, invited] = await Promise.all([
     prisma.watchlistItem.count({ where: { userId: user.id } }),
     prisma.wantedCard.count({ where: { userId: user.id } }),
@@ -126,7 +129,17 @@ export async function getRewards(user: { id: string; image: string | null; kycSt
   const xp = tasks.reduce((sum, task) => sum + task.earnedXp, 0);
   const level = [...LEVELS].reverse().find((l) => xp >= l.minXp) ?? LEVELS[0];
   const next = LEVELS.find((l) => l.minXp > xp) ?? null;
+  return { xp, level, next, tasks, sold };
+}
 
+/** Just the user's level and XP, for the level badge beside their name on profile pages. */
+export async function getUserLevel(user: RewardsUser): Promise<{ level: Level; xp: number }> {
+  const { level, xp } = await getProgress(user);
+  return { level, xp };
+}
+
+export async function getRewards(user: RewardsUser): Promise<Rewards> {
+  const { xp, level, next, tasks, sold } = await getProgress(user);
   const [ratingAgg, leaderboard] = await Promise.all([
     prisma.review.aggregate({ where: { sellerId: user.id }, _avg: { rating: true }, _count: true }),
     prisma.leaderboardBadge.findMany({

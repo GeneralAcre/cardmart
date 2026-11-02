@@ -8,6 +8,8 @@ import { EditProfileButton, ProfileAvatar, ProfileBio, ProfileCover } from "@/co
 import { WalletActions } from "@/components/portfolio/wallet-actions";
 import { ShippingInfoDialog } from "@/components/portfolio/shipping-info-dialog";
 import { IdentityBadge } from "@/components/portfolio/identity-card";
+import { LevelBadge } from "@/components/profile/level-badge";
+import type { Level } from "@/lib/rewards";
 import { ItemShareButton } from "@/components/item/share-button";
 import type { KycStatus } from "@prisma/client";
 import { PortfolioValueChart } from "@/components/portfolio/portfolio-value-chart";
@@ -38,6 +40,8 @@ interface ProfileHeaderProps {
     completedSales: number;
     photoStorageReady: boolean;
   };
+  /** Rewards level and XP, shown as a badge beside the name. */
+  level: { level: Level; xp: number };
 }
 
 export function ProfileHeader({
@@ -54,6 +58,7 @@ export function ProfileHeader({
   shippingAddress,
   phone,
   identity,
+  level,
 }: ProfileHeaderProps) {
   const { connected } = useWalletStore();
   const [copied, setCopied] = useState(false);
@@ -94,6 +99,7 @@ export function ProfileHeader({
             <div className="flex min-w-0 items-center gap-2">
               <span className="truncate text-xl font-semibold sm:text-2xl">{name}</span>
               <IdentityBadge {...identity} />
+              <LevelBadge level={level.level} xp={level.xp} />
               <ItemShareButton path={`/store/${userId}`} />
             </div>
             <div className="text-muted-foreground flex flex-wrap items-center gap-x-1.5 text-sm">
