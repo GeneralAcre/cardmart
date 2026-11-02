@@ -25,7 +25,6 @@ export const PORTFOLIO: Record<string, string> = {
   "No wallet connected": "ยังไม่ได้เชื่อมต่อกระเป๋าเงิน",
   "Member since {date}": "เป็นสมาชิกตั้งแต่ {date}",
   "Change cover": "เปลี่ยนภาพปก",
-  "Add cover": "เพิ่มภาพปก",
   "Remove cover": "ลบภาพปก",
   Bio: "แนะนำตัว",
   "Could not save your bio.": "บันทึกคำแนะนำตัวไม่สำเร็จ",

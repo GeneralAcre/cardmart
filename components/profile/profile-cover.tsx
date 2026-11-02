@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { upload } from "@vercel/blob/client";
@@ -66,9 +67,13 @@ function usePhotoUpload(
   return { busy, input, pick: () => inputRef.current?.click(), remove: () => run(async () => null) };
 }
 
+/** Everyone's cover until they upload their own (and again if they remove it). */
+const DEFAULT_COVER = "/CardMart-cover.png";
+
 /**
- * The wide banner at the top of a profile: the user's cover photo, or a soft
- * gradient when they haven't added one. `editable` adds change and remove buttons.
+ * The wide banner at the top of a profile: the user's cover photo, or the
+ * CardMart cover when they haven't added one. `editable` adds change and
+ * remove buttons; removing goes back to the CardMart cover.
  */
 export function ProfileCover({ cover, editable = false }: { cover: string | null; editable?: boolean }) {
   const t = useT();
@@ -80,14 +85,7 @@ export function ProfileCover({ cover, editable = false }: { cover: string | null
         // eslint-disable-next-line @next/next/no-img-element -- a user upload on Blob storage
         <img src={cover} alt="" className="size-full object-cover" />
       ) : (
-        <div
-          aria-hidden
-          className="size-full"
-          style={{
-            backgroundImage:
-              "radial-gradient(80% 120% at 0% 0%, color-mix(in oklab, var(--foreground) 10%, transparent), transparent 60%), radial-gradient(70% 120% at 100% 100%, color-mix(in oklab, var(--foreground) 7%, transparent), transparent 60%)",
-          }}
-        />
+        <Image src={DEFAULT_COVER} alt="" fill sizes="(min-width: 1536px) 1536px, 100vw" className="object-cover" priority />
       )}
       {editable && (
         <div className="absolute top-3 right-3 flex gap-2">
@@ -98,7 +96,7 @@ export function ProfileCover({ cover, editable = false }: { cover: string | null
             className="flex h-8 items-center gap-1.5 rounded-full bg-black/55 px-3 text-xs font-medium text-white backdrop-blur transition-colors hover:bg-black/70"
           >
             {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Camera className="size-3.5" />}
-            {cover ? t("Change cover") : t("Add cover")}
+            {t("Change cover")}
           </button>
           {cover && (
             <button
