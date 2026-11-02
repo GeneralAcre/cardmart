@@ -1,8 +1,6 @@
 "use client";
 
 import { GameIcon } from "@/components/ui/game-icon";
-import { Cell, Pie, PieChart } from "recharts";
-import { ChartContainer } from "@/components/ui/chart";
 import Link from "next/link";
 
 import { useMoney } from "@/components/currency-provider";
@@ -10,31 +8,11 @@ import { CARD_GAME_COLOR, CARD_GAME_LABELS } from "@/lib/labels";
 import type { PortfolioStats as Stats } from "@/lib/stats";
 import { cn } from "@/lib/utils";
 import { useT } from "@/components/landing/language-provider";
+import { PortfolioValueChart } from "@/components/portfolio/portfolio-value-chart";
 
 const tone = (v: number | null) =>
   v == null || Math.abs(v) < 0.05 ? "text-muted-foreground" : v > 0 ? "text-success" : "text-destructive";
 const pct = (v: number | null) => (v == null ? "—" : `${v > 0 ? "+" : ""}${v.toFixed(1)}%`);
-
-function Tile({
-  label,
-  children,
-  sub,
-  valueClassName = "text-3xl",
-}: {
-  label: string;
-  children: React.ReactNode;
-  sub?: React.ReactNode;
-  valueClassName?: string;
-}) {
-  return (
-    <div className="bg-card flex min-w-0 flex-col gap-1 rounded-xl border p-4 sm:gap-1.5 sm:p-5">
-      <span className="text-muted-foreground text-xs leading-tight font-medium sm:text-sm">{label}</span>
-      <div className={cn("font-bold tracking-tight tabular-nums", valueClassName)}>{children}</div>
-      {sub && <div className="text-muted-foreground text-xs leading-tight sm:text-sm">{sub}</div>}
-    </div>
-  );
-}
-
 
 // Slice colours: the green-to-yellow palette from the high grade down, so the
 // best grades are the brightest. Black Label and ungraded get their own.
@@ -62,51 +40,43 @@ function gradeSlices(rows: { key: string; share: number }[], t: (s: string) => s
   });
 }
 
-/** A share-of-the-whole donut with its key underneath (side by side on wide screens). Used for both the games and the grades. */
-function Donut({ title, slices }: { title: string; slices: Slice[] }) {
+/** A share-of-the-whole as one thin stacked bar, with its key underneath. Used for both the games and the grades. */
+function ShareBar({ title, slices }: { title: string; slices: Slice[] }) {
   return (
-    <div className="bg-card flex min-w-0 flex-col gap-3 rounded-xl border p-4 sm:gap-4 sm:p-5">
-      <h3 className="text-muted-foreground text-xs leading-tight font-medium sm:text-sm">{title}</h3>
-      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:gap-4">
-        <ChartContainer config={{}} className="mx-auto aspect-square size-28 shrink-0 sm:size-32 xl:mx-0 xl:size-28">
-          <PieChart>
-            <Pie
-              data={slices}
-              dataKey="share"
-              nameKey="key"
-              innerRadius="58%"
-              outerRadius="100%"
-              paddingAngle={slices.length > 1 ? 2 : 0}
-              stroke="var(--card)"
-              strokeWidth={2}
-              isAnimationActive={false}
-            >
-              {slices.map((s) => (
-                <Cell key={s.key} fill={s.color} />
-              ))}
-            </Pie>
-          </PieChart>
-        </ChartContainer>
-        <ul className="flex min-w-0 flex-col gap-1.5 xl:flex-1">
-          {slices.map((s) => (
-            <li key={s.key} className="flex items-center gap-2 text-xs sm:text-sm">
-              <span className="size-2.5 shrink-0 rounded-full border border-black/15" style={{ backgroundColor: s.color }} />
-              <span className="flex min-w-0 flex-1 items-center gap-1.5 truncate">{s.label}</span>
-              <span className="text-foreground shrink-0 font-semibold tabular-nums">{Math.round(s.share * 100)}%</span>
-            </li>
-          ))}
-        </ul>
+    <div className="flex min-w-0 flex-col gap-2">
+      <h3 className="text-muted-foreground text-sm font-medium">{title}</h3>
+      <div className="flex h-2.5 w-full gap-0.5 overflow-hidden rounded-full">
+        {slices.map((s) => (
+          <span key={s.key} className="h-full" style={{ width: `${s.share * 100}%`, backgroundColor: s.color }} />
+        ))}
       </div>
+      <ul className="flex flex-wrap gap-x-4 gap-y-1">
+        {slices.map((s) => (
+          <li key={s.key} className="flex items-center gap-1.5 text-sm">
+            <span className="size-2.5 shrink-0 rounded-full border border-black/15" style={{ backgroundColor: s.color }} />
+            <span className="flex items-center gap-1">{s.label}</span>
+            <span className="font-semibold tabular-nums">{Math.round(s.share * 100)}%</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
 
 /**
- * The portfolio at a glance, like a brokerage account: market value, profit
- * or loss, the 30-day move against the CardMart Index, best and worst card,
- * and how the collection splits by game and grade.
+ * The portfolio at a glance, like a brokerage account: profit or loss first
+ * and biggest, then market value, the 30-day move against the CardMart
+ * Index and a small trend line; then best and worst card, and how the
+ * collection splits by game and grade.
  */
-export function PortfolioStats({ stats }: { stats: Stats }) {
+export function PortfolioStats({
+  stats,
+  history,
+}: {
+  stats: Stats;
+  /** Saved portfolio values over time, for the trend line beside the profit. */
+  history: { totalThb: number; createdAt: string }[];
+}) {
   const money = useMoney();
   const t = useT();
   if (stats.heldCount === 0) return null;
@@ -114,55 +84,99 @@ export function PortfolioStats({ stats }: { stats: Stats }) {
   const byValue = stats.marketValueThb > 0;
   const share = (r: { count: number; valueThb: number }) =>
     byValue ? r.valueThb / stats.marketValueThb : r.count / stats.heldCount;
+  const gain = stats.unrealizedThb;
   return (
-    <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Tile label={t("Profit / loss")} valueClassName="text-2xl sm:text-3xl">
-          <span className={tone(stats.unrealizedThb)}>
-            {stats.unrealizedThb == null
-              ? "—"
-              : `${stats.unrealizedThb > 0 ? "+" : stats.unrealizedThb < 0 ? "−" : ""}${money(Math.abs(stats.unrealizedThb))}`}
-          </span>
-        </Tile>
-        <Tile label={t("Best / worst card")} valueClassName="text-base">
-          {stats.best ? (
-            <div className="flex flex-col gap-2">
-              <Link href={`/item/${stats.best.assetId}`} className="flex min-w-0 items-baseline justify-between gap-2 hover:underline">
-                <span className="truncate text-base font-bold sm:text-xl">{stats.best.name}</span>
-                <span className={cn("shrink-0 text-base font-bold sm:text-xl", tone(stats.best.gainPct))}>{pct(stats.best.gainPct)}</span>
-              </Link>
-              {stats.worst && (
-                <Link
-                  href={`/item/${stats.worst.assetId}`}
-                  className="flex min-w-0 items-baseline justify-between gap-2 hover:underline"
-                >
-                  <span className="truncate text-base font-bold sm:text-xl">{stats.worst.name}</span>
-                  <span className={cn("shrink-0 text-base font-bold sm:text-xl", tone(stats.worst.gainPct))}>{pct(stats.worst.gainPct)}</span>
-                </Link>
-              )}
+    <section>
+      <div className="grid gap-3 lg:grid-cols-3">
+        {/* What matters most first: what the cards are worth and how much
+            you're up or down, both big, side by side (profit on the right);
+            then the 30-day move, and a small trend line along the bottom. */}
+        <div className="bg-card flex min-w-0 flex-col gap-5 rounded-xl border p-5 sm:p-6 lg:col-span-2">
+          <div className="flex min-w-0 flex-col gap-4">
+            <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
+              <div className="flex min-w-0 flex-col gap-1">
+                <span className="text-muted-foreground text-sm font-medium">{t("Portfolio value")}</span>
+                <span className="text-2xl font-bold tracking-tight tabular-nums sm:text-3xl">
+                  {byValue ? money(stats.marketValueThb) : "—"}
+                </span>
+              </div>
+              <div className="flex min-w-0 flex-col gap-1 sm:items-end sm:text-right">
+                <span className="text-muted-foreground text-sm font-medium">{t("Profit / loss")}</span>
+                {/* The amount and its percentage, the same size. */}
+                <div className={cn("flex flex-wrap items-baseline gap-x-2 text-2xl font-bold tracking-tight tabular-nums sm:justify-end sm:text-3xl", tone(gain))}>
+                  <span>{gain == null ? "—" : `${gain > 0 ? "+" : gain < 0 ? "−" : ""}${money(Math.abs(gain))}`}</span>
+                  {stats.unrealizedPct != null && <span>({pct(stats.unrealizedPct)})</span>}
+                </div>
+              </div>
             </div>
-          ) : (
-            "—"
-          )}
-        </Tile>
+            <dl className="flex flex-wrap gap-x-8 gap-y-2">
+              <div className="flex items-baseline gap-2">
+                <dt className="text-muted-foreground text-sm">{t("Last 30 days")}</dt>
+                <dd className={cn("text-lg font-semibold tabular-nums", tone(stats.change30d))}>{pct(stats.change30d)}</dd>
+              </div>
+              {stats.index30d != null && (
+                <div className="flex items-baseline gap-2">
+                  <dt className="text-muted-foreground text-sm">{t("CardMart Index")}</dt>
+                  <dd className={cn("text-lg font-semibold tabular-nums", tone(stats.index30d))}>{pct(stats.index30d)}</dd>
+                </div>
+              )}
+            </dl>
+          </div>
+          <div className="border-t pt-4">
+            <PortfolioValueChart initialHistory={history} />
+          </div>
+        </div>
 
-        <Donut
-          title={byValue ? t("By game (market value)") : t("By game")}
-          slices={stats.byGame.map((g) => ({
-            key: g.key,
-            label: (
-              <>
-                <GameIcon game={g.key} size={14} />
-                {t(CARD_GAME_LABELS[g.key])}
-              </>
-            ),
-            share: share(g),
-            color: CARD_GAME_COLOR[g.key],
-          }))}
-        />
-        <Donut
-          title={byValue ? t("By grade (market value)") : t("By grade")}
-          slices={gradeSlices(stats.byGrade.map((g) => ({ key: g.key, share: share(g) })), t)}
-        />
+        {/* Right column: best and worst card, then how the collection splits. */}
+        <div className="flex min-w-0 flex-col gap-3">
+          <div className="bg-card flex min-w-0 flex-col divide-y rounded-xl border">
+            {stats.best ? (
+              [
+                { label: t("Best card"), card: stats.best },
+                ...(stats.worst ? [{ label: t("Worst card"), card: stats.worst }] : []),
+              ].map(({ label, card }) => (
+                <Link
+                  key={label}
+                  href={`/item/${card.assetId}`}
+                  className="hover:bg-accent/50 flex min-w-0 flex-col gap-0.5 px-5 py-4 transition-colors first:rounded-t-xl last:rounded-b-xl"
+                >
+                  <span className="text-muted-foreground text-sm font-medium">{label}</span>
+                  <span className="flex min-w-0 items-baseline justify-between gap-3">
+                    <span className="truncate text-base font-bold">{card.name}</span>
+                    <span className={cn("shrink-0 text-xl font-bold tabular-nums", tone(card.gainPct))}>{pct(card.gainPct)}</span>
+                  </span>
+                </Link>
+              ))
+            ) : (
+              <div className="flex flex-col gap-0.5 px-5 py-4">
+                <span className="text-muted-foreground text-sm font-medium">{t("Best / worst card")}</span>
+                <span className="text-base font-bold">—</span>
+              </div>
+            )}
+          </div>
+
+          <div className="bg-card flex min-w-0 flex-1 flex-col justify-center gap-5 rounded-xl border px-5 py-4">
+            <ShareBar
+              title={byValue ? t("By game (market value)") : t("By game")}
+              slices={stats.byGame.map((g) => ({
+                key: g.key,
+                label: (
+                  <>
+                    <GameIcon game={g.key} size={14} />
+                    {t(CARD_GAME_LABELS[g.key])}
+                  </>
+                ),
+                share: share(g),
+                color: CARD_GAME_COLOR[g.key],
+              }))}
+            />
+            <ShareBar
+              title={byValue ? t("By grade (market value)") : t("By grade")}
+              slices={gradeSlices(stats.byGrade.map((g) => ({ key: g.key, share: share(g) })), t)}
+            />
+          </div>
+        </div>
+      </div>
     </section>
   );
 }

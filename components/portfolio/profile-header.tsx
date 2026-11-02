@@ -6,13 +6,13 @@ import { toast } from "sonner";
 
 import { EditProfileButton, ProfileAvatar, ProfileBio, ProfileCover } from "@/components/profile/profile-cover";
 import { WalletActions } from "@/components/portfolio/wallet-actions";
-import { ShippingInfoDialog } from "@/components/portfolio/shipping-info-dialog";
 import { IdentityBadge } from "@/components/portfolio/identity-card";
 import { LevelBadge } from "@/components/profile/level-badge";
 import type { Level } from "@/lib/rewards";
+import type { AchievementIcon, AchievementTier } from "@/lib/achievements";
+import { AchievementsButton } from "@/components/profile/achievements-button";
 import { ItemShareButton } from "@/components/item/share-button";
 import type { KycStatus } from "@prisma/client";
-import { PortfolioValueChart } from "@/components/portfolio/portfolio-value-chart";
 import { useWalletStore } from "@/lib/web3/wallet-store";
 import { formatDate, shortSignature } from "@/lib/format";
 import { useT } from "@/components/landing/language-provider";
@@ -29,9 +29,6 @@ interface ProfileHeaderProps {
   createdAt: Date;
   /** Real devnet SOL balance, or null if there's no wallet / the RPC call failed. */
   solBalance: number | null;
-  portfolioValueHistory: { totalThb: number; createdAt: string }[];
-  shippingAddress: string | null;
-  phone: string | null;
   identity: {
     status: KycStatus;
     rejectReason: string | null;
@@ -42,6 +39,8 @@ interface ProfileHeaderProps {
   };
   /** Rewards level and XP, shown as a badge beside the name. */
   level: { level: Level; xp: number };
+  /** Earned badges (for the Achievements button) and how many there are in all. */
+  badges: { earned: { id: string; icon: AchievementIcon; tier: AchievementTier }[]; total: number };
 }
 
 export function ProfileHeader({
@@ -54,11 +53,9 @@ export function ProfileHeader({
   walletAddress,
   createdAt,
   solBalance,
-  portfolioValueHistory,
-  shippingAddress,
-  phone,
   identity,
   level,
+  badges,
 }: ProfileHeaderProps) {
   const { connected } = useWalletStore();
   const [copied, setCopied] = useState(false);
@@ -79,8 +76,7 @@ export function ProfileHeader({
   }
 
   // Like a social profile: your cover across the top with your picture
-  // overlapping its lower edge, your actions to the right, then who you are
-  // and how your portfolio's value has moved.
+  // overlapping its lower edge, your actions to the right, then who you are.
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col">
@@ -92,8 +88,8 @@ export function ProfileHeader({
           </div>
           <div className="order-3 mt-4 flex w-full flex-wrap gap-2 sm:order-none sm:mt-3 sm:w-auto sm:justify-end [&_button]:flex-1 sm:[&_button]:flex-none">
             {connected && <WalletActions solBalance={solBalance} />}
-            <ShippingInfoDialog shippingAddress={shippingAddress} phone={phone} />
             <EditProfileButton bio={bio} />
+            <AchievementsButton {...badges} />
           </div>
           <div className="mt-3 flex w-full min-w-0 flex-col gap-1">
             <div className="flex min-w-0 items-center gap-2">
@@ -125,8 +121,6 @@ export function ProfileHeader({
           </div>
         </div>
       </div>
-
-      <PortfolioValueChart initialHistory={portfolioValueHistory} />
     </div>
   );
 }

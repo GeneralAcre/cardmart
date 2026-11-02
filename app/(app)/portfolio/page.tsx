@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bookmark, Flame, PackageOpen } from "lucide-react";
+import { Award, Bell, Bookmark, Flame, History, LayoutGrid, PackageOpen, Tag } from "lucide-react";
 import { getHoldingPnl, getSoldTrades, type HoldingPnl } from "@/lib/pnl";
 import { TradeHistory } from "@/components/portfolio/pnl";
 import { PortfolioStats } from "@/components/portfolio/portfolio-stats";
@@ -27,7 +27,8 @@ import { ListingCard } from "@/components/marketplace/listing-card";
 import { PortfolioItemCard } from "@/components/portfolio/portfolio-item-card";
 import { ProfileHeader } from "@/components/portfolio/profile-header";
 import { WantedCardsPanel } from "@/components/wanted/wanted-cards-panel";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { HiddenOnTabs, ProfileTabs, ProfileTabsProvider } from "@/components/portfolio/profile-tabs";
 import { SalesToShipPanel } from "@/components/portfolio/ship-to-warehouse";
 import { expireOverdueSellerShipments } from "@/lib/actions";
 import { toSaleToShip } from "@/lib/shipping";
@@ -81,6 +82,7 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
   );
   // My Cards is everything owned; Listed is only what's up for sale or auction.
   const listed = assets.filter((a) => a.forSale || a.marketStatus === "IN_AUCTION");
+  const earnedBadges = achievements.filter((a) => a.earned);
 
   return (
     // Same full width as the Market page, so the profile, stats and tabs fill the screen.
@@ -96,12 +98,6 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
           walletAddress={walletAddress}
           createdAt={user.createdAt}
           solBalance={solBalance}
-          portfolioValueHistory={portfolioValueHistory.map((p) => ({
-            totalThb: p.totalThb,
-            createdAt: p.createdAt.toISOString(),
-          }))}
-          shippingAddress={user.shippingAddress}
-          phone={user.phone}
           identity={{
             status: user.kycStatus,
             rejectReason: user.kycRejectReason,
@@ -111,6 +107,10 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
             photoStorageReady: isKycPhotoStorageConfigured(),
           }}
           level={level}
+          badges={{
+            earned: earnedBadges.map(({ id, icon, tier }) => ({ id, icon, tier })),
+            total: achievements.length,
+          }}
         />
       </div>
 
@@ -120,89 +120,109 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
         </div>
       )}
 
-      {assets.length > 0 && (
-        <div className="mb-8">
-          <PortfolioStats stats={portfolioStats} />
-        </div>
-      )}
+      {/* Keyed by the ?tab= in the address, so a link to a tab (like the
+          Achievements button in the header) opens it even from this page. */}
+      <ProfileTabsProvider key={defaultTab} initialTab={defaultTab}>
+        {/* The portfolio summary belongs with your cards, not your badges. */}
+        <HiddenOnTabs tabs={["badges"]}>
+          {assets.length > 0 && (
+            <div className="mb-8">
+              <PortfolioStats
+                stats={portfolioStats}
+                history={portfolioValueHistory.map((p) => ({ totalThb: p.totalThb, createdAt: p.createdAt.toISOString() }))}
+              />
+            </div>
+          )}
+        </HiddenOnTabs>
 
-      <Tabs defaultValue={defaultTab}>
-        <TabsList>
-          <TabsTrigger value="cards">
-            {t("My Cards")} ({assets.length})
-          </TabsTrigger>
-          <TabsTrigger value="listed">
-            {t("Listing Cards")} ({listed.length})
-          </TabsTrigger>
-          <TabsTrigger value="history">
-            {t("History")} ({soldTrades.length})
-          </TabsTrigger>
-          <TabsTrigger value="watchlist">{t("Watchlist")} ({watchlist.length})</TabsTrigger>
-          <TabsTrigger value="alerts">{t("Alerts")} ({wantedCards.length})</TabsTrigger>
-          <TabsTrigger value="badges">
-            {t("Badges")} ({achievements.filter((a) => a.earned).length}/{achievements.length})
-          </TabsTrigger>
-        </TabsList>
+        <ProfileTabs id="profile-tabs" className="scroll-mt-20">
+          <TabsList>
+            <TabsTrigger value="cards">
+              <LayoutGrid className="size-4" />
+              {t("My Cards")} ({assets.length})
+            </TabsTrigger>
+            <TabsTrigger value="listed">
+              <Tag className="size-4" />
+              {t("Listing Cards")} ({listed.length})
+            </TabsTrigger>
+            <TabsTrigger value="history">
+              <History className="size-4" />
+              {t("History")} ({soldTrades.length})
+            </TabsTrigger>
+            <TabsTrigger value="watchlist">
+              <Bookmark className="size-4" />
+              {t("Watchlist")} ({watchlist.length})
+            </TabsTrigger>
+            <TabsTrigger value="alerts">
+              <Bell className="size-4" />
+              {t("Alerts")} ({wantedCards.length})
+            </TabsTrigger>
+            <TabsTrigger value="badges">
+              <Award className="size-4" />
+              {t("Achievements")} ({earnedBadges.length}/{achievements.length})
+            </TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="listed" className="pt-6">
-          <PortfolioGrid assets={listed} escrowAuthorityAddress={escrowAuthorityAddress} shipping={shipping} pnl={pnl} />
-        </TabsContent>
-        <TabsContent value="cards" className="pt-6">
-          <PortfolioGrid assets={assets} escrowAuthorityAddress={escrowAuthorityAddress} shipping={shipping} pnl={pnl} />
-          {redeemed.length > 0 && (
-            <div className="mt-10">
-              <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
-                <Flame className="size-4" /> {t("Redeemed")} ({redeemed.length})
-              </h3>
-              <div className="flex flex-col gap-2">
-                {redeemed.map((a) => (
-                  <Link
-                    key={a.id}
-                    href={`/item/${a.id}`}
-                    className="bg-card hover:bg-accent flex flex-wrap items-center justify-between gap-2 rounded-xl border p-3 text-sm transition-colors"
-                  >
-                    <span className="font-medium">
-                      {a.name}{" "}
-                      <span className="text-muted-foreground font-normal">
-                        · {a.gradingCompany === "RAW" ? t("Raw") : `${a.gradingCompany} ${formatGrade(a.grade)}`}
+          <TabsContent value="listed" className="pt-6">
+            <PortfolioGrid assets={listed} escrowAuthorityAddress={escrowAuthorityAddress} shipping={shipping} pnl={pnl} />
+          </TabsContent>
+          <TabsContent value="cards" className="pt-6">
+            <PortfolioGrid assets={assets} escrowAuthorityAddress={escrowAuthorityAddress} shipping={shipping} pnl={pnl} />
+            {redeemed.length > 0 && (
+              <div className="mt-10">
+                <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
+                  <Flame className="size-4" /> {t("Redeemed")} ({redeemed.length})
+                </h3>
+                <div className="flex flex-col gap-2">
+                  {redeemed.map((a) => (
+                    <Link
+                      key={a.id}
+                      href={`/item/${a.id}`}
+                      className="bg-card hover:bg-accent flex flex-wrap items-center justify-between gap-2 rounded-xl border p-3 text-sm transition-colors"
+                    >
+                      <span className="font-medium">
+                        {a.name}{" "}
+                        <span className="text-muted-foreground font-normal">
+                          · {a.gradingCompany === "RAW" ? t("Raw") : `${a.gradingCompany} ${formatGrade(a.grade)}`}
+                        </span>
                       </span>
-                    </span>
-                    <span className="text-muted-foreground text-xs">
-                      {t("Shipped to you {date} · digital twin burned", { date: a.redeemedAt ? formatDate(a.redeemedAt) : "" })}
-                    </span>
-                  </Link>
+                      <span className="text-muted-foreground text-xs">
+                        {t("Shipped to you {date} · digital twin burned", { date: a.redeemedAt ? formatDate(a.redeemedAt) : "" })}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+          </TabsContent>
+          <TabsContent value="history" className="pt-6">
+            <TradeHistory trades={soldTrades} />
+          </TabsContent>
+          <TabsContent value="watchlist" className="pt-6">
+            {watchlist.length === 0 ? (
+              <div className="text-muted-foreground flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed py-24 text-center">
+                <Bookmark className="size-8" />
+                <p className="text-sm">{t("Nothing on your watchlist yet.")}</p>
+                <Link href="/marketplace" className="text-foreground text-sm underline">
+                  {t("Browse the marketplace")}
+                </Link>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+                {watchlist.map((asset) => (
+                  <ListingCard key={asset.id} asset={asset} />
                 ))}
               </div>
-            </div>
-          )}
-        </TabsContent>
-        <TabsContent value="history" className="pt-6">
-          <TradeHistory trades={soldTrades} />
-        </TabsContent>
-        <TabsContent value="watchlist" className="pt-6">
-          {watchlist.length === 0 ? (
-            <div className="text-muted-foreground flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed py-24 text-center">
-              <Bookmark className="size-8" />
-              <p className="text-sm">{t("Nothing on your watchlist yet.")}</p>
-              <Link href="/marketplace" className="text-foreground text-sm underline">
-                {t("Browse the marketplace")}
-              </Link>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
-              {watchlist.map((asset) => (
-                <ListingCard key={asset.id} asset={asset} />
-              ))}
-            </div>
-          )}
-        </TabsContent>
-        <TabsContent value="alerts" className="pt-6">
-          <WantedCardsPanel cards={wantedCards} />
-        </TabsContent>
-        <TabsContent value="badges" className="pt-6">
-          <Achievements achievements={achievements} />
-        </TabsContent>
-      </Tabs>
+            )}
+          </TabsContent>
+          <TabsContent value="alerts" className="pt-6">
+            <WantedCardsPanel cards={wantedCards} />
+          </TabsContent>
+          <TabsContent value="badges" className="pt-6">
+            <Achievements achievements={achievements} />
+          </TabsContent>
+        </ProfileTabs>
+      </ProfileTabsProvider>
     </div>
   );
 }

@@ -1,95 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import {
-  BadgeCheck,
-  Bot,
-  Boxes,
-  Coins,
-  Crown,
-  Gavel,
-  Gem,
-  Lock,
-  Medal,
-  ShoppingBag,
-  Star,
-  Store,
-  Tag,
-  Trophy,
-  Users,
-  type LucideIcon,
-} from "lucide-react";
 
-import type { Achievement, AchievementIcon, AchievementTier } from "@/lib/achievements";
+import type { Achievement } from "@/lib/achievements";
+import { BadgeEmblem } from "@/components/profile/badge-emblem";
 import { ACHIEVEMENT_GROUPS } from "@/lib/achievement-groups";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { useT } from "@/components/landing/language-provider";
 
-const ICONS: Record<AchievementIcon, LucideIcon> = {
-  verified: BadgeCheck,
-  tag: Tag,
-  store: Store,
-  coins: Coins,
-  gem: Gem,
-  bag: ShoppingBag,
-  boxes: Boxes,
-  gavel: Gavel,
-  star: Star,
-  bot: Bot,
-  users: Users,
-  crown: Crown,
-  trophy: Trophy,
-  medal: Medal,
-};
-
-// A metallic rim per tier, and a darker face inside it.
-const RIM: Record<AchievementTier, string> = {
-  bronze: "from-orange-200 via-orange-500 to-orange-900",
-  silver: "from-zinc-100 via-zinc-400 to-zinc-700",
-  gold: "from-yellow-100 via-amber-400 to-amber-700",
-};
-const FACE: Record<AchievementTier, string> = {
-  bronze: "from-orange-950 to-stone-900 text-orange-200",
-  silver: "from-zinc-800 to-zinc-950 text-zinc-100",
-  gold: "from-amber-950 to-stone-900 text-amber-200",
-};
-
-const HEXAGON = "[clip-path:polygon(50%_0%,93%_25%,93%_75%,50%_100%,7%_75%,7%_25%)]";
-
-/** The badge itself: a hexagon with a metal rim when earned, grey with a lock until then. */
-function BadgeEmblem({ achievement, size }: { achievement: Achievement; size: "md" | "lg" }) {
-  const Icon = ICONS[achievement.icon];
-  const { earned, tier } = achievement;
-  return (
-    <div
-      className={cn(
-        "relative shrink-0 bg-gradient-to-br p-[5%]",
-        HEXAGON,
-        size === "lg" ? "size-36" : "size-20",
-        earned ? RIM[tier] : "from-zinc-500 via-zinc-700 to-zinc-800",
-      )}
-    >
-      <div
-        className={cn(
-          "flex size-full items-center justify-center bg-gradient-to-br",
-          HEXAGON,
-          earned ? FACE[tier] : "from-zinc-800 to-zinc-950 text-zinc-600",
-        )}
-      >
-        <Icon className={size === "lg" ? "size-14" : "size-8"} strokeWidth={1.5} />
-      </div>
-      {!earned && (
-        <Lock
-          className={cn("absolute inset-0 m-auto text-white drop-shadow", size === "lg" ? "size-10" : "size-6")}
-          fill="currentColor"
-        />
-      )}
-    </div>
-  );
-}
-
-/** The profile's Badges tab: every badge, earned first; click one for what it means and how to get it. */
+/** The profile's Achievements tab: every badge by section; click one for what it means and how to get it. */
 export function Achievements({ achievements }: { achievements: Achievement[] }) {
   const t = useT();
   const [openId, setOpenId] = useState<string | null>(null);
@@ -157,7 +77,7 @@ export function Achievements({ achievements }: { achievements: Achievement[] }) 
                     onClick={() => setOpenId(a.id)}
                     className="bg-card hover:bg-accent flex size-full flex-col items-center gap-2 rounded-2xl border px-4 py-6 text-center transition-colors"
                   >
-                    <BadgeEmblem achievement={a} size="md" />
+                    <BadgeEmblem icon={a.icon} tier={a.tier} earned={a.earned} size="md" />
                     <span className="mt-2 text-sm font-semibold">{t(a.name)}</span>
                     <span className="text-muted-foreground line-clamp-3 text-xs">{t(a.howToEarn, a.params)}</span>
                     {!a.earned && a.progress && (
@@ -185,7 +105,7 @@ export function Achievements({ achievements }: { achievements: Achievement[] }) 
         <DialogContent className="bg-card flex flex-col items-center gap-0 rounded-2xl px-8 py-10 text-center sm:max-w-md">
           {open && (
             <>
-              <BadgeEmblem achievement={open} size="lg" />
+              <BadgeEmblem icon={open.icon} tier={open.tier} earned={open.earned} size="lg" />
               <DialogTitle className="mt-6 text-lg">{t(open.name)}</DialogTitle>
               <DialogDescription className="mt-2 text-sm">{t(open.description)}</DialogDescription>
               <span

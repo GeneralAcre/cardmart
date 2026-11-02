@@ -199,6 +199,7 @@ export function EditProfileButton({ bio }: { bio: string | null }) {
   return (
     <>
       <Button
+        size="sm"
         variant="outline"
         onClick={() => {
           setDraft(bio ?? "");

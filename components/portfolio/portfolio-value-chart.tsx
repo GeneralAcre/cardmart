@@ -1,14 +1,13 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { Area, AreaChart, XAxis, YAxis } from "recharts";
 
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getMyPortfolioPriceHistory } from "@/lib/actions";
 import { useCurrency } from "@/components/currency-provider";
-import { formatMoneyCompact } from "@/lib/currency";
 import type { PriceHistoryRange } from "@/lib/queries";
+import { cn } from "@/lib/utils";
 import { useLanguage } from "@/components/landing/language-provider";
 
 interface ValuePoint {
@@ -22,15 +21,16 @@ const RANGE_LABELS: Record<PriceHistoryRange, string> = { "1d": "24H", "7d": "7D
 // comes from lib/queries.ts's getPortfolioPriceHistory, which merges the
 // real PriceSnapshot rows across every asset the user owns — nothing
 // fabricated, and it starts sparse until real pricing events accumulate.
+//
+// A small trend line under the profit figure (PortfolioStats), not a big
+// chart: no axes or grid, green when the value rose over the range and red
+// when it fell. Hovering shows the exact value and time.
 export function PortfolioValueChart({ initialHistory }: { initialHistory: ValuePoint[] }) {
-  const { currency, money } = useCurrency();
+  const { money } = useCurrency();
   const [range, setRange] = useState<PriceHistoryRange>("7d");
   const [history, setHistory] = useState(initialHistory);
   const [pending, startTransition] = useTransition();
   const { locale, tr: t } = useLanguage();
-  const chartConfig = {
-    totalThb: { label: t("Total Value"), color: "var(--foreground)" },
-  } satisfies ChartConfig;
 
   function handleRangeChange(next: PriceHistoryRange) {
     setRange(next);
@@ -40,85 +40,67 @@ export function PortfolioValueChart({ initialHistory }: { initialHistory: ValueP
     });
   }
 
-  // Plotted by real time, so the gaps between points are true to the calendar
-  // and an axis date is never repeated.
   const chartData = history.map((p) => ({ t: new Date(p.createdAt).getTime(), totalThb: p.totalThb }));
+  const first = history[0]?.totalThb;
+  const last = history.at(-1)?.totalThb;
+  const color =
+    first == null || last == null || last === first ? "var(--muted-foreground)" : last > first ? "var(--success)" : "var(--destructive)";
+  const chartConfig = { totalThb: { label: t("Total Value"), color } } satisfies ChartConfig;
   const dateLocale = locale === "th" ? "th-TH" : "en-US";
-  const formatTick = (ms: number) =>
-    range === "1d"
-      ? new Date(ms).toLocaleTimeString(dateLocale, { hour: "numeric", minute: "2-digit" })
-      : new Date(ms).toLocaleDateString(dateLocale, { month: "short", day: "numeric" });
-  const latest = history.at(-1)?.totalThb ?? null;
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex min-w-0 flex-col gap-2">
       <div className="flex items-center justify-between gap-3">
-        <div className="flex flex-col gap-0.5">
-          <span className="text-xl font-semibold tabular-nums">{latest != null ? money(latest) : "—"}</span>
+        <span className="text-muted-foreground text-xs font-medium">{t("Value over time")}</span>
+        <div className="bg-muted flex rounded-lg p-0.5 text-xs font-medium">
+          {(Object.keys(RANGE_LABELS) as PriceHistoryRange[]).map((r) => (
+            <button
+              key={r}
+              type="button"
+              onClick={() => handleRangeChange(r)}
+              className={cn(
+                "rounded-md px-2.5 py-1 transition-colors",
+                range === r ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {RANGE_LABELS[r]}
+            </button>
+          ))}
         </div>
-        <Tabs value={range} onValueChange={(v) => handleRangeChange(v as PriceHistoryRange)}>
-          <TabsList>
-            {(Object.keys(RANGE_LABELS) as PriceHistoryRange[]).map((r) => (
-              <TabsTrigger key={r} value={r}>
-                {RANGE_LABELS[r]}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
       </div>
 
       {chartData.length >= 2 ? (
-        <ChartContainer config={chartConfig} className={`max-h-40 ${pending ? "opacity-50" : ""}`}>
-          <AreaChart data={chartData} margin={{ left: 0, right: 8, top: 8, bottom: 0 }}>
+        <ChartContainer config={chartConfig} className={cn("aspect-auto h-20 w-full", pending && "opacity-50")}>
+          <AreaChart data={chartData} margin={{ left: 0, right: 0, top: 4, bottom: 0 }}>
             <defs>
               <linearGradient id="portfolioValueFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="var(--color-totalThb)" stopOpacity={0.25} />
+                <stop offset="5%" stopColor="var(--color-totalThb)" stopOpacity={0.3} />
                 <stop offset="95%" stopColor="var(--color-totalThb)" stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid vertical={false} />
-            <XAxis
-              dataKey="t"
-              type="number"
-              scale="time"
-              domain={["dataMin", "dataMax"]}
-              tickFormatter={formatTick}
-              tickLine={false}
-              axisLine={false}
-              tickMargin={8}
-              minTickGap={48}
-            />
-            <YAxis
-              tickLine={false}
-              axisLine={false}
-              tickMargin={8}
-              width={56}
-              tickFormatter={(v: number) => formatMoneyCompact(v, currency)}
-            />
+            <XAxis dataKey="t" type="number" scale="time" domain={["dataMin", "dataMax"]} hide />
+            {/* Some room above and below the line; a value that never moved sits in the middle. */}
+            <YAxis domain={([min, max]: readonly number[]) => (min === max ? [min * 0.9, max * 1.1] : [min - (max - min) * 0.2, max + (max - min) * 0.2])} hide />
             <ChartTooltip
               content={(props) => (
                 <ChartTooltipContent
                   {...props}
                   labelFormatter={(_, items) => {
                     const ms = items?.[0]?.payload?.t;
-                    return typeof ms === "number" ? new Date(ms).toLocaleString(dateLocale, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : null;
+                    return typeof ms === "number"
+                      ? new Date(ms).toLocaleString(dateLocale, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
+                      : null;
                   }}
                   formatter={(value) => <span className="font-medium tabular-nums">{money(Number(value))}</span>}
                 />
               )}
             />
-            <Area
-              dataKey="totalThb"
-              type="monotone"
-              fill="url(#portfolioValueFill)"
-              stroke="var(--color-totalThb)"
-              strokeWidth={2}
-            />
+            <Area dataKey="totalThb" type="monotone" fill="url(#portfolioValueFill)" stroke="var(--color-totalThb)" strokeWidth={2} />
           </AreaChart>
         </ChartContainer>
       ) : (
-        <p className="text-muted-foreground text-xs">
-          {latest != null
+        <p className="text-muted-foreground flex h-20 items-center justify-center text-center text-xs">
+          {last != null
             ? t("Not enough history yet to draw a trend for this range.")
             : t("No priced assets yet — list or reprice something to start tracking value over time.")}
         </p>

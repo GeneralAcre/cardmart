@@ -86,6 +86,7 @@ export const REWARDS: Record<string, string> = {
   "Not earned yet": "ยังไม่ได้รับ",
   "{current} of {target} done": "ทำแล้ว {current} จาก {target}",
   "How to earn": "วิธีรับ",
+  Achievements: "ความสำเร็จ",
   "All badges": "เหรียญทั้งหมด",
   "My badges": "เหรียญของฉัน",
   "No badges yet. Switch to All badges to see how to earn them.": "ยังไม่มีเหรียญ สลับไปที่เหรียญทั้งหมดเพื่อดูวิธีรับ",
