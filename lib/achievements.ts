@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getRewards } from "@/lib/rewards";
+import { getRewards, type Rewards } from "@/lib/rewards";
 import { TOP_TIER_SELLER } from "@/lib/seller-tier";
 import type { AchievementGroup } from "@/lib/achievement-groups";
 
@@ -68,7 +68,12 @@ export interface Achievement {
 }
 
 export async function getAchievements(user: { id: string; image: string | null; kycStatus: string }): Promise<Achievement[]> {
-  const { counts, seller, topTier, leaderboard, level } = await getRewards(user);
+  return achievementsFrom(await getRewards(user));
+}
+
+/** The badges from rewards already loaded (the Rewards page has them anyway). */
+export function achievementsFrom(rewards: Rewards): Achievement[] {
+  const { counts, seller, topTier, leaderboard, level } = rewards;
 
   /** A badge for doing something `target` times. */
   function counted(
