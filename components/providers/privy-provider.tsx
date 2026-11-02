@@ -29,22 +29,15 @@ export function PrivyProvider({ children }: { children: React.ReactNode }) {
     <PrivyProviderBase
       appId={appId}
       config={{
-        // No "wallet" here on purpose: Privy's modal sends the sign request
-        // the moment a wallet connects and Phantom rejects it on its own, so
-        // wallet login goes through WalletLoginButton (connect, then a
-        // separate Sign click) instead. Each method also needs to be turned
-        // on in the Privy Dashboard (Settings -> Login Methods) — listing it
-        // here only controls which dashboard-enabled methods render.
+        // The sign-in window is our own (components/onboarding/login-dialog.tsx,
+        // built on Privy's headless hooks), so Privy's login modal isn't
+        // shown. Privy's UI only still appears for picking a wallet to
+        // connect, styled by `appearance` below. Each method also needs to
+        // be turned on in the Privy Dashboard (Settings -> Login Methods).
         loginMethods: ["email", "google"],
         appearance: {
           theme: "dark",
           accentColor: "#ffffff",
-          // Replaces Privy's generic "Log in or sign up" default with this
-          // app's own name — this is the one piece of the reference
-          // screenshot's branding actually controllable from code; the
-          // modal's overall layout (inline OTP button, "Social login" icon
-          // row) is Privy's own template and already follows automatically
-          // from loginMethods having 2+ social providers, as set above.
           landingHeader: "Log in to CardMart",
           // Privy defaults this to 'ethereum-only', which makes Phantom get
           // an Ethereum connect request and reject it ("Unsupported
