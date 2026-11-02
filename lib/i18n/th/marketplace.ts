@@ -137,4 +137,11 @@ export const MARKETPLACE: Record<string, string> = {
   "Could not delete your index.": "ลบดัชนีไม่สำเร็จ",
   "The cards you picked, each in its own grade, weighted equally. Only you can see it. Edit it from its card on the Market page.":
     "การ์ดที่คุณเลือก แยกตามเกรดของแต่ละใบ โดยมีน้ำหนักเท่ากัน มีเพียงคุณที่เห็นดัชนีนี้ แก้ไขได้จากการ์ดดัชนีในหน้าตลาด",
+
+  // "Just sold" ticker
+  "Just sold": "เพิ่งขายไป",
+  "Just now": "เมื่อสักครู่",
+  "{hours}h ago": "{hours} ชม. ที่แล้ว",
+  "{pct}% under market": "ต่ำกว่าราคาตลาด {pct}%",
+  "{pct}% over market": "สูงกว่าราคาตลาด {pct}%",
 };
