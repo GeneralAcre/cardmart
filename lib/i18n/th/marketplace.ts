@@ -119,8 +119,6 @@ export const MARKETPLACE: Record<string, string> = {
   "My Index": "ดัชนีของฉัน",
   Create: "สร้าง",
   "Pick any cards and track them as your own index.": "เลือกการ์ดที่ต้องการแล้วติดตามเป็นดัชนีของคุณเอง",
-  "{count} cards you picked": "การ์ดที่คุณเลือก {count} ใบ",
-  "{priced} of {count} cards priced": "มีราคาตลาด {priced} จาก {count} ใบ",
   "Edit My Index": "แก้ไขดัชนีของฉัน",
   "Pick the cards to track. Your index moves with their market prices, each card weighted equally.":
     "เลือกการ์ดที่ต้องการติดตาม ดัชนีของคุณจะขยับตามราคาตลาดของการ์ดเหล่านั้น โดยแต่ละใบมีน้ำหนักเท่ากัน",

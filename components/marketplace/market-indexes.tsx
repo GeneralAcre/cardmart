@@ -161,13 +161,11 @@ function IndexCard({
   index,
   href = HREF[index.key],
   label,
-  subtitle,
   action,
 }: {
   index: MarketIndex;
   href?: string;
   label?: string;
-  subtitle: string;
   action?: React.ReactNode;
 }) {
   const { tr: t } = useLanguage();
@@ -186,8 +184,7 @@ function IndexCard({
       </div>
 
       <div className="flex items-end justify-between gap-4">
-        <div className="flex min-w-0 flex-col gap-2">
-          <span className="text-muted-foreground truncate text-xs tabular-nums">{subtitle}</span>
+        <div className="flex min-w-0 flex-col">
           <span className="text-4xl leading-none font-semibold tracking-tight tabular-nums">{last ? formatLevel(last.price) : "—"}</span>
         </div>
         {index.points.length >= 2 ? (
@@ -210,7 +207,6 @@ function MyIndexCard({ mine, listings, autoOpen = false }: { mine: MyIndexCardDa
   const [editing, setEditing] = useState(autoOpen);
   const { id, name, index, cards } = mine;
   const label = name ?? undefined;
-  const priced = cards.filter((c) => c.priced).length;
   const editor = <MyIndexEditor indexId={id} open={editing} onOpenChange={setEditing} name={name} cards={cards} listings={listings} />;
 
   if (cards.length === 0) {
@@ -237,11 +233,6 @@ function MyIndexCard({ mine, listings, autoOpen = false }: { mine: MyIndexCardDa
         index={index}
         href={id ? `/market/index/mine-${id}` : HREF.MINE}
         label={label}
-        subtitle={
-          priced === cards.length
-            ? t("{count} cards you picked", { count: cards.length })
-            : t("{priced} of {count} cards priced", { priced, count: cards.length })
-        }
         action={
           <button
             type="button"
@@ -318,14 +309,12 @@ export function MarketIndexes({
   mine?: MyIndexCardData[];
   listings?: LeaderboardRow[];
 }) {
-  const { tr: t } = useLanguage();
   const [justCreated, setJustCreated] = useState<string | null>(null);
   if (mine.length === 0 && indexes.every((i) => i.points.length === 0)) return null;
-  const subtitle = (index: MarketIndex) => (index.key === "ALL" ? t("Top 10 listed on CardMart") : t("Top 50 by market cap"));
   // Offer another index once the first has cards, so an empty row doesn't show two invitations.
   const canAdd = mine.length > 0 && mine.length < MAX_OWN_INDEXES && (mine.length > 1 || mine[0].cards.length > 0);
   const cards = [
-    ...indexes.map((index) => ({ key: index.key, node: <IndexCard index={index} subtitle={subtitle(index)} /> })),
+    ...indexes.map((index) => ({ key: index.key, node: <IndexCard index={index} /> })),
     ...mine.map((m) => ({
       key: m.id ?? "MINE",
       node: <MyIndexCard mine={m} listings={listings} autoOpen={m.id != null && m.id === justCreated} />,
