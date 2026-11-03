@@ -327,7 +327,7 @@ export function PortfolioItemCard({
 
       {asset.marketStatus === "IN_AUCTION" ? (
         <div className="mt-auto pt-1">
-          <Button asChild size="sm" variant="default" className="w-full font-semibold">
+          <Button asChild size="sm" variant="secondary" className="w-full font-semibold">
             <Link href={`/item/${asset.id}`}>{t("View auction")}</Link>
           </Button>
         </div>
@@ -335,7 +335,7 @@ export function PortfolioItemCard({
         <div className="mt-auto pt-1">
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
-              <Button size="sm" variant="default" className="w-full font-semibold">
+              <Button size="sm" variant="secondary" className="w-full font-semibold">
                 {t("Manage")} <ChevronDown />
               </Button>
             </DropdownMenuTrigger>
