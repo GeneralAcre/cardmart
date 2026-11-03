@@ -64,7 +64,15 @@ function usePrivyWalletStore(): WalletStore {
     (a) => a.type === "wallet" && a.chainType === "solana" && a.walletClientType !== "privy",
   );
   const externalAddress = externalSolana && "address" in externalSolana ? externalSolana.address : null;
-  const wallet = (externalAddress ? wallets.find((w) => w.address === externalAddress) : wallets[0]) ?? null;
+  // Otherwise their embedded Privy wallet. Never just the first wallet the
+  // browser offers: a Phantom that's connected but not linked to this account
+  // isn't the address the server has, so it mustn't be shown or paid from.
+  const embeddedSolana = user?.linkedAccounts.find(
+    (a) => a.type === "wallet" && a.chainType === "solana" && a.walletClientType === "privy",
+  );
+  const embeddedAddress = embeddedSolana && "address" in embeddedSolana ? embeddedSolana.address : null;
+  const accountAddress = externalAddress ?? embeddedAddress;
+  const wallet = (accountAddress ? wallets.find((w) => w.address === accountAddress) : null) ?? null;
   const publicKey = wallet?.address ?? null;
   const connected = authenticated && Boolean(publicKey);
 

@@ -228,7 +228,7 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
         <CardHeader>
           <CardTitle>{t("Listing")}</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col gap-5">
+        <CardContent className="flex flex-col gap-5 pb-5">
           <StepHeading step={1} title={t("What are you listing?")} tour="sell-details" />
           <div className="flex flex-col gap-2">
             <Label>{t("Item Condition")}</Label>

@@ -4,7 +4,8 @@ export const LISTING: Record<string, string> = {
   "Sell a card": "ขายการ์ด",
   "Back to Marketplace": "กลับไปที่ตลาด",
   "Graded and raw cards, paid through escrow and checked at our warehouse before the seller is paid.": "การ์ดเกรดและการ์ดดิบ ชำระผ่านเอสโครว์และตรวจสอบที่คลังสินค้าของเราก่อนจ่ายเงินให้ผู้ขาย",
-  "List a card you have now, or send a raw card in to be graded first.": "ลงขายการ์ดที่คุณมีตอนนี้ หรือส่งการ์ดดิบเข้ามาเกรดก่อน",
+  "List a graded or ungraded card you have in hand. It goes live on the market once you confirm.":
+    "ลงขายการ์ดที่เกรดแล้วหรือยังไม่เกรดที่อยู่ในมือคุณ การ์ดจะขึ้นตลาดทันทีเมื่อคุณยืนยัน",
   "How do you want to add your card?": "คุณต้องการเพิ่มการ์ดอย่างไร?",
   "List a card now": "ลงขายการ์ดตอนนี้",
   "Already slabbed, or selling it raw. Verify it with photos and list it — {price} fee.":

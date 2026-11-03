@@ -1,7 +1,9 @@
 "use client";
 
-import { PrivyProvider as PrivyProviderBase } from "@privy-io/react-auth";
-import { toSolanaWalletConnectors } from "@privy-io/react-auth/solana";
+import { useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { PrivyProvider as PrivyProviderBase, usePrivy } from "@privy-io/react-auth";
+import { toSolanaWalletConnectors, useCreateWallet } from "@privy-io/react-auth/solana";
 import { createSolanaRpc, createSolanaRpcSubscriptions } from "@solana/kit";
 import { SOLANA_RPC_URL, SOLANA_WS_URL } from "@/lib/web3/rpc-url";
 
@@ -53,7 +55,36 @@ export function PrivyProvider({ children }: { children: React.ReactNode }) {
         solana: { rpcs: solanaDevnetRpc },
       }}
     >
+      <EnsureSolanaWallet />
       {children}
     </PrivyProviderBase>
   );
+}
+
+/**
+ * Makes sure every signed-in account has a Solana wallet. createOnLogin above
+ * doesn't fire for our own sign-in window (it's built on Privy's headless
+ * hooks), so an account could end up with none: nothing to pay from, and
+ * "No wallet connected" on the profile. Creates the embedded one, then
+ * refreshes so the server picks the address up (lib/session.ts saves it).
+ */
+function EnsureSolanaWallet() {
+  const { ready, authenticated, user } = usePrivy();
+  const { createWallet } = useCreateWallet();
+  const router = useRouter();
+  const started = useRef(false);
+  const hasSolanaWallet = user?.linkedAccounts.some((a) => a.type === "wallet" && a.chainType === "solana") ?? false;
+
+  useEffect(() => {
+    if (!ready || !authenticated || !user || hasSolanaWallet || started.current) return;
+    started.current = true;
+    createWallet()
+      .then(() => router.refresh())
+      .catch(() => {
+        // Try again on the next change (another page, a fresh sign-in).
+        started.current = false;
+      });
+  }, [ready, authenticated, user, hasSolanaWallet, createWallet, router]);
+
+  return null;
 }
