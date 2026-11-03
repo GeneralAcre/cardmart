@@ -316,11 +316,13 @@ export function TourGuide({ id, signedIn, done }: { id: TourId; signedIn: boolea
   const reward = signedIn && !done.includes(id) ? tourXp(count) - tourXp(done.length) : TOUR_TIERS[0].xp;
 
   return createPortal(
-    <div className="fixed inset-0 z-[60]" role="dialog" aria-modal="true" aria-label={t(step.title)}>
+    // The frame itself lets clicks through; only the dimmed blocker and the card take them,
+    // so the cut-out spotlight on a step they have to try really can be tapped.
+    <div className="pointer-events-none fixed inset-0 z-[60]" role="dialog" aria-modal="true" aria-label={t(step.title)}>
       {/* Blocks the page while touring; the spotlight's huge shadow does the dimming. */}
       {/* On a step they have to try, the spotlight is cut out of it so it can be tapped. */}
       <div
-        className={cn("absolute inset-0", !rect && "bg-black/60")}
+        className={cn("pointer-events-auto absolute inset-0", !rect && "bg-black/60")}
         style={
           mustTap && rect
             ? {
@@ -347,7 +349,7 @@ export function TourGuide({ id, signedIn, done }: { id: TourId; signedIn: boolea
       <div
         ref={cardRef}
         className={cn(
-          "bg-popover text-popover-foreground absolute flex w-[min(22rem,calc(100vw-24px))] flex-col gap-3 rounded-2xl border p-5 shadow-2xl transition-[top,left,opacity] duration-300 ease-out",
+          "bg-popover text-popover-foreground pointer-events-auto absolute flex w-[min(22rem,calc(100vw-24px))] flex-col gap-3 rounded-2xl border p-5 shadow-2xl transition-[top,left,opacity] duration-300 ease-out",
           !cardPos && "opacity-0",
         )}
         style={cardPos ?? { top: 0, left: 0 }}
