@@ -165,6 +165,41 @@
     0% { background-position: 100% 0; }
     50%, 100% { background-position: 0% 0; }
   }
+
+  /* Market news banner (components/marketplace/market-news-hero.tsx). Each
+     slide's cards deal in, then float; a foil shine crosses the front card;
+     the blurred backdrop slowly zooms; the active dot fills while the slide
+     shows and moves on when it's full (its duration is set inline). */
+  --animate-news-deal: news-deal 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-news-float: news-float 6s ease-in-out infinite;
+  --animate-news-shine: news-shine 4s ease-in-out 1s infinite;
+  --animate-news-zoom: news-zoom 12s ease-out both;
+  --animate-news-rise: news-rise 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-news-progress: news-progress 7s linear both;
+  @keyframes news-deal {
+    from { opacity: 0; transform: translate(40%, 12%) rotate(14deg) scale(0.85); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes news-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+  @keyframes news-shine {
+    0% { transform: translateX(-120%) skewX(-20deg); }
+    45%, 100% { transform: translateX(220%) skewX(-20deg); }
+  }
+  @keyframes news-zoom {
+    from { transform: scale(1.25); }
+    to { transform: scale(1.1); }
+  }
+  @keyframes news-rise {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes news-progress {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+  }
 }
 
 /* The landing headline in Thai: tone marks and lower vowels need more room
@@ -189,6 +224,18 @@ html[lang="th"] .hero-title {
   }
   .ticker-mask {
     overflow-x: auto;
+  }
+  /* The news banner holds still and only changes slide when asked. */
+  .animate-news-deal,
+  .animate-news-float,
+  .animate-news-shine,
+  .animate-news-zoom,
+  .animate-news-rise,
+  .animate-news-progress {
+    animation: none;
+  }
+  .animate-news-shine {
+    display: none;
   }
   .animate-text-sweep {
     animation: none;

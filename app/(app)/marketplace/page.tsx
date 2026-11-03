@@ -2,7 +2,8 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import type { CardGame } from "@prisma/client";
 
-import { MarketHero } from "@/components/marketplace/market-hero";
+import { MarketNewsHero } from "@/components/marketplace/market-news-hero";
+import { getMarketNews } from "@/lib/market-news";
 import { MarketIndexes } from "@/components/marketplace/market-indexes";
 import { MarketPulse } from "@/components/marketplace/market-pulse";
 import { JustSoldTicker } from "@/components/marketplace/just-sold-ticker";
@@ -18,12 +19,13 @@ import { EMPTY_FILTERS } from "@/lib/types";
 
 export default async function MarketplacePage({ searchParams }: { searchParams: Promise<{ q?: string; game?: string }> }) {
   const [{ q, game }, user] = await Promise.all([searchParams, getOptionalUser()]);
-  const [listings, movers, indexes, mine, recentSales, t] = await Promise.all([
+  const [listings, movers, indexes, mine, recentSales, news, t] = await Promise.all([
     getMarketplaceListings(),
     getLeaderboard(user?.id ?? ""),
     getMarketIndexes(),
     user ? Promise.all([getMyIndex(user.id), getUserIndexes(user.id)]).then(([first, extras]) => [first, ...extras]) : [],
     getRecentSales(),
+    getMarketNews(),
     getT(),
   ]);
 
@@ -33,7 +35,8 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
 
   return (
     <div className="mx-auto w-full max-w-screen-2xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
-      <MarketHero />
+      {/* The headline and search first, then what's new: set drops, top cards, new listings, a live auction. */}
+      <MarketNewsHero slides={news.slides} wall={news.wall} />
       {recentSales.length > 0 && (
         <div className="mb-6">
           <JustSoldTicker sales={recentSales} />
