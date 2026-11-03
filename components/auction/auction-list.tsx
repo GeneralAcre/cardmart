@@ -348,6 +348,8 @@ export function AuctionList({ auctions }: { auctions: Auction[] }) {
 
   const filtered = q !== "" || game !== "ALL" || grader !== "ALL" || window !== "any";
   const trigger = "bg-card h-10 w-auto gap-2 rounded-lg px-3 text-sm font-semibold";
+  // On phones the three filters share one row, so each takes a third and its label truncates.
+  const filter = cn(trigger, "w-full min-w-0 gap-1 px-2.5 [&>span]:min-w-0 [&>span]:truncate sm:w-auto sm:gap-2 sm:px-3");
 
   return (
     <div className="flex flex-col gap-4">
@@ -378,9 +380,9 @@ export function AuctionList({ auctions }: { auctions: Auction[] }) {
       </div>
 
       {/* Filters. */}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="grid grid-cols-3 items-center gap-2 sm:flex sm:flex-wrap">
         <Select value={game} onValueChange={(v) => setGame(v as typeof game)}>
-          <SelectTrigger className={trigger} aria-label={t("Game")}>
+          <SelectTrigger className={filter} aria-label={t("Game")}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -390,7 +392,7 @@ export function AuctionList({ auctions }: { auctions: Auction[] }) {
           </SelectContent>
         </Select>
         <Select value={window} onValueChange={(v) => setWindow(v as Window)}>
-          <SelectTrigger className={trigger} aria-label={t("Ending within")}>
+          <SelectTrigger className={filter} aria-label={t("Ending within")}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -401,7 +403,7 @@ export function AuctionList({ auctions }: { auctions: Auction[] }) {
           </SelectContent>
         </Select>
         <Select value={grader} onValueChange={(v) => setGrader(v as typeof grader)}>
-          <SelectTrigger className={trigger} aria-label={t("Grader")}>
+          <SelectTrigger className={filter} aria-label={t("Grader")}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -421,7 +423,7 @@ export function AuctionList({ auctions }: { auctions: Auction[] }) {
               setGrader("ALL");
               setWindow("any");
             }}
-            className="text-muted-foreground hover:text-foreground px-1 text-sm underline underline-offset-4"
+            className="text-muted-foreground hover:text-foreground col-span-3 justify-self-start px-1 text-sm underline underline-offset-4"
           >
             {t("Clear filters")}
           </button>
