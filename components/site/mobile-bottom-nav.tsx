@@ -16,6 +16,7 @@ export function MobileBottomNav() {
 
   return (
     <nav
+      data-tour="nav"
       className="bg-background/95 fixed inset-x-0 bottom-0 z-40 border-t backdrop-blur md:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
     >

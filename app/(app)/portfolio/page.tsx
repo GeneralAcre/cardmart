@@ -30,6 +30,7 @@ import { WantedCardsPanel } from "@/components/wanted/wanted-cards-panel";
 import { TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HiddenOnTabs, ProfileTabs, ProfileTabsProvider } from "@/components/portfolio/profile-tabs";
 import { SalesToShipPanel } from "@/components/portfolio/ship-to-warehouse";
+import { PageTour } from "@/components/tour/page-tour";
 import { expireOverdueSellerShipments } from "@/lib/actions";
 import { toSaleToShip } from "@/lib/shipping";
 import { formatDate, formatGrade } from "@/lib/format";
@@ -87,7 +88,8 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
   return (
     // Same full width as the Market page, so the profile, stats and tabs fill the screen.
     <div className="mx-auto w-full max-w-screen-2xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mb-8">
+      <PageTour id="portfolio" />
+      <div className="mb-8" data-tour="profile">
         <ProfileHeader
           userId={user.id}
           name={user.name ?? user.handle ?? t("Collector")}
@@ -135,7 +137,7 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
           )}
         </HiddenOnTabs>
 
-        <ProfileTabs id="profile-tabs" className="scroll-mt-20">
+        <ProfileTabs id="profile-tabs" className="scroll-mt-20" data-tour="portfolio-tabs">
           <TabsList>
             <TabsTrigger value="cards">
               <LayoutGrid className="size-4" />

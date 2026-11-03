@@ -15,8 +15,11 @@ import { ORDERS } from "@/lib/i18n/th/orders";
 import { PAGES } from "@/lib/i18n/th/pages";
 import { PORTFOLIO } from "@/lib/i18n/th/portfolio";
 import { REWARDS } from "@/lib/i18n/th/rewards";
+import { TOUR } from "@/lib/i18n/th/tour";
 
 export const TH: Record<string, string> = {
+  // Tours reuse words translated elsewhere (Back, Sell a card); those win.
+  ...TOUR,
   // First, so an existing translation of a shared word ("Auctions") wins.
   ...FAQ,
   ...STATS,

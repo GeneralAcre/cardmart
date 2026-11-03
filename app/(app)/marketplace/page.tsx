@@ -10,6 +10,7 @@ import { JustSoldTicker } from "@/components/marketplace/just-sold-ticker";
 import { getRecentSales } from "@/lib/recent-sales";
 import { MarketplaceExplorer } from "@/components/marketplace/marketplace-explorer";
 import { ActionButton } from "@/components/ui/action-button";
+import { PageTour } from "@/components/tour/page-tour";
 import { getLeaderboard, getMarketplaceListings } from "@/lib/queries";
 import { getOptionalUser } from "@/lib/session";
 import { getT } from "@/lib/i18n/server";
@@ -36,9 +37,12 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
   return (
     <div className="mx-auto w-full max-w-screen-2xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
       {/* The headline and search first, then what's new: set drops, top cards, new listings, a live auction. */}
-      <MarketNewsHero slides={news.slides} wall={news.wall} />
+      <PageTour id="marketplace" />
+      <div data-tour="search">
+        <MarketNewsHero slides={news.slides} wall={news.wall} />
+      </div>
       {recentSales.length > 0 && (
-        <div className="mb-6">
+        <div className="mb-6" data-tour="just-sold">
           <JustSoldTicker sales={recentSales} />
         </div>
       )}
@@ -46,7 +50,7 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
         <h1 className="text-2xl font-semibold">{t("Market")}</h1>
         {/* Shown to everyone, guests included: selling is a main reason to come
             here, and a guest who taps it is sent to sign in first (proxy.ts). */}
-        <ActionButton href="/marketplace/sell" icon={Plus} className="hidden md:inline-flex">
+        <ActionButton href="/marketplace/sell" icon={Plus} className="hidden md:inline-flex" data-tour="sell">
           {t("Sell a card")}
         </ActionButton>
         {/* Phones: a round + pinned bottom right, just above the bottom menu, like a floating add button. */}
@@ -54,6 +58,7 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
           href="/marketplace/sell"
           aria-label={t("Sell a card")}
           title={t("Sell a card")}
+          data-tour="sell"
           className="bg-primary text-primary-foreground fixed right-4 bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] z-30 flex size-14 items-center justify-center rounded-full shadow-lg transition-transform active:scale-95 md:hidden"
         >
           <Plus className="size-7" />
@@ -61,7 +66,7 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
       </div>
       {/* Signed-in viewers also get their own indexes, from cards they pick. */}
       {(mine.length > 0 || indexes.some((i) => i.points.length > 0)) && (
-        <div className="mb-6">
+        <div className="mb-6" data-tour="indexes">
           <MarketIndexes
             indexes={indexes}
             mine={mine.map(({ id, name, index, cards }) => ({ id, name, index, cards }))}
@@ -70,14 +75,16 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
         </div>
       )}
       {/* Trending movers and the heatmap sit right under the indexes, above the filters and listings. */}
-      <div className="mb-6">
+      <div className="mb-6" data-tour="movers">
         <MarketPulse rows={movers} />
       </div>
-      <MarketplaceExplorer
-        key={`${initialFilters.q}|${initialFilters.games.join(",")}`}
-        initialListings={listings}
-        initialFilters={initialFilters}
-      />
+      <div data-tour="listings">
+        <MarketplaceExplorer
+          key={`${initialFilters.q}|${initialFilters.games.join(",")}`}
+          initialListings={listings}
+          initialFilters={initialFilters}
+        />
+      </div>
     </div>
   );
 }

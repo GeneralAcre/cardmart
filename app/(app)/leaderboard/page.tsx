@@ -1,5 +1,6 @@
 import { CommunityTabs } from "@/components/community/community-tabs";
 import { TopTraders } from "@/components/leaderboard/top-traders";
+import { PageTour } from "@/components/tour/page-tour";
 import { getTopTraders } from "@/lib/queries";
 import { getCurrentUser } from "@/lib/session";
 import { getT } from "@/lib/i18n/server";
@@ -17,9 +18,14 @@ export default async function LeaderboardPage() {
           <h1 className="text-2xl font-semibold">{t("Leaderboard")}</h1>
           <p className="text-muted-foreground text-sm">{t("Top traders on CardMart, ranked by their gains.")}</p>
         </div>
-        <CommunityTabs />
+        <div data-tour="community-tabs">
+          <CommunityTabs />
+        </div>
       </div>
-      <TopTraders rows={traders} me={{ id: user.id, name: user.name, handle: user.handle, image: user.image }} />
+      <PageTour id="leaderboard" />
+      <div data-tour="traders">
+        <TopTraders rows={traders} me={{ id: user.id, name: user.name, handle: user.handle, image: user.image }} />
+      </div>
     </div>
   );
 }

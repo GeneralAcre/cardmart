@@ -23,7 +23,7 @@ export function NavLinks() {
   const t = useT();
 
   return (
-    <nav className="hidden items-center gap-1 md:flex">
+    <nav className="hidden items-center gap-1 md:flex" data-tour="nav">
       {links.map((l) => {
         const active = isNavEntryActive(pathname, l);
         const stateClass = active ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground";

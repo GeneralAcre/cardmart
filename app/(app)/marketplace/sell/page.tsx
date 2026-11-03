@@ -2,6 +2,7 @@ import { ChevronLeft } from "lucide-react";
 
 import { ListingFlow } from "@/components/listing/listing-flow";
 import { ActionButton } from "@/components/ui/action-button";
+import { PageTour } from "@/components/tour/page-tour";
 import { getEscrowAuthorityAddress } from "@/lib/web3/escrow-server";
 import { getT } from "@/lib/i18n/server";
 
@@ -29,6 +30,7 @@ export default async function SellPage() {
           {t("List a card you have now, or send a raw card in to be graded first.")}
         </p>
       </div>
+      <PageTour id="sell" />
       <ListingFlow escrowAuthorityAddress={escrowAuthorityAddress} />
     </div>
   );

@@ -93,6 +93,8 @@ export function ProfileCover({ cover, editable = false }: { cover: string | null
             type="button"
             onClick={pick}
             disabled={busy}
+            data-tour="profile-cover"
+            data-tour-skip={cover ? "You already have one, so you can skip this." : undefined}
             className="flex h-8 items-center gap-1.5 rounded-full bg-black/55 px-3 text-xs font-medium text-white backdrop-blur transition-colors hover:bg-black/70"
           >
             {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Camera className="size-3.5" />}
@@ -149,6 +151,8 @@ export function ProfileAvatar({
         disabled={busy}
         aria-label={image ? t("Change photo") : t("Add photo")}
         title={image ? t("Change photo") : t("Add photo")}
+        data-tour="profile-photo"
+        data-tour-skip={image ? "You already have one, so you can skip this." : undefined}
         className="group focus-visible:ring-ring relative shrink-0 rounded-full outline-none focus-visible:ring-2"
       >
         {avatar}
@@ -201,6 +205,8 @@ export function EditProfileButton({ bio }: { bio: string | null }) {
       <Button
         size="sm"
         variant="outline"
+        data-tour="profile-edit"
+        data-tour-skip={bio ? "You already have one, so you can skip this." : undefined}
         onClick={() => {
           setDraft(bio ?? "");
           setOpen(true);

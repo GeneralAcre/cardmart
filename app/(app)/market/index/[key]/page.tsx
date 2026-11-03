@@ -9,6 +9,7 @@ import { getMoney } from "@/lib/currency-server";
 import { getCurrentUser } from "@/lib/session";
 import { getLocale, getT } from "@/lib/i18n/server";
 import { cn } from "@/lib/utils";
+import { PageTour } from "@/components/tour/page-tour";
 
 // URL slug → index. The links come from the index cards on the Market page.
 const SLUGS: Record<string, MarketIndex["key"]> = { cardmart: "ALL", pokemon: "POKEMON", "one-piece": "ONE_PIECE", mine: "MINE" };
@@ -117,6 +118,7 @@ export default async function IndexPage({ params }: { params: Promise<{ key: str
 
   return (
     <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
+      <PageTour id="index" />
       <Breadcrumbs items={[{ label: t("Market"), href: "/marketplace" }, { label: title }]} />
 
       <div className="mb-4 flex max-w-2xl flex-col gap-1">
@@ -126,11 +128,11 @@ export default async function IndexPage({ params }: { params: Promise<{ key: str
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="contents lg:flex lg:min-w-0 lg:flex-col lg:gap-8">
-          <div className="order-1 lg:order-none">
+          <div className="order-1 lg:order-none" data-tour="index-quote">
             <IndexQuote index={index} name={title} />
           </div>
 
-          <section className="order-3 flex flex-col gap-2 lg:order-none">
+          <section className="order-3 flex flex-col gap-2 lg:order-none" data-tour="index-members">
             <h2 className="text-lg font-semibold">{t("Cards in this index")}</h2>
             <IndexMembers members={members} longLabel={longLabel} />
             <p className="text-muted-foreground text-[11px]">
@@ -139,7 +141,7 @@ export default async function IndexPage({ params }: { params: Promise<{ key: str
                 : t("Prices are TCGplayer's market price for the ungraded card, in baht. The top 50 is re-ranked once a day.")}
             </p>
           </section>
-          <section className="order-4 flex flex-col gap-2 lg:order-none">
+          <section className="order-4 flex flex-col gap-2 lg:order-none" data-tour="index-other">
             <h2 className="text-lg font-semibold">{t("Other indexes")}</h2>
             <div className="bg-card rounded-xl border px-4 py-1">
               {all
@@ -166,7 +168,7 @@ export default async function IndexPage({ params }: { params: Promise<{ key: str
 
         </div>
 
-        <aside className="order-2 flex flex-col gap-4 lg:order-none">
+        <aside className="order-2 flex flex-col gap-4 lg:order-none" data-tour="index-movers">
           <h2 className="text-lg font-semibold">{t("Top movers today")}</h2>
           <MoverList title={t("Gainers")} members={gainers} />
           <MoverList title={t("Losers")} members={losers} />

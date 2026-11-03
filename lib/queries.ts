@@ -175,6 +175,7 @@ export async function getSellerProfile(sellerId: string) {
       createdAt: true,
       walletAddress: true,
       kycStatus: true,
+      toursDone: true,
     },
   });
   if (!seller) return null;

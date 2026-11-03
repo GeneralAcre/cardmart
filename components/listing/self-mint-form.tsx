@@ -229,7 +229,7 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
           <CardTitle>{t("Listing")}</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-5">
-          <StepHeading step={1} title={t("What are you listing?")} />
+          <StepHeading step={1} title={t("What are you listing?")} tour="sell-details" />
           <div className="flex flex-col gap-2">
             <Label>{t("Item Condition")}</Label>
             <Tabs value={raw ? "raw" : "graded"} onValueChange={(v) => handleModeChange(v === "raw")}>
@@ -399,12 +399,12 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
 
           <Separator />
 
-          <StepHeading step={2} title={t("Prove it's really yours")} />
+          <StepHeading step={2} title={t("Prove it's really yours")} tour="sell-photos" />
           <CameraCaptureGrid category={category} raw={raw} captures={captures} onChange={setCaptures} />
 
           <Separator />
 
-          <StepHeading step={3} title={t("Set your price")} />
+          <StepHeading step={3} title={t("Set your price")} tour="sell-price" />
           <div className="flex flex-col gap-2">
             <Label htmlFor="price">{t("Listing Price (THB)")}</Label>
             <Input
@@ -425,6 +425,7 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
             size="lg"
             disabled={!canSubmit}
             onClick={() => setSignOpen(true)}
+            data-tour="sell-submit"
           >
             <BadgeCheck />
             {t("Create Listing")}
@@ -432,7 +433,7 @@ export function SelfMintForm({ escrowAuthorityAddress }: { escrowAuthorityAddres
         </CardContent>
       </Card>
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3" data-tour="sell-preview">
         <span className="text-muted-foreground text-sm font-medium">{t("Digital Certificate Preview")}</span>
         <CardArt
           themeIndex={serial ? themeIndexForSerial(serial) : themeIndexForSerial(name || "preview")}

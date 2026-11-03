@@ -67,7 +67,7 @@ export interface Achievement {
   group: AchievementGroup;
 }
 
-export async function getAchievements(user: { id: string; image: string | null; kycStatus: string }): Promise<Achievement[]> {
+export async function getAchievements(user: { id: string; image: string | null; kycStatus: string; toursDone: string[] }): Promise<Achievement[]> {
   return achievementsFrom(await getRewards(user));
 }
 

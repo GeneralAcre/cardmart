@@ -211,6 +211,10 @@ model User {
   // their watchlist). Null shows the default, "My Index".
   myIndexName String?
 
+  // The page tours (lib/tours.ts) they've finished, by tour id. Each counts
+  // toward the "Take the page tours" XP task on the Rewards page.
+  toursDone String[] @default([])
+
   // The wide banner behind their profile, and a short line about themselves,
   // both shown on their portfolio and public store page.
   coverImage String?

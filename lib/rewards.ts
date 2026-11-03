@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/lib/prisma";
 import { isTopTierSeller, type SellerStanding } from "@/lib/seller-tier";
+import { TOUR_IDS, TOUR_PAGES, TOUR_TIERS, isTourId } from "@/lib/tours";
 
 // XP and levels for the Rewards page. Every point comes from something the
 // user has really done on CardMart, counted straight from their records each
@@ -92,7 +93,7 @@ export interface Rewards {
   counts: Record<string, number>;
 }
 
-type RewardsUser = { id: string; image: string | null; kycStatus: string };
+type RewardsUser = { id: string; image: string | null; kycStatus: string; toursDone: string[] };
 
 /** XP, level and task progress, counted from the user's real records. */
 async function getProgress(user: RewardsUser) {
@@ -110,12 +111,17 @@ async function getProgress(user: RewardsUser) {
     prisma.user.count({ where: { referredById: user.id, profileComplete: true } }),
   ]);
 
+  // Page tours: finished ones are kept on the user row. Go opens the next one not done yet.
+  const toursDone = user.toursDone.filter(isTourId);
+  const nextTour = TOUR_IDS.find((id) => !toursDone.includes(id)) ?? TOUR_IDS[0];
+
   const tiered: TieredTask[] = [
     // Getting started: one step each.
     { id: "photo", group: "start", title: "Add a profile photo", description: "Put a face to your store.", href: "/settings", tiers: [{ target: 1, xp: 50 }], count: user.image ? 1 : 0 },
     { id: "kyc", group: "start", title: "Verify your identity", description: "Verified sellers get a badge and more trust.", href: "/portfolio", tiers: [{ target: 1, xp: 150 }], count: user.kycStatus === "VERIFIED" ? 1 : 0 },
     { id: "watch", group: "start", title: "Watch a card", description: "Save a listing to follow its price.", href: "/marketplace", tiers: [{ target: 1, xp: 25 }], count: watching },
     { id: "wanted", group: "start", title: "Add a wanted card", description: "Get told when a card you want is listed.", href: "/portfolio", tiers: [{ target: 1, xp: 25 }], count: wanted },
+    { id: "tour", group: "start", titleOne: "Take your first page tour", title: "Take {n} page tours", description: "Short guides to each page, shown the first time you open it.", href: `${TOUR_PAGES[nextTour]}?tour=1`, tiers: TOUR_TIERS, count: toursDone.length },
     { id: "message", group: "start", title: "Message a seller", description: "Ask a question before you buy.", href: "/messages", tiers: [{ target: 1, xp: 25 }], count: messages },
     // Trading: steps that keep going.
     { id: "list", group: "trade", titleOne: "List your first card", title: "List {n} cards", description: "Put cards up for sale.", href: "/marketplace/sell", tiers: [{ target: 1, xp: 100 }, { target: 5, xp: 250 }, { target: 20, xp: 600 }], count: listed },

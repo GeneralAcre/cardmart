@@ -8,6 +8,7 @@ import {
   Camera,
   Check,
   Coins,
+  Compass,
   Crown,
   Eye,
   Gavel,
@@ -22,6 +23,7 @@ import {
 } from "lucide-react";
 
 import { CommunityTabs } from "@/components/community/community-tabs";
+import { PageTour } from "@/components/tour/page-tour";
 import { ItemShareButton } from "@/components/item/share-button";
 import { BadgeEmblem } from "@/components/profile/badge-emblem";
 import { Progress } from "@/components/ui/progress";
@@ -48,6 +50,7 @@ const TASK_ICONS: Record<string, LucideIcon> = {
   kyc: BadgeCheck,
   watch: Eye,
   wanted: Bell,
+  tour: Compass,
   message: MessageCircle,
   list: Tag,
   buy: ShoppingBag,
@@ -80,9 +83,12 @@ export default async function RewardsPage() {
         </div>
         <CommunityTabs />
       </div>
+      <PageTour id="rewards" />
 
       <div className="flex flex-col gap-6">
-        <LevelHero rewards={rewards} span={span} into={into} t={t} />
+        <div data-tour="level">
+          <LevelHero rewards={rewards} span={span} into={into} t={t} />
+        </div>
 
         {/* Three quick numbers. */}
         <div className="grid grid-cols-3 gap-3">
@@ -96,7 +102,7 @@ export default async function RewardsPage() {
         </div>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
-          <div className="flex min-w-0 flex-col gap-8">
+          <div className="flex min-w-0 flex-col gap-8" data-tour="tasks">
             <TaskSection title={t("Getting started")} tasks={start} t={t} />
             <TaskSection title={t("Trading")} tasks={trade} t={t} />
           </div>
@@ -362,7 +368,7 @@ function InviteCard({ handle, t }: { handle: string; t: Translate }) {
   const url = referralUrl(handle);
   const qr = qrPath(url);
   return (
-    <section id="invite" className="bg-card flex scroll-mt-24 flex-col gap-4 rounded-2xl border p-5">
+    <section id="invite" data-tour="invite" className="bg-card flex scroll-mt-24 flex-col gap-4 rounded-2xl border p-5">
       <div className="flex items-center gap-3">
         <span className="bg-secondary flex size-10 shrink-0 items-center justify-center rounded-xl">
           <UserPlus className="size-5" />
