@@ -308,7 +308,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
                 ? "bg-muted text-muted-foreground"
                 : marketDeltaPct < 0
                   ? "bg-success/15 text-success"
-                  : "bg-amber-400/15 text-amber-400",
+                  : "bg-warning/15 text-warning",
             )}
           >
             {Math.abs(marketDeltaPct) < 3
@@ -425,7 +425,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
                   ? t("Ungraded — verified by camera")
                   : `${asset.gradingCompany} ${formatGrade(asset.grade)}`}
                 {asset.isBlackLabel && (
-                  <span className="rounded bg-black-label px-1 py-0.5 text-[9px] font-bold text-background">
+                  <span className="rounded bg-black-label px-1.5 py-0.5 text-[10px] font-bold text-background">
                     Black Label
                   </span>
                 )}

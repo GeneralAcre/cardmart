@@ -152,7 +152,7 @@ function LevelHero({ rewards, span, into, t }: { rewards: Rewards; span: number;
         className="pointer-events-none absolute inset-x-0 top-0 h-48 opacity-60"
         style={{
           backgroundImage: `radial-gradient(60% 100% at 15% 0%, color-mix(in oklab, ${
-            levelTier(level.level) === "gold" ? "#f2b500" : levelTier(level.level) === "silver" ? "#a8adb8" : "#c8702f"
+            levelTier(level.level) === "gold" ? "var(--medal-gold)" : levelTier(level.level) === "silver" ? "var(--medal-silver)" : "var(--medal-bronze)"
           } 25%, transparent), transparent 70%)`,
         }}
       />

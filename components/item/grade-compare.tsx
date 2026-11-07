@@ -247,7 +247,7 @@ export function GradeCompare({
                   {isOwnGrade ? reference.label : `${reference.label}, ${tierName}`} ({money(reference.thb)})
                 </span>
                 {reference.count < MIN_RELIABLE_PRICES && (
-                  <span className="block text-right text-xs text-amber-400">
+                  <span className="block text-right text-xs text-warning">
                     {t(reference.count === 1 ? "Based on only {count} price — a rough guide." : "Based on only {count} prices — a rough guide.", { count: reference.count })}
                   </span>
                 )}

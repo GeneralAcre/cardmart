@@ -48,9 +48,9 @@ function Pct({ pct, className }: { pct: number | null; className?: string }) {
 // Gold / silver / bronze: the podium numerals, its top-edge glow, and the
 // first three rank badges in the table.
 const MEDAL = [
-  { text: "text-[#F2C14E]", line: "via-[#F2C14E]", ring: "ring-[#F2C14E]/60", badge: "bg-[#F2C14E] text-black" },
-  { text: "text-[#C9D3E0]", line: "via-[#C9D3E0]", ring: "ring-[#C9D3E0]/40", badge: "bg-[#C9D3E0] text-black" },
-  { text: "text-[#D98A55]", line: "via-[#D98A55]", ring: "ring-[#D98A55]/40", badge: "bg-[#D98A55] text-black" },
+  { text: "text-medal-gold", line: "via-medal-gold", ring: "ring-medal-gold/60", badge: "bg-medal-gold text-background" },
+  { text: "text-medal-silver", line: "via-medal-silver", ring: "ring-medal-silver/40", badge: "bg-medal-silver text-background" },
+  { text: "text-medal-bronze", line: "via-medal-bronze", ring: "ring-medal-bronze/40", badge: "bg-medal-bronze text-background" },
 ];
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -108,7 +108,7 @@ function YourStanding({ me, rows }: { me: Me; rows: TraderRow[] }) {
           <UserAvatar user={me} className="size-12 text-sm sm:size-16 sm:text-base" />
           <div className="flex min-w-0 flex-col gap-0.5">
             <span className="truncate text-xl font-semibold sm:text-2xl">{me.handle ? `@${me.handle}` : displayNameOf(me)}</span>
-            <span className="truncate text-sm font-medium text-[#F2C14E]">
+            <span className="truncate text-sm font-medium text-medal-gold">
               {!row
                 ? t("Buy a card to get on the board")
                 : ahead

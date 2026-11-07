@@ -431,7 +431,7 @@ function AgentMock() {
           <div className="flex min-w-0 flex-col gap-3 rounded-2xl rounded-tl-md border bg-foreground/[0.03] p-3">
             <p className="text-sm">{g.found}</p>
             <div className="flex items-center gap-3 rounded-xl border p-2.5">
-              <div className="flex h-14 w-11 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-indigo-500/60 via-violet-600/50 to-slate-900 font-mono text-[9px] font-semibold text-white/80">
+              <div className="flex h-14 w-11 shrink-0 items-center justify-center card-stage rounded-md border font-mono text-[10px] font-semibold text-foreground/80">
                 PSA 10
               </div>
               {/* Price under the name rather than beside it, so the name keeps its width on a phone. */}

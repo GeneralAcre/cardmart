@@ -101,7 +101,7 @@ function CardChip({ asset, className }: { asset: ChatAsset; className?: string }
 }
 
 const OFFER_STATUS: Record<string, { label: string; className: string }> = {
-  PENDING: { label: "Waiting for reply", className: "bg-amber-400/15 text-amber-400" },
+  PENDING: { label: "Waiting for reply", className: "bg-warning/15 text-warning" },
   ACCEPTED: { label: "Accepted", className: "bg-success/15 text-success" },
   REJECTED: { label: "Declined", className: "bg-destructive/15 text-destructive" },
   WITHDRAWN: { label: "Withdrawn", className: "bg-muted text-muted-foreground" },

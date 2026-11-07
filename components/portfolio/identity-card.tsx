@@ -63,7 +63,7 @@ export function IdentityBadge({
         title={`${t("Trust & Safety")} · ${t(KYC_STATUS_LABELS[status])}`}
         className={cn(
           "inline-flex size-6 shrink-0 items-center justify-center rounded-full transition-opacity hover:opacity-80",
-          status === "VERIFIED" ? "text-success" : status === "PENDING" ? "text-muted-foreground" : "text-amber-500",
+          status === "VERIFIED" ? "text-success" : status === "PENDING" ? "text-muted-foreground" : "text-warning",
         )}
       >
         <Icon className="size-5" />

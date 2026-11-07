@@ -31,6 +31,12 @@
   --compare: #3b9eff;
   /* BGS Black Label: one amber for its text and tags everywhere. */
   --black-label: #fbbf24;
+  /* Needs a look but is not an error: waiting, rough guide, above market, unverified. */
+  --warning: #fbbf24;
+  /* One gold / silver / bronze for podiums, level badges and medals. */
+  --medal-gold: #f2b500;
+  --medal-silver: #a8adb8;
+  --medal-bronze: #c8702f;
   --border: #262626;
   --input: #2e2e2e;
   --ring: #737373;
@@ -75,6 +81,11 @@
   --destructive: #dc2626;
   --compare: #1d6fd1;
   --black-label: #b45309;
+  --warning: #b45309;
+  /* Deeper medal tones so they stay readable as text on white. */
+  --medal-gold: #a16207;
+  --medal-silver: #6b7280;
+  --medal-bronze: #9a3412;
   --border: #e2e2e0;
   --input: #dcdcda;
   --ring: #a3a3a3;
@@ -113,6 +124,10 @@
   --color-success: var(--success);
   --color-compare: var(--compare);
   --color-black-label: var(--black-label);
+  --color-warning: var(--warning);
+  --color-medal-gold: var(--medal-gold);
+  --color-medal-silver: var(--medal-silver);
+  --color-medal-bronze: var(--medal-bronze);
   --color-success-foreground: var(--success-foreground);
   --color-destructive: var(--destructive);
   --color-highlight: var(--highlight);

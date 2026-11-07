@@ -41,7 +41,7 @@ export default async function StorePage({ params }: { params: Promise<{ id: stri
     .toUpperCase();
 
   return (
-    <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6">
+    <div className="mx-auto w-full max-w-screen-2xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
       {/* Their cover across the top, their picture overlapping its lower edge, like a social profile. */}
       <div className="mb-8 flex flex-col">
         <ProfileCover cover={seller.coverImage} editable={currentUser.id === seller.id} />
@@ -90,7 +90,7 @@ export default async function StorePage({ params }: { params: Promise<{ id: stri
               <p className="text-sm">{t("Nothing listed for sale right now.")}</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
               {listings.map((asset) => (
                 <ListingCard key={asset.id} asset={asset} />
               ))}
