@@ -33,7 +33,7 @@ function Row({ tag, title, body }: { tag: React.ReactNode; title: string; body: 
 /** A visual legend for the tags and colours on cards, so nothing needs guessing. */
 export function CardGuide({ t }: { t: Translate }) {
   return (
-    <div className="flex flex-col gap-4">
+    <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
       <Section title={t("Games")} intro={t("The coloured tag above a card's name shows which game it is from.")}>
         <ul className="flex flex-col gap-3">
           {CARD_GAMES.map((g) => (

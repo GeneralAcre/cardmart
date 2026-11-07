@@ -124,7 +124,7 @@ const MORE: { icon: LucideIcon; title: string; body: string; href: string; cta: 
 
 function StepList({ steps, t }: { steps: Step[]; t: Translate }) {
   return (
-    <ol className="flex flex-col gap-3">
+    <ol className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
       {steps.map((step, i) => {
         const Icon = step.icon;
         return (
@@ -152,7 +152,7 @@ export default async function GuidePage({ searchParams }: { searchParams: Promis
   const [{ welcome, tab }, t] = await Promise.all([searchParams, getT()]);
 
   return (
-    <div className="mx-auto w-full max-w-3xl flex-1 px-4 py-10 sm:px-6">
+    <div className="mx-auto w-full max-w-screen-2xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
       {welcome && (
         <div className="bg-foreground text-background mb-8 rounded-xl p-5">
           <p className="text-lg font-semibold">{t("Welcome to CardMart")}</p>
@@ -193,7 +193,7 @@ export default async function GuidePage({ searchParams }: { searchParams: Promis
       </Tabs>
 
       <h2 className="mt-12 mb-4 text-lg font-semibold">{t("More ways to trade")}</h2>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {MORE.map((m) => {
           const Icon = m.icon;
           return (
