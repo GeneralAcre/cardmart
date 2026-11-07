@@ -2,7 +2,10 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-:root {
+/* .theme-dark keeps these dark values on a section that is always dark (the
+   Market news banner) even when the rest of the page is in the light theme. */
+:root,
+.theme-dark {
   /* Traded-style surfaces: a near-black page, a slightly lifted #141414 card
      and a quiet #262626 hairline border — separation comes from the card
      surface and the image "stage" inside it, not from loud outlines. */
@@ -97,13 +100,6 @@
   --highlight-foreground: #ffffff;
   --stage: radial-gradient(120% 80% at 50% 0%, #ffffff 0%, #f3f3f2 50%, #e9e9e7 100%);
   --photo-shadow: 0 6px 14px rgba(0, 0, 0, 0.2);
-}
-
-/* Amber notes (Black Label, "rough guide", above-market) are tuned for the
-   dark page; on white they need a deeper amber to stay readable. */
-:root[data-theme="light"] .text-amber-400,
-:root[data-theme="light"] .text-amber-500 {
-  color: #b45309;
 }
 
 @theme inline {

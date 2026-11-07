@@ -17,13 +17,18 @@ import { CARD_GAMES, CARD_GAME_LABELS } from "@/lib/labels";
 import type { NewsCard, NewsSlide } from "@/lib/market-news";
 import { cn } from "@/lib/utils";
 
-/** Each kind of news has its own colour: the label's dot, the glow behind the cards, the price. */
+/**
+ * Each kind of news has its own brand colour: the label's dot, the glow behind
+ * the cards, the price. Released is the lime, a live auction the red, the top
+ * card gold, an upcoming set the blue, and a new listing plain white. The
+ * banner is always dark (.theme-dark), so these are the dark-theme values.
+ */
 const ACCENT: Record<NewsSlide["kind"], { dot: string; glow: string; price: string }> = {
-  upcoming: { dot: "bg-violet-400", glow: "rgba(167,139,250,0.45)", price: "from-violet-200 to-white" },
-  released: { dot: "bg-emerald-400", glow: "rgba(52,211,153,0.4)", price: "from-emerald-200 to-white" },
-  top: { dot: "bg-amber-400", glow: "rgba(251,191,36,0.45)", price: "from-amber-200 via-yellow-100 to-white" },
-  listed: { dot: "bg-sky-400", glow: "rgba(56,189,248,0.4)", price: "from-sky-200 to-white" },
-  auction: { dot: "bg-rose-400", glow: "rgba(251,113,133,0.45)", price: "from-rose-200 to-white" },
+  upcoming: { dot: "bg-compare", glow: "var(--compare)", price: "from-compare to-white" },
+  released: { dot: "bg-success", glow: "var(--success)", price: "from-success to-white" },
+  top: { dot: "bg-medal-gold", glow: "var(--medal-gold)", price: "from-medal-gold to-white" },
+  listed: { dot: "bg-white", glow: "#ffffff", price: "from-white/70 to-white" },
+  auction: { dot: "bg-destructive", glow: "var(--destructive)", price: "from-destructive to-white" },
 };
 
 // Where the cards behind the front one sit: fanned out to either side.
@@ -57,7 +62,7 @@ function SlideVisual({ slide }: { slide: NewsSlide }) {
       <div
         aria-hidden
         className="absolute inset-0 -z-10"
-        style={{ background: `radial-gradient(closest-side, ${accent.glow}, transparent)` }}
+        style={{ background: `radial-gradient(closest-side, color-mix(in srgb, ${accent.glow} 40%, transparent), transparent)` }}
       />
       {art ? (
         // The set's own picture, at its own shape (a card, a booster, a box).
@@ -327,7 +332,7 @@ export function MarketNewsHero({ slides, wall }: { slides: NewsSlide[]; wall: Ne
       <section
         aria-roledescription="carousel"
         aria-label={t("What's new")}
-        className="group relative isolate h-[26rem] overflow-hidden rounded-2xl border bg-black text-white md:h-80"
+        className="theme-dark group relative isolate h-[26rem] overflow-hidden rounded-2xl border bg-black text-white md:h-80"
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         onTouchStart={(e) => (touchX.current = e.touches[0].clientX)}
