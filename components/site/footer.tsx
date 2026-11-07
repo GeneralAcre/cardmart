@@ -66,7 +66,7 @@ export async function SiteFooter() {
   const t = await getT();
   return (
     <footer className="border-t pb-14 sm:pb-0">
-      <div className="mx-auto grid max-w-7xl grid-cols-2 gap-x-6 gap-y-10 px-4 py-12 sm:px-6 sm:py-16 md:grid-cols-[minmax(0,2fr)_1fr_1fr_1fr]">
+      <div className="mx-auto grid max-w-screen-2xl grid-cols-2 gap-x-6 gap-y-10 px-4 py-12 sm:px-6 sm:py-16 lg:px-8 md:grid-cols-[minmax(0,2fr)_1fr_1fr_1fr]">
         <div className="col-span-2 flex flex-col gap-5 md:col-span-1">
           <Link href="/" className="w-fit">
             <Logo />
