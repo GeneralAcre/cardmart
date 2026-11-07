@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   ArrowLeftRight,
+  ArrowRight,
   BadgeCheck,
   BellRing,
   Camera,
@@ -18,7 +19,6 @@ import {
 
 import { CardGuide } from "@/components/guide/card-guide";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SELF_MINT_FEE_THB, SELLER_SHIPPING_COST_THB, THB_PER_SOL } from "@/lib/pricing";
 import { formatThb } from "@/lib/format";
 import { getT } from "@/lib/i18n/server";
@@ -122,34 +122,58 @@ const MORE: { icon: LucideIcon; title: string; body: string; href: string; cta: 
   },
 ];
 
-function StepList({ steps, t }: { steps: Step[]; t: Translate }) {
+/**
+ * The card after the last step: what to do next, with its button. It sits in
+ * the steps' grid so it fills the free slot beside them instead of hanging
+ * below. Also the last box of the Card guide.
+ */
+function NextStep({ title, body, href, cta, t }: { title: string; body: string; href: string; cta: string; t: Translate }) {
   return (
-    <ol className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-      {steps.map((step, i) => {
-        const Icon = step.icon;
-        return (
-          <li key={step.title} className="bg-card flex gap-4 rounded-xl border p-4">
-            <div className="flex shrink-0 flex-col items-center gap-2">
-              <span className="bg-foreground text-background flex size-8 items-center justify-center rounded-full text-sm font-bold">
-                {i + 1}
-              </span>
-            </div>
-            <div className="flex min-w-0 flex-col gap-1">
-              <span className="flex items-center gap-2 font-semibold">
-                <Icon className="text-muted-foreground size-4" />
-                {t(step.title)}
-              </span>
-              <p className="text-muted-foreground text-sm">{t(step.body, step.vars)}</p>
-            </div>
-          </li>
-        );
-      })}
-    </ol>
+    <div className="bg-card flex flex-col justify-between gap-4 rounded-xl border p-4">
+      <div className="flex flex-col gap-1">
+        <span className="font-semibold">{t(title)}</span>
+        <p className="text-muted-foreground text-sm">{t(body)}</p>
+      </div>
+      <Button asChild className="w-fit">
+        <Link href={href}>
+          {t(cta)} <ArrowRight />
+        </Link>
+      </Button>
+    </div>
   );
 }
 
-export default async function GuidePage({ searchParams }: { searchParams: Promise<{ welcome?: string; tab?: string }> }) {
-  const [{ welcome, tab }, t] = await Promise.all([searchParams, getT()]);
+function StepList({ steps, t, next }: { steps: Step[]; t: Translate; next: React.ReactNode }) {
+  return (
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+      <ol className="contents">
+        {steps.map((step, i) => {
+          const Icon = step.icon;
+          return (
+            <li key={step.title} className="bg-card flex gap-4 rounded-xl border p-4">
+              <div className="flex shrink-0 flex-col items-center gap-2">
+                <span className="bg-foreground text-background flex size-8 items-center justify-center rounded-full text-sm font-bold">
+                  {i + 1}
+                </span>
+              </div>
+              <div className="flex min-w-0 flex-col gap-1">
+                <span className="flex items-center gap-2 font-semibold">
+                  <Icon className="text-muted-foreground size-4" />
+                  {t(step.title)}
+                </span>
+                <p className="text-muted-foreground text-sm">{t(step.body, step.vars)}</p>
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+      {next}
+    </div>
+  );
+}
+
+export default async function GuidePage({ searchParams }: { searchParams: Promise<{ welcome?: string }> }) {
+  const [{ welcome }, t] = await Promise.all([searchParams, getT()]);
 
   return (
     <div className="mx-auto w-full max-w-screen-2xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
@@ -169,28 +193,56 @@ export default async function GuidePage({ searchParams }: { searchParams: Promis
         </p>
       </div>
 
-      <Tabs defaultValue={tab === "sell" ? "sell" : tab === "cards" ? "cards" : "buy"}>
-        <TabsList>
-          <TabsTrigger value="buy">{t("I want to buy")}</TabsTrigger>
-          <TabsTrigger value="sell">{t("I want to sell")}</TabsTrigger>
-          <TabsTrigger value="cards">{t("Card guide")}</TabsTrigger>
-        </TabsList>
-        <TabsContent value="buy" className="flex flex-col gap-4 pt-4">
-          <StepList steps={BUY_STEPS} t={t} />
-          <Button asChild className="w-fit">
-            <Link href="/marketplace">{t("Start browsing")}</Link>
-          </Button>
-        </TabsContent>
-        <TabsContent value="sell" className="flex flex-col gap-4 pt-4">
-          <StepList steps={SELL_STEPS} t={t} />
-          <Button asChild className="w-fit">
-            <Link href="/marketplace/sell">{t("List your first card")}</Link>
-          </Button>
-        </TabsContent>
-        <TabsContent value="cards" className="pt-4">
-          <CardGuide t={t} />
-        </TabsContent>
-      </Tabs>
+      {/* Buying, selling and the card guide one after another, each with its own heading (and #anchor). */}
+      <section id="buy" className="scroll-mt-20">
+        <h2 className="mb-4 text-lg font-semibold">{t("I want to buy")}</h2>
+        <StepList
+          steps={BUY_STEPS}
+          t={t}
+          next={
+            <NextStep
+              title="Ready to buy?"
+              body="Browse graded cards from verified sellers. Every payment is held in escrow until the card checks out."
+              href="/marketplace"
+              cta="Start browsing"
+              t={t}
+            />
+          }
+        />
+      </section>
+
+      <section id="sell" className="mt-12 scroll-mt-20">
+        <h2 className="mb-4 text-lg font-semibold">{t("I want to sell")}</h2>
+        <StepList
+          steps={SELL_STEPS}
+          t={t}
+          next={
+            <NextStep
+              title="Ready to sell?"
+              body="List a card in a few minutes with Instant Verify, then set a price or start an auction."
+              href="/marketplace/sell"
+              cta="List your first card"
+              t={t}
+            />
+          }
+        />
+      </section>
+
+      <section id="cards" className="mt-12 scroll-mt-20">
+        <h2 className="mb-4 text-lg font-semibold">{t("Card guide")}</h2>
+        <CardGuide
+          t={t}
+          next={
+            <NextStep
+              title="See them on the Market"
+              body="Every tag here appears on the cards for sale. Filter by game, rarity, grade and language."
+              href="/marketplace"
+              cta="Start browsing"
+              t={t}
+            />
+          }
+        />
+      </section>
 
       <h2 className="mt-12 mb-4 text-lg font-semibold">{t("More ways to trade")}</h2>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">

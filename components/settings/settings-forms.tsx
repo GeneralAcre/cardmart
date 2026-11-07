@@ -41,7 +41,7 @@ export function ProfileForm({ name, handle }: { name: string; handle: string }) 
   useSavedFeedback(state, t("Profile updated."));
 
   return (
-    <form action={action} className="flex flex-col gap-4">
+    <form action={action} className="flex flex-1 flex-col gap-4">
       <div className="flex flex-col gap-2">
         <Label htmlFor="settings-name">{t("Display Name")}</Label>
         <Input id="settings-name" name="name" defaultValue={name} required minLength={2} />
@@ -63,7 +63,7 @@ export function ProfileForm({ name, handle }: { name: string; handle: string }) 
         </div>
       </div>
       {state.error && <p className="text-destructive text-sm">{t(state.error)}</p>}
-      <Button type="submit" disabled={pending} className="w-full sm:w-fit">
+      <Button type="submit" disabled={pending} className="mt-auto w-full sm:w-fit">
         {pending && <Loader2 className="animate-spin" />}
         {t("Save changes")}
       </Button>
@@ -77,7 +77,7 @@ export function ShippingForm({ address, phone }: { address: string; phone: strin
   useSavedFeedback(state, t("Shipping info updated."));
 
   return (
-    <form action={action} className="flex flex-col gap-4">
+    <form action={action} className="flex flex-1 flex-col gap-4">
       <div className="flex flex-col gap-2">
         <Label htmlFor="settings-address">{t("Shipping Address")}</Label>
         <Textarea
@@ -102,7 +102,7 @@ export function ShippingForm({ address, phone }: { address: string; phone: strin
         />
       </div>
       {state.error && <p className="text-destructive text-sm">{t(state.error)}</p>}
-      <Button type="submit" disabled={pending} className="w-full sm:w-fit">
+      <Button type="submit" disabled={pending} className="mt-auto w-full sm:w-fit">
         {pending && <Loader2 className="animate-spin" />}
         {t("Save changes")}
       </Button>
@@ -120,7 +120,9 @@ function Choice<T extends string>({
   onChange: (next: T) => void;
 }) {
   return (
-    <div className="bg-muted grid w-full grid-flow-col auto-cols-fr gap-1 rounded-lg p-1 sm:w-fit">
+    // One fixed width for every switcher, split evenly between its options, so
+    // Screen mode, Language and Currency line up on both edges.
+    <div className="bg-muted grid w-full grid-flow-col auto-cols-fr gap-1 rounded-lg p-1 sm:w-72">
       {options.map((o) => (
         <button
           key={o.value}

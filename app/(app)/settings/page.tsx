@@ -15,7 +15,7 @@ export default async function SettingsPage() {
         <h1 className="text-2xl font-semibold">{t("Settings")}</h1>
         <p className="text-muted-foreground text-sm">{t("Your profile and where we ship physical items.")}</p>
       </div>
-      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
         <section className="bg-card flex flex-col gap-4 rounded-xl border p-4 sm:p-6">
           <h2 className="text-base font-semibold">{t("Profile")}</h2>
           <ProfilePhoto image={user.image} name={user.name ?? ""} initials={(user.name ?? user.handle ?? "?").split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()} />
