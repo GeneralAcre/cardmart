@@ -91,11 +91,11 @@ export default async function AgentPage({ searchParams }: { searchParams: Promis
   ];
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-4 py-8 sm:px-6 sm:py-10">
+    <div className="mx-auto flex w-full max-w-screen-2xl flex-1 flex-col gap-8 px-4 py-6 sm:px-6 lg:px-8">
       <PageTour id="agent" />
       {/* Wallet sits beside the intro, not at the bottom: funding it is the first thing a new user has to do. */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <header data-tour="agent-intro" className="relative overflow-hidden rounded-2xl border bg-[radial-gradient(120%_140%_at_0%_0%,rgba(0,199,88,0.14),transparent_55%)] p-5 sm:p-8">
+        <header data-tour="agent-intro" className="relative overflow-hidden rounded-2xl border bg-[radial-gradient(120%_140%_at_0%_0%,rgba(204,239,32,0.12),transparent_55%)] p-5 sm:p-8">
           <div className="flex flex-col gap-6">
             <div className="flex max-w-xl flex-col gap-3">
               <span className="bg-background/60 text-muted-foreground flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs backdrop-blur">

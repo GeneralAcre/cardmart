@@ -5,6 +5,7 @@ import Link from "next/link";
 
 import { useMoney } from "@/components/currency-provider";
 import { CARD_GAME_COLOR, CARD_GAME_LABELS } from "@/lib/labels";
+import { RARITY_SCALE } from "@/lib/rarity";
 import type { PortfolioStats as Stats } from "@/lib/stats";
 import { cn } from "@/lib/utils";
 import { useT } from "@/components/landing/language-provider";
@@ -16,7 +17,7 @@ const pct = (v: number | null) => (v == null ? "—" : `${v > 0 ? "+" : ""}${v.t
 
 // Slice colours: the green-to-yellow palette from the high grade down, so the
 // best grades are the brightest. Black Label and ungraded get their own.
-const GRADE_PALETTE = ["#FFFF3F", "#EEEF20", "#D4D700", "#AACC00", "#80B918", "#55A630", "#2B9348", "#007F5F"];
+const GRADE_PALETTE = RARITY_SCALE;
 const BLACK_LABEL_COLOR = "#1c1c1f";
 const UNGRADED_COLOR = "#9aa5a0";
 

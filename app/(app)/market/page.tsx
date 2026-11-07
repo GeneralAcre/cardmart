@@ -44,7 +44,7 @@ export default async function MarketPage({ searchParams }: { searchParams: Promi
   ];
 
   return (
-    <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6">
+    <div className="mx-auto w-full max-w-screen-2xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
       <div className="mb-8 flex flex-col gap-2">
         <h1 className="text-2xl font-semibold">{t("Market")}</h1>
         <p className="text-muted-foreground max-w-2xl text-sm">

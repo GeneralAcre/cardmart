@@ -13,7 +13,7 @@ export default async function NewsPage() {
   const [overview, releases, t] = await Promise.all([getMarketOverview(), getSetReleases(), getT()]);
 
   return (
-    <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
+    <div className="mx-auto w-full max-w-screen-2xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-col gap-1">
           <h1 className="text-2xl font-semibold">{t("News")}</h1>

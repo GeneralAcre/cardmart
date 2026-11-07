@@ -28,6 +28,10 @@ export const RARITY_SHORT: Record<CardRarity, string> = Object.fromEntries(RARIT
 // apart). Black text on every tier except the darkest green (U/C), where only
 // white passes WCAG AA contrast (4.5:1) at the tags' 11px. Full
 // class names so Tailwind picks them up.
+
+/** The scale as plain values, rarest (brightest) first, for charts. RARITY_STYLE and RARITY_BORDER use the same shades. */
+export const RARITY_SCALE = ["#FFFF3F", "#EEEF20", "#D4D700", "#AACC00", "#80B918", "#55A630", "#2B9348", "#007F5F"];
+
 export const RARITY_STYLE: Record<CardRarity, string> = {
   SAR: "bg-[#FFFF3F] text-black",
   SEC: "bg-[#EEEF20] text-black",

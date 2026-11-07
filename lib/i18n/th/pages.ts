@@ -217,6 +217,15 @@ export const PAGES: Record<string, string> = {
   "I want to sell": "ฉันอยากขาย",
   "Start browsing": "เริ่มเลือกดู",
   "List your first card": "ลงขายการ์ดใบแรก",
+  "Ready to buy?": "พร้อมซื้อแล้วหรือยัง?",
+  "Browse graded cards from verified sellers. Every payment is held in escrow until the card checks out.":
+    "เลือกดูการ์ดเกรดจากผู้ขายที่ยืนยันตัวตนแล้ว ทุกการชำระเงินจะพักในเอสโครว์จนกว่าการ์ดจะผ่านการตรวจสอบ",
+  "Ready to sell?": "พร้อมขายแล้วหรือยัง?",
+  "List a card in a few minutes with Instant Verify, then set a price or start an auction.":
+    "ลงขายการ์ดได้ในไม่กี่นาทีด้วย Instant Verify แล้วตั้งราคาหรือเปิดประมูล",
+  "See them on the Market": "ดูของจริงในตลาด",
+  "Every tag here appears on the cards for sale. Filter by game, rarity, grade and language.":
+    "แท็กทั้งหมดนี้แสดงอยู่บนการ์ดที่วางขาย กรองตามเกม ความหายาก เกรด และภาษาได้",
   "More ways to trade": "วิธีซื้อขายอื่นๆ",
 
   // Onboarding

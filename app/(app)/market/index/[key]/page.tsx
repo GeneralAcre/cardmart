@@ -117,7 +117,7 @@ export default async function IndexPage({ params }: { params: Promise<{ key: str
         : t("30D");
 
   return (
-    <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
+    <div className="mx-auto w-full max-w-screen-2xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
       <PageTour id="index" />
       <Breadcrumbs items={[{ label: t("Market"), href: "/marketplace" }, { label: title }]} />
 

@@ -9,7 +9,7 @@ import { useT } from "@/components/landing/language-provider";
 
 // Colour steps up with the level: grey for new users, green mid-way, gold at the top.
 function levelClass(level: number) {
-  if (level >= 5) return "bg-amber-500/15 text-amber-500";
+  if (level >= 5) return "bg-medal-gold/15 text-medal-gold";
   if (level >= 3) return "bg-success/15 text-success";
   return "bg-secondary text-foreground";
 }

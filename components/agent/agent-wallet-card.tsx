@@ -66,7 +66,7 @@ export function AgentWalletCard({ address, balanceSol }: { address: string; bala
   }
 
   return (
-    <section className="bg-card flex flex-col gap-4 rounded-xl border p-4 sm:p-5">
+    <section className="bg-card flex h-full flex-col gap-4 rounded-2xl border p-4 sm:p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
           <span className="text-muted-foreground flex items-center gap-1.5 text-xs font-semibold tracking-wide uppercase">

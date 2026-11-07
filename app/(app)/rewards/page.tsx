@@ -75,7 +75,7 @@ export default async function RewardsPage() {
   const tasksDone = tasks.filter((task) => task.done).length;
 
   return (
-    <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+    <div className="mx-auto w-full max-w-screen-2xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-col gap-1">
           <h1 className="text-2xl font-semibold">{t("Rewards")}</h1>
@@ -152,7 +152,7 @@ function LevelHero({ rewards, span, into, t }: { rewards: Rewards; span: number;
         className="pointer-events-none absolute inset-x-0 top-0 h-48 opacity-60"
         style={{
           backgroundImage: `radial-gradient(60% 100% at 15% 0%, color-mix(in oklab, ${
-            levelTier(level.level) === "gold" ? "#f2b500" : levelTier(level.level) === "silver" ? "#a8adb8" : "#c8702f"
+            levelTier(level.level) === "gold" ? "var(--medal-gold)" : levelTier(level.level) === "silver" ? "var(--medal-silver)" : "var(--medal-bronze)"
           } 25%, transparent), transparent 70%)`,
         }}
       />
