@@ -126,8 +126,10 @@ export default async function IndexPage({ params }: { params: Promise<{ key: str
         <p className="text-muted-foreground text-sm">{t(info.description)}</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
-        <div className="contents lg:flex lg:min-w-0 lg:flex-col lg:gap-8">
+      {/* On wide screens the left column spans both rows, so Other indexes tucks in
+          right under Key statistics; on phones it stays last, after the cards. */}
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_20rem] lg:grid-rows-[auto_1fr] lg:gap-y-4">
+        <div className="contents lg:row-span-2 lg:flex lg:min-w-0 lg:flex-col lg:gap-8">
           <div className="order-1 lg:order-none" data-tour="index-quote">
             <IndexQuote index={index} name={title} />
           </div>
@@ -141,34 +143,9 @@ export default async function IndexPage({ params }: { params: Promise<{ key: str
                 : t("Prices are TCGplayer's market price for the ungraded card, in baht. The top 50 is re-ranked once a day.")}
             </p>
           </section>
-          <section className="order-4 flex flex-col gap-2 lg:order-none" data-tour="index-other">
-            <h2 className="text-lg font-semibold">{t("Other indexes")}</h2>
-            <div className="bg-card rounded-xl border px-4 py-1">
-              {all
-                .filter((i) => i.key !== key)
-                .map((i) => {
-                  const level = i.points.at(-1)?.price;
-                  return (
-                    <Link
-                      key={i.key}
-                      href={`/market/index/${SLUG_OF[i.key]}`}
-                      className="hover:text-foreground flex items-center justify-between gap-3 border-b py-2.5 text-sm last:border-b-0"
-                    >
-                      <span className="min-w-0 flex-1 truncate font-medium">{t(INFO[i.key].title)}</span>
-                      <IndexSparkline index={i} />
-                      <span className="flex items-center gap-2 tabular-nums">
-                        <span className="font-semibold">{level != null ? formatLevel(level) : "—"}</span>
-                        <span className={cn("text-xs", toneClass(i.change1d))}>{formatPct(i.change1d)}</span>
-                      </span>
-                    </Link>
-                  );
-                })}
-            </div>
-          </section>
-
         </div>
 
-        <aside className="order-2 flex flex-col gap-4 lg:order-none" data-tour="index-movers">
+        <aside className="order-2 flex flex-col gap-4 lg:order-none lg:col-start-2 lg:row-start-1" data-tour="index-movers">
           <h2 className="text-lg font-semibold">{t("Top movers today")}</h2>
           <MoverList title={t("Gainers")} members={gainers} />
           <MoverList title={t("Losers")} members={losers} />
@@ -190,6 +167,35 @@ export default async function IndexPage({ params }: { params: Promise<{ key: str
             </div>
           </section>
         </aside>
+
+        <section
+          className="order-4 flex flex-col gap-2 lg:order-none lg:col-start-2 lg:row-start-2 lg:self-start"
+          data-tour="index-other"
+        >
+          <h2 className="text-lg font-semibold">{t("Other indexes")}</h2>
+          <div className="bg-card rounded-xl border px-4 py-1">
+            {all
+              .filter((i) => i.key !== key)
+              .map((i) => {
+                const level = i.points.at(-1)?.price;
+                return (
+                  <Link
+                    key={i.key}
+                    href={`/market/index/${SLUG_OF[i.key]}`}
+                    className="hover:text-foreground flex items-center justify-between gap-3 border-b py-2.5 text-sm last:border-b-0"
+                  >
+                    <span className="min-w-0 flex-1 truncate font-medium">{t(INFO[i.key].title)}</span>
+                    <IndexSparkline index={i} />
+                    {/* Level over today's change, so a row fits the narrow column. */}
+                    <span className="flex w-16 shrink-0 flex-col items-end tabular-nums">
+                      <span className="font-semibold">{level != null ? formatLevel(level) : "—"}</span>
+                      <span className={cn("text-xs", toneClass(i.change1d))}>{formatPct(i.change1d)}</span>
+                    </span>
+                  </Link>
+                );
+              })}
+          </div>
+        </section>
       </div>
     </div>
   );

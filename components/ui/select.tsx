@@ -32,7 +32,9 @@ function SelectTrigger({
       data-size={size}
       className={cn(
         "border-input data-[placeholder]:text-muted-foreground flex w-fit items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-2 text-sm whitespace-nowrap shadow-sm outline-none transition-[color,box-shadow] disabled:cursor-not-allowed disabled:opacity-50",
-        "data-[size=default]:h-9 data-[size=sm]:h-8",
+        // A plain h-9 (not data-[size=default]:h-9) so a height passed in className,
+        // e.g. h-11 to match a search box beside it, replaces it instead of losing to it.
+        "h-9 data-[size=sm]:h-8",
         "focus-visible:border-ring focus-visible:ring-ring/40 focus-visible:ring-2",
         "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className,
