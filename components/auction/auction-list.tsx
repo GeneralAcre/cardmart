@@ -8,7 +8,7 @@ import type { CardGame, GradingCompany } from "@prisma/client";
 
 import { CardArt } from "@/components/asset/card-art";
 import { CountdownTimer } from "@/components/auction/countdown-timer";
-import { Button } from "@/components/ui/button";
+import { ActionButton } from "@/components/ui/action-button";
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UserAvatar } from "@/components/messages/user-avatar";
@@ -23,7 +23,7 @@ import { useT } from "@/components/landing/language-provider";
 type Auction = Awaited<ReturnType<typeof getActiveAuctions>>[number];
 
 // Desktop columns: picture+card, starting bid, current bid, bids, ends, action.
-const COLUMNS = "md:grid-cols-[minmax(0,2.2fr)_1fr_1.2fr_0.7fr_1.3fr_8.5rem]";
+const COLUMNS = "md:grid-cols-[minmax(0,2.2fr)_1fr_1.2fr_0.7fr_1.3fr_10rem]";
 
 const noSubscribe = () => () => {};
 
@@ -171,11 +171,9 @@ function AuctionRow({ auction }: { auction: Auction }) {
         </div>
 
         {/* Action */}
-        <Button asChild size="sm" className="col-span-2 w-full md:col-span-1">
-          <Link href={href}>
-            <Gavel /> {count === 0 ? t("Bid first") : t("Place a bid")}
-          </Link>
-        </Button>
+        <ActionButton href={href} icon={Gavel} className="col-span-2 w-full px-3 md:col-span-1">
+          {count === 0 ? t("Bid first") : t("Place a bid")}
+        </ActionButton>
       </div>
 
       {auction.bids.length > 0 && (

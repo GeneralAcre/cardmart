@@ -12,7 +12,7 @@ export default async function LeaderboardPage() {
   const [traders, t] = await Promise.all([getTopTraders(), getT()]);
 
   return (
-    <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:py-8 sm:px-6 lg:px-8">
+    <div className="mx-auto w-full max-w-screen-2xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-col gap-1">
           <h1 className="text-2xl font-semibold">{t("Leaderboard")}</h1>

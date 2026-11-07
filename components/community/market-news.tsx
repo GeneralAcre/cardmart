@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Activity } from "lucide-react";
+import { Activity, Banknote, ChartColumn, ReceiptText, ShoppingBag, Tag } from "lucide-react";
 
 import { useMoney } from "@/components/currency-provider";
 import type { getMarketOverview } from "@/lib/queries";
@@ -22,19 +22,24 @@ export function MarketStats({ overview }: { overview: Overview }) {
   const money = useMoney();
   const t = useT();
   const stats = [
-    { label: "Live listings", value: overview.activeListings.toLocaleString() },
-    { label: "Median asking price", value: overview.medianAskThb != null ? money(overview.medianAskThb) : "—" },
-    { label: "Sales · 30 days", value: overview.sales30d.toLocaleString() },
-    { label: "Median sale · 30 days", value: overview.medianSale30dThb != null ? money(overview.medianSale30dThb) : "—" },
-    { label: "Volume · 30 days", value: money(overview.volume30dThb) },
+    { icon: ShoppingBag, label: "Live listings", value: overview.activeListings.toLocaleString() },
+    { icon: Tag, label: "Median asking price", value: overview.medianAskThb != null ? money(overview.medianAskThb) : "—" },
+    { icon: ReceiptText, label: "Sales · 30 days", value: overview.sales30d.toLocaleString() },
+    { icon: Banknote, label: "Median sale · 30 days", value: overview.medianSale30dThb != null ? money(overview.medianSale30dThb) : "—" },
+    { icon: ChartColumn, label: "Volume · 30 days", value: money(overview.volume30dThb) },
   ];
 
   return (
-    <div className="bg-card grid grid-cols-2 gap-x-5 gap-y-3 rounded-2xl border px-4 py-3 sm:grid-cols-5">
-      {stats.map((stat) => (
-        <div key={stat.label} className="flex min-w-0 flex-col gap-0.5">
-          <span className="text-muted-foreground truncate text-[11px]">{t(stat.label)}</span>
-          <span className="text-sm leading-tight font-semibold tabular-nums sm:text-base">{stat.value}</span>
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 [&>*:last-child]:col-span-2 sm:[&>*:last-child]:col-span-1">
+      {stats.map(({ icon: Icon, label, value }) => (
+        <div key={label} className="bg-card flex min-w-0 flex-col gap-2 rounded-2xl border p-4 xl:flex-row xl:items-center xl:gap-3">
+          <span className="bg-secondary flex size-9 shrink-0 items-center justify-center rounded-xl">
+            <Icon className="size-4" />
+          </span>
+          <div className="flex min-w-0 flex-col">
+            <span className="text-muted-foreground truncate text-xs">{t(label)}</span>
+            <span className="truncate text-lg font-bold tabular-nums">{value}</span>
+          </div>
         </div>
       ))}
     </div>

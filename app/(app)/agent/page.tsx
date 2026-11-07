@@ -91,7 +91,7 @@ export default async function AgentPage({ searchParams }: { searchParams: Promis
   ];
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-4 py-8 sm:px-6 sm:py-10">
+    <div className="mx-auto flex w-full max-w-screen-2xl flex-1 flex-col gap-8 px-4 py-6 sm:px-6 lg:px-8">
       <PageTour id="agent" />
       {/* Wallet sits beside the intro, not at the bottom: funding it is the first thing a new user has to do. */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
