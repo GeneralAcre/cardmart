@@ -32,7 +32,8 @@ export function ProfitCalculator({ priceThb, marketThb }: { priceThb: number; ma
   const marketProfit = marketThb != null ? marketThb - resaleCost - paid : null;
 
   return (
-    <details className="detail-panel group rounded-2xl border">
+    // Open, it fills its column, so its bottom lines up with the panel beside it.
+    <details className="detail-panel group rounded-2xl border open:flex-1">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 [&::-webkit-details-marker]:hidden">
         <span className="flex items-center gap-2 text-sm font-semibold">
           <Calculator className="text-muted-foreground size-4" /> {t("Profit calculator")}
@@ -67,48 +68,47 @@ export function ProfitCalculator({ priceThb, marketThb }: { priceThb: number; ma
           ))}
         </div>
 
+        {/* Price and fee fold into one "You pay" line; break-even only shows when
+            shipping makes it differ from what you paid. */}
         <dl className="flex flex-col gap-1.5">
-          <div className="flex justify-between gap-3">
-            <dt className="text-muted-foreground">{t("Price")}</dt>
-            <dd className="tabular-nums">{formatThb(priceThb)}</dd>
-          </div>
-          <div className="flex justify-between gap-3">
-            <dt className="text-muted-foreground">{t("Buyer protection ({pct}%)", { pct: BUYER_FEE_PERCENT })}</dt>
-            <dd className="tabular-nums">{formatThb(fee)}</dd>
-          </div>
-          <div className="flex justify-between gap-3 border-t pt-1.5 font-semibold">
-            <dt>{t("You pay")}</dt>
-            <dd className="tabular-nums">{formatThb(paid)}</dd>
-          </div>
-          <div className="flex justify-between gap-3">
-            <dt className="text-muted-foreground">
-              {keep === "home" ? t("Break even (resale incl. {shipping} shipping)", { shipping: formatThb(SELLER_SHIPPING_COST_THB) }) : t("Break even")}
+          <div className="flex items-baseline justify-between gap-3">
+            <dt className="flex flex-col">
+              <span className="font-semibold">{t("You pay")}</span>
+              <span className="text-muted-foreground text-xs">
+                {formatThb(priceThb)} + {t("Buyer protection ({pct}%)", { pct: BUYER_FEE_PERCENT })} {formatThb(fee)}
+              </span>
             </dt>
-            <dd className="font-semibold tabular-nums">{formatThb(breakEven)}</dd>
+            <dd className="font-semibold tabular-nums">{formatThb(paid)}</dd>
           </div>
+          {breakEven !== paid && (
+            <div className="flex justify-between gap-3">
+              <dt className="text-muted-foreground">
+                {t("Break even (resale incl. {shipping} shipping)", { shipping: formatThb(SELLER_SHIPPING_COST_THB) })}
+              </dt>
+              <dd className="font-semibold tabular-nums">{formatThb(breakEven)}</dd>
+            </div>
+          )}
         </dl>
 
-        <div className="flex flex-col gap-1.5 border-t pt-3">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t pt-3">
           <label htmlFor="resale-price" className="text-muted-foreground text-xs">
             {t("If you resell at (THB)")}
           </label>
-          <div className="flex items-center gap-3">
-            <Input
-              id="resale-price"
-              type="number"
-              inputMode="numeric"
-              min={0}
-              value={resale}
-              onChange={(e) => setResale(e.target.value)}
-              placeholder={t("Resale price")}
-              className="h-9 max-w-40"
-            />
-            {profit != null && (
-              <span className={cn("font-semibold tabular-nums", tone(profit))}>
-                {signed(profit)} <span className="text-xs font-medium">({((profit / paid) * 100).toFixed(1)}%)</span>
-              </span>
-            )}
-          </div>
+          <Input
+            id="resale-price"
+            type="number"
+            inputMode="numeric"
+            min={0}
+            value={resale}
+            onChange={(e) => setResale(e.target.value)}
+            placeholder={t("Resale price")}
+            className="h-8 w-32"
+          />
+          {profit != null && (
+            <span className={cn("font-semibold tabular-nums", tone(profit))}>
+              {signed(profit)} <span className="text-xs font-medium">({((profit / paid) * 100).toFixed(1)}%)</span>
+            </span>
+          )}
           {marketThb != null && resaleThb !== marketThb && (
             <button
               type="button"
@@ -119,9 +119,6 @@ export function ProfitCalculator({ priceThb, marketThb }: { priceThb: number; ma
             </button>
           )}
         </div>
-        <p className="text-muted-foreground text-[11px]">
-          {t("The next buyer pays their own protection fee, so reselling a vaulted card costs you nothing extra on CardMart.")}
-        </p>
       </div>
     </details>
   );

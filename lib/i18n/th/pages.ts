@@ -9,6 +9,7 @@ export const PAGES: Record<string, string> = {
   "Could not remove the photo.": "ลบรูปไม่สำเร็จ",
   "Your account, wallet and settings.": "บัญชี กระเป๋าเงิน และการตั้งค่าของคุณ",
   "Find your next card at the right price.": "หาการ์ดใบถัดไปในราคาที่ใช่",
+  "the right price": "ราคาที่ใช่",
   "Compare prices across cards and grades, and follow the ones you love.": "เปรียบเทียบราคาการ์ดและเกรด แล้วติดตามใบที่คุณชอบ",
   "Try Umbreon PSA 10": "ลองค้นหา Umbreon PSA 10",
   // Market news banner (components/marketplace/market-news-hero.tsx).

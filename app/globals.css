@@ -148,6 +148,7 @@
   --font-sans: var(--font-geist), var(--font-noto-sans-thai), sans-serif;
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-geist), var(--font-noto-sans-thai), sans-serif;
+  --font-display: var(--font-anton), var(--font-noto-sans-thai), sans-serif;
   --color-chart-5: var(--chart-5);
   --color-chart-4: var(--chart-4);
   --color-chart-3: var(--chart-3);

@@ -39,7 +39,8 @@ function IndexIcon({ index }: { index: MarketIndex["key"] }) {
     <span aria-hidden className="flex size-7 shrink-0 items-center justify-center">
       {index === "ALL" ? (
         // eslint-disable-next-line @next/next/no-img-element -- tiny static logo
-        <img src="/cardmart-star.png" alt="" className="logo-adaptive size-3.5 object-contain" />
+        // The app icon (outlined star on black), the same mark as the header and Compare page.
+        <img src="/cardmart-icon.png" alt="" className="size-5 rounded-md object-cover" />
       ) : index === "MINE" ? (
         <Bookmark className="size-3.5 fill-current" />
       ) : (
