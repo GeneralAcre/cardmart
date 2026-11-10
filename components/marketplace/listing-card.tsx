@@ -88,7 +88,7 @@ export function ListingCard({
           >
             <ChangeTag
               pct={asset.priceChangePct}
-              className={cn("text-[11px] leading-none", asset.priceChangePct >= 0 ? "text-success-foreground" : "text-white")}
+              className={cn("text-[11px] leading-none", asset.priceChangePct >= 0 ? "text-success-foreground" : "text-destructive-foreground")}
             />
           </span>
         )}

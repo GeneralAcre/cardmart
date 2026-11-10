@@ -27,9 +27,15 @@
   --accent-foreground: #ffffff;
   /* Status colors: every "good / up / done" green and every
      "bad / down / error" red on the site comes from these two. */
-  --success: #CCEF20;
+  --success: #72F277;
   --success-foreground: #0a0a0a;
-  --destructive: #D62828;
+  /* Price down / loss / error text: the mirror of the green (same saturation
+     and lightness, red hue), so up and down carry equal weight. */
+  --destructive: #F27272;
+  --destructive-foreground: #0a0a0a;
+  /* Filled danger surfaces with white text (delete buttons, alert badges):
+     a deeper red, since white on the soft red is too faint to read. */
+  --danger: #D62828;
   /* Comparing against a different grade than the listing: informational, not a deal or a warning. */
   --compare: #3b9eff;
   /* BGS Black Label: one amber for its text and tags everywhere. */
@@ -82,6 +88,8 @@
   --success: #15803d;
   --success-foreground: #ffffff;
   --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --danger: #dc2626;
   --compare: #1d6fd1;
   --black-label: #b45309;
   --warning: #b45309;
@@ -126,6 +134,8 @@
   --color-medal-bronze: var(--medal-bronze);
   --color-success-foreground: var(--success-foreground);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-danger: var(--danger);
   --color-highlight: var(--highlight);
   --color-highlight-foreground: var(--highlight-foreground);
   --color-border: var(--border);

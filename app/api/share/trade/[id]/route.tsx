@@ -23,9 +23,9 @@ import { referralUrl } from "@/lib/referral";
 
 const WIDTH = 1080;
 const HEIGHT = 1350;
-const LIME = "#CCEF20";
+const LIME = "#72F277";
 // The site's --destructive red, so a loss looks the same here as on the site.
-const RED = "#D62828";
+const RED = "#F27272";
 
 // The CardMart star, traced from public/cardmart-star.png (5 tips, 5 inner
 // corners), so the background can draw it large and sharp at any size.
@@ -115,7 +115,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
           display: "flex",
           flexDirection: "column",
           background: "#0a0a0a",
-          backgroundImage: `radial-gradient(circle at 78% 30%, ${up ? "rgba(204,239,32,0.20)" : "rgba(214,40,40,0.18)"} 0%, rgba(10,10,10,0) 58%)`,
+          backgroundImage: `radial-gradient(circle at 78% 30%, ${up ? "rgba(114,242,119,0.20)" : "rgba(242,114,114,0.18)"} 0%, rgba(10,10,10,0) 58%)`,
           color: "#ffffff",
           fontFamily: "Geist",
           padding: `${PAD}px ${PAD}px 56px`,
@@ -147,10 +147,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
                 running off the right edge, with a small outlined one in the empty
                 space beside the prices. */}
             <div style={{ position: "absolute", top: 40, left: 360, display: "flex", transform: "rotate(-14deg)" }}>
-              <Star size={1000} fill={up ? "rgba(204,239,32,0.10)" : "rgba(214,40,40,0.10)"} />
+              <Star size={1000} fill={up ? "rgba(114,242,119,0.10)" : "rgba(242,114,114,0.10)"} />
             </div>
             <div style={{ position: "absolute", top: 900, left: 790, display: "flex", transform: "rotate(18deg)" }}>
-              <Star size={240} fill="none" stroke={up ? "rgba(204,239,32,0.18)" : "rgba(214,40,40,0.18)"} strokeWidth={3} />
+              <Star size={240} fill="none" stroke={up ? "rgba(114,242,119,0.18)" : "rgba(242,114,114,0.18)"} strokeWidth={3} />
             </div>
           </>
         )}
