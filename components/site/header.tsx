@@ -6,6 +6,7 @@ import { getMyNotifications, getUnreadMessageCount, getUnreadNotificationCount }
 import { NavLinks } from "@/components/site/nav-links";
 import { MobileBottomNav } from "@/components/site/mobile-bottom-nav";
 import { NotificationBell } from "@/components/site/notification-bell";
+import { HeaderSearchButton } from "@/components/site/header-search-button";
 import { ProfileDrawer } from "@/components/site/profile-drawer";
 import { ThemeToggleButton } from "@/components/site/theme-toggle";
 import { Logo } from "@/components/site/logo";
@@ -38,6 +39,8 @@ export async function SiteHeader() {
             <NavLinks />
           </div>
           <div className="flex shrink-0 items-center gap-1 sm:gap-3">
+            {/* Phones only: the Market's search box is on a banner slide that rotates away; this brings it back. */}
+            <HeaderSearchButton />
             <NotificationBell
               initialNotifications={notifications.map((n) => ({
                 id: n.id,
@@ -83,6 +86,7 @@ function GuestHeader() {
             <NavLinks />
           </div>
           <div className="flex shrink-0 items-center gap-1 sm:gap-3">
+            <HeaderSearchButton />
             <ThemeToggleButton />
             <LoginButton size="sm" label="Login" />
           </div>

@@ -29,12 +29,17 @@ export function MobileBottomNav() {
               key={l.href}
               href={l.href}
               className={cn(
-                "flex min-w-0 flex-col items-center justify-center gap-0.5 px-0.5 text-[11px] font-medium transition-colors",
+                "flex min-w-0 flex-col items-center justify-center gap-1 transition-colors",
                 active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
               )}
+              // Icons only on the bar; the name is still read out and shown on long-press.
+              aria-label={t(l.shortLabel ?? l.label)}
+              aria-current={active ? "page" : undefined}
+              title={t(l.shortLabel ?? l.label)}
             >
-              <Icon className={cn("size-5", active && "text-primary")} />
-              <span className="max-w-full truncate">{t(l.shortLabel ?? l.label)}</span>
+              <Icon className={cn("size-6", active && "text-primary")} />
+              {/* A lime dot marks the current tab, since there's no label to make bold. The dot is always there (clear when inactive) so icons don't shift. */}
+              <span aria-hidden className={cn("size-1 rounded-full", active ? "bg-success" : "bg-transparent")} />
             </Link>
           );
         })}

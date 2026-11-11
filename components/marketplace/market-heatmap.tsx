@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, LayoutGrid } from "lucide-react";
 
@@ -152,8 +152,14 @@ export function MarketHeatmap({
   compact = false,
   period: controlledPeriod,
   onPeriodChange,
+  title,
+  extra,
 }: {
   rows: LeaderboardRow[];
+  /** Shown on the left of the toolbar row, with the view controls on the right. */
+  title?: ReactNode;
+  /** More controls after the view controls (the Market page puts its period picker here). */
+  extra?: ReactNode;
   compact?: boolean;
   /** When the page owns the period (the Market page shares one picker with the movers), pass it here and the map hides its own. */
   period?: LeaderboardPeriod;
@@ -250,8 +256,9 @@ export function MarketHeatmap({
   const biggest = sorted[0];
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className={cn("flex flex-col", title ? "gap-3" : "gap-4")}>
+      <div className="flex min-h-9 flex-wrap items-center justify-between gap-3">
+        {title}
         <div className="flex flex-wrap items-center gap-2">
           {series != null ? (
             <Button variant="outline" size="sm" onClick={() => setSeries(null)}>
@@ -278,6 +285,7 @@ export function MarketHeatmap({
             />
           )}
           {series != null && <span className="truncate text-sm font-semibold">{series}</span>}
+          {extra}
         </div>
         {!onPeriodChange && (
           <Segmented value={period} onChange={(v) => setPeriod(v as LeaderboardPeriod)} options={PERIODS.map((p) => ({ value: p, label: p }))} />

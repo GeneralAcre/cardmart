@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CountdownTimer } from "@/components/auction/countdown-timer";
 import { useT } from "@/components/landing/language-provider";
 import { useMoney } from "@/components/currency-provider";
+import { OPEN_SEARCH_EVENT } from "@/components/site/header-search-button";
 import { CARD_GAMES, CARD_GAME_LABELS } from "@/lib/labels";
 import type { NewsCard, NewsSlide } from "@/lib/market-news";
 import { cn } from "@/lib/utils";
@@ -85,11 +86,17 @@ function Duotone({ src, className }: { src: string; className?: string }) {
 }
 
 /** The first slide: the Market's headline and search, over the word pattern. */
-function SearchSlide({ onTyping }: { onTyping: (typing: boolean) => void }) {
+function SearchSlide({ onTyping, focusToken }: { onTyping: (typing: boolean) => void; focusToken: number }) {
   const t = useT();
   const router = useRouter();
   const [game, setGame] = useState<CardGame | "ALL">("ALL");
   const [query, setQuery] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // The header's search icon bumps `focusToken`; each bump puts the cursor in the field.
+  useEffect(() => {
+    if (focusToken > 0) inputRef.current?.focus();
+  }, [focusToken]);
 
   function search(e: React.FormEvent) {
     e.preventDefault();
@@ -106,7 +113,7 @@ function SearchSlide({ onTyping }: { onTyping: (typing: boolean) => void }) {
       <Stripes className="-top-6 right-6 h-28 sm:right-12 sm:h-36" />
       <Stripes className="-bottom-6 left-6 h-20 sm:left-12 sm:h-28" />
       <div className="flex h-full items-center px-4 sm:px-16">
-        <div className="mx-auto flex w-full max-w-2xl flex-col items-center gap-4 text-center">
+        <div className="mx-auto flex w-full max-w-2xl flex-col items-center gap-3 text-center sm:gap-4">
           <h2
             className="animate-news-rise font-display text-4xl leading-[0.95] tracking-wide uppercase sm:text-6xl"
             style={{ animationDelay: "0ms" }}
@@ -147,6 +154,7 @@ function SearchSlide({ onTyping }: { onTyping: (typing: boolean) => void }) {
             <div className="relative flex !h-11 min-w-0 items-center rounded-md border border-white/20 bg-black sm:flex-1">
               <Search className="pointer-events-none absolute left-3 size-4 text-white/70" />
               <input
+                ref={inputRef}
                 value={query}
                 onChange={(e) => {
                   setQuery(e.target.value);
@@ -185,7 +193,7 @@ function NewsSlideView({ slide }: { slide: NewsSlide }) {
       <Stripes className="-bottom-6 left-6 h-16 sm:left-12 sm:h-24" />
 
       <div className="flex h-full items-center justify-center px-5 sm:px-16">
-        <div className="flex max-w-2xl min-w-0 flex-col items-center gap-3 text-center">
+        <div className="flex max-w-2xl min-w-0 flex-col items-center gap-2 text-center sm:gap-3">
           {/* A slanted lime tag, like the stripes. */}
           <span
             className="animate-news-rise bg-success text-success-foreground inline-flex w-fit -skew-x-[18deg] items-center px-3 py-1 text-xs font-bold tracking-wider uppercase"
@@ -252,18 +260,36 @@ export function MarketNewsHero({ slides }: { slides: NewsSlide[]; wall?: NewsCar
   const [hovered, setHovered] = useState(false);
   const [typing, setTyping] = useState(false);
   const touchX = useRef<number | null>(null);
+  const sectionRef = useRef<HTMLElement>(null);
+  const [focusToken, setFocusToken] = useState(0);
 
   const count = slides.length + 1; // the search slide comes first
   const go = (i: number) => setIndex((i + count) % count);
   const slide = index > 0 ? slides[index - 1] : null;
   const dot = "bg-success";
 
+  // The header's search icon (phones) asks for the search slide: show it, stop the
+  // rotation as a typed search would, scroll it into view and focus the field.
+  // Arriving from another page with #search does the same once on load.
+  useEffect(() => {
+    const open = () => {
+      setIndex(0);
+      setTyping(true);
+      setFocusToken((n) => n + 1);
+      sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+    window.addEventListener(OPEN_SEARCH_EVENT, open);
+    if (window.location.hash === "#search") open();
+    return () => window.removeEventListener(OPEN_SEARCH_EVENT, open);
+  }, []);
+
   return (
     <div className="mb-6 flex flex-col gap-3">
       <section
+        ref={sectionRef}
         aria-roledescription="carousel"
         aria-label={t("What's new")}
-        className="theme-dark group relative isolate h-[26rem] overflow-hidden rounded-2xl border bg-black text-white md:h-80"
+        className="theme-dark group relative isolate h-72 scroll-mt-20 overflow-hidden rounded-2xl border bg-black text-white md:h-80"
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         onTouchStart={(e) => (touchX.current = e.touches[0].clientX)}
@@ -275,7 +301,7 @@ export function MarketNewsHero({ slides }: { slides: NewsSlide[]; wall?: NewsCar
         }}
       >
         <div key={slide?.id ?? "search"} className="h-full">
-          {slide ? <NewsSlideView slide={slide} /> : <SearchSlide onTyping={setTyping} />}
+          {slide ? <NewsSlideView slide={slide} /> : <SearchSlide onTyping={setTyping} focusToken={focusToken} />}
         </div>
 
         {count > 1 && (
