@@ -187,11 +187,15 @@ export function MarketPulse({ rows }: { rows: LeaderboardRow[] }) {
       </div>
 
       <div className="flex min-w-0 flex-col gap-3 lg:flex-[4]">
-        <div className="flex h-9 items-center justify-between gap-3">
-          {sectionTitle(LayoutGrid, t("Heatmap"))}
-          <div className="hidden lg:block">{periodPicker}</div>
-        </div>
-        <MarketHeatmap rows={rows} compact period={period} onPeriodChange={setPeriod} />
+        {/* The title on the left; the map's own view switches (and, on wide screens, the period) on the right of the same row. */}
+        <MarketHeatmap
+          rows={rows}
+          compact
+          period={period}
+          onPeriodChange={setPeriod}
+          title={sectionTitle(LayoutGrid, t("Heatmap"))}
+          extra={<div className="hidden lg:block">{periodPicker}</div>}
+        />
       </div>
     </section>
   );

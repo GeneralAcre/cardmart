@@ -314,13 +314,14 @@ export function MarketIndexes({
   if (mine.length === 0 && indexes.every((i) => i.points.length === 0)) return null;
   // Offer another index once the first has cards, so an empty row doesn't show two invitations.
   const canAdd = mine.length > 0 && mine.length < MAX_OWN_INDEXES && (mine.length > 1 || mine[0].cards.length > 0);
+  // Your own indexes come first, so they're the card in view on phones and never hidden past the row's edge; the market ones follow.
   const cards = [
-    ...indexes.map((index) => ({ key: index.key, node: <IndexCard index={index} /> })),
     ...mine.map((m) => ({
       key: m.id ?? "MINE",
       node: <MyIndexCard mine={m} listings={listings} autoOpen={m.id != null && m.id === justCreated} />,
     })),
     ...(canAdd ? [{ key: "NEW", node: <NewIndexCard onCreated={setJustCreated} /> }] : []),
+    ...indexes.map((index) => ({ key: index.key, node: <IndexCard index={index} /> })),
   ];
   return (
     <>
