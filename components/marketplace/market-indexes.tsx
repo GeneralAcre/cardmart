@@ -42,7 +42,8 @@ function IndexIcon({ index }: { index: MarketIndex["key"] }) {
         // The app icon (outlined star on black), the same mark as the header and Compare page.
         <img src="/cardmart-icon.png" alt="" className="size-5 rounded-md object-cover" />
       ) : index === "MINE" ? (
-        <Bookmark className="size-3.5 fill-current" />
+        // Purple marks "your own" index, the one accent spot where purple, not green, carries identity.
+        <Bookmark className="text-accent-purple size-4 fill-current" />
       ) : (
         <GameIcon game={index} size={20} />
       )}
@@ -314,14 +315,19 @@ export function MarketIndexes({
   if (mine.length === 0 && indexes.every((i) => i.points.length === 0)) return null;
   // Offer another index once the first has cards, so an empty row doesn't show two invitations.
   const canAdd = mine.length > 0 && mine.length < MAX_OWN_INDEXES && (mine.length > 1 || mine[0].cards.length > 0);
-  // Your own indexes come first, so they're the card in view on phones and never hidden past the row's edge; the market ones follow.
+  // The game indexes (Pokémon, One Piece) come first, then the all-market CardMart index, then your own indexes.
+  const marketOrder = ["POKEMON", "ONE_PIECE", "ALL"];
+  const rank = (key: string) => {
+    const i = marketOrder.indexOf(key);
+    return i === -1 ? marketOrder.length : i;
+  };
   const cards = [
+    ...[...indexes].sort((a, b) => rank(a.key) - rank(b.key)).map((index) => ({ key: index.key, node: <IndexCard index={index} /> })),
     ...mine.map((m) => ({
       key: m.id ?? "MINE",
       node: <MyIndexCard mine={m} listings={listings} autoOpen={m.id != null && m.id === justCreated} />,
     })),
     ...(canAdd ? [{ key: "NEW", node: <NewIndexCard onCreated={setJustCreated} /> }] : []),
-    ...indexes.map((index) => ({ key: index.key, node: <IndexCard index={index} /> })),
   ];
   return (
     <>

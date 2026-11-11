@@ -41,6 +41,10 @@
   /* Filled danger surfaces with white text (delete buttons, alert badges):
      a deeper red, since white on the soft red is too faint to read. */
   --danger: #D62828;
+  /* Secondary accent — purple, for decorative chrome only (section icons,
+     "your own" marks). Never used for price up/down or good/bad: green keeps
+     that job, so purple and green never carry the same meaning. */
+  --accent-purple: #a78bfa;
   /* Comparing against a different grade than the listing: informational, not a deal or a warning. */
   --compare: #3b9eff;
   /* BGS Black Label: one amber for its text and tags everywhere. */
@@ -96,6 +100,7 @@
   --destructive: #dc2626;
   --destructive-foreground: #ffffff;
   --danger: #dc2626;
+  --accent-purple: #7c3aed;
   --compare: #1d6fd1;
   --black-label: #b45309;
   --warning: #b45309;
@@ -133,6 +138,7 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-success: var(--success);
   --color-compare: var(--compare);
+  --color-accent-purple: var(--accent-purple);
   --color-black-label: var(--black-label);
   --color-warning: var(--warning);
   --color-medal-gold: var(--medal-gold);
@@ -347,4 +353,63 @@ html[lang="th"] .hero-title {
 /* A white logo turned dark on the light theme. */
 :root[data-theme="light"] .logo-adaptive {
   filter: invert(1);
+}
+
+/* Printing the price comparison: only the open comparison dialog is printed,
+   on white paper whatever the on-screen theme, with its on-screen controls
+   hidden (they carry print:hidden). */
+@media print {
+  :root:root {
+    color-scheme: light;
+    --background: #ffffff;
+    --foreground: #0a0a0a;
+    --card: #ffffff;
+    --card-foreground: #0a0a0a;
+    --muted: #f1f1f0;
+    --muted-foreground: #525252;
+    --border: #d4d4d2;
+    --success: #15803d;
+    --success-fill: #72f277;
+    --success-fill-foreground: #0a0a0a;
+  }
+  body > *:not([data-slot="dialog-content"]):not(:has([data-slot="dialog-content"])) {
+    display: none !important;
+  }
+  [data-slot="dialog-overlay"] {
+    display: none !important;
+  }
+  [data-slot="dialog-content"] {
+    position: absolute !important;
+    inset: 0 auto auto 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 10mm !important;
+    width: 100% !important;
+    animation: none !important;
+  }
+  /* The wordmark is white for the dark page; paper needs it dark. */
+  .print-logo {
+    filter: invert(1);
+  }
+  * {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  /* No page margin also drops the browser's own date, page title and URL lines; the content keeps its own padding. */
+  @page {
+    size: A4 landscape;
+    margin: 0;
+  }
+  html,
+  body {
+    height: auto !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+}
+@media print {
+  [data-slot="dialog-content"] > button {
+    display: none !important;
+  }
 }

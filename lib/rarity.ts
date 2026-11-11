@@ -21,38 +21,37 @@ export const RARITY_SHORT: Record<CardRarity, string> = Object.fromEntries(RARIT
   string
 >;
 
-// A green-to-yellow scale, one solid shade per tier so each reads apart at a
-// glance: the common cards are deep green, the rarer the card the further it
-// moves toward bright yellow, and SAR is the brightest of all. Two of the
-// palette's ten shades are skipped (they sit too close to a neighbour to tell
-// apart). Black text on every tier except the darkest green (U/C), where only
-// white passes WCAG AA contrast (4.5:1) at the tags' 11px. Full
-// class names so Tailwind picks them up.
+// A purple scale, one solid shade per tier so each reads apart at a glance:
+// the common cards are deep violet, the rarer the card the lighter and brighter
+// it gets, and SAR is the brightest lavender of all. Purple keeps rarity clear
+// of the brand's green, which stands for price/good. Black text on the lighter
+// tiers, white on the darker ones (SR and below), where only white passes WCAG
+// AA contrast (4.5:1) at the tags' 11px. Full class names so Tailwind picks them up.
 
 /** The scale as plain values, rarest (brightest) first, for charts. RARITY_STYLE and RARITY_BORDER use the same shades. */
-export const RARITY_SCALE = ["#FFFF3F", "#EEEF20", "#D4D700", "#AACC00", "#80B918", "#55A630", "#2B9348", "#007F5F"];
+export const RARITY_SCALE = ["#E9D5FF", "#D8B4FE", "#C084FC", "#A855F7", "#9333EA", "#7E22CE", "#6B21A8", "#581C87"];
 
 export const RARITY_STYLE: Record<CardRarity, string> = {
-  SAR: "bg-[#FFFF3F] text-black",
-  SEC: "bg-[#EEEF20] text-black",
-  UR: "bg-[#D4D700] text-black",
-  AR: "bg-[#AACC00] text-black",
-  SR: "bg-[#80B918] text-black",
-  RR: "bg-[#55A630] text-black",
-  R: "bg-[#2B9348] text-black",
-  UC: "bg-[#007F5F] text-white",
+  SAR: "bg-[#E9D5FF] text-black",
+  SEC: "bg-[#D8B4FE] text-black",
+  UR: "bg-[#C084FC] text-black",
+  AR: "bg-[#A855F7] text-black",
+  SR: "bg-[#9333EA] text-white",
+  RR: "bg-[#7E22CE] text-white",
+  R: "bg-[#6B21A8] text-white",
+  UC: "bg-[#581C87] text-white",
 };
 
 /** The same colours as RARITY_STYLE, as an outline only, for the quiet tag on listing cards. */
 export const RARITY_BORDER: Record<CardRarity, string> = {
-  SAR: "border-[#FFFF3F]",
-  SEC: "border-[#EEEF20]",
-  UR: "border-[#D4D700]",
-  AR: "border-[#AACC00]",
-  SR: "border-[#80B918]",
-  RR: "border-[#55A630]",
-  R: "border-[#2B9348]",
-  UC: "border-[#007F5F]",
+  SAR: "border-[#E9D5FF]",
+  SEC: "border-[#D8B4FE]",
+  UR: "border-[#C084FC]",
+  AR: "border-[#A855F7]",
+  SR: "border-[#9333EA]",
+  RR: "border-[#7E22CE]",
+  R: "border-[#6B21A8]",
+  UC: "border-[#581C87]",
 };
 
 export const isRarity =(value: string | null | undefined): value is CardRarity =>
