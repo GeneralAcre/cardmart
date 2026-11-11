@@ -42,7 +42,8 @@ function IndexIcon({ index }: { index: MarketIndex["key"] }) {
         // The app icon (outlined star on black), the same mark as the header and Compare page.
         <img src="/cardmart-icon.png" alt="" className="size-5 rounded-md object-cover" />
       ) : index === "MINE" ? (
-        <Bookmark className="size-3.5 fill-current" />
+        // Purple marks "your own" index, the one accent spot where purple, not green, carries identity.
+        <Bookmark className="text-accent-purple size-4 fill-current" />
       ) : (
         <GameIcon game={index} size={20} />
       )}

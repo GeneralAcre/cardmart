@@ -46,7 +46,7 @@ export function ListingCard({
     >
       {/* The card sits on a dark spotlight "stage", shown whole (contain)
           rather than cropped, the way a slab photo would be. */}
-      <div className="card-stage relative aspect-[4/5] overflow-hidden">
+      <div className="card-stage relative aspect-[8/9] overflow-hidden">
         {image ? (
           // Real live-camera capture instead of the generated digital-twin
           // art whenever one exists — this is what the item actually
@@ -57,10 +57,10 @@ export function ListingCard({
             alt={asset.name}
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1280px) 33vw, 20vw"
-            className="object-contain p-4 photo-shadow transition-transform duration-300 group-hover:scale-[1.04] sm:p-5"
+            className="object-contain p-3 photo-shadow transition-transform duration-300 group-hover:scale-[1.04] sm:p-4"
           />
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center p-5 transition-transform duration-300 group-hover:scale-[1.04]">
+          <div className="absolute inset-0 flex items-center justify-center p-4 transition-transform duration-300 group-hover:scale-[1.04]">
             <CardArt
               themeIndex={asset.themeIndex}
               category={asset.category}
@@ -101,7 +101,7 @@ export function ListingCard({
         )}
       </div>
 
-      <div className={cn("flex flex-1 flex-col gap-1", compact ? "p-3" : "p-3.5 sm:p-4")}>
+      <div className={cn("flex flex-1 flex-col gap-1", compact ? "p-3" : "p-3 sm:p-3.5")}>
         {/* One line on every card, so the set line and price line up across a row with no gaps.
             A long name ends in "…" and shows in full on hover. */}
         <h3 title={asset.name} className={cn("truncate font-semibold", compact ? "text-[13px]" : "text-sm")}>{asset.name}</h3>
@@ -113,7 +113,7 @@ export function ListingCard({
         </div>
 
         {/* Bottom row: the seller's picture on the left (name on hover), the price on the right. */}
-        <div className="mt-auto flex items-center justify-between gap-2 pt-3">
+        <div className="mt-auto flex items-center justify-between gap-2 pt-2.5">
           <span title={sellerName} aria-label={t("Seller: {name}", { name: sellerName })}>
             <UserAvatar user={{ name: sellerName, handle: null, image: asset.seller.image ?? null }} className="size-6 [&_*]:text-[10px]" />
           </span>
@@ -134,7 +134,7 @@ export function ListingCard({
   return (
     <div className={cn("group/compare relative flex", compare.selected && "[&>a]:border-success")}>
       {card}
-      <div className="pointer-events-none absolute inset-x-0 top-0 aspect-[4/5]">
+      <div className="pointer-events-none absolute inset-x-0 top-0 aspect-[8/9]">
         <button
           type="button"
           onClick={compare.onToggle}

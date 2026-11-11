@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, Grid3x3, LayoutGrid, PackageSearch, Scale, Search, SlidersHorizontal, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Grid3x3, LayoutGrid, PackageSearch, Scale, Search, SlidersHorizontal, X } from "lucide-react";
 
 import { FilterBar } from "@/components/marketplace/filter-bar";
 import { ListingCard } from "@/components/marketplace/listing-card";
@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { useT } from "@/components/landing/language-provider";
 import { EMPTY_FILTERS, type AssetSummary, type MarketplaceFilterState } from "@/lib/types";
@@ -279,15 +279,27 @@ export function MarketplaceExplorer({
                   )}
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-5xl">
-                <DialogHeader>
-                  <DialogTitle>{t("Compare prices")}</DialogTitle>
-                  <DialogDescription>{t("Compare asking prices across cards and grading institutes.")}</DialogDescription>
-                </DialogHeader>
-                {/* Compares across everything listed, not just the filtered
-                    results — filters narrow what you browse, not which cards
-                    you can compare. */}
-                <PriceCompareTable listings={initialListings} selected={compareCards} onSelectedChange={setCompareCards} />
+              {/* Full page: fills the screen so the cards can sit side by side.
+                  The Back button replaces the default floating X. */}
+              <DialogContent
+                showCloseButton={false}
+                className="inset-0 h-dvh max-h-none w-screen max-w-none translate-x-0 translate-y-0 content-start rounded-none border-0 sm:max-w-none sm:p-8"
+              >
+                <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 sm:gap-6">
+                  <DialogHeader className="print:hidden">
+                    <DialogClose asChild>
+                      <Button variant="outline" size="sm" className="mb-1 w-fit">
+                        <ArrowLeft /> {t("Back to marketplace")}
+                      </Button>
+                    </DialogClose>
+                    <DialogTitle className="text-2xl">{t("Compare prices")}</DialogTitle>
+                    <DialogDescription>{t("Compare asking prices across cards and grading institutes.")}</DialogDescription>
+                  </DialogHeader>
+                  {/* Compares across everything listed, not just the filtered
+                      results — filters narrow what you browse, not which cards
+                      you can compare. */}
+                  <PriceCompareTable listings={initialListings} selected={compareCards} onSelectedChange={setCompareCards} />
+                </div>
               </DialogContent>
             </Dialog>
           )}

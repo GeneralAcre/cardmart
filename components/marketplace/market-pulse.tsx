@@ -163,7 +163,7 @@ export function MarketPulse({ rows }: { rows: LeaderboardRow[] }) {
     const Icon = icon;
     return (
       <div className="flex items-center gap-2">
-        <div className="bg-secondary text-foreground flex size-7 items-center justify-center rounded-md">
+        <div className="bg-accent-purple/15 text-accent-purple flex size-7 items-center justify-center rounded-md">
           <Icon className="size-3.5" />
         </div>
         <h2 className="eyebrow text-foreground text-sm">{label}</h2>

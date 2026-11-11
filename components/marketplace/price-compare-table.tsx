@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Check, Plus, Search, X } from "lucide-react";
+import { ArrowRight, Check, Plus, Printer, Search, X } from "lucide-react";
 import type { GradingCompany } from "@prisma/client";
 
 import { CardArt } from "@/components/asset/card-art";
@@ -12,6 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { displayImage } from "@/lib/card-image";
 import { formatGrade } from "@/lib/format";
+import { CARD_LANGUAGE_LABELS } from "@/lib/labels";
+import { RARITY_SHORT } from "@/lib/rarity";
 import { useMoney } from "@/components/currency-provider";
 import { cn } from "@/lib/utils";
 import type { AssetSummary } from "@/lib/types";
@@ -19,7 +21,7 @@ import { useT } from "@/components/landing/language-provider";
 
 export const MAX_COMPARE = 5;
 const ANY = "ANY";
-const COLUMNS = "sm:grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_minmax(0,1fr)_9rem_4.5rem]";
+const COLUMNS = "sm:grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_minmax(0,1.2fr)_10rem_6.5rem]";
 
 // Spelled out here (not GRADING_COMPANY_LABELS) because buyers comparing
 // prices often know BGS by its company name, Beckett.
@@ -37,6 +39,13 @@ type Institute = GradingCompany | typeof ANY;
 // grid uses to pick cards for comparison.
 export const compareCardKey = (l: { name: string; subtitle: string }) => `${l.name}\u0000${l.subtitle}`;
 const cardKey = compareCardKey;
+
+/** Middle asking price; the mean of the two middle ones when the count is even. */
+function median(values: number[]) {
+  const sorted = [...values].sort((x, y) => x - y);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
 
 interface CardOption {
   key: string;
@@ -130,15 +139,61 @@ export function PriceCompareTable({
     const grades = [...new Set(matches.map((l) => (l.gradingCompany === "RAW" ? t("Raw") : formatGrade(l.grade))))];
     return {
       count: matches.length,
-      min: Math.min(...prices),
-      max: Math.max(...prices),
+      median: median(prices),
       cheapestId: cheapest.id,
+      institute: row.institute,
+      cheapest,
       grades,
     };
   });
 
-  const filledMins = results.flatMap((r) => (r ? [r.min] : []));
+  const filledMins = results.flatMap((r) => (r ? [r.median] : []));
   const bestPrice = filledMins.length > 1 ? Math.min(...filledMins) : null;
+
+  type Result = NonNullable<(typeof results)[number]>;
+  const stats: { label: string; value: (r: Result) => ReactNode; isBest?: (r: Result | null) => boolean; printOnly?: boolean }[] = [
+    // The dropdown in each card head does this job on screen; paper needs it as text.
+    { label: "Institute", printOnly: true, value: (r) => t(r.institute === ANY ? "All institutes" : INSTITUTE_LABELS[r.institute]) },
+    {
+      label: "Median price",
+      value: (r) => money(r.median),
+      isBest: (r) => r != null && bestPrice != null && r.median === bestPrice,
+    },
+    { label: "Listings", value: (r) => r.count },
+    {
+      label: "Grades",
+      value: (r) => (
+        <span className="flex flex-wrap justify-center gap-1.5">
+          {r.grades.map((g) => (
+            <span key={g} className="bg-muted rounded-md px-2 py-0.5 text-sm font-medium">
+              {g}
+            </span>
+          ))}
+        </span>
+      ),
+    },
+    {
+      label: "Price trend",
+      value: (r) => {
+        const { priceDirection: dir, priceChangePct: pct } = r.cheapest;
+        if (!dir) return <span className="text-muted-foreground font-normal">—</span>;
+        return (
+          <span className={dir === "up" ? "text-success" : "text-destructive"}>
+            {dir === "up" ? "▲" : "▼"}
+            {pct != null ? ` ${Math.abs(pct).toFixed(1)}%` : ""}
+          </span>
+        );
+      },
+    },
+    { label: "Rarity", value: (r) => (r.cheapest.rarity ? RARITY_SHORT[r.cheapest.rarity] : "—") },
+    { label: "Card number", value: (r) => r.cheapest.cardNumber || "—" },
+    { label: "Language", value: (r) => t(CARD_LANGUAGE_LABELS[r.cheapest.language]) },
+  ];
+
+  // Cheapest card first, so the best deal leads from the left; cards with no listings go last.
+  const order = rows
+    .map((_, i) => i)
+    .sort((a, b) => (results[a]?.median ?? Infinity) - (results[b]?.median ?? Infinity));
 
   function addCard(card: string) {
     if (chosen.has(card) || rows.length >= MAX_COMPARE) return;
@@ -158,53 +213,73 @@ export function PriceCompareTable({
   return (
     <div className="flex flex-col gap-4">
       {rows.length > 0 && (
-        // One grid per comparison instead of a <table>: on phones each row
-        // stacks into its own card, so nothing ever needs a sideways scroll;
-        // from sm up the same grid lines up into table columns.
-        <div className="bg-card overflow-hidden rounded-xl border">
-          <div className={cn("text-muted-foreground hidden gap-3 border-b px-3 py-2.5 text-xs font-medium sm:grid", COLUMNS)}>
-            <span>{t("Card")}</span>
-            <span>{t("Institute")}</span>
-            <span>{t("Grades")}</span>
-            <span className="text-right">{t("Price")}</span>
-            <span />
+        // Paper only: the CardMart wordmark top left, what this is and when it was made on the right.
+        <div className="hidden items-end justify-between border-b-2 border-foreground pb-4 print:flex">
+          <Image src="/cardmart-logo.png" alt="CardMart" width={484} height={77} unoptimized className="print-logo h-8 w-auto" />
+          <div className="text-right">
+            <div className="text-lg font-semibold">{t("Compare prices")}</div>
+            <div className="text-muted-foreground text-sm">
+              {t("Median asking price")}
+            </div>
           </div>
-          <div className="divide-y">
-            {rows.map((row, i) => {
+        </div>
+      )}
+
+      {rows.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <span className="text-muted-foreground text-sm">
+            {bestPrice != null ? (
+              <>
+                <span className="text-success font-semibold">{t("Green")}</span> = {t("lowest price")}
+              </>
+            ) : (
+              t("You can compare up to 5 cards.")
+            )}
+          </span>
+          <div className="flex items-center gap-2 print:hidden">
+            <Button variant="outline" onClick={() => window.print()}>
+              <Printer /> {t("Print")}
+            </Button>
+            <Button onClick={() => setPicking((p) => !p)} disabled={rows.length >= MAX_COMPARE} aria-expanded={picking}>
+              <Plus /> {t("Add card")} ({rows.length}/{MAX_COMPARE})
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {rows.length > 0 && (
+        // Head-to-head: one column per card, one row per stat, so the same
+        // fact lines up across cards. Scrolls sideways inside the box when
+        // five cards do not fit (phones); the label column stays put.
+        <div className="bg-card overflow-x-auto rounded-2xl border print:overflow-visible print:break-inside-avoid">
+          <div
+            className="grid min-w-full"
+            style={{ gridTemplateColumns: `minmax(7.5rem,10rem) repeat(${rows.length}, minmax(10.5rem,1fr))` }}
+          >
+            {/* Card heads */}
+            <div className="bg-card sticky left-0 z-10" />
+            {order.map((i) => rows[i]).map((row) => {
               const card = cardByKey.get(row.card);
-              if (!card) return null;
-              const result = results[i];
+              if (!card) return <div key={row.card} />;
               const institutes = [...new Set(priced.filter((l) => cardKey(l) === row.card).map((l) => l.gradingCompany))];
-              const isBest = result != null && bestPrice != null && result.min === bestPrice;
               return (
-                <div key={row.card} className={cn("grid grid-cols-[3rem_minmax(0,1fr)] gap-x-3 gap-y-2 p-3 sm:items-center", COLUMNS)}>
-                  <div className="row-span-4 flex items-start gap-3 sm:row-span-1 sm:col-span-1 sm:items-center">
-                    <CardThumb asset={card.cover} sizes="48px" className="h-16 w-12 shrink-0" />
-                    <div className="hidden min-w-0 flex-col sm:flex">
-                      <span className="truncate text-sm font-medium">{card.name}</span>
-                      <span className="text-muted-foreground truncate text-xs">{card.subtitle}</span>
-                    </div>
+                <div key={row.card} className="relative flex flex-col items-center gap-2 p-5 pb-6 text-center print:gap-1 print:p-3">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-muted-foreground absolute top-2 right-2 size-8 print:hidden"
+                    onClick={() => removeRow(row.card)}
+                    aria-label={t("Remove row")}
+                  >
+                    <X />
+                  </Button>
+                  <CardThumb asset={card.cover} sizes="200px" className="h-48 w-36 shrink-0 print:h-32 print:w-24" />
+                  <div className="flex max-w-full min-w-0 flex-col">
+                    <span className="truncate text-lg font-semibold">{card.name}</span>
+                    <span className="text-muted-foreground truncate text-sm">{card.subtitle}</span>
                   </div>
-
-                  {/* Phones: name and remove button beside the picture. */}
-                  <div className="flex min-w-0 items-start justify-between gap-2 sm:hidden">
-                    <div className="flex min-w-0 flex-col">
-                      <span className="truncate text-sm font-medium">{card.name}</span>
-                      <span className="text-muted-foreground truncate text-xs">{card.subtitle}</span>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-muted-foreground size-8 shrink-0"
-                      onClick={() => removeRow(row.card)}
-                      aria-label={t("Remove row")}
-                    >
-                      <X />
-                    </Button>
-                  </div>
-
                   <Select value={row.institute} onValueChange={(v) => setInstitutes((prev) => ({ ...prev, [row.card]: v as Institute }))}>
-                    <SelectTrigger size="sm" className="w-full min-w-0 [&>span]:truncate" aria-label={t("Grading institute")}>
+                    <SelectTrigger className="h-10 w-full min-w-0 text-sm print:hidden [&>span]:truncate" aria-label={t("Grading institute")}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -218,70 +293,58 @@ export function PriceCompareTable({
                         ))}
                     </SelectContent>
                   </Select>
-
-                  {result ? (
-                    <>
-                      <span className="text-muted-foreground truncate text-xs">
-                        <span className="sm:hidden">{t("Grades:")} </span>
-                        {result.grades.join(", ")}
-                      </span>
-                      <div className="flex items-center justify-between gap-2 sm:block sm:text-right">
-                        <div className="tabular-nums">
-                          <div className={cn("font-semibold", isBest && "text-success")}>{money(result.min)}</div>
-                          <div className="text-muted-foreground text-[11px]">
-                            {result.count > 1
-                              ? t("up to {max} · {count} listings", { max: money(result.max), count: result.count })
-                              : t("1 listing")}
-                          </div>
-                        </div>
-                        <Button asChild variant="outline" size="sm" className="sm:hidden">
-                          <Link href={`/item/${result.cheapestId}`}>
-                            {t("Cheapest")} <ArrowRight />
-                          </Link>
-                        </Button>
-                      </div>
-                    </>
-                  ) : (
-                    <span className="text-muted-foreground text-xs sm:col-span-2">{t("No listings for this combination.")}</span>
-                  )}
-
-                  <div className="hidden items-center justify-end sm:flex">
-                    {result && (
-                      <Button asChild variant="ghost" size="icon" className="size-8">
-                        <Link href={`/item/${result.cheapestId}`} aria-label={t("View cheapest listing")}>
-                          <ArrowRight />
-                        </Link>
-                      </Button>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-muted-foreground size-8"
-                      onClick={() => removeRow(row.card)}
-                      aria-label={t("Remove row")}
-                    >
-                      <X />
-                    </Button>
-                  </div>
                 </div>
               );
             })}
-          </div>
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t px-3 py-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setPicking((p) => !p)}
-              disabled={rows.length >= MAX_COMPARE}
-              aria-expanded={picking}
-            >
-              <Plus /> {t("Add card")} ({rows.length}/{MAX_COMPARE})
-            </Button>
-            {bestPrice != null && (
-              <span className="text-muted-foreground text-xs">
-                <span className="text-success font-medium">{t("Green")}</span> = {t("lowest price")}
-              </span>
-            )}
+
+            {/* Stat rows */}
+            {stats.map((stat, n) => (
+              <Fragment key={stat.label}>
+                <div
+                  className={cn(
+                    "text-muted-foreground sticky left-0 z-10 items-center border-t px-4 py-3.5 text-sm font-medium print:py-2",
+                    stat.printOnly ? "hidden print:flex" : "flex",
+                    n % 2 === 0 ? "bg-card" : "bg-muted",
+                  )}
+                >
+                  {t(stat.label)}
+                </div>
+                {order.map((i) => {
+                  const row = rows[i];
+                  const result = results[i];
+                  const best = stat.isBest?.(result) ?? false;
+                  return (
+                    <div
+                      key={row.card}
+                      className={cn(
+                        "items-center justify-center border-t border-l px-3 py-3.5 text-center text-base font-semibold tabular-nums print:py-2",
+                        stat.printOnly ? "hidden print:flex" : "flex",
+                        n % 2 === 1 && "bg-muted/50",
+                        best && "bg-success/15 text-success ring-success/40 ring-1 ring-inset",
+                      )}
+                    >
+                      {result ? stat.value(result) : <span className="text-muted-foreground font-normal">—</span>}
+                    </div>
+                  );
+                })}
+              </Fragment>
+            ))}
+
+            {/* Link row */}
+            <div className="bg-card sticky left-0 z-10 border-t print:hidden" />
+            {order.map((i) => (
+              <div key={rows[i].card} className="flex items-center justify-center border-t border-l p-3 print:hidden">
+                {results[i] ? (
+                  <Button asChild className="w-full">
+                    <Link href={`/item/${results[i]!.cheapestId}`}>
+                      {t("View cheapest listing")} <ArrowRight />
+                    </Link>
+                  </Button>
+                ) : (
+                  <span className="text-muted-foreground text-sm">{t("No listings for this combination.")}</span>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       )}
