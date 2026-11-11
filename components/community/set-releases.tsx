@@ -192,7 +192,7 @@ export function SetReleases({
                           <span
                             className={cn(
                               "absolute top-2 right-2 rounded-md px-1.5 py-1 text-[11px] leading-none font-semibold backdrop-blur-sm",
-                              soon ? "bg-success text-success-foreground" : "bg-background/85 text-foreground",
+                              soon ? "bg-success-fill text-success-fill-foreground" : "bg-background/85 text-foreground",
                             )}
                           >
                             {relative(s.releaseDate, today, t)}

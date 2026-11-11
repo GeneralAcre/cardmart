@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Noto_Sans_Thai } from "next/font/google";
+import { Anton, Geist, Geist_Mono, Noto_Sans_Thai } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
@@ -26,6 +26,14 @@ const geistMono = Geist_Mono({
 const notoSansThai = Noto_Sans_Thai({
   variable: "--font-noto-sans-thai",
   subsets: ["thai", "latin"],
+  display: "swap",
+});
+
+// Tall condensed display face, only for the Market banner's big headlines.
+const anton = Anton({
+  variable: "--font-anton",
+  weight: "400",
+  subsets: ["latin"],
   display: "swap",
 });
 
@@ -61,7 +69,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang={locale}
       data-theme={theme}
-      className={`${geist.variable} ${notoSansThai.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geist.variable} ${notoSansThai.variable} ${geistMono.variable} ${anton.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <ThemeProvider initialTheme={theme}>

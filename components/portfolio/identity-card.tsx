@@ -80,7 +80,7 @@ export function IdentityBadge({
             <div
               className={cn(
                 "flex size-9 shrink-0 items-center justify-center rounded-lg",
-                status === "VERIFIED" ? "bg-success text-success-foreground" : "bg-muted text-foreground",
+                status === "VERIFIED" ? "bg-success-fill text-success-fill-foreground" : "bg-muted text-foreground",
               )}
             >
               <Icon className="size-4" />
@@ -207,7 +207,7 @@ function KycDialog({
         <ol className="grid grid-cols-4 gap-1.5">
           {STEPS.map((label, i) => (
             <li key={label} className="flex flex-col gap-1">
-              <span className={cn("h-1 rounded-full", i <= step ? "bg-success" : "bg-muted")} />
+              <span className={cn("h-1 rounded-full", i <= step ? "bg-success-fill" : "bg-muted")} />
               <span className={cn("text-[11px]", i === step ? "text-foreground font-medium" : "text-muted-foreground")}>
                 {t(label)}
               </span>

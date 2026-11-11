@@ -84,7 +84,7 @@ export function ProfileDrawer({
           </Avatar>
           {/* Messages moved in here from the header, so a dot says there's something unread. */}
           {unreadMessageCount > 0 && (
-            <span className="bg-destructive ring-background absolute top-0 right-0 size-2.5 rounded-full ring-2">
+            <span className="bg-danger ring-background absolute top-0 right-0 size-2.5 rounded-full ring-2">
               <span className="sr-only">{t("Unread messages")}</span>
             </span>
           )}
@@ -120,7 +120,9 @@ export function ProfileDrawer({
             >
               <span className="flex min-w-0 items-center gap-2">
                 <Wallet className="text-success size-4 shrink-0" />
-                <span className="truncate font-mono text-sm">{short(publicKey)}</span>
+                {/* Phones: short form. Desktop: a longer middle cut that still fits on one line, so the address is easy to check. */}
+                <span className="truncate font-mono text-sm sm:hidden">{short(publicKey)}</span>
+                <span className="hidden truncate font-mono text-sm sm:inline">{`${publicKey.slice(0, 12)}…${publicKey.slice(-12)}`}</span>
               </span>
               {copied ? <Check className="text-success size-4 shrink-0" /> : <Copy className="text-muted-foreground size-4 shrink-0" />}
             </button>
@@ -140,7 +142,7 @@ export function ProfileDrawer({
                 </span>
                 <span className="flex-1">{label}</span>
                 {badge ? (
-                  <span className="bg-destructive min-w-5 rounded-full px-1.5 py-0.5 text-center text-[10px] leading-none font-semibold text-white">
+                  <span className="bg-danger min-w-5 rounded-full px-1.5 py-0.5 text-center text-[10px] leading-none font-semibold text-white">
                     {badge > 9 ? "9+" : badge}
                   </span>
                 ) : null}

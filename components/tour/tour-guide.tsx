@@ -423,7 +423,7 @@ export function TourGuide({ id, signedIn, done }: { id: TourId; signedIn: boolea
                 <>
                   {returnTo ? t("Continue the tour") : t("Finish")}
                   {reward > 0 && !loggedIn && (
-                    <span className="bg-success text-success-foreground flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[11px] font-bold">
+                    <span className="bg-success-fill text-success-fill-foreground flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[11px] font-bold">
                       <Zap className="size-3" fill="currentColor" />+{reward} XP
                     </span>
                   )}

@@ -87,13 +87,9 @@ export function buildPriceInsights(input: InsightInput, t: Translate = translato
             detail: t("This exact card's median sale price on CardMart is {median} ({sales}).", { median, sales }),
           },
     );
-  } else if (market.saleCount === 0) {
-    insights.push({
-      tone: "neutral",
-      title: t("No CardMart sales yet"),
-      detail: t("This exact card and grade hasn't sold here in the last 90 days. Compare with the outside prices below."),
-    });
   }
+  // No sales yet: say nothing here. The Compare tab already notes it, and an
+  // insight card that only says "no data" takes room without telling anything.
 
   if (price != null && market.listingCount > 1 && market.lowestAskThb != null) {
     insights.push(

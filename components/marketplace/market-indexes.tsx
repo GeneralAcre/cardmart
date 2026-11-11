@@ -39,7 +39,8 @@ function IndexIcon({ index }: { index: MarketIndex["key"] }) {
     <span aria-hidden className="flex size-7 shrink-0 items-center justify-center">
       {index === "ALL" ? (
         // eslint-disable-next-line @next/next/no-img-element -- tiny static logo
-        <img src="/cardmart-star.png" alt="" className="logo-adaptive size-3.5 object-contain" />
+        // The app icon (outlined star on black), the same mark as the header and Compare page.
+        <img src="/cardmart-icon.png" alt="" className="size-5 rounded-md object-cover" />
       ) : index === "MINE" ? (
         <Bookmark className="size-3.5 fill-current" />
       ) : (
@@ -185,13 +186,13 @@ function IndexCard({
 
       <div className="flex items-end justify-between gap-4">
         <div className="flex min-w-0 flex-col">
-          <span className="text-4xl leading-none font-semibold tracking-tight tabular-nums">{last ? formatLevel(last.price) : "—"}</span>
+          <span className="text-[1.75rem] leading-none md:text-4xl font-semibold tracking-tight tabular-nums">{last ? formatLevel(last.price) : "—"}</span>
         </div>
         {index.points.length >= 2 ? (
-          <Sparkline index={index} className="h-14 w-28 shrink-0" tooltip={false} />
+          <Sparkline index={index} className="h-12 w-24 shrink-0 md:h-14 md:w-28" tooltip={false} />
         ) : (
           // Nothing to draw yet: a dashed baseline, so the card doesn't look broken.
-          <svg aria-hidden viewBox="0 0 112 56" className="text-muted-foreground h-14 w-28 shrink-0">
+          <svg aria-hidden viewBox="0 0 112 56" className="text-muted-foreground h-12 w-24 shrink-0 md:h-14 md:w-28">
             <path d="M2 30 H110" stroke="currentColor" strokeWidth="2" strokeDasharray="2 7" strokeLinecap="round" opacity="0.45" />
           </svg>
         )}

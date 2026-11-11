@@ -17,124 +17,75 @@ import { CARD_GAMES, CARD_GAME_LABELS } from "@/lib/labels";
 import type { NewsCard, NewsSlide } from "@/lib/market-news";
 import { cn } from "@/lib/utils";
 
-/**
- * Each kind of news has its own brand colour: the label's dot, the glow behind
- * the cards, the price. Released is the lime, a live auction the red, the top
- * card gold, an upcoming set the blue, and a new listing plain white. The
- * banner is always dark (.theme-dark), so these are the dark-theme values.
+/*
+ * The banner's look: black, tall condensed uppercase type, slanted lime
+ * stripes in the corners, a faint repeated word behind, and pictures tinted
+ * lime (duotone) as backdrops. The front cards keep their real colours, so a
+ * buyer can still see the card. Always dark (.theme-dark).
  */
-const ACCENT: Record<NewsSlide["kind"], { dot: string; glow: string; price: string }> = {
-  upcoming: { dot: "bg-compare", glow: "var(--compare)", price: "from-compare to-white" },
-  released: { dot: "bg-success", glow: "var(--success)", price: "from-success to-white" },
-  top: { dot: "bg-medal-gold", glow: "var(--medal-gold)", price: "from-medal-gold to-white" },
-  listed: { dot: "bg-white", glow: "#ffffff", price: "from-white/70 to-white" },
-  auction: { dot: "bg-destructive", glow: "var(--destructive)", price: "from-destructive to-white" },
+
+// Only the eyebrow's dot says which kind of news it is; everything else is the lime.
+const DOT: Record<NewsSlide["kind"], string> = {
+  upcoming: "bg-compare",
+  released: "bg-success",
+  top: "bg-medal-gold",
+  listed: "bg-white",
+  auction: "bg-destructive",
 };
 
-// Where the cards behind the front one sit: fanned out to either side.
-const FAN = [
-  { transform: "none", z: 30, opacity: 1 },
-  { transform: "translateX(-52%) rotate(-11deg) scale(0.8)", z: 20, opacity: 0.7 },
-  { transform: "translateX(52%) rotate(11deg) scale(0.8)", z: 10, opacity: 0.7 },
-];
-
-const SHINE =
-  "animate-news-shine pointer-events-none absolute inset-y-0 left-0 w-1/2 bg-gradient-to-r from-transparent via-white/35 to-transparent mix-blend-overlay";
-
-function CardPicture({ card, front }: { card: NewsCard; front: boolean }) {
+/** Three slanted lime bars, cut off by the banner's edge. */
+function Stripes({ className }: { className?: string }) {
   return (
-    <div className="relative aspect-[63/88] h-full overflow-hidden rounded-[5%] shadow-[0_20px_50px_-10px_rgba(0,0,0,0.8)] ring-1 ring-white/20">
-      <Image src={card.url} alt={front ? card.name : ""} fill unoptimized sizes="240px" className="object-cover" />
-      {front && <span aria-hidden className={SHINE} />}
+    <div aria-hidden className={cn("pointer-events-none absolute flex gap-2.5", className)}>
+      {[1, 0.7, 0.45].map((opacity, i) => (
+        <span key={i} className="bg-success block h-full w-4 -skew-x-[28deg] sm:w-6" style={{ opacity }} />
+      ))}
     </div>
   );
 }
 
-function SlideVisual({ slide }: { slide: NewsSlide }) {
-  const accent = ACCENT[slide.kind];
-  // A set not out yet often has no picture at TCGplayer: its cards stand in.
-  const [artFailed, setArtFailed] = useState(false);
-  const art = !artFailed ? slide.artUrl : null;
-
+/** A word repeated in rows, very faint, as a texture behind the headline. */
+function WordPattern({ word }: { word: string }) {
+  const line = Array.from({ length: 14 }, () => word).join(" ");
   return (
-    <div className="relative h-full w-full">
-      {/* A soft glow in the slide's colour behind the cards. */}
-      <div
-        aria-hidden
-        className="absolute inset-0 -z-10"
-        style={{ background: `radial-gradient(closest-side, color-mix(in srgb, ${accent.glow} 40%, transparent), transparent)` }}
-      />
-      {art ? (
-        // The set's own picture, at its own shape (a card, a booster, a box).
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="animate-news-deal h-[84%]">
-            <div className="animate-news-float relative h-full overflow-hidden rounded-xl shadow-[0_20px_50px_-10px_rgba(0,0,0,0.8)] ring-1 ring-white/20">
-              <Image
-                src={art}
-                alt={slide.title}
-                width={400}
-                height={400}
-                unoptimized
-                onError={() => setArtFailed(true)}
-                className="h-full w-auto max-w-none"
-              />
-              <span aria-hidden className={SHINE} />
-            </div>
-          </div>
-        </div>
-      ) : (
-        // Drawn back to front, so the first card ends up on top.
-        slide.cards
-          .map((card, i) => ({ card, i }))
-          .reverse()
-          .map(({ card, i }) => (
-            <div
-              key={card.url + i}
-              className="absolute inset-0 flex items-center justify-center"
-              style={{ transform: FAN[i].transform, zIndex: FAN[i].z, opacity: FAN[i].opacity }}
-            >
-              <div className="animate-news-deal h-[86%]" style={{ animationDelay: `${120 + (2 - i) * 110}ms` }}>
-                <div className="animate-news-float h-full" style={{ animationDelay: `${i * -2}s` }}>
-                  <CardPicture card={card} front={i === 0} />
-                </div>
-              </div>
-            </div>
-          ))
-      )}
+    <div
+      aria-hidden
+      className="font-display pointer-events-none absolute inset-0 -z-10 flex flex-col justify-center overflow-hidden text-5xl leading-[1.05] whitespace-nowrap text-white/[0.05] uppercase select-none sm:text-6xl"
+    >
+      {Array.from({ length: 8 }, (_, r) => (
+        <span key={r} className={r % 2 ? "-translate-x-24" : "-translate-x-4"}>
+          {line}
+        </span>
+      ))}
     </div>
   );
 }
 
-/** Slow columns of top cards drifting up and down, tilted, behind the search slide. */
-function CardWall({ cards }: { cards: NewsCard[] }) {
-  if (cards.length === 0) return null;
-  const columns = Array.from({ length: 7 }, (_, c) =>
-    Array.from({ length: 6 }, (_, r) => cards[(c * 3 + r * 7) % cards.length]),
-  );
+/** Text with one phrase in the lime, when the phrase is in it (it may not be, in another language). */
+function Highlight({ text, phrase }: { text: string; phrase: string }) {
+  const at = phrase ? text.toLowerCase().indexOf(phrase.toLowerCase()) : -1;
+  if (at < 0) return <>{text}</>;
   return (
-    <div aria-hidden className="pointer-events-none absolute inset-0 -z-20 overflow-hidden">
-      <div className="absolute -inset-x-[10%] -inset-y-1/2 grid -rotate-12 grid-cols-4 gap-3 sm:grid-cols-5 lg:grid-cols-7">
-        {columns.map((column, c) => (
-          <div key={c} className={cn("min-w-0", c >= 4 && "hidden sm:block", c >= 5 && "sm:hidden lg:block")}>
-            <div
-              className={cn("flex flex-col gap-3", c % 2 === 0 ? "animate-wall-up" : "animate-wall-down")}
-              style={{ animationDuration: `${50 + c * 6}s` }}
-            >
-              {[...column, ...column].map((card, i) => (
-                <div key={i} className="relative aspect-[63/88] overflow-hidden rounded-lg">
-                  <Image src={card.url} alt="" fill unoptimized sizes="160px" className="object-cover" />
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
+    <>
+      {text.slice(0, at)}
+      <span className="text-success">{text.slice(at, at + phrase.length)}</span>
+      {text.slice(at + phrase.length)}
+    </>
+  );
+}
+
+/** A picture tinted lime: greyscale, then multiplied with the brand colour. */
+function Duotone({ src, className }: { src: string; className?: string }) {
+  return (
+    <div aria-hidden className={cn("absolute overflow-hidden", className)}>
+      <Image src={src} alt="" fill unoptimized sizes="100vw" className="animate-news-zoom object-cover contrast-125 grayscale" />
+      <div className="bg-success absolute inset-0 mix-blend-multiply" />
     </div>
   );
 }
 
-/** The first slide: the Market's headline and search, over the moving card wall. */
-function SearchSlide({ wall, onTyping }: { wall: NewsCard[]; onTyping: (typing: boolean) => void }) {
+/** The first slide: the Market's headline and search, over the word pattern. */
+function SearchSlide({ onTyping }: { onTyping: (typing: boolean) => void }) {
   const t = useT();
   const router = useRouter();
   const [game, setGame] = useState<CardGame | "ALL">("ALL");
@@ -151,24 +102,18 @@ function SearchSlide({ wall, onTyping }: { wall: NewsCard[]; onTyping: (typing: 
 
   return (
     <>
-      <CardWall cards={wall} />
-      {/* A dark veil, deepest behind the words, so they stay readable over the cards. */}
-      <div
-        aria-hidden
-        className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_65%_75%_at_center,rgba(0,0,0,0.92)_0%,rgba(0,0,0,0.75)_55%,rgba(0,0,0,0.5)_100%)]"
-      />
+      <WordPattern word="CardMart" />
+      <Stripes className="-top-6 right-6 h-28 sm:right-12 sm:h-36" />
+      <Stripes className="-bottom-6 left-6 h-20 sm:left-12 sm:h-28" />
       <div className="flex h-full items-center px-4 sm:px-16">
         <div className="mx-auto flex w-full max-w-2xl flex-col items-center gap-4 text-center">
           <h2
-            className="animate-news-rise text-2xl leading-tight font-bold tracking-tight [text-shadow:0_2px_20px_rgba(0,0,0,0.7)] sm:text-4xl"
+            className="animate-news-rise font-display text-4xl leading-[0.95] tracking-wide uppercase sm:text-6xl"
             style={{ animationDelay: "0ms" }}
           >
-            {t("Find your next card at the right price.")}
+            <Highlight text={t("Find your next card at the right price.")} phrase={t("the right price")} />
           </h2>
-          <p
-            className="animate-news-rise text-sm text-white/80 [text-shadow:0_1px_12px_rgba(0,0,0,0.7)] sm:text-base"
-            style={{ animationDelay: "80ms" }}
-          >
+          <p className="animate-news-rise text-sm text-white/70 sm:text-base" style={{ animationDelay: "80ms" }}>
             {t("Compare prices across cards and grades, and follow the ones you love.")}
           </p>
           <form
@@ -182,7 +127,7 @@ function SearchSlide({ wall, onTyping }: { wall: NewsCard[]; onTyping: (typing: 
               onOpenChange={(open) => open && onTyping(true)}
             >
               <SelectTrigger
-                className="col-span-2 !h-11 w-full border-white/20 bg-black/50 text-white backdrop-blur-sm hover:bg-black/60 sm:w-40 dark:bg-black/50 dark:hover:bg-black/60 [&_svg]:text-white/70"
+                className="col-span-2 !h-11 w-full border-white/20 bg-black text-white hover:bg-white/5 sm:w-40 dark:bg-black dark:hover:bg-white/5 [&_svg]:text-white/70"
                 aria-label={t("Game")}
               >
                 <SelectValue />
@@ -199,7 +144,7 @@ function SearchSlide({ wall, onTyping }: { wall: NewsCard[]; onTyping: (typing: 
                 ))}
               </SelectContent>
             </Select>
-            <div className="relative flex !h-11 min-w-0 items-center rounded-md border border-white/20 bg-black/50 backdrop-blur-sm sm:flex-1">
+            <div className="relative flex !h-11 min-w-0 items-center rounded-md border border-white/20 bg-black sm:flex-1">
               <Search className="pointer-events-none absolute left-3 size-4 text-white/70" />
               <input
                 value={query}
@@ -209,10 +154,10 @@ function SearchSlide({ wall, onTyping }: { wall: NewsCard[]; onTyping: (typing: 
                 }}
                 placeholder={t("Try Umbreon PSA 10")}
                 aria-label={t("Search cards")}
-                className="h-full w-full min-w-0 rounded-md bg-transparent pr-3 pl-9 text-sm text-white outline-none placeholder:text-white/60"
+                className="h-full w-full min-w-0 rounded-md bg-transparent pr-3 pl-9 text-sm text-white outline-none placeholder:text-white/50"
               />
             </div>
-            <Button type="submit" className="!h-11 bg-white px-5 text-black hover:bg-white/90">
+            <Button type="submit" className="bg-success text-success-foreground hover:bg-success/90 !h-11 px-5 font-semibold">
               {t("Search")} <ArrowRight />
             </Button>
           </form>
@@ -225,38 +170,34 @@ function SearchSlide({ wall, onTyping }: { wall: NewsCard[]; onTyping: (typing: 
 function NewsSlideView({ slide }: { slide: NewsSlide }) {
   const t = useT();
   const money = useMoney();
-  const accent = ACCENT[slide.kind];
   const bg = slide.cards[0]?.url ?? slide.artUrl;
 
   return (
     <>
-      {/* The slide's own picture, blurred and slowly zooming, as the backdrop. */}
-      {bg && (
-        <div aria-hidden className="absolute inset-0 -z-20 opacity-60">
-          <Image src={bg} alt="" fill unoptimized sizes="100vw" className="animate-news-zoom object-cover blur-2xl" />
-        </div>
-      )}
-      {/* Dark on the words' side, so they stay readable over any picture. */}
+      {/* The slide's picture, tinted lime, across the whole banner; darkest in the
+          middle behind the words. No card pictures on top: the tint is the graphic. */}
+      {bg && <Duotone src={bg} className="inset-0 -z-20 opacity-75" />}
       <div
         aria-hidden
-        className="absolute inset-0 -z-10 bg-gradient-to-t from-black via-black/80 to-black/10 md:bg-gradient-to-r md:from-black md:via-black/75 md:to-black/20"
+        className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_55%_80%_at_center,rgba(0,0,0,0.85)_0%,rgba(0,0,0,0.55)_60%,rgba(0,0,0,0.25)_100%)]"
       />
+      <Stripes className="-top-6 right-6 h-24 sm:right-12 sm:h-32" />
+      <Stripes className="-bottom-6 left-6 h-16 sm:left-12 sm:h-24" />
 
-      <div className="grid h-full grid-rows-[11rem_1fr] md:grid-cols-[minmax(0,1fr)_minmax(0,24rem)] md:grid-rows-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,30rem)]">
-        <div className="relative md:order-2">
-          <SlideVisual slide={slide} />
-        </div>
-
-        <div className="flex min-w-0 flex-col justify-end gap-3 px-5 pb-6 sm:px-8 md:justify-center md:pb-0 md:pl-16">
+      <div className="flex h-full items-center justify-center px-5 sm:px-16">
+        <div className="flex max-w-2xl min-w-0 flex-col items-center gap-3 text-center">
+          {/* A slanted lime tag, like the stripes. */}
           <span
-            className="animate-news-rise inline-flex w-fit items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold backdrop-blur-sm"
+            className="animate-news-rise bg-success text-success-foreground inline-flex w-fit -skew-x-[18deg] items-center px-3 py-1 text-xs font-bold tracking-wider uppercase"
             style={{ animationDelay: "0ms" }}
           >
-            <span className={cn("size-2 rounded-full", accent.dot, slide.kind === "auction" && "animate-pulse")} />
-            {t(slide.eyebrow, slide.eyebrowParams)}
+            <span className="inline-flex skew-x-[18deg] items-center gap-2">
+              <span className={cn("size-2 rounded-full ring-1 ring-black/40", DOT[slide.kind], slide.kind === "auction" && "animate-pulse")} />
+              {t(slide.eyebrow, slide.eyebrowParams)}
+            </span>
           </span>
           <h2
-            className="animate-news-rise line-clamp-2 text-2xl leading-tight font-bold tracking-tight sm:text-4xl"
+            className="animate-news-rise font-display line-clamp-2 text-3xl leading-[0.95] tracking-wide uppercase sm:text-5xl"
             style={{ animationDelay: "80ms" }}
           >
             {slide.title}
@@ -264,39 +205,28 @@ function NewsSlideView({ slide }: { slide: NewsSlide }) {
           <p className="animate-news-rise line-clamp-1 text-sm text-white/70" style={{ animationDelay: "160ms" }}>
             {slide.facts.map((f, i) => (
               <span key={i}>
-                {i > 0 && <span className="px-2 text-white/30">|</span>}
+                {i > 0 && <span className="text-success px-2">/</span>}
                 {t(f.text, f.vars)}
               </span>
             ))}
           </p>
           {(slide.priceThb !== null || slide.endsAt) && (
-            <div
-              className="animate-news-rise flex flex-wrap items-baseline gap-x-5 gap-y-1"
-              style={{ animationDelay: "240ms" }}
-            >
+            <div className="animate-news-rise flex flex-wrap items-baseline justify-center gap-x-5 gap-y-1" style={{ animationDelay: "240ms" }}>
               {slide.priceThb !== null && (
                 <span className="flex items-baseline gap-2">
-                  <span
-                    className={cn(
-                      "bg-gradient-to-r bg-clip-text text-3xl font-extrabold text-transparent tabular-nums sm:text-4xl",
-                      accent.price,
-                    )}
-                  >
-                    {money(slide.priceThb)}
-                  </span>
-                  {slide.priceLabel && <span className="text-xs text-white/60">{t(slide.priceLabel)}</span>}
+                  <span className="font-display text-success text-4xl tracking-wide tabular-nums sm:text-5xl">{money(slide.priceThb)}</span>
+                  {slide.priceLabel && <span className="text-xs text-white/60 uppercase">{t(slide.priceLabel)}</span>}
                 </span>
               )}
               {slide.endsAt && (
                 <span className="text-sm text-white/70">
-                  {t("Ends in")}{" "}
-                  <CountdownTimer endTime={slide.endsAt} className="font-semibold text-white tabular-nums" />
+                  {t("Ends in")} <CountdownTimer endTime={slide.endsAt} className="font-semibold text-white tabular-nums" />
                 </span>
               )}
             </div>
           )}
           <div className="animate-news-rise pt-1" style={{ animationDelay: "320ms" }}>
-            <Button asChild className="h-10 bg-white px-5 font-semibold text-black hover:bg-white/90">
+            <Button asChild className="bg-success text-success-foreground hover:bg-success/90 h-10 px-5 font-semibold">
               <Link href={slide.href}>
                 {t(slide.cta)} <ArrowRight />
               </Link>
@@ -314,8 +244,9 @@ function NewsSlideView({ slide }: { slide: NewsSlide }) {
  * index, the latest listing, a live auction. Slides move on by themselves
  * (paused while the pointer is over the banner, and for good once someone
  * starts a search), and can be changed with the arrows, the dots, or a swipe.
+ * The page still passes `wall` (cards for the old moving card wall); it isn't drawn any more.
  */
-export function MarketNewsHero({ slides, wall }: { slides: NewsSlide[]; wall: NewsCard[] }) {
+export function MarketNewsHero({ slides }: { slides: NewsSlide[]; wall?: NewsCard[] }) {
   const t = useT();
   const [index, setIndex] = useState(0);
   const [hovered, setHovered] = useState(false);
@@ -325,7 +256,7 @@ export function MarketNewsHero({ slides, wall }: { slides: NewsSlide[]; wall: Ne
   const count = slides.length + 1; // the search slide comes first
   const go = (i: number) => setIndex((i + count) % count);
   const slide = index > 0 ? slides[index - 1] : null;
-  const dot = slide ? ACCENT[slide.kind].dot : "bg-foreground";
+  const dot = "bg-success";
 
   return (
     <div className="mb-6 flex flex-col gap-3">
@@ -344,7 +275,7 @@ export function MarketNewsHero({ slides, wall }: { slides: NewsSlide[]; wall: Ne
         }}
       >
         <div key={slide?.id ?? "search"} className="h-full">
-          {slide ? <NewsSlideView slide={slide} /> : <SearchSlide wall={wall} onTyping={setTyping} />}
+          {slide ? <NewsSlideView slide={slide} /> : <SearchSlide onTyping={setTyping} />}
         </div>
 
         {count > 1 && (

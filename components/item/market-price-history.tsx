@@ -130,6 +130,7 @@ export function MarketPriceHistory({
   const [overlays, setOverlays] = useState({ ma7: false, ma30: false, index: false });
   const [range, setRange] = useState<RangeKey>("90d");
   const [condition, setCondition] = useState(tierKey(current));
+  const isRaw = current.gradingCompany === "RAW";
   const [ebay, setEbay] = useState(initialEbay);
   const [, startTransition] = useTransition();
   // Read once per mount: the chart's "today" shouldn't shift on every render.
@@ -557,7 +558,14 @@ export function MarketPriceHistory({
               <HistoricalData rows={historyRows} fileName={csvName} />
             </>
           ) : (
-            <>
+            // Wide screens: the price comparison on the left, grading value and the
+            // profit calculator beside it, so neither stretches across the page.
+            <div
+              className={cn(
+                "grid grid-cols-1 gap-6",
+                (isRaw || calculator) && "lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]",
+              )}
+            >
               <GradeCompare
                 tierName={tierName(selected)}
                 isOwnGrade={isOwnGrade}
@@ -569,9 +577,14 @@ export function MarketPriceHistory({
                 tcg={selected.gradingCompany === "RAW" ? tcg : null}
                 query={query}
               />
-              <GradingValue ebay={ebay} />
-              {calculator}
-            </>
+              {(isRaw || calculator) && (
+                <div className="flex min-w-0 flex-col gap-6">
+                  {/* Only an ungraded card can still be sent for grading. */}
+                  {isRaw && <GradingValue ebay={ebay} />}
+                  {calculator}
+                </div>
+              )}
+            </div>
           )}
         </>
       )}

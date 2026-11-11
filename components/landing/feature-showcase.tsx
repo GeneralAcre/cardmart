@@ -207,7 +207,7 @@ function MarketMock() {
                     whileInView={{ width: `${(g.price / maxGrade) * 100}%` }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.8, ease: "easeOut" }}
-                    className={cn("h-full rounded-full", g.current ? "bg-success" : "bg-foreground/25")}
+                    className={cn("h-full rounded-full", g.current ? "bg-success-fill" : "bg-foreground/25")}
                   />
                 </div>
                 <span className="text-right font-semibold tabular-nums">{money(g.price)}</span>
@@ -259,7 +259,7 @@ function EscrowMock() {
                 <span
                   className={cn(
                     "relative flex size-6 shrink-0 items-center justify-center rounded-full border",
-                    state === "done" && "bg-success border-success text-success-foreground",
+                    state === "done" && "bg-success-fill border-success-fill text-success-fill-foreground",
                     state === "current" && "border-success",
                     state === "todo" && "border-foreground/15",
                   )}
@@ -442,7 +442,7 @@ function AgentMock() {
               </div>
             </div>
             <div aria-hidden className="flex gap-2">
-              <span className="bg-success text-success-foreground rounded-full px-4 py-1.5 text-xs font-semibold">{g.approve}</span>
+              <span className="bg-success-fill text-success-fill-foreground rounded-full px-4 py-1.5 text-xs font-semibold">{g.approve}</span>
               <span className="text-muted-foreground rounded-full border px-4 py-1.5 text-xs font-semibold">{g.skip}</span>
             </div>
           </div>

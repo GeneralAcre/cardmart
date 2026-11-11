@@ -273,7 +273,7 @@ export function MarketplaceExplorer({
                 <Button variant="outline" className="h-10 rounded-lg">
                   <Scale /> <span className="hidden xl:inline">{t("Compare prices")}</span>
                   {compareCards.length > 0 && (
-                    <span className="bg-success text-background rounded-full px-1.5 text-[11px] leading-5 font-semibold tabular-nums">
+                    <span className="bg-success-fill text-success-fill-foreground rounded-full px-1.5 text-[11px] leading-5 font-semibold tabular-nums">
                       {compareCards.length}
                     </span>
                   )}

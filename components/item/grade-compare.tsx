@@ -57,14 +57,15 @@ function SourceMark({ source, size = "md" }: { source: Source; size?: "sm" | "md
     <span
       aria-hidden
       className={cn(
-        "flex shrink-0 items-center justify-center overflow-hidden bg-white",
+        "flex shrink-0 items-center justify-center overflow-hidden",
+        source === "cardmart" ? "border border-white/15 bg-black" : "bg-white",
         small ? "size-5 rounded-full" : "size-8 rounded-lg",
       )}
     >
       {source === "cardmart" ? (
-        // The star sits in a lot of padding; scale it up to fill the tile.
+        // The app icon itself (outlined star on black), the same mark as the header wordmark.
         // eslint-disable-next-line @next/next/no-img-element
-        <img src="/cardmart-star.png" alt="" className="size-full scale-[1.7] object-contain" />
+        <img src="/cardmart-icon.png" alt="" className="size-full object-cover" />
       ) : source === "ebay" ? (
         <span className={cn("leading-none font-bold tracking-[-0.06em]", small ? "text-[8px]" : "text-[11px]")}>
           {EBAY_LETTERS.map(([letter, color]) => (
@@ -198,7 +199,6 @@ export function GradeCompare({
   const values = lanes.flatMap((l) => [l.pointThb, ...(l.rangeThb ?? [])]).filter((v): v is number => v != null && v > 0);
   const axisMax = values.length ? niceMax(Math.max(...values)) : 0;
   const pos = (v: number) => `${Math.min(100, (v / axisMax) * 100)}%`;
-  const ticks = [0, axisMax / 2, axisMax];
 
   // Headline: this listing against the best reference for the picked grade.
   // count = how many prices it rests on, so a verdict from one listing says so.
@@ -211,59 +211,62 @@ export function GradeCompare({
         : null;
   const diffPct = listingThb != null && reference ? ((listingThb - reference.thb) / reference.thb) * 100 : null;
 
+  // CardMart rows with nothing to plot fold into one line under the chart
+  // instead of each taking a full empty row.
+  const isEmptyCardMart = (l: Lane) => l.source === "cardmart" && !l.highlight && l.pointThb == null && l.rangeThb == null;
+  const shownLanes = lanes.filter((l) => !isEmptyCardMart(l));
+  const noAsks = asks.length === 0;
+  const noSales = sorted.length === 0;
+  const emptyNote =
+    noAsks && noSales
+      ? t("No other CardMart listings or sales in {grade} yet.", { grade: tierName })
+      : noAsks
+        ? t("No other CardMart listings in {grade} right now.", { grade: tierName })
+        : noSales
+          ? t("No CardMart sales in {grade} yet.", { grade: tierName })
+          : null;
+
+  // h-full + flex-1: beside a taller column, the panel stretches to match it.
   return (
-    <div className="flex flex-col gap-4">
-      <div className="bg-card overflow-hidden rounded-2xl border">
-        <div className="flex flex-wrap items-end justify-between gap-3 border-b p-4">
-          <div className="flex flex-col gap-0.5">
-            <span className="text-muted-foreground text-xs">
-              {isOwnGrade
-                ? t("This listing")
-                : t("This listing ({grade}) vs {other}", {
-                    grade: listingGradeName,
-                    other: tierName,
-                  })}
-            </span>
-            <span className="text-2xl leading-none font-bold tabular-nums">
-              {listingThb != null ? money(listingThb) : "—"}
-            </span>
-          </div>
-          {diffPct != null && reference && (
-            <div className="flex items-center gap-2 text-sm">
-              {Math.abs(diffPct) < 1 ? null : diffPct < 0 ? (
-                <ArrowDownRight className={cn("size-4", isOwnGrade ? "text-success" : "text-compare")} />
-              ) : (
-                <ArrowUpRight className={cn("size-4", isOwnGrade ? "text-destructive" : "text-compare")} />
-              )}
-              <span>
-                <span className={cn("font-semibold", !isOwnGrade && "text-compare")}>
-                  {Math.abs(diffPct) < 1
-                    ? t("About the same as")
-                    : t(diffPct < 0 ? "{pct}% below" : "{pct}% above", {
-                        pct: Math.abs(diffPct).toFixed(0),
-                      })}
-                </span>{" "}
-                <span className="text-muted-foreground">
-                  {isOwnGrade ? reference.label : `${reference.label}, ${tierName}`} ({money(reference.thb)})
-                </span>
-                {reference.count < MIN_RELIABLE_PRICES && (
-                  <span className="block text-right text-xs text-warning">
-                    {t(reference.count === 1 ? "Based on only {count} price — a rough guide." : "Based on only {count} prices — a rough guide.", { count: reference.count })}
-                  </span>
-                )}
+    <div className="flex h-full flex-col gap-4">
+      <div className="bg-card flex flex-1 flex-col overflow-hidden rounded-2xl border">
+        {/* One slim verdict line; the listing's own price is already in the first row. */}
+        {diffPct != null && reference && (
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 border-b px-4 py-2.5 text-sm">
+            {Math.abs(diffPct) < 1 ? null : diffPct < 0 ? (
+              <ArrowDownRight className={cn("size-4 shrink-0", isOwnGrade ? "text-success" : "text-compare")} />
+            ) : (
+              <ArrowUpRight className={cn("size-4 shrink-0", isOwnGrade ? "text-destructive" : "text-compare")} />
+            )}
+            <span>
+              {!isOwnGrade && <span className="text-muted-foreground">{t("This listing ({grade}) is", { grade: listingGradeName })} </span>}
+              <span className={cn("font-semibold", !isOwnGrade && "text-compare")}>
+                {Math.abs(diffPct) < 1
+                  ? t("About the same as")
+                  : t(diffPct < 0 ? "{pct}% below" : "{pct}% above", {
+                      pct: Math.abs(diffPct).toFixed(0),
+                    })}
+              </span>{" "}
+              <span className="text-muted-foreground">
+                {isOwnGrade ? reference.label : `${reference.label}, ${tierName}`} ({money(reference.thb)})
               </span>
-            </div>
-          )}
-        </div>
+            </span>
+            {reference.count < MIN_RELIABLE_PRICES && (
+              <span className="text-warning text-xs">
+                {t(reference.count === 1 ? "Based on only {count} price — a rough guide." : "Based on only {count} prices — a rough guide.", { count: reference.count })}
+              </span>
+            )}
+          </div>
+        )}
 
         <ul className="divide-y">
-          {lanes.map((lane) => {
+          {shownLanes.map((lane) => {
             const hasData = lane.pointThb != null || lane.rangeThb != null;
             return (
               <li
                 key={lane.key}
                 className={cn(
-                  "grid grid-cols-[auto_1fr_auto] items-center gap-x-3 gap-y-2 px-4 py-3 sm:grid-cols-[auto_minmax(0,14rem)_1fr_7.5rem]",
+                  "grid grid-cols-[auto_1fr_auto] items-center gap-x-3 gap-y-2 px-4 py-2.5 sm:grid-cols-[auto_minmax(0,11rem)_1fr_6.5rem]",
                   lane.highlight && "bg-muted/40",
                 )}
               >
@@ -302,7 +305,7 @@ export function GradeCompare({
                         <div
                           className={cn(
                             "absolute top-1/2 h-2 -translate-y-1/2 rounded-full",
-                            isOwnGrade ? "bg-foreground/15" : "bg-compare/30",
+                            isOwnGrade ? "bg-success/30" : "bg-compare/30",
                           )}
                           style={{
                             left: pos(lane.rangeThb[0]),
@@ -316,9 +319,9 @@ export function GradeCompare({
                           className={cn(
                             "ring-card absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2",
                             lane.highlight
-                              ? "bg-foreground size-3.5"
+                              ? "bg-success size-3.5"
                               : isOwnGrade
-                                ? "bg-muted-foreground size-2.5"
+                                ? "bg-success size-2.5"
                                 : "bg-compare size-2.5",
                           )}
                           style={{ left: pos(lane.pointThb) }}
@@ -346,27 +349,12 @@ export function GradeCompare({
           })}
         </ul>
 
-        {axisMax > 0 && (
-          <div className="text-muted-foreground hidden grid-cols-[auto_minmax(0,14rem)_1fr_7.5rem] gap-x-3 border-t px-4 py-2 text-[10px] tabular-nums sm:grid">
-            <span className="w-8" />
-            <span />
-            <div className="relative h-3">
-              {ticks.map((v, i) => (
-                <span
-                  key={v}
-                  className={cn("absolute", i === 0 ? "" : i === ticks.length - 1 ? "-translate-x-full" : "-translate-x-1/2")}
-                  style={{ left: pos(v) }}
-                >
-                  {money(v)}
-                </span>
-              ))}
-            </div>
-            <span />
-          </div>
-        )}
+        {/* Footer pinned to the bottom, so a stretched panel has no gap above it. */}
+        <div className="mt-auto flex flex-col gap-2 border-t px-4 py-3">
+          {emptyNote && <p className="text-muted-foreground text-[11px]">{emptyNote}</p>}
+          <CompareLinks query={query} />
+        </div>
       </div>
-
-      <CompareLinks query={query} />
     </div>
   );
 }
@@ -412,13 +400,6 @@ function CompareLinks({ query }: { query: string }) {
           </a>
         ))}
       </div>
-
-      <p className="text-muted-foreground text-[11px]">
-        {t(
-          "Rows compare the same card and set in the grade picked above. eBay figures are current asking prices, not sold prices, converted at about {rate} THB per USD.",
-          { rate: THB_PER_USD },
-        )}
-      </p>
     </div>
   );
 }
