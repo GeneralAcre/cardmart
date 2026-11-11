@@ -326,7 +326,7 @@ export function PriceCompareTable({
                     <div className="relative">
                       <CardThumb asset={card.cover} sizes="(max-width: 640px) 30vw, 160px" className="aspect-[3/4] w-full" />
                       {isChosen && (
-                        <span className="bg-success text-background absolute top-1.5 right-1.5 flex size-5 items-center justify-center rounded-full">
+                        <span className="bg-success-fill text-success-fill-foreground absolute top-1.5 right-1.5 flex size-5 items-center justify-center rounded-full">
                           <Check className="size-3.5" />
                         </span>
                       )}

@@ -170,7 +170,7 @@ function LevelHero({ rewards, span, into, t }: { rewards: Rewards; span: number;
             </span>
           </div>
           <div className="flex flex-col gap-2">
-            <Progress value={percent} className="[&>[data-slot=progress-indicator]]:bg-success h-3" />
+            <Progress value={percent} className="[&>[data-slot=progress-indicator]]:bg-success-fill h-3" />
             <div className="text-muted-foreground flex justify-between gap-3 text-sm">
               <span>
                 {next
@@ -200,7 +200,7 @@ function LevelHero({ rewards, span, into, t }: { rewards: Rewards; span: number;
               <span
                 className={cn(
                   "bg-card flex size-8 items-center justify-center rounded-full border-2 text-xs font-bold tabular-nums",
-                  reached ? "border-success bg-success text-success-foreground" : "text-muted-foreground",
+                  reached ? "border-success-fill bg-success-fill text-success-fill-foreground" : "text-muted-foreground",
                   current && "ring-success/30 ring-4",
                 )}
               >
@@ -252,7 +252,7 @@ function TaskSection({ title, tasks, t }: { title: string; tasks: RewardTask[]; 
                 <span
                   className={cn(
                     "flex size-11 shrink-0 items-center justify-center rounded-xl",
-                    task.done ? "bg-success text-success-foreground" : "bg-secondary text-foreground",
+                    task.done ? "bg-success-fill text-success-fill-foreground" : "bg-secondary text-foreground",
                   )}
                 >
                   {task.done ? <Check className="size-5" /> : <Icon className="size-5" />}
@@ -331,7 +331,7 @@ function TopTierCard({ rewards, t }: { rewards: Rewards; t: Translate }) {
         <span
           className={cn(
             "flex size-10 shrink-0 items-center justify-center rounded-xl",
-            topTier ? "bg-success text-success-foreground" : "bg-secondary text-muted-foreground",
+            topTier ? "bg-success-fill text-success-fill-foreground" : "bg-secondary text-muted-foreground",
           )}
         >
           <Crown className="size-5" />
@@ -349,7 +349,7 @@ function TopTierCard({ rewards, t }: { rewards: Rewards; t: Translate }) {
             <span
               className={cn(
                 "flex size-5 shrink-0 items-center justify-center rounded-full",
-                c.ok ? "bg-success text-success-foreground" : "border",
+                c.ok ? "bg-success-fill text-success-fill-foreground" : "border",
               )}
             >
               {c.ok && <Check className="size-3" />}

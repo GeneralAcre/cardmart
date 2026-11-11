@@ -79,8 +79,8 @@ export function CameraCaptureGrid({ category, raw = false, captures, onChange, v
                 {t(view.label)}
               </span>
               {captured && (
-                <span className="absolute right-1 top-1 rounded-full bg-success p-0.5">
-                  <CheckCircle2 className="text-success-foreground size-3.5" />
+                <span className="absolute right-1 top-1 rounded-full bg-success-fill p-0.5">
+                  <CheckCircle2 className="text-success-fill-foreground size-3.5" />
                 </span>
               )}
               {captured && (

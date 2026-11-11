@@ -82,13 +82,13 @@ export function ListingCard({
             className={cn(
               CHIP,
               "absolute right-2.5 top-2.5 py-1.5 shadow-sm",
-              asset.priceChangePct >= 0 ? "bg-success" : "bg-destructive",
+              asset.priceChangePct >= 0 ? "bg-success-fill" : "bg-destructive",
             )}
             title={t("Change since the last price")}
           >
             <ChangeTag
               pct={asset.priceChangePct}
-              className={cn("text-[11px] leading-none", asset.priceChangePct >= 0 ? "text-success-foreground" : "text-destructive-foreground")}
+              className={cn("text-[11px] leading-none", asset.priceChangePct >= 0 ? "text-success-fill-foreground" : "text-destructive-foreground")}
             />
           </span>
         )}
@@ -146,7 +146,7 @@ export function ListingCard({
             CHIP,
             "pointer-events-auto absolute right-2.5 bottom-2.5 inline-flex items-center gap-1 py-1.5 transition-[opacity,background-color] disabled:opacity-50",
             compare.selected
-              ? "bg-success text-background"
+              ? "bg-success-fill text-success-fill-foreground"
               : "bg-black/70 hover:bg-black/85 md:opacity-60 md:group-hover/compare:opacity-100 md:focus-visible:opacity-100",
           )}
         >

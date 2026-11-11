@@ -285,7 +285,7 @@ function DealCard({ d }: { d: AgentDecisionRow }) {
           <Image src={d.asset.imageUrl} alt={d.asset.name} fill sizes="(min-width: 1024px) 18rem, 50vw" className="object-contain p-3" />
         )}
         {deal != null && deal > 0 && (
-          <span className="bg-success text-success-foreground absolute top-2 left-2 rounded-md px-2 py-0.5 text-xs font-bold tabular-nums">
+          <span className="bg-success-fill text-success-fill-foreground absolute top-2 left-2 rounded-md px-2 py-0.5 text-xs font-bold tabular-nums">
             -{deal}%
           </span>
         )}

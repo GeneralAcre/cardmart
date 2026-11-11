@@ -29,6 +29,11 @@
      "bad / down / error" red on the site comes from these two. */
   --success: #72F277;
   --success-foreground: #0a0a0a;
+  /* Solid fills (badges, pills, progress bars, filled buttons). Same lime in
+     both themes, always with black text; the light theme keeps a deeper
+     --success for text, icons and thin lines. */
+  --success-fill: #72F277;
+  --success-fill-foreground: #0a0a0a;
   /* Price down / loss / error text: the mirror of the green (same saturation
      and lightness, red hue), so up and down carry equal weight. */
   --destructive: #F27272;
@@ -66,7 +71,8 @@
 /* Light theme, opt-in from the theme toggle (<html data-theme="light">).
    Same structure as dark: a slightly tinted page with white cards on it.
    The brand lime is unreadable as text on white, so "up / good" figures use
-   a deeper green here; chips that fill with it switch to white text. */
+   a deeper green here. Solid fills (--success-fill) keep the lime with black
+   text, which reads well on white. */
 :root[data-theme="light"] {
   color-scheme: light;
   --background: #f5f5f4;
@@ -133,6 +139,8 @@
   --color-medal-silver: var(--medal-silver);
   --color-medal-bronze: var(--medal-bronze);
   --color-success-foreground: var(--success-foreground);
+  --color-success-fill: var(--success-fill);
+  --color-success-fill-foreground: var(--success-fill-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-danger: var(--danger);
