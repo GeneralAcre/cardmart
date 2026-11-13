@@ -6,7 +6,7 @@ import { IndexMembers, IndexQuote, IndexSparkline } from "@/components/marketpla
 import { getIndexDetail, getMarketIndexes, getMyIndex, getUserIndex, type IndexMember, type MarketIndex } from "@/lib/stats";
 import { priceStats } from "@/lib/stats-math";
 import { getMoney } from "@/lib/currency-server";
-import { getCurrentUser } from "@/lib/session";
+import { getOptionalUser } from "@/lib/session";
 import { getLocale, getT } from "@/lib/i18n/server";
 import { cn } from "@/lib/utils";
 import { PageTour } from "@/components/tour/page-tour";
@@ -89,8 +89,10 @@ export default async function IndexPage({ params }: { params: Promise<{ key: str
   const ownId = slug.startsWith("mine-") ? slug.slice("mine-".length) : null;
   const key = ownId ? "MINE" : SLUGS[slug];
   if (!key) notFound();
-  const user = await getCurrentUser();
-  const [{ name, index, members, all }, t, locale] = await Promise.all([loadDetail(key, user.id, ownId), getT(), getLocale()]);
+  const user = await getOptionalUser();
+  // The three market indexes are public; a personal "My Index" needs an account.
+  if (key === "MINE" && !user) notFound();
+  const [{ name, index, members, all }, t, locale] = await Promise.all([loadDetail(key, user?.id ?? "", ownId), getT(), getLocale()]);
   const info = INFO[key];
   // Your own index shows the name you gave it.
   const title = name ?? t(info.title);

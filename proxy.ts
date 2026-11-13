@@ -2,13 +2,39 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { REF_COOKIE, REF_COOKIE_MAX_AGE, REF_HANDLE } from "@/lib/referral";
 
-// Viewable without signing in — legal pages and the marketing landing page
-// must stay readable by anyone, signed in or not. There's no separate
-// /login route anymore: "/" IS the sign-in surface (it embeds the real
-// Privy login button directly), so anyone without a session gets sent
-// there instead of to a dedicated login page.
-// "/marketplace" itself is open so visitors can look around before signing in; the pages under it (selling) and every card page still need an account.
+// Viewable without signing in. The whole marketplace is browsable by anyone
+// — a visitor (or a tester trying the product) can read through every card
+// page, seller store, auction, market index, the leaderboard and the news
+// before they ever create an account. There's no separate /login route: "/"
+// IS the sign-in surface (it embeds the real Privy login button directly), so
+// the pages that DO need an account send a signed-out visitor there.
+//
+// Only the pages that act *as* you stay private: your portfolio, settings,
+// messages, rewards, the AI agent, onboarding, and the sell/listing flow —
+// i.e. signing in is required just to sell or manage your own account, not to
+// look around. Each of those also re-checks at the data layer
+// (getCurrentUser in lib/session.ts), which is the authoritative gate; this
+// edge list is defense in depth, per Privy's own guidance.
 const PUBLIC_PATHS = ["/", "/marketplace", "/terms", "/privacy", "/staff-login"];
+// Open to guests by prefix (exact match OR a "/child" under it). "/marketplace"
+// is matched exactly above on purpose, so its "/marketplace/sell" child stays
+// private. "/share/..." receipts stay open to anyone with the link.
+const PUBLIC_PREFIXES = [
+  "/item",
+  "/store",
+  "/auctions",
+  "/market",
+  "/leaderboard",
+  "/news",
+  "/guide",
+  "/faq",
+  "/share",
+];
+
+function isPublicPath(pathname: string) {
+  if (PUBLIC_PATHS.includes(pathname)) return true;
+  return PUBLIC_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+}
 
 // Privy sign-in is wired up (see lib/session.ts, app/page.tsx) but
 // intentionally not enforced until both NEXT_PUBLIC_PRIVY_APP_ID and
@@ -81,9 +107,7 @@ function route(req: NextRequest) {
 
   if (!PRIVY_ENFORCED) return NextResponse.next();
 
-  // Shared sale receipts (/share/...) are meant to be opened by anyone.
-  const isPublicPath = PUBLIC_PATHS.includes(pathname) || pathname.startsWith("/share/");
-  if (!hasSession && !isPublicPath) {
+  if (!hasSession && !isPublicPath(pathname)) {
     return NextResponse.redirect(new URL("/", req.nextUrl.origin));
   }
 }

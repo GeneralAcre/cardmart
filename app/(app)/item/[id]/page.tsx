@@ -24,7 +24,7 @@ import { WantedCardButton } from "@/components/wanted/wanted-card-form";
 import { VerifiedBadge } from "@/components/store/verified-badge";
 import { TopTierBadge } from "@/components/store/top-tier-badge";
 import { isTopTierSellerById } from "@/lib/rewards";
-import { getCurrentUser } from "@/lib/session";
+import { getOptionalUser } from "@/lib/session";
 import { getT } from "@/lib/i18n/server";
 import { ItemGallery } from "@/components/item/item-gallery";
 import { MarketPriceHistory } from "@/components/item/market-price-history";
@@ -87,7 +87,9 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
   // Cancel any sale whose seller missed the shipping deadline before reading
   // the item, so its status below is never stale.
   await expireOverdueSellerShipments({ revalidate: false });
-  const [asset, user, t] = await Promise.all([getAssetById(id), getCurrentUser(), getT()]);
+  // A signed-out visitor can still read the whole card page — they just get
+  // no "yours"/watching/order state, and buying/messaging prompts sign-in.
+  const [asset, user, t] = await Promise.all([getAssetById(id), getOptionalUser(), getT()]);
 
   if (!asset) notFound();
 
@@ -188,39 +190,40 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
   // user, that doesn't have a review yet — real gate, not just "did you buy
   // something from this seller ever."
   const reviewableEscrow = asset.escrowTxs.find(
-    (tx) => tx.buyerId === user.id && tx.status === "RELEASED" && !tx.review,
+    (tx) => tx.buyerId === user?.id && tx.status === "RELEASED" && !tx.review,
   );
 
   // The viewer's most recent completed purchase of this item — the one they
   // can report a problem with (see openDispute). The form is offered for
   // DISPUTE_WINDOW_DAYS after the sale; an existing report stays visible after that.
-  const myCompletedPurchase = asset.escrowTxs.find((tx) => tx.buyerId === user.id && tx.status === "RELEASED");
+  const myCompletedPurchase = asset.escrowTxs.find((tx) => tx.buyerId === user?.id && tx.status === "RELEASED");
   const canReportProblem =
     myCompletedPurchase?.releasedAt != null &&
     (myCompletedPurchase.dispute != null ||
       isWithinDisputeWindow(myCompletedPurchase.releasedAt));
 
-  const isOwner = asset.ownerId === user.id;
+  const isOwner = asset.ownerId === user?.id;
   // The year comes from the PSA cert when we have it, otherwise from the set name ("Base Set — 1999").
   const cardYear = psaCert?.year ?? asset.subtitle.match(/\b(?:19|20)\d{2}\b/)?.[0] ?? null;
 
   // A sale of this item still in escrow — shown to the buyer as order
   // progress, and to the seller as the "ship it to us" task.
   const openSale = asset.escrowTxs.find((tx) => tx.status === "LOCKED" && tx.inboundPackage);
-  const myOpenOrder = openSale?.buyerId === user.id ? openSale : null;
+  const myOpenOrder = user && openSale?.buyerId === user.id ? openSale : null;
   const saleToShip =
+    user &&
     openSale?.sellerId === user.id &&
     openSale.inboundPackage &&
     (openSale.inboundPackage.status === "AWAITING_SELLER_SHIPMENT" || openSale.inboundPackage.status === "PENDING_INSPECTION")
       ? toSaleToShip({ ...openSale.inboundPackage, asset, escrowTx: openSale })
       : null;
-  const isWatching = !isOwner && (await isAssetWatched(user.id, asset.id));
+  const isWatching = !isOwner && user != null && (await isAssetWatched(user.id, asset.id));
 
   const [activeAuction, acceptedOffer, escrowAuthorityAddress, myShipment] = await Promise.all([
     asset.marketStatus === "IN_AUCTION" ? getActiveAuctionForAsset(asset.id) : Promise.resolve(null),
-    !isOwner ? getAcceptedOfferForViewer(asset.id, user.id) : Promise.resolve(null),
+    user && !isOwner ? getAcceptedOfferForViewer(asset.id, user.id) : Promise.resolve(null),
     getEscrowAuthorityAddress(),
-    isOwner ? getShipmentForRecipient(asset.id, user.id) : Promise.resolve(null),
+    user && isOwner ? getShipmentForRecipient(asset.id, user.id) : Promise.resolve(null),
   ]);
 
   // The market price for this card in a grade, from real data only: eBay's

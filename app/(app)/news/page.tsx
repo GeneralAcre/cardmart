@@ -3,13 +3,11 @@ import { MarketStats } from "@/components/community/market-news";
 import { SetReleases } from "@/components/community/set-releases";
 import { getMarketOverview } from "@/lib/queries";
 import { RELEASE_GAMES, getSetReleases } from "@/lib/tcg-releases";
-import { getCurrentUser } from "@/lib/session";
 import { getT } from "@/lib/i18n/server";
 
 // Community → News: the market's headline figures and new set releases for
-// the games we trade.
+// the games we trade. Open to everyone — nothing here is personal.
 export default async function NewsPage() {
-  await getCurrentUser();
   const [overview, releases, t] = await Promise.all([getMarketOverview(), getSetReleases(), getT()]);
 
   return (

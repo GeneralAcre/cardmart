@@ -2,13 +2,13 @@ import { CommunityTabs } from "@/components/community/community-tabs";
 import { TopTraders } from "@/components/leaderboard/top-traders";
 import { PageTour } from "@/components/tour/page-tour";
 import { getTopTraders } from "@/lib/queries";
-import { getCurrentUser } from "@/lib/session";
+import { getOptionalUser } from "@/lib/session";
 import { getT } from "@/lib/i18n/server";
 
 // Community → Leaderboard: the trader ranking only. Market movers and the
 // heatmap are on the Market page; stats, activity and releases are in News.
 export default async function LeaderboardPage() {
-  const user = await getCurrentUser();
+  const user = await getOptionalUser();
   const [traders, t] = await Promise.all([getTopTraders(), getT()]);
 
   return (
@@ -24,7 +24,7 @@ export default async function LeaderboardPage() {
       </div>
       <PageTour id="leaderboard" />
       <div data-tour="traders">
-        <TopTraders rows={traders} me={{ id: user.id, name: user.name, handle: user.handle, image: user.image }} />
+        <TopTraders rows={traders} me={user ? { id: user.id, name: user.name, handle: user.handle, image: user.image } : null} />
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 import { Gavel } from "lucide-react";
 
 import { getActiveAuctions, getVaultAssets } from "@/lib/queries";
-import { getCurrentUser } from "@/lib/session";
+import { getOptionalUser } from "@/lib/session";
 import { getT } from "@/lib/i18n/server";
 import { AuctionList } from "@/components/auction/auction-list";
 import { CreateAuctionButton } from "@/components/auction/create-auction-button";
@@ -9,8 +9,10 @@ import { AutoSettle } from "@/components/auction/auto-settle";
 import { PageTour } from "@/components/tour/page-tour";
 
 export default async function AuctionsPage() {
-  const [user, t] = await Promise.all([getCurrentUser(), getT()]);
-  const [auctions, myAssets] = await Promise.all([getActiveAuctions(), getVaultAssets(user.id)]);
+  const [user, t] = await Promise.all([getOptionalUser(), getT()]);
+  // A guest sees the live auctions; they just have no cards of their own to
+  // put up, so the "create auction" picker comes back empty.
+  const [auctions, myAssets] = await Promise.all([getActiveAuctions(), user ? getVaultAssets(user.id) : Promise.resolve([])]);
   const eligibleAssets = myAssets
     .filter((a) => a.marketStatus !== "IN_AUCTION" && a.marketStatus !== "IN_ESCROW")
     .map((a) => ({ id: a.id, name: a.name, subtitle: a.subtitle, priceThb: a.priceThb }));
