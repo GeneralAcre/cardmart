@@ -263,14 +263,14 @@ function winRate(r: TraderRow) {
   return r.closedTrades > 0 ? `${r.wins}/${r.closedTrades}` : "—";
 }
 
-export function TopTraders({ rows, me }: { rows: TraderRow[]; me: Me }) {
+export function TopTraders({ rows, me }: { rows: TraderRow[]; me: Me | null }) {
   const [openId, setOpenId] = useState<string | null>(null);
   const t = useT();
 
   if (rows.length === 0) {
     return (
       <div className="flex flex-col gap-6 sm:gap-8">
-        <YourStanding me={me} rows={rows} />
+        {me && <YourStanding me={me} rows={rows} />}
         <p className="text-muted-foreground rounded-2xl border border-dashed py-16 text-center text-sm">
           {t("No completed sales yet — traders show up here once someone buys a card.")}
         </p>
@@ -296,7 +296,7 @@ export function TopTraders({ rows, me }: { rows: TraderRow[]; me: Me }) {
         })}
       </ol>
 
-      <YourStanding me={me} rows={rows} />
+      {me && <YourStanding me={me} rows={rows} />}
 
       {/* Full standings */}
       <section className="overflow-hidden rounded-2xl border">

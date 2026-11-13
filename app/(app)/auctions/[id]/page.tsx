@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { Gavel } from "lucide-react";
 
 import { getAuctionById } from "@/lib/queries";
-import { getCurrentUser } from "@/lib/session";
+import { getOptionalUser } from "@/lib/session";
 import { getT } from "@/lib/i18n/server";
 import { ItemGallery } from "@/components/item/item-gallery";
 import { BidPanel } from "@/components/auction/bid-panel";
@@ -24,20 +24,20 @@ import { bidStep, minNextBid } from "@/lib/auction-rules";
 export default async function AuctionDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const money = await getMoney();
   const { id } = await params;
-  const [auction, user, t] = await Promise.all([getAuctionById(id), getCurrentUser(), getT()]);
+  const [auction, user, t] = await Promise.all([getAuctionById(id), getOptionalUser(), getT()]);
 
   if (!auction) notFound();
 
   const { asset } = auction;
   const gradeTier = gradeTierLabel(asset.gradingCompany, asset.grade, asset.isBlackLabel);
-  const isOwner = asset.ownerId === user.id;
+  const isOwner = asset.ownerId === user?.id;
   const hasNotStarted = auction.startTime > new Date();
   const hasEnded = auction.status !== "ACTIVE" || auction.endTime <= new Date();
   const topBid = auction.bids[0] ?? null;
   // Bidding closed but settleAuction hasn't finished yet (see AutoSettle).
   const awaitingSettlement = auction.status === "ACTIVE" && hasEnded && topBid != null;
-  const isWinner = awaitingSettlement && topBid.bidderId === user.id;
-  const myLockedBidThb = !hasEnded && topBid?.bidderId === user.id && topBid.lockStatus === "HELD" ? topBid.amountThb : null;
+  const isWinner = awaitingSettlement && topBid.bidderId === user?.id;
+  const myLockedBidThb = !hasEnded && topBid?.bidderId === user?.id && topBid.lockStatus === "HELD" ? topBid.amountThb : null;
   const minBid = minNextBid(auction);
 
   const sellerInitials = (asset.seller.name ?? "?")

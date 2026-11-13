@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { CircleCheck, MessageSquare, PackageOpen } from "lucide-react";
 
 import { getSellerProfile } from "@/lib/queries";
-import { getCurrentUser } from "@/lib/session";
+import { getOptionalUser } from "@/lib/session";
 import { getT } from "@/lib/i18n/server";
 import { MessageSellerButton } from "@/components/messages/message-seller-button";
 import { ProfileAvatar, ProfileBio, ProfileCover } from "@/components/profile/profile-cover";
@@ -26,7 +26,7 @@ import { displayImage } from "@/lib/card-image";
 export default async function StorePage({ params }: { params: Promise<{ id: string }> }) {
   const money = await getMoney();
   const { id } = await params;
-  const [profile, currentUser, t] = await Promise.all([getSellerProfile(id), getCurrentUser(), getT()]);
+  const [profile, currentUser, t] = await Promise.all([getSellerProfile(id), getOptionalUser(), getT()]);
 
   if (!profile) notFound();
   const { seller, listings, rating, reviews, soldHistory, saleCount } = profile;
@@ -44,12 +44,12 @@ export default async function StorePage({ params }: { params: Promise<{ id: stri
     <div className="mx-auto w-full max-w-screen-2xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
       {/* Their cover across the top, their picture overlapping its lower edge, like a social profile. */}
       <div className="mb-8 flex flex-col">
-        <ProfileCover cover={seller.coverImage} editable={currentUser.id === seller.id} />
+        <ProfileCover cover={seller.coverImage} editable={currentUser?.id === seller.id} />
         <div className="flex items-start justify-between gap-4 px-4 sm:px-6">
           <div className="-mt-12 shrink-0 sm:-mt-16">
             <ProfileAvatar image={seller.image} name={displayName} initials={initials} />
           </div>
-          {currentUser.id !== seller.id && <MessageSellerButton sellerId={seller.id} className="mt-3 shrink-0" />}
+          {currentUser?.id !== seller.id && <MessageSellerButton sellerId={seller.id} className="mt-3 shrink-0" />}
         </div>
         <div className="mt-3 flex min-w-0 flex-col gap-1 px-4 sm:px-6">
           <div className="flex flex-wrap items-baseline gap-x-2">
