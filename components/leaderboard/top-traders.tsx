@@ -1,22 +1,14 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
-import { ChevronDown, Crown, Diamond } from "lucide-react";
+import type { ReactNode } from "react";
+import { Flame, Handshake, Info, Layers, TrendingUp, Trophy, type LucideIcon } from "lucide-react";
 
-import { CardArt } from "@/components/asset/card-art";
 import { UserAvatar, displayNameOf } from "@/components/messages/user-avatar";
-import { formatDate, formatGrade } from "@/lib/format";
 import { useMoney } from "@/components/currency-provider";
-import type { TraderPosition, TraderRow } from "@/lib/queries";
+import type { TraderRow } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 import { useT } from "@/components/landing/language-provider";
-
-function gradeSymbol(p: TraderPosition) {
-  if (p.gradingCompany === "RAW") return "RAW";
-  return `${p.gradingCompany} ${formatGrade(p.grade)}${p.isBlackLabel ? " BL" : ""}`;
-}
 
 function toneOf(n: number | null) {
   if (n == null || n === 0) return "text-muted-foreground";
@@ -45,32 +37,15 @@ function Pct({ pct, className }: { pct: number | null; className?: string }) {
   );
 }
 
-// Gold / silver / bronze: the podium numerals, its top-edge glow, and the
-// first three rank badges in the table.
+// Gold / silver / bronze: the top-three rank numbers in each board and the
+// top-edge glow on "Your standing".
 const MEDAL = [
-  { text: "text-medal-gold", line: "via-medal-gold", ring: "ring-medal-gold/60", badge: "bg-medal-gold text-background" },
-  { text: "text-medal-silver", line: "via-medal-silver", ring: "ring-medal-silver/40", badge: "bg-medal-silver text-background" },
-  { text: "text-medal-bronze", line: "via-medal-bronze", ring: "ring-medal-bronze/40", badge: "bg-medal-bronze text-background" },
+  { text: "text-medal-gold", line: "via-medal-gold", ring: "ring-medal-gold/60" },
+  { text: "text-medal-silver", line: "via-medal-silver", ring: "ring-medal-silver/40" },
+  { text: "text-medal-bronze", line: "via-medal-bronze", ring: "ring-medal-bronze/40" },
 ];
 
-const pad = (n: number) => String(n).padStart(2, "0");
-
-function RankBadge({ rank, className }: { rank: number; className?: string }) {
-  const medal = MEDAL[rank - 1];
-  return (
-    <span
-      className={cn(
-        "inline-flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold tabular-nums",
-        medal ? medal.badge : "bg-muted text-muted-foreground",
-        className,
-      )}
-    >
-      {rank}
-    </span>
-  );
-}
-
-// The oversized, barely-there rank number behind a card.
+// The oversized, barely-there rank number behind the "Your standing" card.
 function Watermark({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <span
@@ -87,190 +62,138 @@ function Watermark({ children, className }: { children: ReactNode; className?: s
 
 type Me = { id: string; name: string | null; handle: string | null; image: string | null };
 
-function YourStanding({ me, rows }: { me: Me; rows: TraderRow[] }) {
+// The viewer's rank in one category board (null = not on that board yet).
+type MyRank = { label: string; title: string; icon: LucideIcon; rank: number | null };
+
+function YourStanding({ me, rows, ranks }: { me: Me; rows: TraderRow[]; ranks: MyRank[] }) {
   const money = useMoney();
   const t = useT();
   const idx = rows.findIndex((r) => r.userId === me.id);
   const row = idx >= 0 ? rows[idx] : null;
+
+  // Not on the board yet: a slim prompt, so the leaderboard stays the focus.
+  if (!row) {
+    return (
+      <section className="bg-card flex flex-col gap-3 rounded-2xl border p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:p-5">
+        <div className="flex min-w-0 items-center gap-3">
+          <UserAvatar user={me} className="size-11 shrink-0" />
+          <div className="flex min-w-0 flex-col">
+            <span className="text-muted-foreground flex items-center gap-1.5 text-[11px] font-medium tracking-[0.2em] uppercase">
+              <Trophy className="size-3.5" />
+              {t("Your standing")}
+            </span>
+            <span className="truncate text-lg font-semibold">{me.handle ? `@${me.handle}` : displayNameOf(me)}</span>
+          </div>
+        </div>
+        <span className="text-sm font-medium text-medal-gold sm:text-right">{t("Buy a card to get on the board")}</span>
+      </section>
+    );
+  }
+
   const rank = idx + 1;
   const ahead = idx > 0 ? rows[idx - 1] : null;
 
   return (
     <section className="bg-card relative overflow-hidden rounded-2xl border">
-      {row && <Watermark className="-right-3 -bottom-6 text-[7rem] sm:-right-4 sm:-bottom-10 sm:text-[14rem]">{rank}</Watermark>}
-      <div className="relative flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:gap-6 sm:p-8">
-        <div className="flex flex-col gap-1 sm:border-r sm:pr-8">
-          <span className="text-muted-foreground text-[11px] font-medium tracking-[0.2em] uppercase">{t("Your standing")}</span>
-          <span className="text-4xl font-bold tracking-tight tabular-nums sm:text-6xl">{row ? `#${rank}` : "—"}</span>
+      <Watermark className="-right-3 -bottom-6 text-[7rem] sm:-right-4 sm:-bottom-10 sm:text-[12rem]">{rank}</Watermark>
+      <div className="relative flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:gap-6 sm:p-6">
+        <div className="flex flex-col gap-1 sm:border-r sm:pr-6">
+          <span className="text-muted-foreground flex items-center gap-1.5 text-[11px] font-medium tracking-[0.2em] uppercase">
+            <Trophy className="size-3.5" />
+            {t("Your standing")}
+          </span>
+          <span className="text-4xl font-bold tracking-tight tabular-nums sm:text-5xl">{`#${rank}`}</span>
+          <span className="text-muted-foreground text-[11px] tracking-[0.15em] uppercase">{t("Overall")}</span>
         </div>
 
-        <div className="flex min-w-0 flex-1 items-center gap-4">
-          <UserAvatar user={me} className="size-12 text-sm sm:size-16 sm:text-base" />
-          <div className="flex min-w-0 flex-col gap-0.5">
-            <span className="truncate text-xl font-semibold sm:text-2xl">{me.handle ? `@${me.handle}` : displayNameOf(me)}</span>
-            <span className="truncate text-sm font-medium text-medal-gold">
-              {!row
-                ? t("Buy a card to get on the board")
-                : ahead
+        <div className="flex min-w-0 flex-1 flex-col gap-3">
+          <div className="flex min-w-0 items-center gap-4">
+            <UserAvatar user={me} className="size-12 text-sm sm:size-14 sm:text-base" />
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <span className="truncate text-xl font-semibold">{me.handle ? `@${me.handle}` : displayNameOf(me)}</span>
+              <span className="truncate text-sm font-medium text-medal-gold">
+                {ahead
                   ? t("{amount} to #{rank}", { amount: money(Math.max(0, ahead.totalGainThb - row.totalGainThb)), rank: rank - 1 })
                   : t("Top of the board")}
-            </span>
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {ranks.map((c) => {
+              const Icon = c.icon;
+              const medal = c.rank && c.rank <= 3 ? MEDAL[c.rank - 1] : null;
+              return (
+                <span
+                  key={c.label}
+                  title={c.title}
+                  className="bg-background/40 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs"
+                >
+                  <Icon className={cn("size-3.5", medal ? medal.text : "text-muted-foreground")} />
+                  <span className="text-muted-foreground">{c.label}</span>
+                  <span className={cn("font-semibold tabular-nums", medal && medal.text)}>{c.rank ? `#${c.rank}` : "—"}</span>
+                </span>
+              );
+            })}
           </div>
         </div>
-
-        {row && (
-          <div className="flex items-center justify-between gap-6 border-t pt-4 sm:justify-start sm:gap-8 sm:border-t-0 sm:border-l sm:pt-0 sm:pl-8">
-            <div className="flex flex-col items-center gap-1">
-              <span className="text-2xl font-semibold tabular-nums">{winRate(row)}</span>
-              <span className="text-muted-foreground text-[11px] tracking-[0.2em] uppercase">{t("Flips won")}</span>
-            </div>
-            <div className="flex flex-col items-center gap-1">
-              <Gain thb={row.totalGainThb} className="text-2xl font-semibold" />
-              <span className="text-muted-foreground text-[11px] tracking-[0.2em] uppercase">{t("Total gain")}</span>
-            </div>
-          </div>
-        )}
       </div>
     </section>
   );
 }
 
-/** An empty podium spot: the same card shell as a trader's, with nothing in it yet. */
-function PodiumPlaceholder({ rank }: { rank: number }) {
-  const t = useT();
-  const medal = MEDAL[rank - 1];
-  const first = rank === 1;
-  return (
-    <div className="bg-card/60 relative flex h-full w-full flex-col overflow-hidden rounded-2xl border border-dashed p-4 sm:p-6">
-      <Watermark className="-top-2 -right-2 text-[6rem] sm:-top-3 sm:-right-3 sm:text-[8rem]">{pad(rank)}</Watermark>
-      <span className={cn("relative font-bold leading-none tracking-tight tabular-nums opacity-40", medal.text, first ? "text-5xl sm:text-7xl" : "text-5xl sm:text-6xl")}>
-        {pad(rank)}
-      </span>
-      <span className="relative mt-3 flex min-w-0 items-center gap-3">
-        <span aria-hidden className={cn("shrink-0 rounded-full border-2 border-dashed opacity-50", medal.ring.replace("ring-", "border-"), first ? "size-14 sm:size-20" : "size-14 sm:size-[4.5rem]")} />
-        <span aria-hidden className="flex min-w-0 flex-1 flex-col gap-2">
-          <span className="bg-muted h-4 w-3/4 rounded" />
-          <span className="bg-muted h-3 w-1/2 rounded" />
-        </span>
-      </span>
-      <span className="relative mt-4 flex items-center justify-between gap-3 border-t pt-3 sm:mt-6 sm:pt-5">
-        <span className="text-muted-foreground text-base font-medium tracking-[0.15em] uppercase sm:text-lg">{t("Total gain")}</span>
-        <span aria-hidden className="bg-muted h-6 w-24 rounded" />
-      </span>
-    </div>
-  );
-}
+// One category board: a header chip and a ranked top-ten, after the Premier
+// League "player stats" layout the user asked for.
+type Board = {
+  title: string;
+  icon: LucideIcon;
+  data: TraderRow[];
+  value: (r: TraderRow) => ReactNode;
+  empty: string;
+};
 
-function PodiumCard({ r, rank, onSelect }: { r: TraderRow; rank: number; onSelect: () => void }) {
-  const t = useT();
-  const medal = MEDAL[rank - 1];
-  const first = rank === 1;
+function CategoryBoard({ title, icon: Icon, data, value, empty }: Board) {
   return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className="bg-card hover:border-foreground/25 relative flex h-full w-full flex-col overflow-hidden rounded-2xl border p-4 text-left sm:p-6 transition-colors"
-    >
-      {/* thin medal-coloured glow along the top edge */}
-      <span aria-hidden className={cn("absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent to-transparent", medal.line)} />
-      <Watermark className="-top-2 -right-2 text-[6rem] sm:-top-3 sm:-right-3 sm:text-[8rem]">{pad(rank)}</Watermark>
-      {first ? (
-        <Crown className={cn("absolute top-4 right-4 size-5 sm:top-5 sm:right-5 sm:size-6", medal.text)} />
+    <section className="bg-card flex h-full flex-col overflow-hidden rounded-2xl border">
+      <div className="flex items-center gap-2.5 border-b px-4 py-3.5">
+        <div className="bg-foreground text-background flex size-8 items-center justify-center rounded-lg">
+          <Icon className="size-4" />
+        </div>
+        <h2 className="text-[15px] font-semibold">{title}</h2>
+      </div>
+      {data.length === 0 ? (
+        <p className="text-muted-foreground flex flex-1 items-center justify-center px-4 py-10 text-center text-sm">{empty}</p>
       ) : (
-        <Diamond className={cn("absolute top-4 right-4 size-3.5 sm:top-6 sm:right-6", medal.text)} />
-      )}
-
-      <span className={cn("relative font-bold leading-none tracking-tight tabular-nums", medal.text, first ? "text-5xl sm:text-7xl" : "text-5xl sm:text-6xl")}>
-        {pad(rank)}
-      </span>
-
-      <span className="relative mt-3 flex min-w-0 items-center gap-3">
-        <UserAvatar user={r} className={cn("ring-2 ring-offset-2 ring-offset-card", medal.ring, first ? "size-14 sm:size-20" : "size-14 sm:size-[4.5rem]")} />
-        <span className="flex min-w-0 flex-col gap-1">
-          <span className="truncate text-lg font-semibold">{r.handle ? `@${r.handle}` : displayNameOf(r)}</span>
-          <span className="text-muted-foreground truncate text-xs">
-            {t(r.positions.length === 1 ? "{count} card bought" : "{count} cards bought", { count: r.positions.length })}
-            {r.closedTrades > 0 && ` · ${t("{wins}/{total} flips won", { wins: r.wins, total: r.closedTrades })}`}
-          </span>
-        </span>
-      </span>
-
-      <span className="relative mt-4 flex items-center justify-between gap-3 border-t pt-3 sm:mt-6 sm:pt-5">
-        <span className="text-muted-foreground text-base font-medium tracking-[0.15em] sm:text-lg uppercase">{t("Total gain")}</span>
-        <span className="flex flex-col items-end">
-          <Gain thb={r.totalGainThb} className="text-lg font-bold sm:text-2xl" />
-          <Pct pct={r.totalGainPct} className="text-sm font-medium" />
-        </span>
-      </span>
-    </button>
-  );
-}
-
-// Phones: a literal podium. 2 · 1 · 3 side by side, each trader standing on a
-// block whose height follows their rank, so the winner is in the middle on top.
-function MobilePodium({ rows, onSelect }: { rows: TraderRow[]; onSelect: (id: string) => void }) {
-  const top = rows.slice(0, 3);
-  const order = [1, 0, 2];
-  const blockHeight = ["h-32", "h-24", "h-20"];
-  return (
-    <ol className="grid grid-cols-3 items-end gap-2 sm:hidden">
-      {order.map((i) => {
-        const r = top[i];
-        const medal = MEDAL[i];
-        const first = i === 0;
-        if (!r) {
-          // An empty spot: a dashed avatar, a blank name line and the block with just its number.
-          return (
-            <li key={`empty-${i}`} className="min-w-0">
-              <div aria-hidden className="flex w-full min-w-0 flex-col items-center gap-1.5">
-                <span className={cn("rounded-full border-2 border-dashed opacity-50", medal.ring.replace("ring-", "border-"), first ? "size-16" : "size-12")} />
-                <span className="bg-muted h-3 w-2/3 rounded" />
-                <span className={cn("bg-card/60 relative flex w-full items-start justify-center overflow-hidden rounded-t-xl border border-b-0 border-dashed pt-2", blockHeight[i])}>
-                  <span className={cn("text-3xl font-bold leading-none tabular-nums opacity-40", medal.text)}>{pad(i + 1)}</span>
+        <ol className="flex flex-1 flex-col divide-y">
+          {data.map((r, i) => (
+            <li key={r.userId} className={cn(i === 0 && "bg-gradient-to-r from-medal-gold/[0.08] to-transparent")}>
+              <Link href={`/store/${r.userId}`} className="hover:bg-accent/50 flex items-center gap-3 px-4 py-3 transition-colors">
+                <span className={cn("w-6 shrink-0 text-center text-base font-bold tabular-nums", i < 3 ? MEDAL[i].text : "text-muted-foreground")}>
+                  {i + 1}
                 </span>
-              </div>
+                <UserAvatar user={r} className="size-10 shrink-0" />
+                <span className="flex min-w-0 flex-1 flex-col leading-tight">
+                  <span className="truncate text-sm font-semibold">{displayNameOf(r)}</span>
+                  {r.handle && <span className="text-muted-foreground truncate text-xs">@{r.handle}</span>}
+                </span>
+                <span className="flex shrink-0 flex-col items-end gap-0.5 text-right leading-tight">{value(r)}</span>
+              </Link>
             </li>
-          );
-        }
-        return (
-          <li key={r.userId} className="min-w-0">
-            <button type="button" onClick={() => onSelect(r.userId)} className="flex w-full min-w-0 flex-col items-center gap-1.5 text-center">
-              {first && <Crown className={cn("size-5", medal.text)} />}
-              <UserAvatar user={r} className={cn("ring-2 ring-offset-2 ring-offset-background", medal.ring, first ? "size-16" : "size-12")} />
-              <span className="w-full truncate text-xs font-semibold">{r.handle ? `@${r.handle}` : displayNameOf(r)}</span>
-              <span
-                className={cn(
-                  "bg-card relative flex w-full flex-col items-center gap-1 overflow-hidden rounded-t-xl border border-b-0 px-1 pt-2",
-                  blockHeight[i],
-                )}
-              >
-                <span aria-hidden className={cn("absolute inset-x-3 top-0 h-px bg-gradient-to-r from-transparent to-transparent", medal.line)} />
-                <span className={cn("text-3xl font-bold leading-none tabular-nums", medal.text)}>{pad(i + 1)}</span>
-                <span className="flex w-full flex-col items-center gap-0.5">
-                  <Gain thb={r.totalGainThb} className="w-full truncate text-xs font-bold" />
-                  <Pct pct={r.totalGainPct} className="text-[10px]" />
-                </span>
-              </span>
-            </button>
-          </li>
-        );
-      })}
-    </ol>
+          ))}
+        </ol>
+      )}
+    </section>
   );
-}
-
-function winRate(r: TraderRow) {
-  return r.closedTrades > 0 ? `${r.wins}/${r.closedTrades}` : "—";
 }
 
 export function TopTraders({ rows, me }: { rows: TraderRow[]; me: Me | null }) {
-  const [openId, setOpenId] = useState<string | null>(null);
   const t = useT();
+  const money = useMoney();
 
   if (rows.length === 0) {
     return (
       <div className="flex flex-col gap-6 sm:gap-8">
-        {me && <YourStanding me={me} rows={rows} />}
+        {me && <YourStanding me={me} rows={rows} ranks={[]} />}
         <p className="text-muted-foreground rounded-2xl border border-dashed py-16 text-center text-sm">
           {t("No completed sales yet — traders show up here once someone buys a card.")}
         </p>
@@ -278,181 +201,139 @@ export function TopTraders({ rows, me }: { rows: TraderRow[]; me: Me | null }) {
     );
   }
 
-  // 2 · 1 · 3 on wide screens, with the winner raised; 1 · 2 · 3 stacked on phones.
-  const podiumOrder = ["sm:order-2", "sm:order-1 sm:mt-10", "sm:order-3 sm:mt-10"];
+  // Board-wide totals, shown as the same stat-card row the Market page uses.
+  const cardsTraded = rows.reduce((n, r) => n + r.positions.length, 0);
+  const wins = rows.reduce((n, r) => n + r.wins, 0);
+  const closed = rows.reduce((n, r) => n + r.closedTrades, 0);
+  const totalGains = rows.reduce((n, r) => n + r.totalGainThb, 0);
+  const stats = [
+    { label: "Traders ranked", value: rows.length.toLocaleString() },
+    { label: "Cards traded", value: cardsTraded.toLocaleString() },
+    { label: "Flips won", value: closed > 0 ? `${wins}/${closed}` : "—" },
+    { label: "Total gains", value: money(totalGains) },
+  ];
+
+  // Full ranked order for each category, so a trader's position is known even
+  // when they fall outside a board's visible top ten.
+  const byGain = [...rows].sort((a, b) => b.totalGainThb - a.totalGainThb);
+  const byReturn = rows.filter((r) => r.totalGainPct != null).sort((a, b) => b.totalGainPct! - a.totalGainPct!);
+  const byFlips = rows
+    .filter((r) => r.closedTrades > 0)
+    .sort((a, b) => b.wins - a.wins || b.wins / b.closedTrades - a.wins / a.closedTrades);
+  const byVolume = rows.filter((r) => r.closedTrades > 0).sort((a, b) => b.closedTrades - a.closedTrades);
+  const top = <T,>(arr: T[]) => arr.slice(0, 10);
+
+  // Four category boards, each ranking the same traders by a different metric
+  // so a different person can lead each one.
+  const boards: Board[] = [
+    {
+      title: t("Biggest Winners"),
+      icon: TrendingUp,
+      data: top(byGain),
+      empty: t("No gains yet"),
+      value: (r) => <Gain thb={r.totalGainThb} className="text-base font-bold" />,
+    },
+    {
+      title: t("Hot Hands"),
+      icon: Flame,
+      data: top(byReturn),
+      empty: t("No returns yet"),
+      value: (r) => <Pct pct={r.totalGainPct} className="text-base font-bold" />,
+    },
+    {
+      title: t("Deal Closers"),
+      icon: Handshake,
+      data: top(byFlips),
+      empty: t("No flips sold yet"),
+      value: (r) => <span className="text-success text-base font-bold tabular-nums">{r.wins}/{r.closedTrades}</span>,
+    },
+    {
+      title: t("Volume Kings"),
+      icon: Layers,
+      data: top(byVolume),
+      empty: t("No sales yet"),
+      value: (r) => <span className="text-base font-bold tabular-nums">{r.closedTrades}</span>,
+    },
+  ];
+
+  // The viewer's position on each board, shown as chips on "Your standing".
+  const posOf = (list: TraderRow[]) => {
+    const i = me ? list.findIndex((r) => r.userId === me.id) : -1;
+    return i < 0 ? null : i + 1;
+  };
+  const myRanks: MyRank[] = [
+    { label: t("Gains"), title: t("Biggest Winners"), icon: TrendingUp, rank: posOf(byGain) },
+    { label: t("Return"), title: t("Hot Hands"), icon: Flame, rank: posOf(byReturn) },
+    { label: t("Flips"), title: t("Deal Closers"), icon: Handshake, rank: posOf(byFlips) },
+    { label: t("Volume"), title: t("Volume Kings"), icon: Layers, rank: posOf(byVolume) },
+  ];
 
   return (
     <div className="flex flex-col gap-6 sm:gap-8">
-      <MobilePodium rows={rows} onSelect={setOpenId} />
+      {me && <YourStanding me={me} rows={rows} ranks={myRanks} />}
 
-      <ol className="hidden gap-4 sm:grid sm:grid-cols-3">
-        {[0, 1, 2].map((i) => {
-          const r = rows[i];
-          return (
-            <li key={r?.userId ?? `empty-${i}`} className={podiumOrder[i]}>
-              {r ? <PodiumCard r={r} rank={i + 1} onSelect={() => setOpenId(r.userId)} /> : <PodiumPlaceholder rank={i + 1} />}
-            </li>
-          );
-        })}
-      </ol>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {stats.map((s) => (
+          <div key={s.label} className="bg-card flex flex-col gap-1 rounded-xl border p-4">
+            <span className="text-muted-foreground text-xs tracking-wide uppercase">{t(s.label)}</span>
+            <span className="text-xl leading-tight font-bold tabular-nums">{s.value}</span>
+          </div>
+        ))}
+      </div>
 
-      {me && <YourStanding me={me} rows={rows} />}
-
-      {/* Full standings */}
-      <section className="overflow-hidden rounded-2xl border">
-        <div className="bg-muted/40 text-muted-foreground grid grid-cols-[2.5rem_1fr_auto_1.5rem] items-center gap-3 border-b px-4 py-2.5 text-[11px] font-medium tracking-wider uppercase md:grid-cols-[2.5rem_1fr_5rem_5rem_7rem_7rem_8rem_1.5rem]">
-          <span>{t("Rank")}</span>
-          <span>{t("Trader")}</span>
-          <span className="hidden text-right md:block">{t("Cards")}</span>
-          <span className="hidden text-right md:block">{t("Flips won")}</span>
-          <span className="hidden text-right md:block">{t("Realized")}</span>
-          <span className="hidden text-right md:block">{t("Unrealized")}</span>
-          <span className="text-right">{t("Total gain")}</span>
-          <span />
+      {/* Four category leaderboards, side by side on wide screens. */}
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center gap-2">
+          <div className="bg-foreground text-background flex size-7 items-center justify-center rounded-lg">
+            <Trophy className="size-3.5" />
+          </div>
+          <h2 className="text-lg font-semibold">{t("Category leaders")}</h2>
         </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {boards.map((b) => (
+            <CategoryBoard key={b.title} {...b} />
+          ))}
+        </div>
+      </div>
 
-        <ol className="divide-y">
-          {rows.map((r, i) => {
-            const open = openId === r.userId;
-            return (
-              <li key={r.userId} className={cn(open && "bg-muted/20")}>
-                <button
-                  type="button"
-                  onClick={() => setOpenId(open ? null : r.userId)}
-                  aria-expanded={open}
-                  className="hover:bg-accent/50 grid w-full grid-cols-[2.5rem_1fr_auto_1.5rem] items-center gap-3 px-4 py-3 text-left transition-colors md:grid-cols-[2.5rem_1fr_5rem_5rem_7rem_7rem_8rem_1.5rem]"
-                >
-                  <RankBadge rank={i + 1} />
-                  <span className="flex min-w-0 items-center gap-3">
-                    <UserAvatar user={r} className="size-9" />
-                    <span className="flex min-w-0 flex-col">
-                      <span className="truncate font-semibold">{displayNameOf(r)}</span>
-                      {r.handle && <span className="text-muted-foreground truncate text-xs">@{r.handle}</span>}
-                    </span>
-                  </span>
-                  <span className="hidden text-right text-sm tabular-nums md:block">{r.positions.length}</span>
-                  <span className="hidden text-right text-sm tabular-nums md:block">{winRate(r)}</span>
-                  <Gain thb={r.realizedThb} className="hidden text-right text-sm md:block" />
-                  <Gain thb={r.unrealizedThb} className="hidden text-right text-sm md:block" />
-                  <span className="flex flex-col items-end">
-                    <Gain thb={r.totalGainThb} className="font-semibold" />
-                    <Pct pct={r.totalGainPct} className="text-xs" />
-                  </span>
-                  <ChevronDown className={cn("text-muted-foreground size-4 justify-self-end transition-transform", open && "rotate-180")} />
-                </button>
-
-                {open && (
-                  <div className="px-4 pb-4 md:pl-[4.25rem]">
-                    <div className="bg-card rounded-lg border p-3">
-                      <div className="mb-1 flex items-center justify-between gap-2 text-xs">
-                        <span className="text-muted-foreground font-medium tracking-wider uppercase">
-                          {t("What {name} traded", { name: displayNameOf(r) })}
-                        </span>
-                        <Link href={`/store/${r.userId}`} className="font-medium hover:underline">
-                          {t("View store")} →
-                        </Link>
-                      </div>
-                      <ul className="flex flex-col divide-y">
-                        {r.positions.map((p) => (
-                          <PositionRow key={`${p.assetId}-${p.boughtAt}`} p={p} />
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                )}
-              </li>
-            );
-          })}
-        </ol>
-      </section>
-
-      {/* What the numbers mean, led by "Flips won" since it's the least obvious. */}
-      <details className="bg-card group rounded-2xl border">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-sm font-semibold sm:px-6 [&::-webkit-details-marker]:hidden">
-          {t("How to read the leaderboard")}
-          <ChevronDown className="text-muted-foreground size-4 transition-transform group-open:rotate-180" />
-        </summary>
-        <dl className="grid gap-4 border-t px-4 py-4 sm:grid-cols-2 sm:px-6">
+      {/* What each board is ranked by. */}
+      <section className="bg-card rounded-2xl border">
+        <div className="flex items-center gap-2 border-b px-4 py-3 sm:px-6">
+          <div className="bg-foreground text-background flex size-7 items-center justify-center rounded-lg">
+            <Info className="size-3.5" />
+          </div>
+          <h2 className="font-semibold">{t("How to read the leaderboard")}</h2>
+        </div>
+        <dl className="grid gap-4 px-4 py-4 sm:grid-cols-2 sm:px-6 xl:grid-cols-4">
           <div className="flex flex-col gap-1">
-            <dt className="text-sm font-semibold">{t("Flips won")}</dt>
+            <dt className="text-sm font-semibold">{t("Biggest Winners")}</dt>
             <dd className="text-muted-foreground text-sm leading-relaxed">
-              {t("A flip is a card someone bought and then sold. It's won when the sale price beat what they paid. 2/3 means 3 cards sold and 2 of them for a profit. A dash means nothing sold yet.")}
+              {t("Ranked by total gain in baht: realized profit plus paper gains on cards still held.")}
             </dd>
           </div>
           <div className="flex flex-col gap-1">
-            <dt className="text-sm font-semibold">{t("Realized")}</dt>
+            <dt className="text-sm font-semibold">{t("Hot Hands")}</dt>
             <dd className="text-muted-foreground text-sm leading-relaxed">
-              {t("Profit locked in from cards already sold: sold price minus bought price.")}
+              {t("Ranked by return %: gain measured against what they paid, so a sharp small trader can top a whale.")}
             </dd>
           </div>
           <div className="flex flex-col gap-1">
-            <dt className="text-sm font-semibold">{t("Unrealized")}</dt>
+            <dt className="text-sm font-semibold">{t("Deal Closers")}</dt>
             <dd className="text-muted-foreground text-sm leading-relaxed">
-              {t("Paper profit on cards still held: the current asking price minus bought price. It changes until the card sells.")}
+              {t("Ranked by flips won: cards bought then sold for more than they cost. 2/3 means 3 sold, 2 at a profit.")}
             </dd>
           </div>
           <div className="flex flex-col gap-1">
-            <dt className="text-sm font-semibold">{t("Total gain")}</dt>
+            <dt className="text-sm font-semibold">{t("Volume Kings")}</dt>
             <dd className="text-muted-foreground text-sm leading-relaxed">
-              {t("Realized plus unrealized. The board is ranked by this number.")}
+              {t("Ranked by cards sold: how many completed sales they've made on CardMart.")}
             </dd>
           </div>
         </dl>
-      </details>
+      </section>
       <p className="text-muted-foreground text-xs leading-relaxed">
         {t("Built from completed escrow sales only. Realized = sold price − bought price. Unrealized = a held card's current asking price − bought price. A first sale by the card's minter has no purchase price, so it isn't counted as a gain; swaps aren't counted either.")}
       </p>
     </div>
-  );
-}
-
-function PositionRow({ p }: { p: TraderPosition }) {
-  const money = useMoney();
-  const t = useT();
-  const sold = p.soldThb != null;
-  return (
-    <li className="flex items-center gap-3 py-2.5 text-sm">
-      <Link href={`/item/${p.assetId}`} className="relative aspect-[3/4] w-10 shrink-0 overflow-hidden rounded border">
-        {p.photoUrl ? (
-          <Image src={p.photoUrl} alt="" fill sizes="40px" className="object-cover" />
-        ) : (
-          <CardArt
-            themeIndex={p.themeIndex}
-            category={p.category}
-            gradingCompany={p.gradingCompany}
-            grade={p.grade}
-            isBlackLabel={p.isBlackLabel}
-            bordered={false}
-          />
-        )}
-      </Link>
-      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="flex min-w-0 items-center gap-2">
-          <Link href={`/item/${p.assetId}`} className="truncate font-medium hover:underline">
-            {p.name}
-          </Link>
-          <span
-            className={cn(
-              "shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase",
-              sold ? "bg-success/15 text-success" : "bg-muted text-muted-foreground",
-            )}
-          >
-            {sold ? t("Sold") : t("Holding")}
-          </span>
-        </span>
-        <span className="text-muted-foreground truncate text-xs">
-          {gradeSymbol(p)} · {t("Bought {price} on {date}", { price: money(p.boughtThb), date: formatDate(p.boughtAt) })}
-          {sold && p.soldAt
-            ? ` · ${t("Sold {price} on {date}", { price: money(p.soldThb!), date: formatDate(p.soldAt) })}`
-            : p.currentThb != null
-              ? ` · ${t("Now {price}", { price: money(p.currentThb) })}`
-              : ""}
-        </span>
-      </div>
-      <div className="flex shrink-0 flex-col items-end">
-        <Gain thb={p.gainThb} className="font-medium" />
-        <Pct pct={p.gainPct} className="text-xs" />
-      </div>
-    </li>
   );
 }

@@ -52,6 +52,37 @@ export const LEADERBOARD: Record<string, string> = {
   Trader: "เทรดเดอร์",
   "Flips won": "ขายได้กำไร",
   "Total gain": "กำไรรวม",
+  "Full standings": "อันดับทั้งหมด",
+  "Traders ranked": "เทรดเดอร์ที่จัดอันดับ",
+  "Cards traded": "การ์ดที่ซื้อขาย",
+  "Total gains": "กำไรรวมทุกคน",
+
+  // Category boards
+  "Biggest Winners": "ทำกำไรสูงสุด",
+  "Hot Hands": "มือร้อน",
+  "Deal Closers": "ปิดดีลเก่งสุด",
+  "Volume Kings": "ซื้อขายมากสุด",
+  Overall: "โดยรวม",
+  "Category leaders": "ผู้นำแต่ละหมวด",
+  Gains: "กำไร",
+  Return: "ผลตอบแทน",
+  Flips: "ขายกำไร",
+  Volume: "ปริมาณ",
+  "No gains yet": "ยังไม่มีกำไร",
+  "No returns yet": "ยังไม่มีผลตอบแทน",
+  "No flips sold yet": "ยังไม่มีการขายทำกำไร",
+  "No cards yet": "ยังไม่มีการ์ด",
+  "No sales yet": "ยังไม่มีการขาย",
+  "{pct}% won": "ชนะ {pct}%",
+  "{count} sold": "ขายแล้ว {count}",
+  "Ranked by total gain in baht: realized profit plus paper gains on cards still held.":
+    "จัดอันดับตามกำไรรวมเป็นบาท: กำไรที่รับรู้แล้วบวกกำไรบนกระดาษของการ์ดที่ยังถืออยู่",
+  "Ranked by return %: gain measured against what they paid, so a sharp small trader can top a whale.":
+    "จัดอันดับตามผลตอบแทน %: กำไรเทียบกับเงินที่จ่ายไป เทรดเดอร์รายเล็กที่เก่งจึงแซงรายใหญ่ได้",
+  "Ranked by flips won: cards bought then sold for more than they cost. 2/3 means 3 sold, 2 at a profit.":
+    "จัดอันดับตามจำนวนที่ขายได้กำไร: การ์ดที่ซื้อมาแล้วขายได้สูงกว่าทุน 2/3 หมายถึงขายไป 3 ใบ กำไร 2 ใบ",
+  "Ranked by cards sold: how many completed sales they've made on CardMart.":
+    "จัดอันดับตามจำนวนการ์ดที่ขายได้: ขายสำเร็จบน CardMart ไปกี่ครั้ง",
   "How to read the leaderboard": "วิธีอ่านกระดานอันดับ",
   "A flip is a card someone bought and then sold. It's won when the sale price beat what they paid. 2/3 means 3 cards sold and 2 of them for a profit. A dash means nothing sold yet.":
     "Flip คือการ์ดที่ซื้อมาแล้วขายต่อ ถือว่าชนะเมื่อราคาขายสูงกว่าราคาที่ซื้อ 2/3 หมายถึงขายไป 3 ใบ และได้กำไร 2 ใบ ถ้าเป็นขีดแปลว่ายังไม่ได้ขาย",
