@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
     .map(Number)
     .filter((n) => !Number.isNaN(n));
   const blackLabelOnly = sp.get("blackLabel") === "true";
+  const goldLabelOnly = sp.get("goldLabel") === "true";
   const finiteOrUndefined = (key: string) => {
     const n = sp.has(key) ? Number(sp.get(key)) : NaN;
     return Number.isFinite(n) ? n : undefined;
@@ -42,6 +43,7 @@ export async function GET(request: NextRequest) {
     gradingCompanies: gradingCompanies.length ? gradingCompanies : undefined,
     grades: grades.length ? grades : undefined,
     blackLabelOnly,
+    goldLabelOnly,
     priceMin,
     priceMax,
     vaultedStatus,

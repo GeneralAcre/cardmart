@@ -134,7 +134,9 @@ export function FilterBar({
       ...filters,
       gradingCompanies,
       grades: filters.grades.filter((g) => options.grades.includes(g)),
+      // Both BGS-only labels drop away when BGS is no longer among the picked graders.
       blackLabelOnly: filters.blackLabelOnly && options.blackLabel,
+      goldLabelOnly: filters.goldLabelOnly && options.blackLabel,
     });
   }
 
@@ -148,6 +150,10 @@ export function FilterBar({
 
   function toggleBlackLabel() {
     onChange({ ...filters, blackLabelOnly: !filters.blackLabelOnly });
+  }
+
+  function toggleGoldLabel() {
+    onChange({ ...filters, goldLabelOnly: !filters.goldLabelOnly });
   }
 
   const hasSidebarFilters = JSON.stringify(filters) !== JSON.stringify(EMPTY_FILTERS);
@@ -241,9 +247,22 @@ export function FilterBar({
         ) : (
           <div className="grid grid-cols-4 gap-2">
             {options.blackLabel && (
-              <FilterPill active={filters.blackLabelOnly} onClick={toggleBlackLabel} className="col-span-2 px-0">
-                Black Label
-              </FilterPill>
+              <>
+                {/* The two BGS labels share a row above the numbers: Black Label
+                    first as the higher tier, then Gold Label (a plain BGS
+                    Pristine 10). Both appear only when BGS is in play. */}
+                <FilterPill active={filters.blackLabelOnly} onClick={toggleBlackLabel} className="col-span-2 px-0">
+                  Black Label
+                </FilterPill>
+                <FilterPill
+                  active={filters.goldLabelOnly}
+                  onClick={toggleGoldLabel}
+                  className="col-span-2 px-0"
+                  activeClass="bg-amber-400 border-amber-400 text-black"
+                >
+                  Gold Label
+                </FilterPill>
+              </>
             )}
             {options.grades.map((grade) => (
               <FilterPill key={grade} active={filters.grades.includes(grade)} onClick={() => toggleGrade(grade)} className="px-0">

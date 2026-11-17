@@ -13,6 +13,8 @@ export interface MarketplaceFilters {
   gradingCompanies?: GradingCompany[];
   grades?: number[];
   blackLabelOnly?: boolean;
+  /** BGS Gold Label only — a BGS Pristine 10 (grade 10) that isn't a Black Label. */
+  goldLabelOnly?: boolean;
   priceMin?: number;
   priceMax?: number;
   vaultedStatus?: "ALL" | "IN_VAULT" | "SHIPPING";
@@ -102,8 +104,19 @@ export async function getMarketplaceListings(filters: MarketplaceFilters = {}) {
   if (filters.grades?.length) {
     where.grade = { in: filters.grades };
   }
-  if (filters.blackLabelOnly) {
-    where.isBlackLabel = true;
+  // Black Label and Gold Label are both BGS top-tier designations on a
+  // Pristine 10 (see Asset.isBlackLabel). Pushed into AND so they combine
+  // with — rather than clobber — any grader/grade filters already set above.
+  const labelClause: Prisma.AssetWhereInput | null =
+    filters.blackLabelOnly && filters.goldLabelOnly
+      ? { gradingCompany: "BGS", grade: 10 } // both: any BGS Pristine 10
+      : filters.blackLabelOnly
+        ? { isBlackLabel: true }
+        : filters.goldLabelOnly
+          ? { gradingCompany: "BGS", grade: 10, isBlackLabel: false }
+          : null;
+  if (labelClause) {
+    where.AND = [...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []), labelClause];
   }
   if (filters.priceMin != null || filters.priceMax != null) {
     where.priceThb = {
