@@ -38,6 +38,7 @@ function buildQuery(filters: MarketplaceFilterState) {
   filters.gradingCompanies.forEach((c) => sp.append("gradingCompany", c));
   filters.grades.forEach((g) => sp.append("grade", String(g)));
   if (filters.blackLabelOnly) sp.set("blackLabel", "true");
+  if (filters.goldLabelOnly) sp.set("goldLabel", "true");
   if (filters.priceMin != null) sp.set("priceMin", String(filters.priceMin));
   if (filters.priceMax != null) sp.set("priceMax", String(filters.priceMax));
   if (filters.vaultedStatus !== "ALL") sp.set("vaultedStatus", filters.vaultedStatus);
@@ -54,6 +55,7 @@ function countActiveFilters(filters: MarketplaceFilterState): number {
     filters.gradingCompanies.length +
     filters.grades.length +
     (filters.blackLabelOnly ? 1 : 0) +
+    (filters.goldLabelOnly ? 1 : 0) +
     (filters.priceMin != null ? 1 : 0) +
     (filters.priceMax != null ? 1 : 0) +
     (filters.vaultedStatus !== "ALL" ? 1 : 0)

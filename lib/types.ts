@@ -52,6 +52,8 @@ export interface MarketplaceFilterState {
   grades: number[];
   /** BGS Black Label only — a separate toggle since it's not a distinct numeric grade (see Asset.isBlackLabel). */
   blackLabelOnly: boolean;
+  /** BGS Gold Label only — a BGS Pristine 10 that isn't a Black Label. BGS-only, like blackLabelOnly. */
+  goldLabelOnly: boolean;
   priceMin: number | null;
   priceMax: number | null;
   vaultedStatus: "ALL" | "IN_VAULT" | "SHIPPING";
@@ -66,6 +68,7 @@ export const EMPTY_FILTERS: MarketplaceFilterState = {
   gradingCompanies: [],
   grades: [],
   blackLabelOnly: false,
+  goldLabelOnly: false,
   priceMin: null,
   priceMax: null,
   vaultedStatus: "ALL",

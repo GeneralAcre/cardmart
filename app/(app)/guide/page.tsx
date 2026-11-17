@@ -10,7 +10,9 @@ import {
   PackageCheck,
   Search,
   ShieldCheck,
+  ShoppingBag,
   Sparkles,
+  Store,
   Tag,
   Vault,
   Wallet,
@@ -23,6 +25,7 @@ import { SELF_MINT_FEE_THB, SELLER_SHIPPING_COST_THB, THB_PER_SOL } from "@/lib/
 import { formatThb } from "@/lib/format";
 import { getT } from "@/lib/i18n/server";
 import type { Translate, TranslateVars } from "@/lib/i18n/translate";
+import { cn } from "@/lib/utils";
 
 // Titles and bodies are English t() keys; {placeholders} are filled from vars.
 interface Step {
@@ -143,32 +146,74 @@ function NextStep({ title, body, href, cta, t }: { title: string; body: string; 
   );
 }
 
-function StepList({ steps, t, next }: { steps: Step[]; t: Translate; next: React.ReactNode }) {
+/**
+ * One path (Buy or Sell) as a numbered timeline inside a card: a connecting
+ * line threads the step numbers so the journey reads top to bottom at a
+ * glance, and the call to action is pinned to the bottom so the two cards
+ * line up side by side. Icons sit next to each step title, not in a wall of
+ * equal grey boxes.
+ */
+function Journey({
+  id,
+  icon: Icon,
+  heading,
+  accent,
+  steps,
+  cta,
+  t,
+}: {
+  id: string;
+  icon: LucideIcon;
+  heading: string;
+  /** The tint behind the header icon — the one spot of colour per card. */
+  accent: string;
+  steps: Step[];
+  cta: { body: string; href: string; label: string };
+  t: Translate;
+}) {
   return (
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-      <ol className="contents">
-        {steps.map((step, i) => {
-          const Icon = step.icon;
-          return (
-            <li key={step.title} className="bg-card flex gap-4 rounded-xl border p-4">
-              <div className="flex shrink-0 flex-col items-center gap-2">
-                <span className="bg-foreground text-background flex size-8 items-center justify-center rounded-full text-sm font-bold">
+    <section id={id} className="scroll-mt-20 h-full">
+      <div className="bg-card flex h-full flex-col gap-5 rounded-2xl border p-5 sm:p-6">
+        <div className="flex items-center gap-3">
+          <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-xl", accent)}>
+            <Icon className="size-5" />
+          </span>
+          <h2 className="text-lg font-semibold">{t(heading)}</h2>
+        </div>
+
+        <ol className="relative flex flex-col">
+          {steps.map((step, i) => {
+            const StepIcon = step.icon;
+            const last = i === steps.length - 1;
+            return (
+              <li key={step.title} className="relative flex gap-4 pb-5 last:pb-0">
+                {/* The thread between this number and the next. */}
+                {!last && <span aria-hidden className="bg-border absolute top-9 bottom-0 left-4 w-px -translate-x-1/2" />}
+                <span className="bg-foreground text-background z-10 flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-bold">
                   {i + 1}
                 </span>
-              </div>
-              <div className="flex min-w-0 flex-col gap-1">
-                <span className="flex items-center gap-2 font-semibold">
-                  <Icon className="text-muted-foreground size-4" />
-                  {t(step.title)}
-                </span>
-                <p className="text-muted-foreground text-sm">{t(step.body, step.vars)}</p>
-              </div>
-            </li>
-          );
-        })}
-      </ol>
-      {next}
-    </div>
+                <div className="flex min-w-0 flex-col gap-1 pt-1">
+                  <span className="flex items-center gap-2 font-semibold">
+                    <StepIcon className="text-muted-foreground size-4 shrink-0" />
+                    {t(step.title)}
+                  </span>
+                  <p className="text-muted-foreground text-sm">{t(step.body, step.vars)}</p>
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+
+        <div className="mt-auto flex flex-col items-start gap-3 border-t pt-4">
+          <p className="text-muted-foreground text-sm">{t(cta.body)}</p>
+          <Button asChild className="w-fit">
+            <Link href={cta.href}>
+              {t(cta.label)} <ArrowRight />
+            </Link>
+          </Button>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -193,40 +238,37 @@ export default async function GuidePage({ searchParams }: { searchParams: Promis
         </p>
       </div>
 
-      {/* Buying, selling and the card guide one after another, each with its own heading (and #anchor). */}
-      <section id="buy" className="scroll-mt-20">
-        <h2 className="mb-4 text-lg font-semibold">{t("I want to buy")}</h2>
-        <StepList
+      {/* Buy and Sell side by side as two timelines, so both paths are visible
+          at a glance instead of a long scroll of look-alike cards. Each keeps
+          its own #anchor. */}
+      <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2">
+        <Journey
+          id="buy"
+          icon={ShoppingBag}
+          heading="I want to buy"
+          accent="bg-foreground text-background"
           steps={BUY_STEPS}
+          cta={{
+            body: "Browse graded cards from verified sellers. Every payment is held in escrow until the card checks out.",
+            href: "/marketplace",
+            label: "Start browsing",
+          }}
           t={t}
-          next={
-            <NextStep
-              title="Ready to buy?"
-              body="Browse graded cards from verified sellers. Every payment is held in escrow until the card checks out."
-              href="/marketplace"
-              cta="Start browsing"
-              t={t}
-            />
-          }
         />
-      </section>
-
-      <section id="sell" className="mt-12 scroll-mt-20">
-        <h2 className="mb-4 text-lg font-semibold">{t("I want to sell")}</h2>
-        <StepList
+        <Journey
+          id="sell"
+          icon={Store}
+          heading="I want to sell"
+          accent="bg-primary text-primary-foreground"
           steps={SELL_STEPS}
+          cta={{
+            body: "List a card in a few minutes with Instant Verify, then set a price or start an auction.",
+            href: "/marketplace/sell",
+            label: "List your first card",
+          }}
           t={t}
-          next={
-            <NextStep
-              title="Ready to sell?"
-              body="List a card in a few minutes with Instant Verify, then set a price or start an auction."
-              href="/marketplace/sell"
-              cta="List your first card"
-              t={t}
-            />
-          }
         />
-      </section>
+      </div>
 
       <section id="cards" className="mt-12 scroll-mt-20">
         <h2 className="mb-4 text-lg font-semibold">{t("Card guide")}</h2>
@@ -249,14 +291,14 @@ export default async function GuidePage({ searchParams }: { searchParams: Promis
         {MORE.map((m) => {
           const Icon = m.icon;
           return (
-            <div key={m.title} className="bg-card flex flex-col gap-2 rounded-xl border p-4">
-              <span className="flex items-center gap-2 font-semibold">
-                <Icon className="text-muted-foreground size-4" />
-                {t(m.title)}
+            <div key={m.title} className="bg-card flex flex-col gap-3 rounded-xl border p-4">
+              <span className="bg-muted text-foreground flex size-9 items-center justify-center rounded-lg">
+                <Icon className="size-5" />
               </span>
+              <span className="font-semibold">{t(m.title)}</span>
               <p className="text-muted-foreground flex-1 text-sm">{t(m.body)}</p>
-              <Link href={m.href} className="text-sm font-medium underline underline-offset-2">
-                {t(m.cta)}
+              <Link href={m.href} className="text-foreground inline-flex items-center gap-1 text-sm font-medium hover:underline">
+                {t(m.cta)} <ArrowRight className="size-3.5" />
               </Link>
             </div>
           );
