@@ -267,4 +267,35 @@ export const PAGES: Record<string, string> = {
   "By continuing, you agree to our": "เมื่อดำเนินการต่อ ถือว่าคุณยอมรับ",
   "Terms of Service": "ข้อกำหนดการให้บริการ",
   and: "และ",
+
+  // Guide — grade value ladder
+  "Grade value, highest to lowest": "มูลค่าตามเกรด เรียงจากสูงไปต่ำ",
+  "The same card is worth more at a higher grade — and the grader matters too. This is the rough order for Pokémon; among the top 10s it can flip from card to card.":
+    "การ์ดใบเดียวกันจะมีมูลค่าสูงขึ้นเมื่อเกรดสูงขึ้น และค่ายที่เกรดก็มีผลด้วย นี่คือลำดับคร่าวๆ สำหรับการ์ด Pokémon ในกลุ่มเกรด 10 ระดับบนลำดับอาจสลับกันได้ตามการ์ดแต่ละใบ",
+  "Black Label": "Black Label",
+  "A BGS 10 with all four sub-grades a perfect 10. The rarest slab, and the biggest premium in the hobby.":
+    "BGS 10 ที่เกรดย่อยทั้งสี่ด้านได้ 10 เต็มทุกด้าน สแลบที่หายากที่สุดและมีส่วนต่างราคาสูงที่สุดในวงการ",
+  "Gold Label": "Gold Label",
+  "A true BGS 10 is very rare, so it carries a scarcity premium. Its market is thin, so on some cards a PSA 10 still sells higher.":
+    "BGS 10 แท้ๆ นั้นหายากมาก จึงมีส่วนต่างราคาจากความหายาก แต่ตลาดซื้อขายน้อย บางการ์ด PSA 10 จึงยังขายได้สูงกว่า",
+  "Gem Mint 10": "Gem Mint 10",
+  "The resale benchmark for Pokémon — the most traded and most liquid 10.":
+    "เกณฑ์มาตรฐานการขายต่อสำหรับ Pokémon — เกรด 10 ที่ซื้อขายกันมากที่สุดและสภาพคล่องสูงที่สุด",
+  "Pristine 10": "Pristine 10",
+  "A perfect 10, but usually sells a little under a PSA 10 of the same card.":
+    "เกรด 10 เต็ม แต่โดยทั่วไปขายได้ต่ำกว่า PSA 10 ของการ์ดใบเดียวกันเล็กน้อย",
+  "Gem Mint 9.5": "Gem Mint 9.5",
+  "Half a step below a 10, from BGS or CGC. PSA does not give half grades.":
+    "ต่ำกว่าเกรด 10 ครึ่งขั้น ของ BGS หรือ CGC PSA ไม่ให้เกรดแบบครึ่งขั้น",
+  "Mint 9": "Mint 9",
+  "A clean slab from PSA, BGS or CGC.": "สแลบสภาพดีจาก PSA, BGS หรือ CGC",
+  "Near Mint–Mint 8.5": "Near Mint–Mint 8.5",
+  "Near Mint–Mint with a small visible flaw.": "Near Mint–Mint ที่มีตำหนิเล็กน้อยพอมองเห็น",
+  "Near Mint–Mint 8": "Near Mint–Mint 8",
+  "A solid mid-grade slab.": "สแลบเกรดกลางที่มั่นคง",
+  "Near Mint 7": "Near Mint 7",
+  "Light wear, still graded and protected.": "มีร่องรอยเล็กน้อย แต่ยังได้รับเกรดและมีการป้องกัน",
+  // "Ungraded" is already translated above (line ~49); the ladder reuses it.
+  "No grade. CardMart checks it by camera before it is listed.":
+    "ไม่มีเกรด CardMart ตรวจสอบด้วยกล้องก่อนลงประกาศ",
 };
